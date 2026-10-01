@@ -47,6 +47,12 @@ overview of the fork with screenshots.
   provides, so the AppImage and `.deb` are now built on 24.04 and won't start on older systems.
 - On Windows, an MCP server whose command isn't installed (for example `npx` without Node.js) now
   fails with "Command not found" and install hints, instead of a vague connection error.
+- Security updates for several dependencies flagged by GitHub: the AWS connections no longer pull
+  in an older TLS library with known certificate-checking and crash bugs, and the bundled HTML
+  sanitizer and helper libraries are on patched versions.
+- Exporting a chat to Word now leaves out images that aren't PNG, JPEG, GIF, WebP or BMP. The
+  image reader built into the Word converter could hang forever on some malformed image types, so
+  those images are skipped instead of freezing the export.
 
 ### 2026-09-30
 

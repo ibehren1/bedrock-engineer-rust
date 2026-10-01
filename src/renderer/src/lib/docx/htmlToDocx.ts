@@ -37,6 +37,49 @@ const DOCX_FONT = 'Calibri'
 /** Body (Normal) font size in HIP — half-points, so 20 = 10pt. */
 const DOCX_BODY_FONT_SIZE_HIP = 20
 
+/** An `<img>` tag with a double-quoted `src`. */
+const IMG_TAG_RE = /<img\b[^>]*?\ssrc="([^"]*)"[^>]*>/gi
+
+/** A base64 data URL; group 1 is the payload. */
+const BASE64_DATA_URL_RE = /^data:[^,;]*(?:;[^,;]*)*;base64,(.*)$/is
+
+/**
+ * The decoded payload starts with a PNG, JPEG, GIF, WebP or BMP signature. These are the
+ * formats the image-size copy bundled in html-to-docx recognizes on its first-byte fast path,
+ * so it never reaches its ICNS or HEIF parsers, which can loop forever on malformed input
+ * (image-size ≤ 2.0.2 advisories; the copy is inlined in html-to-docx's bundle, so it can't
+ * be upgraded).
+ */
+function isSafeImagePayload(base64: string): boolean {
+  let head: string
+  try {
+    // 24 base64 chars decode to the first 18 bytes, enough for every signature below.
+    head = atob(decodeURIComponent(base64).replace(/\s+/g, '').slice(0, 24))
+  } catch {
+    return false
+  }
+  return (
+    head.startsWith('\x89PNG\r\n\x1a\n') ||
+    head.startsWith('\xff\xd8\xff') ||
+    head.startsWith('GIF87a') ||
+    head.startsWith('GIF89a') ||
+    (head.startsWith('RIFF') && head.startsWith('WEBPVP8', 8)) ||
+    head.startsWith('BM')
+  )
+}
+
+/**
+ * Remove every `<img>` html-to-docx would have to size that isn't an inline PNG, JPEG, GIF,
+ * WebP or BMP (see {@link isSafeImagePayload}). The chat export only inlines images as data
+ * URLs, so in practice this drops attachments in other formats rather than hanging the export.
+ */
+export function dropUnsafeImages(html: string): string {
+  return html.replace(IMG_TAG_RE, (tag, src: string) => {
+    const payload = BASE64_DATA_URL_RE.exec(src.trim())?.[1]
+    return payload !== undefined && isSafeImagePayload(payload) ? tag : ''
+  })
+}
+
 /**
  * Run `fn` with `globalThis.global` and `globalThis.Buffer` defined, as html-to-docx expects,
  * then remove whichever of them were missing before, so the rest of the renderer never sees a
@@ -72,7 +115,7 @@ export async function convertChatHtmlToDocx(html: string): Promise<Uint8Array> {
     const { default: HTMLtoDOCX } = await import('html-to-docx')
 
     // 自己完結した HTML（インライン画像付き）を docx に変換する
-    const document = `<!DOCTYPE html><html><head><meta charset="utf-8" /></head><body>${html}</body></html>`
+    const document = `<!DOCTYPE html><html><head><meta charset="utf-8" /></head><body>${dropUnsafeImages(html)}</body></html>`
     const generated = await HTMLtoDOCX(document, null, {
       font: DOCX_FONT,
       fontSize: DOCX_BODY_FONT_SIZE_HIP,

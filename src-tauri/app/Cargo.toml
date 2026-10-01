@@ -36,7 +36,7 @@ tauri-plugin-notification = "=2.5.0"
 tauri-plugin-dialog = "=2.8.0"
 tauri-plugin-opener = "=2.7.0"
 tauri-plugin-single-instance = "=2.5.1"
-aws-sdk-s3 = "=1.150.0"
+aws-sdk-s3 = { version = "=1.150.0", default-features = false, features = ["sigv4a", "http-1x", "default-https-client", "rt-tokio"] }
 anyhow = "=1.0.104"
 base64 = "=0.22.1"
 percent-encoding = "=2.3.2"

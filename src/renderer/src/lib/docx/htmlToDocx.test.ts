@@ -1,5 +1,5 @@
 import JSZip from 'jszip'
-import { bytesToBase64, convertChatHtmlToDocx } from './htmlToDocx'
+import { bytesToBase64, convertChatHtmlToDocx, dropUnsafeImages } from './htmlToDocx'
 import { applyHeadingStyles, compressTables, tightenMessageRules } from './postProcessDocx'
 
 /** The speaker separator `buildChatHtml` emits between groups. */
@@ -78,6 +78,35 @@ describe('docx post-processing', () => {
         '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="1" w:lineRule="exact"/></w:pPr></w:p></w:tbl>'
     )
     expect(tightenMessageRules(content + spacer)).toBe(content + spacer)
+  })
+})
+
+describe('dropUnsafeImages', () => {
+  const img = (bytes: number[] | string): string => {
+    const raw = typeof bytes === 'string' ? bytes : String.fromCharCode(...bytes)
+    return `<img src="data:image/png;base64,${btoa(raw)}" />`
+  }
+
+  it('keeps PNG, JPEG, GIF, WebP and BMP images', () => {
+    const html =
+      img([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]) +
+      img([0xff, 0xd8, 0xff, 0xe0]) +
+      img('GIF89a\x01\x00') +
+      img('RIFF\x00\x00\x00\x00WEBPVP8 ') +
+      img('BM\x00\x00')
+    expect(dropUnsafeImages(html)).toBe(html)
+  })
+
+  it('drops ICNS, HEIF, other formats and non-data sources', () => {
+    const html =
+      '<p>a</p>' +
+      img('icns\x00\x00\x00\x08') +
+      img('\x00\x00\x00\x18ftypheic') +
+      img('RIFFftypWEBPxxxx') +
+      '<img alt="x" src="https://example.com/a.png">' +
+      '<img src="data:image/png;base64,!!!" />' +
+      '<p>b</p>'
+    expect(dropUnsafeImages(html)).toBe('<p>a</p><p>b</p>')
   })
 })
 
