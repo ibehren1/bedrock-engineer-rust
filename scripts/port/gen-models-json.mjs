@@ -38,6 +38,8 @@ try {
     tmpModule,
     '\nexport const __TEXT_MODELS = MODEL_REGISTRY\nexport const __IMAGE_MODELS = IMAGE_GENERATION_MODELS\n'
   )
+  // The module is a temporary copy written above, so it can only be imported at run time.
+  // eslint-disable-next-line no-restricted-syntax
   const mod = await import(pathToFileURL(tmpModule).href)
 
   const regions = new Set()

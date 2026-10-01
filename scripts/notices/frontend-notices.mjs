@@ -16,6 +16,7 @@
 import { execFileSync } from 'node:child_process'
 import { readFileSync, readdirSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 // Permissive licenses that need no review. Keep in step with src-tauri/about.toml `accepted`.
 const ACCEPTED = new Set([
@@ -61,7 +62,9 @@ const KNOWN_EXCEPTIONS = {
 const args = process.argv.slice(2)
 const strict = args.includes('--strict')
 const outIdx = args.indexOf('--out')
-const repoRoot = resolve(dirname(new URL(import.meta.url).pathname), '..', '..')
+// fileURLToPath, not `new URL(...).pathname`: on Windows that is `/D:/...`, which resolve() turns
+// into `D:\D:\...`.
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const outPath = resolve(repoRoot, outIdx >= 0 ? args[outIdx + 1] : 'notices/frontend.md')
 
 const rootPkg = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf8'))
@@ -72,6 +75,8 @@ let lsOut
 try {
   lsOut = execFileSync('npm', ['ls', '--omit=dev', '--all', '--parseable'], {
     cwd: repoRoot,
+    // On Windows `npm` is `npm.cmd`, which Node only runs through a shell.
+    shell: process.platform === 'win32',
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
     stdio: ['ignore', 'pipe', 'ignore']
