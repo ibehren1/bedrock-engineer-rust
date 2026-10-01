@@ -25,10 +25,10 @@ jobs:
       matrix:
         include: >-
           ${{ github.event.repository.private
-          && fromJSON('[{"os": "ubuntu-22.04"}]')
+          && fromJSON('[{"os": "ubuntu-24.04"}]')
           || fromJSON('[{"os": "macos-latest", "tauri_args": "--target universal-apple-darwin", "rust_targets": "aarch64-apple-darwin,x86_64-apple-darwin"},
           {"os": "windows-latest", "tauri_args": "--bundles nsis"},
-          {"os": "ubuntu-22.04", "tauri_args": "--bundles appimage,deb"}]') }}
+          {"os": "ubuntu-24.04", "tauri_args": "--bundles appimage,deb"}]') }}
 
     runs-on: ${{ matrix.os }}
     env:
@@ -40,8 +40,9 @@ jobs:
         uses: actions/checkout@v5
 
       # WebKitGTK and friends for Tauri on Linux, plus xcap's screen-capture deps (X11 / Wayland
-      # / PipeWire; pipewire-sys needs libclang for bindgen). Ubuntu 22.04 keeps the AppImage's
-      # glibc floor low enough to run on older distributions.
+      # / PipeWire; pipewire-sys needs libclang for bindgen). Ubuntu 24.04 because xcap's PipeWire
+      # bindings (libspa 0.10) need newer PipeWire headers than 22.04's 0.3.48; the AppImage and
+      # .deb therefore need a distribution at least as new (glibc 2.39).
       - name: Install Linux system dependencies
         if: runner.os == 'Linux'
         run: |
@@ -84,7 +85,9 @@ jobs:
 
       - name: Run Rust tests
         working-directory: src-tauri
-        run: cargo test --workspace --locked
+        # --no-fail-fast: keep running the other test binaries after one fails, so a run reports
+        # every failing crate instead of only the first.
+        run: cargo test --workspace --locked --no-fail-fast
 
       - name: Run unit tests
         run: npm test
@@ -125,6 +128,10 @@ jobs:
       # multiplied runner minutes to produce binaries that are never published.
       - name: Build app
         if: github.event.repository.private == false
+        # The AppImage tooling is itself an AppImage, and Ubuntu 24.04 ships no FUSE 2 to mount it;
+        # extract-and-run avoids needing FUSE at all. Ignored on other platforms.
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: 1
         run: npm run tauri -- build ${{ matrix.tauri_args }}
 
       # Give installers stable, space-free names: bedrock-engineer-rust-<version>-<arch>.<ext>.

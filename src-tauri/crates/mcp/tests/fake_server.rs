@@ -163,23 +163,37 @@ impl Drop for HttpServer {
 fn http_server(py: &str, mode: &str) -> HttpServer {
     let dir = tempfile::TempDir::new().unwrap();
     let port_file = dir.path().join("port");
-    let child = Command::new(py)
+    let stderr_file = dir.path().join("stderr");
+    let mut child = Command::new(py)
         .arg(script())
         .arg("http")
         .arg(&port_file)
         .arg(mode)
         .stdin(Stdio::piped())
+        .stderr(std::fs::File::create(&stderr_file).unwrap())
         .spawn()
         .unwrap();
+    // Generous: CI runners execute many test binaries at once, so a cold Python start can be slow.
+    let timeout = Duration::from_secs(30);
     let start = Instant::now();
     let port = loop {
         if let Ok(s) = std::fs::read_to_string(&port_file) {
             break s.trim().parse().unwrap();
         }
-        assert!(
-            start.elapsed() < Duration::from_secs(10),
-            "server did not start"
-        );
+        let exited = child.try_wait().unwrap();
+        if exited.is_some() || start.elapsed() >= timeout {
+            let _ = child.kill();
+            let _ = child.wait();
+            let stderr = std::fs::read_to_string(&stderr_file).unwrap_or_default();
+            panic!(
+                "fake MCP server ({py}, {mode}) did not start: {} after {:?}\nstderr:\n{stderr}",
+                match exited {
+                    Some(status) => format!("exited with {status}"),
+                    None => "no port written".to_string(),
+                },
+                start.elapsed()
+            );
+        }
         std::thread::sleep(Duration::from_millis(50));
     };
     HttpServer {

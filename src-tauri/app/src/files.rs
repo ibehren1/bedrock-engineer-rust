@@ -535,7 +535,9 @@ mod tests {
         );
         assert_eq!(read_shared_agents(Some(d.path())), AgentList::default());
 
-        let dir = d.path().join(".bedrock-engineer/agents");
+        // Joined per component so the expected path uses the platform's separator, as the
+        // reported `sharedFilePath` does.
+        let dir = d.path().join(".bedrock-engineer").join("agents");
         fs::create_dir_all(&dir).unwrap();
         fs::write(dir.join("b.yaml"), "id: keep-me\nname: B\nmcpTools: [x]\n").unwrap();
         fs::write(dir.join("a.json"), r#"{"name":"A"}"#).unwrap();

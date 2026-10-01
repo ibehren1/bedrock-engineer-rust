@@ -42,6 +42,9 @@ overview of the fork with screenshots.
   window saved off to the side of a display you no longer have is moved back into view, and one too
   large for the screen you have now is ignored in favour of the default size. The first launch, as
   before, opens at the default size, centered.
+- **Linux builds now need Ubuntu 24.04 or a similarly recent distribution** (glibc 2.39 or later,
+  such as Debian 13 or Fedora 40). Screen capture needs a newer PipeWire than Ubuntu 22.04
+  provides, so the AppImage and `.deb` are now built on 24.04 and won't start on older systems.
 
 ### 2026-09-30
 

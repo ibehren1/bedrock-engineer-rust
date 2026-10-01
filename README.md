@@ -73,7 +73,8 @@ downloads if it is missing.
 ### Linux
 
 Make the AppImage executable and run it (`chmod +x bedrock-engineer-rust-*.AppImage`), or install
-the `.deb` with `sudo apt install ./bedrock-engineer-rust-<version>-x64.deb`.
+the `.deb` with `sudo apt install ./bedrock-engineer-rust-<version>-x64.deb`. Both need a 2024-era
+or newer distribution (glibc 2.39 or later): for example Ubuntu 24.04, Debian 13 or Fedora 40.
 
 ### Set up AWS access
 

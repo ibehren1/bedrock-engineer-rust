@@ -1,0 +1,7 @@
+# Check out text files with LF on every platform. Windows runners otherwise convert to CRLF,
+# which Prettier flags (`Delete ␍`) and which changes the bytes of files read by tests.
+* text=auto eol=lf
+
+# Generated license notices quote upstream license texts byte for byte, some with CRLF lines.
+notices/** -text
+src/.editorconfig -text
