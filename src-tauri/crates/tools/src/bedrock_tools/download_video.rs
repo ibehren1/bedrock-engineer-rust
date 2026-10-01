@@ -318,8 +318,16 @@ mod tests {
             "Video downloaded to /definitely/missing.mp4 but file verification failed"
         );
         let local = fake.calls()[3].1["localPath"].as_str().unwrap().to_string();
+        let name = std::path::Path::new(&local)
+            .file_name()
+            .unwrap()
+            .to_string_lossy();
+        assert_eq!(
+            std::path::Path::new(&local).parent(),
+            Some(std::path::Path::new("/proj"))
+        );
         assert!(
-            local.starts_with("/proj/downloaded-video-") && local.ends_with("Z.mp4"),
+            name.starts_with("downloaded-video-") && name.ends_with("Z.mp4"),
             "{local}"
         );
     }

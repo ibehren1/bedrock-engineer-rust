@@ -58,13 +58,13 @@ async fn create_folder_errors() {
     .unwrap_err();
     let v = response(&err);
     assert_eq!(v["type"], "EXECUTION");
-    assert!(
-        v["error"]
-            .as_str()
-            .unwrap()
-            .starts_with("Error creating folder: ENOTDIR: not a directory, mkdir '"),
-        "{v}"
-    );
+    // Node reports ENOTDIR here on Unix; on Windows the OS reports that the file already exists.
+    let expected = if cfg!(windows) {
+        "Error creating folder: EEXIST: file already exists, mkdir '"
+    } else {
+        "Error creating folder: ENOTDIR: not a directory, mkdir '"
+    };
+    assert!(v["error"].as_str().unwrap().starts_with(expected), "{v}");
 
     let err = run(&CreateFolderTool, json!({"type": "createFolder"}))
         .await

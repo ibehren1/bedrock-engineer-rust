@@ -45,6 +45,8 @@ overview of the fork with screenshots.
 - **Linux builds now need Ubuntu 24.04 or a similarly recent distribution** (glibc 2.39 or later,
   such as Debian 13 or Fedora 40). Screen capture needs a newer PipeWire than Ubuntu 22.04
   provides, so the AppImage and `.deb` are now built on 24.04 and won't start on older systems.
+- On Windows, an MCP server whose command isn't installed (for example `npx` without Node.js) now
+  fails with "Command not found" and install hints, instead of a vague connection error.
 
 ### 2026-09-30
 

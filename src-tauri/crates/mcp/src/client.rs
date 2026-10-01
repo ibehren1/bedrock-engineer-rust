@@ -1,6 +1,6 @@
 //! One MCP server connection — port of `src/main/mcp/mcp-client.ts` (`MCPClient`).
 
-use crate::command_resolver::resolve_command;
+use crate::command_resolver::{find_in_path, path_extensions, resolve_command};
 use crate::sse::SseClientTransport;
 use crate::{Error, Result};
 use common::zod::{array, object, req, Schema};
@@ -152,6 +152,21 @@ impl McpClient {
         if resolved != command {
             tracing::info!(category = "mcp", resolved = %resolved, original = %command, "Using resolved command path");
         }
+        let environment = stdio_environment(env);
+        if cfg!(windows) {
+            // `cmd /c` below always starts, so a missing command would only show up as a closed
+            // connection; report it as Node's cross-spawn does.
+            let var = |name: &str| {
+                environment
+                    .iter()
+                    .find(|(k, _)| k.eq_ignore_ascii_case(name))
+                    .map(|(_, v)| v.as_str())
+            };
+            let exts = path_extensions(var("PATHEXT"));
+            if find_in_path(&resolved, var("PATH").unwrap_or_default(), ';', &exts).is_none() {
+                return Err(Error::Mcp(format!("spawn {resolved} ENOENT")));
+            }
+        }
         let mut cmd = if cfg!(windows) {
             // Node's cross-spawn resolves `npx` to `npx.cmd`; `cmd /c` gives the same lookup.
             let mut c = tokio::process::Command::new("cmd");
@@ -162,7 +177,7 @@ impl McpClient {
         };
         cmd.args(args);
         cmd.env_clear();
-        cmd.envs(stdio_environment(env));
+        cmd.envs(environment);
 
         let (transport, _stderr) = TokioChildProcess::builder(cmd)
             .stderr(Stdio::inherit())

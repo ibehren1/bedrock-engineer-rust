@@ -530,11 +530,20 @@ mod tests {
         );
         let previous_called = Arc::new(AtomicBool::new(false));
         let flag = previous_called.clone();
-        let hook = panic_hook(Box::new(move |_| flag.store(true, Ordering::SeqCst)));
+        // The hook is process-wide and other tests run in parallel: hand their panics to the
+        // original hook, so their messages are still printed while this one is installed.
+        let original: Arc<PanicHook> = Arc::new(std::panic::take_hook());
+        let forward = original.clone();
+        let hook = panic_hook(Box::new(move |info| {
+            if std::thread::current().name() == Some("panic-test") {
+                flag.store(true, Ordering::SeqCst);
+            } else {
+                forward(info);
+            }
+        }));
 
-        // The hook is process-wide; install it only for this panic, on a named thread whose
-        // default subscriber is the capturing one.
-        let original = std::panic::take_hook();
+        // Installed only for this panic, on a named thread whose default subscriber is the
+        // capturing one.
         std::panic::set_hook(hook);
         let result = std::thread::Builder::new()
             .name("panic-test".into())
@@ -545,7 +554,7 @@ mod tests {
             })
             .unwrap()
             .join();
-        std::panic::set_hook(original);
+        std::panic::set_hook(Box::new(move |info| original(info)));
 
         assert!(result.unwrap(), "the closure panicked");
         assert!(previous_called.load(Ordering::SeqCst));

@@ -295,8 +295,23 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn runs_a_real_shell() {
-        let path = shell_path("/bin/sh", Duration::from_secs(10)).unwrap();
-        assert!(!path.is_empty());
+        // A real /bin/sh, but with an empty environment and home directory, so the machine's own
+        // profile files and variables (CI runners add plenty) can't change the result.
+        let dir = tempfile::tempdir().unwrap();
+        let shell = dir.path().join("clean-sh");
+        std::fs::write(
+            &shell,
+            format!(
+                "#!/bin/sh\nexec /usr/bin/env -i HOME='{}' PATH=/usr/bin:/bin /bin/sh \"$@\"\n",
+                dir.path().display()
+            ),
+        )
+        .unwrap();
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&shell, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let path = shell_path(shell.to_str().unwrap(), Duration::from_secs(10))
+            .unwrap_or_else(|e| panic!("{e}"));
+        assert!(path.split(':').any(|p| p == "/bin"), "{path}");
     }
 
     #[cfg(unix)]

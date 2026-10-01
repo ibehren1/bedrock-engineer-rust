@@ -38,9 +38,80 @@ pub fn resolve_command(command: &str) -> String {
         .unwrap_or_else(|| command.to_string())
 }
 
+/// Where `command` would be found by a `PATH` search: `path` split on `sep`, trying the bare name
+/// and then each of `exts` appended (Windows' `PATHEXT`). A command that already names a path is
+/// checked as it is, with the same extensions. `None` when nothing exists.
+///
+/// On Windows MCP servers are started through `cmd /c`, and `cmd` itself always starts, so a missing
+/// command never surfaces as "not found"; this lookup reports it up front, the way Node's
+/// cross-spawn turns `cmd`'s exit into `ENOENT`.
+pub fn find_in_path(command: &str, path: &str, sep: char, exts: &[String]) -> Option<PathBuf> {
+    let candidates = |base: PathBuf| {
+        std::iter::once(base.clone()).chain(exts.iter().map(move |ext| {
+            let mut name = base.clone().into_os_string();
+            name.push(ext);
+            PathBuf::from(name)
+        }))
+    };
+    if command.contains('/') || command.contains('\\') {
+        return candidates(PathBuf::from(command)).find(|p| p.is_file());
+    }
+    path.split(sep)
+        .filter(|dir| !dir.is_empty())
+        .flat_map(|dir| candidates(Path::new(dir).join(command)))
+        .find(|p| p.is_file())
+}
+
+/// Windows' `PATHEXT` as a list, or its usual default when unset.
+pub fn path_extensions(pathext: Option<&str>) -> Vec<String> {
+    pathext
+        .filter(|v| !v.trim().is_empty())
+        .unwrap_or(".COM;.EXE;.BAT;.CMD")
+        .split(';')
+        .filter(|e| !e.is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn finds_commands_with_or_without_an_extension() {
+        let dir = tempfile::tempdir().unwrap();
+        let bin = dir.path().join("bin");
+        std::fs::create_dir(&bin).unwrap();
+        std::fs::write(bin.join("npx.cmd"), "").unwrap();
+        std::fs::write(bin.join("plain"), "").unwrap();
+        let path = format!(";{};", bin.display());
+        let exts = path_extensions(Some(".exe;.cmd"));
+        assert_eq!(
+            find_in_path("npx", &path, ';', &exts),
+            Some(bin.join("npx.cmd"))
+        );
+        assert_eq!(
+            find_in_path("plain", &path, ';', &exts),
+            Some(bin.join("plain"))
+        );
+        assert_eq!(find_in_path("missing", &path, ';', &exts), None);
+        // Directories are not commands.
+        std::fs::create_dir(bin.join("dir")).unwrap();
+        assert_eq!(find_in_path("dir", &path, ';', &exts), None);
+        // A path is checked as it is.
+        let full = bin.join("npx").to_string_lossy().into_owned();
+        assert_eq!(
+            find_in_path(&full, "", ';', &exts),
+            Some(bin.join("npx.cmd"))
+        );
+    }
+
+    #[test]
+    fn pathext_defaults_when_unset() {
+        assert_eq!(path_extensions(None), [".COM", ".EXE", ".BAT", ".CMD"]);
+        assert_eq!(path_extensions(Some(" ")), [".COM", ".EXE", ".BAT", ".CMD"]);
+        assert_eq!(path_extensions(Some(".EXE;.PS1")), [".EXE", ".PS1"]);
+    }
 
     #[test]
     fn paths_are_left_alone() {

@@ -168,7 +168,11 @@ mod tests {
             .unwrap()
             .to_string_lossy()
             .into_owned();
-        assert!(path.starts_with(&format!("{p}/downloads/")), "{path}");
+        assert_eq!(
+            Path::new(&path).parent(),
+            Some(dir.path().join("downloads").as_path()),
+            "{path}"
+        );
         assert!(
             name.starts_with("example.com_") && name.ends_with(".txt"),
             "{name}"

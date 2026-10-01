@@ -200,7 +200,8 @@ mod tests {
             } else if p.ends_with("empty.png") {
                 Ok(String::new())
             } else {
-                Ok(format!("desc of {}", p.rsplit('/').next().unwrap()))
+                let name = std::path::Path::new(p).file_name().unwrap();
+                Ok(format!("desc of {}", name.to_string_lossy()))
             }
         }));
         let dir = tempfile::tempdir().unwrap();
