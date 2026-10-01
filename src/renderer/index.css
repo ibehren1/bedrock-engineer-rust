@@ -1,0 +1,439 @@
+/* Fonts are bundled, never fetched. This is a desktop app that must render
+   identically offline and on every platform it builds for — the previous
+   behaviour was to inherit whatever the OS provided (SF Pro on macOS, Segoe UI
+   Variable on Windows), so no tuned scale could hold across all three.
+   Inter's `opsz` axis is used rather than `wght` because this UI is dense with
+   10-12px labels, and automatic optical sizing is what keeps them legible. */
+@import '@fontsource-variable/inter/opsz.css';
+@import '@fontsource-variable/inter/opsz-italic.css';
+@import '@fontsource-variable/jetbrains-mono/wght.css';
+@import '@fontsource-variable/geist/wght.css';
+@import '@fontsource-variable/geist-mono/wght.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Inter is the only bundled face with an optical-size axis; this lets it
+       pick the design cut matching the rendered size. Faces without the axis
+       ignore it. */
+    font-optical-sizing: auto;
+  }
+
+  /* Figures are fixed-width everywhere by default. Token counts and dollar
+     costs update live in the chat header and the analytics modal, and
+     proportional digits make them jitter horizontally as they change. */
+  body {
+    font-variant-numeric: tabular-nums;
+    background-color: var(--canvas);
+    color: var(--ink);
+  }
+
+  /* Code and identifiers opt back out of ligatures — `!=` and `=>` should read
+     as the characters they are, not as a glyph. */
+  code,
+  kbd,
+  pre,
+  samp {
+    font-variant-ligatures: none;
+  }
+}
+
+/* There was no prefers-reduced-motion handling anywhere, against ~200 transition
+   utilities and a set of spinners and pulses. Honour the OS setting rather than
+   asking every component to remember to.
+
+   Durations are collapsed to 1ms rather than 0 so that transitionend and
+   animationend still fire — code that waits for them would otherwise hang. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================================
+   THEME SYSTEM
+
+   A theme is a block of token values. Nothing else. There is no per-theme
+   override list, no inventory of utilities to keep in sync, and no dependence
+   on Tailwind's `dark:` variant for surfaces, borders, text or accent. Adding a
+   sixth appearance means copying one block below and adding its name to the
+   three lists in useTheme.ts, main.tsx and lib/appearance.ts.
+
+   This replaced an earlier design where `dim` was a hand-written remap of
+   light-track utilities and `charcoal` rode the `dark:` variant. Both were dead
+   ends: the first needed a grep-verified inventory that silently missed anything
+   new, and the second meant a "theme" could only ever be the dark palette with
+   patches, because ~1,300 `dark:*-gray-*` call sites resolved to literal
+   Tailwind greys rather than to the theme.
+
+   RULES FOR NEW CODE
+     - Surfaces:  bg-canvas / bg-surface / bg-surface-2 / bg-raised / bg-sunken
+     - Rules:     border-subtle / border-faint / border-strong
+     - Text:      text-ink / text-ink-muted / text-ink-faint
+     - Accent:    bg-accent / text-accent / border-accent (+ -strong, -soft,
+                  -tint, -fg)
+     - Status:    text-success / bg-success-soft, and danger / warning likewise
+     - Shape:     rounded-control / rounded-container, shadow-raised
+   Never write a raw gray-*, blue-* or `dark:` utility for these jobs. They do
+   not follow the theme, which is exactly the bug this system exists to prevent.
+
+   Appearances run light to dark: light, newspaper, dim, charcoal, dark.
+   ============================================================================ */
+
+:root,
+[data-theme='light'] {
+  /* Surfaces, back to front. */
+  --canvas: #f3f4f6;
+  --surface: #ffffff;
+  --surface-2: #f9fafb;
+  --raised: #e5e7eb;
+  --sunken: #d1d5db;
+
+  /* Rules. `subtle` is the default; `strong` is for a rule that carries meaning
+     (a table header underline), `faint` for dividers inside a list. */
+  --border: #e5e7eb;
+  --border-soft: #f3f4f6;
+  --border-strong: #d1d5db;
+
+  /* Text. Three steps: content, secondary, metadata. `muted` is deliberately
+     darker than Tailwind's gray-500 because chrome is set at 12.5px here and
+     the old value did not hold contrast at that size. */
+  --ink: #111827;
+  --ink-muted: #4b5563;
+  --ink-faint: #6b7280;
+
+  --accent: #2563eb;
+  --accent-strong: #1d4ed8;
+  --accent-fg: #ffffff;
+
+  /* Status colours are tokens so a theme can retune them. Charcoal has to,
+     because its accent is amber and would otherwise collide with warning. */
+  --success: #047857;
+  --danger: #b91c1c;
+  --warning: #b45309;
+
+  --radius-control: 3px;
+  --radius-container: 5px;
+  --shadow-raised: 0 1px 1px 0 rgb(0 0 0 / 0.04);
+}
+
+/* ---------------------------------------------------------------------------
+   NEWSPAPER — flat monochrome, e-ink / letterpress.
+
+   Newsprint rather than office paper: the whole ramp sits well below white, so
+   the page does not glare. Anchored on #bbb9b4 for the canvas, with the surfaces
+   stepping up from there but never reaching white — an earlier version used
+   #f6f6f6 over #ffffff panels and read far too bright.
+
+   The greys carry the faintest warm cast, which is what newsprint has. It is
+   held deliberately low: at this chroma it reads as paper, and pushing it
+   further would tip into sepia.
+
+   The accent IS the ink: links are underlined ink, active states are solid ink.
+   Status colour is the one deliberate exception — with the chrome monochrome it
+   becomes the only colour on screen, and so easier to spot here than in any
+   other appearance.
+   --------------------------------------------------------------------------- */
+[data-theme='newspaper'] {
+  --canvas: #bbb9b4;
+  --surface: #d2cfc9;
+  --surface-2: #c6c3bd;
+  --raised: #b0aea9;
+  --sunken: #a4a29d;
+
+  --border: #a4a29d;
+  --border-soft: #b2b0ab;
+  /* A rule that carries meaning stays a black hairline, as on a printed page. */
+  --border-strong: #1a1a1a;
+
+  /* Ink is unchanged: near-black on #bbb9b4 is about 10:1, and about 13:1 on the
+     surface, so toning the paper down costs nothing in legibility. */
+  --ink: #0a0a0a;
+  --ink-muted: #33322f;
+  --ink-faint: #5c5b57;
+
+  --accent: #0a0a0a;
+  --accent-strong: #000000;
+  --accent-fg: #ffffff;
+
+  /* Darker than the other appearances use. These were tuned against a near-white
+     page; on the toned paper the previous values fell to 3.3-4.2:1, under the
+     4.5:1 needed for text. Measured against #bbb9b4 they are now 5.3, 5.3 and
+     4.9:1, and higher again on the surface. */
+  --success: #024a35;
+  --danger: #7f1616;
+  --warning: #73320a;
+
+  /* Square and flat. Only a one-line change because radius and shadow are
+     tokens rather than literal utilities. */
+  --radius-control: 2px;
+  --radius-container: 0px;
+  --shadow-raised: none;
+}
+
+/* ---------------------------------------------------------------------------
+   DIM — a softened light view. A muted slate canvas, not black.
+   Text stays dark; that is what preserves contrast.
+   --------------------------------------------------------------------------- */
+[data-theme='dim'] {
+  --canvas: #bcc2ce;
+  --surface: #d2d7e0;
+  --surface-2: #c6ccd7;
+  --raised: #b1b8c5;
+  --sunken: #a6adbc;
+
+  --border: #a6adbc;
+  --border-soft: #b4bac6;
+  --border-strong: #8f97a6;
+
+  --ink: #111827;
+  --ink-muted: #414a57;
+  --ink-faint: #5b6472;
+
+  --accent: #2f6bf0;
+  --accent-strong: #2456d6;
+  --accent-fg: #ffffff;
+
+  --success: #046c4e;
+  --danger: #9b1c1c;
+  --warning: #92400e;
+
+  --shadow-raised: 0 1px 1px 0 rgb(0 0 0 / 0.1);
+}
+
+/* ---------------------------------------------------------------------------
+   CHARCOAL — warm charcoal with an amber accent.
+
+   Palette read from https://telemetry.fw-gui.com/static/styles.css:
+     .page_background     #2d2f31 / #e8eaed
+     .dashboard-table th  #ffbf12 on #3a3c3e, 2px #ffbf12 underline
+     .ip-address          #adb0b3
+     header/footer        #ffbf12 with #323231 text
+
+   The canvas is a WARM charcoal, not a blue-black — that is what distinguishes
+   it from `dark`. Resist "correcting" it toward slate.
+
+   Because amber is the accent it cannot also mean warning, so warning shifts to
+   orange here. That is the whole reason status colours are tokens.
+   --------------------------------------------------------------------------- */
+[data-theme='charcoal'] {
+  --canvas: #2d2f31;
+  --surface: #3a3c3e;
+  --surface-2: #333537;
+  --raised: #45474a;
+  --sunken: #4f5155;
+
+  --border: #4a4c4f;
+  --border-soft: #3f4143;
+  /* Neutral, NOT the amber from the source site's table-header rule. 135 call
+     sites use border-strong as an ordinary stronger border, so amber here would
+     put a gold outline around most of the app. Amber belongs on accent
+     elements — links, active states, focus — where border-accent asks for it
+     explicitly. */
+  --border-strong: #5c5f63;
+
+  --ink: #e8eaed;
+  --ink-muted: #adb0b3;
+  --ink-faint: #8b8e91;
+
+  --accent: #ffbf12;
+  --accent-strong: #ffcf4a;
+  --accent-fg: #323231; /* dark text on amber, as the source site does */
+
+  --success: #34d399;
+  --danger: #f87171;
+  --warning: #fb923c; /* orange, not amber — amber is the accent */
+
+  --shadow-raised: 0 1px 2px 0 rgb(0 0 0 / 0.45);
+}
+
+/* ---------------------------------------------------------------------------
+   DARK — the original near-black, blue-tinted palette.
+   --------------------------------------------------------------------------- */
+[data-theme='dark'] {
+  --canvas: #111827;
+  --surface: #1f2937;
+  --surface-2: #171f2b;
+  --raised: #374151;
+  --sunken: #4b5563;
+
+  --border: #374151;
+  --border-soft: #1f2937;
+  --border-strong: #4b5563;
+
+  --ink: #f9fafb;
+  --ink-muted: #9ca3af;
+  --ink-faint: #6b7280;
+
+  --accent: #4f7ffa;
+  --accent-strong: #6a8dff;
+  --accent-fg: #ffffff;
+
+  --success: #34d399;
+  --danger: #f87171;
+  --warning: #fbbf24;
+
+  --shadow-raised: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+}
+
+/* ----------------------------------------------------------------------------
+   DERIVED TOKENS
+
+   Declared once rather than per theme. Custom properties substitute rather than
+   evaluate, so var(--accent) resolves at the point of use and these stay correct
+   in every appearance — including any added later.
+   ---------------------------------------------------------------------------- */
+:root {
+  --accent-soft: color-mix(in srgb, var(--accent) 45%, transparent);
+  --accent-tint: color-mix(in srgb, var(--accent) 12%, transparent);
+  --success-soft: color-mix(in srgb, var(--success) 14%, transparent);
+  --danger-soft: color-mix(in srgb, var(--danger) 14%, transparent);
+  --warning-soft: color-mix(in srgb, var(--warning) 14%, transparent);
+
+  /* Hover steps for the tinted fills. Needed because the palette migration
+     collapsed two source shades (a 100 fill and its 200 hover) onto one token,
+     which left 37 controls with a hover that changed nothing. */
+  --accent-tint-strong: color-mix(in srgb, var(--accent) 24%, transparent);
+  --success-soft-strong: color-mix(in srgb, var(--success) 26%, transparent);
+  --danger-soft-strong: color-mix(in srgb, var(--danger) 26%, transparent);
+  --warning-soft-strong: color-mix(in srgb, var(--warning) 26%, transparent);
+
+  /* Hover steps for status colours. Mixing toward --ink means these darken on a
+     light appearance and lighten on a dark one automatically, so a new theme
+     gets correct hover states without declaring anything. */
+  --success-strong: color-mix(in srgb, var(--success) 78%, var(--ink));
+  --danger-strong: color-mix(in srgb, var(--danger) 78%, var(--ink));
+  --warning-strong: color-mix(in srgb, var(--warning) 78%, var(--ink));
+
+  /* The moving part of a switch. Deliberately NOT a surface token: a knob has to
+     stay lighter than its track in every appearance, and --surface inverts —
+     in charcoal it is #3a3c3e, darker than the track it sits on, so the knob
+     vanished. Near-white reads on a grey track and on the amber accent alike.
+     Override per theme only if a future appearance needs it. */
+  --knob: #ffffff;
+}
+
+/* ----------------------------------------------------------------------------
+   FONT CHOICE
+
+   Interface and code faces are independent settings (appFontSans /
+   appFontMono), applied as data-font-sans / data-font-mono on <html> by
+   useFont.ts, and pre-applied in main.tsx to avoid a flash of the wrong face.
+
+   They are separate because they do different jobs. JetBrains Mono
+   distinguishes 1/l/I and 0/O better than Geist Mono, and this app puts long
+   tool-use IDs, ARNs and file paths in monospace constantly — so preferring
+   Geist for interface text should not force it on code as well.
+
+   Emoji families stay in every sans stack: the user avatar is a real emoji
+   feature and would otherwise fall back inconsistently.
+   ---------------------------------------------------------------------------- */
+:root {
+  --stack-emoji: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji';
+  --stack-system-sans: ui-sans-serif, system-ui, sans-serif, var(--stack-emoji);
+  --stack-system-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --stack-inter: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, sans-serif, var(--stack-emoji);
+  --stack-geist: 'Geist Variable', 'Geist', ui-sans-serif, system-ui, sans-serif, var(--stack-emoji);
+
+  --stack-jetbrains: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, SFMono-Regular,
+    Menlo, monospace;
+  --stack-geist-mono: 'Geist Mono Variable', 'Geist Mono', ui-monospace, SFMono-Regular, Menlo,
+    monospace;
+
+  --font-sans: var(--stack-inter);
+  --font-mono: var(--stack-jetbrains);
+}
+
+[data-font-sans='inter'] {
+  --font-sans: var(--stack-inter);
+}
+[data-font-sans='geist'] {
+  --font-sans: var(--stack-geist);
+}
+[data-font-sans='system'] {
+  --font-sans: var(--stack-system-sans);
+}
+
+[data-font-mono='jetbrains'] {
+  --font-mono: var(--stack-jetbrains);
+}
+[data-font-mono='geist-mono'] {
+  --font-mono: var(--stack-geist-mono);
+}
+[data-font-mono='system'] {
+  --font-mono: var(--stack-system-mono);
+}
+
+/* ----------------------------------------------------------------------------
+   VENDOR CSS THAT CANNOT BE TOKENISED
+
+   react-cmdk and Flowbite ship pre-compiled Tailwind with literal values baked
+   in. These rules pull the parts that show onto the tokens, for EVERY theme —
+   not just one. Without them the command palette and any Flowbite internals the
+   theme object does not reach keep stock greys and stock radii, which is what
+   made the squared-off look land only in newspaper.
+   ---------------------------------------------------------------------------- */
+
+/* react-cmdk bundles its own Preflight copy, scoped to .command-palette, which
+   pins a font stack and neutral colours. The leading `html` is load-order
+   insurance: cmdk.css is imported from command-palette.tsx and lands after this
+   file, so an equal-specificity rule would lose. */
+html .command-palette .command-palette-content {
+  font-family: var(--font-sans);
+  background-color: var(--surface);
+  color: var(--ink);
+  border-radius: var(--radius-container);
+}
+html .command-palette input {
+  background-color: transparent;
+  color: var(--ink);
+}
+
+/* Any vendor radius still reaching the page follows the shape tokens, in every
+   appearance. App source uses only rounded-control / rounded-container /
+   rounded-full, so these selectors exist purely for Flowbite's and cmdk's dist.
+   :where() keeps specificity at zero so app utilities always win. */
+:where(.rounded, .rounded-sm, .rounded-md) {
+  border-radius: var(--radius-control);
+}
+:where(.rounded-lg, .rounded-xl, .rounded-2xl, .rounded-3xl) {
+  border-radius: var(--radius-container);
+}
+:where(.rounded-t-lg, .rounded-t-xl) {
+  border-top-left-radius: var(--radius-container);
+  border-top-right-radius: var(--radius-container);
+}
+:where(.rounded-b-lg, .rounded-b-xl) {
+  border-bottom-left-radius: var(--radius-container);
+  border-bottom-right-radius: var(--radius-container);
+}
+
+/* Newspaper is flat everywhere, including inside vendor components. */
+[data-theme='newspaper']
+  :where(.shadow-sm, .shadow, .shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl, .shadow-inner) {
+  box-shadow: none;
+}
+
+/* Accent divider between user/assistant turns. Soft tint so it separates
+   without shouting; theme-aware via --accent. */
+.hr-accent {
+  border: 0;
+  border-top: 1px solid var(--accent-soft);
+}
+
+/* Matches the app icon's dark navy-charcoal background. Intentionally a fixed
+   colour: it is the product mark, not a themed surface. */
+.bg-icon {
+  background-color: #0f1117;
+}

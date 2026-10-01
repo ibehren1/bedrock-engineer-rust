@@ -1,0 +1,49 @@
+{
+	"recentSessions": [
+		"session_1790613354839",
+		"session_1790000000000",
+		"session_1788988619650",
+		"session_1780000000000"
+	],
+	"metadata": {
+		"session_1788988619650": {
+			"id": "session_1788988619650",
+			"title": "Chat 9/9/2026, 4:16:59 PM",
+			"createdAt": 1788988619650,
+			"updatedAt": 1788988619650,
+			"messageCount": 0,
+			"agentId": "defaultAgent",
+			"modelId": "global.anthropic.claude-sonnet-4-6",
+			"systemPrompt": ""
+		},
+		"session_1790000000000": {
+			"id": "session_1790000000000",
+			"title": "No system prompt",
+			"createdAt": 1790000000000,
+			"updatedAt": 1790000100000,
+			"messageCount": 1,
+			"agentId": "defaultAgent",
+			"modelId": "us.amazon.nova-pro-v1:0"
+		},
+		"session_1790613354839": {
+			"id": "session_1790613354839",
+			"title": "Refactor the parser — 日本語 ✓",
+			"createdAt": 1790613354839,
+			"updatedAt": 1790613999001,
+			"messageCount": 4,
+			"agentId": "softwareAgent",
+			"modelId": "global.anthropic.claude-sonnet-4-6",
+			"systemPrompt": "You are a helpful assistant.\n\nRules:\n- be brief"
+		},
+		"session_1780000000000": {
+			"id": "session_1780000000000",
+			"title": "file was deleted",
+			"createdAt": 1780000000000,
+			"updatedAt": 1795000000000,
+			"messageCount": 4,
+			"agentId": "defaultAgent",
+			"modelId": "m"
+		}
+	},
+	"activeSessionId": "session_1790613354839"
+}

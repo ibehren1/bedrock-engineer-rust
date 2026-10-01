@@ -1,0 +1,60 @@
+# cargo-about config: third-party notices for the Rust crates compiled into the app.
+# Generate with `make notices` (or `sh scripts/notices/generate.sh`); output: notices/rust.md.
+#
+# `accepted` is the permissive accept-list. A crate whose license expression cannot be
+# satisfied from this list makes `cargo about generate` fail, which is the copyleft/unknown
+# license gate. Keep in step with ACCEPTED in scripts/notices/frontend-notices.mjs.
+accepted = [
+    "MIT",
+    "MIT-0",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "0BSD",
+    "ISC",
+    "Zlib",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "CC0-1.0",
+    "Unlicense",
+    "BSL-1.0",
+    "CDLA-Permissive-2.0",
+    "OpenSSL",
+]
+
+# Only count dependencies that can actually ship on the three desktop platforms.
+targets = [
+    "aarch64-apple-darwin",
+    "x86_64-apple-darwin",
+    "x86_64-pc-windows-msvc",
+    "aarch64-pc-windows-msvc",
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+]
+
+# Build-time-only crates don't end up in the binary.
+ignore-build-dependencies = true
+ignore-dev-dependencies = true
+# Our own workspace crates are MIT-0 and covered by LICENSE/NOTICE.
+private = { ignore = true }
+
+# MPL-2.0 is weak, file-level copyleft: using unmodified crates is fine as long as the notice
+# and a pointer to the (crates.io) source ship with the app, which notices/rust.md does. It is
+# accepted per crate, not globally, so any NEW MPL dependency still fails the gate for review.
+# cssparser / cssparser-macros / dtoa-short / selectors come in through tauri-utils (HTML/CSS
+# handling), option-ext through dirs.
+[cssparser]
+accepted = ["MPL-2.0"]
+
+[cssparser-macros]
+accepted = ["MPL-2.0"]
+
+[dtoa-short]
+accepted = ["MPL-2.0"]
+
+[selectors]
+accepted = ["MPL-2.0"]
+
+[option-ext]
+accepted = ["MPL-2.0"]

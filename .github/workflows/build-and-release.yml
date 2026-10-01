@@ -1,0 +1,306 @@
+name: Build and Release
+
+# Runs on every push to main (including PR merges): build + publish a GitHub
+# release. The release body is the newest dated section of CHANGELOG.md, plus a
+# link to the full changelog.
+
+on:
+  push:
+    branches: [main]
+  # Manual runs build and test only; the release job is gated on a push to main.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      # The macOS and Windows lanes exist to package installers, which only a public repo does
+      # (see the "Build app" step). A private repo therefore runs a single Linux lane for the
+      # platform-independent checks (same lint, typecheck and tests) at the 1x minute rate
+      # instead of macOS's 10x and Windows's 2x.
+      matrix:
+        include: >-
+          ${{ github.event.repository.private
+          && fromJSON('[{"os": "ubuntu-22.04"}]')
+          || fromJSON('[{"os": "macos-latest", "tauri_args": "--target universal-apple-darwin", "rust_targets": "aarch64-apple-darwin,x86_64-apple-darwin"},
+          {"os": "windows-latest", "tauri_args": "--bundles nsis"},
+          {"os": "ubuntu-22.04", "tauri_args": "--bundles appimage,deb"}]') }}
+
+    runs-on: ${{ matrix.os }}
+    env:
+      NODE_OPTIONS: '--max-old-space-size=8192'
+      CARGO_TERM_COLOR: always
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      # WebKitGTK and friends for Tauri on Linux, plus xcap's screen-capture deps (X11 / Wayland
+      # / PipeWire; pipewire-sys needs libclang for bindgen). Ubuntu 22.04 keeps the AppImage's
+      # glibc floor low enough to run on older distributions.
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
+            librsvg2-dev libxdo-dev libssl-dev patchelf file pkg-config libclang-dev \
+            libxcb1-dev libxrandr-dev libdbus-1-dev libpipewire-0.3-dev libwayland-dev \
+            libegl-dev libgbm-dev
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          # Share one cache per OS between the test and bundle builds.
+          key: ${{ matrix.os }}
+
+      - name: Install cargo-about
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-about
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Run Rust tests
+        working-directory: src-tauri
+        run: cargo test --workspace --locked
+
+      - name: Run unit tests
+        run: npm test
+
+      # Regenerates notices/rust.md and notices/frontend.md, which the bundle ships. Fails on
+      # any dependency whose license is outside the accept-lists.
+      - name: Generate third-party notices
+        run: npm run notices
+
+      # Optional macOS signing / notarization, read by the Tauri CLI from the environment.
+      # With no secrets configured the bundle is ad-hoc signed (bundle.macOS.signingIdentity
+      # "-"). Only non-empty values are exported: the Tauri CLI
+      # treats a set-but-empty APPLE_CERTIFICATE as a certificate to import and fails.
+      - name: Configure macOS signing (optional)
+        if: runner.os == 'macOS' && github.event.repository.private == false
+        shell: bash
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          for name in APPLE_SIGNING_IDENTITY APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD \
+                      APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+            value="${!name}"
+            if [ -n "$value" ]; then
+              echo "$name<<__EOF__" >> "$GITHUB_ENV"
+              echo "$value" >> "$GITHUB_ENV"
+              echo "__EOF__" >> "$GITHUB_ENV"
+              echo "Using $name from secrets"
+            fi
+          done
+
+      # Packaging installers only happens on a public repo. The private repo is where work is
+      # merged, so it still runs the checks above, but building installers there costs
+      # multiplied runner minutes to produce binaries that are never published.
+      - name: Build app
+        if: github.event.repository.private == false
+        run: npm run tauri -- build ${{ matrix.tauri_args }}
+
+      # Give installers stable, space-free names: bedrock-engineer-rust-<version>-<arch>.<ext>.
+      - name: Collect installers
+        if: github.event.repository.private == false
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=$(node -p "require('./package.json').version")
+          mkdir -p dist-installers
+          find src-tauri/target -path '*/release/bundle/*' -type f \
+            \( -name '*.dmg' -o -name '*-setup.exe' -o -name '*.AppImage' -o -name '*.deb' \) |
+          while IFS= read -r f; do
+            base=$(basename "$f")
+            case "$base" in
+              *.dmg)      ext=dmg ;;
+              *-setup.exe) ext=setup.exe ;;
+              *.AppImage) ext=AppImage ;;
+              *.deb)      ext=deb ;;
+            esac
+            case "$base" in
+              *universal*) arch=universal ;;
+              *aarch64*|*arm64*) arch=arm64 ;;
+              *) arch=x64 ;;
+            esac
+            cp "$f" "dist-installers/bedrock-engineer-rust-${VERSION}-${arch}.${ext}"
+          done
+          ls -la dist-installers
+
+      - name: Upload artifacts
+        if: github.event.repository.private == false && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v5
+        with:
+          name: ${{ matrix.os }}-artifacts
+          path: dist-installers/*
+          # A build that failed to produce installers shouldn't fail this step — the release
+          # job runs regardless and will publish notes without assets.
+          if-no-files-found: warn
+          # These are only needed to hand builds to the release job; don't let them linger in
+          # the Actions tab.
+          retention-days: 1
+
+  release:
+    name: Publish Release
+    needs: [build]
+    # Publish the release even if the build job failed or produced no installers.
+    # `!cancelled()` runs on build success OR failure (but not on manual cancel);
+    # any binaries that did build are attached, otherwise a notes-only release is
+    # published.
+    if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Read version from package.json
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "Package version: $VERSION"
+
+      - name: Check for existing tag
+        id: check-tag
+        run: |
+          if git rev-parse --verify "refs/tags/v${VERSION}" >/dev/null 2>&1; then
+            echo "Tag v${VERSION} already exists on the remote; skipping release."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download all build artifacts
+        # Don't fail the release if a build produced no artifacts to download.
+        if: steps.check-tag.outputs.skip != 'true'
+        continue-on-error: true
+        uses: actions/download-artifact@v5
+        with:
+          path: artifacts
+
+      - name: List downloaded artifacts
+        if: steps.check-tag.outputs.skip != 'true'
+        run: |
+          echo "Downloaded artifacts:"
+          find ./artifacts -type f 2>/dev/null | sort || echo "(none — build produced no installers)"
+
+      - name: Build release notes from CHANGELOG
+        if: steps.check-tag.outputs.skip != 'true'
+        run: |
+          # The release body is the newest dated section of CHANGELOG.md only:
+          # from the first "### YYYY-MM-DD" heading up to the next one. Fails
+          # loudly if the file or a dated heading is missing.
+          if [ ! -f CHANGELOG.md ]; then
+            echo "Error: CHANGELOG.md not found" >&2
+            exit 1
+          fi
+
+          # Bracket ranges rather than {4} intervals, so this works with any awk.
+          awk '
+            /^### [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/ {
+              if (seen) exit
+              seen = 1
+            }
+            seen
+          ' CHANGELOG.md > update-summary.md
+
+          if [ ! -s update-summary.md ]; then
+            echo "Error: no dated '### YYYY-MM-DD' section found in CHANGELOG.md" >&2
+            exit 1
+          fi
+
+          {
+            echo "# Bedrock Engineer v${VERSION}"
+            echo
+            echo "## Update summary"
+            echo
+            cat update-summary.md
+            echo
+            echo "Full changelog: ${{ github.server_url }}/${{ github.repository }}/blob/main/CHANGELOG.md"
+          } > RELEASE_NOTES.md
+
+          echo "----- Release notes preview -----"
+          cat RELEASE_NOTES.md
+          echo "---------------------------------"
+
+      - name: Create GitHub Release
+        if: steps.check-tag.outputs.skip != 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: v${{ env.VERSION }}
+          body_path: RELEASE_NOTES.md
+          files: |
+            artifacts/**/*.dmg
+            artifacts/**/*.exe
+            artifacts/**/*.AppImage
+            artifacts/**/*.deb
+          # Publish even when no installers were built (notes-only release).
+          fail_on_unmatched_files: false
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Keep binaries only on the release we just published. Older releases keep
+      # their tag and notes but shed their (large) downloadable assets.
+      - name: Prune assets from older releases
+        if: steps.check-tag.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CURRENT_TAG: v${{ env.VERSION }}
+        run: |
+          set -euo pipefail
+
+          # All release tags except the one we just published.
+          tags=$(gh release list --limit 1000 --json tagName --jq '.[].tagName' \
+            | grep -vxF "$CURRENT_TAG" || true)
+
+          if [ -z "$tags" ]; then
+            echo "No older releases to prune."
+            exit 0
+          fi
+
+          while IFS= read -r tag; do
+            [ -z "$tag" ] && continue
+            assets=$(gh release view "$tag" --json assets --jq '.assets[].name' || true)
+            if [ -z "$assets" ]; then
+              echo "Release $tag has no assets; nothing to prune."
+              continue
+            fi
+            while IFS= read -r asset; do
+              [ -z "$asset" ] && continue
+              echo "Deleting asset '$asset' from release $tag"
+              gh release delete-asset "$tag" "$asset" --yes
+            done <<< "$assets"
+          done <<< "$tags"

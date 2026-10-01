@@ -1,0 +1,22 @@
+Bedrock Engineer (Bedrock Engineer Rust Fork) - Rust/Tauri port
+Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+Licensed under the MIT No Attribution License (MIT-0). See LICENSE.
+
+Provenance
+- Original application: Bedrock Engineer by Amazon.com, Inc.,
+  https://github.com/aws-samples/bedrock-engineer, licensed MIT-0.
+- Fork ("Bedrock Engineer Rust Fork") maintained and extended by Isaac Behrens <ibehr@amazon.com>, Sr. Solutions Architect.
+- Rust/Tauri port authored by Isaac Behrens. Copyright Amazon.com, Inc. or its affiliates.
+
+Third-party components
+This software bundles third-party components under their own licenses. Their notices and
+license texts are in notices/rust.md (Rust crates) and notices/frontend.md (JavaScript
+packages); installed builds carry the same files in the app's resources under notices/.
+Regenerate them with `make notices`.
+
+One bundled component is not under an open-source license: @codesandbox/nodebox (a dependency
+of the Website Generator's live preview) is under the Sustainable Use License, which permits
+internal and non-commercial use and free-of-charge redistribution. This app is distributed free
+of charge on those terms; do not sell it or offer it as a paid service without replacing that
+component.

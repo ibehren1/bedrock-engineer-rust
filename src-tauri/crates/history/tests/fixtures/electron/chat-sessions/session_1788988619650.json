@@ -1,0 +1,10 @@
+{
+  "id": "session_1788988619650",
+  "title": "Chat 9/9/2026, 4:16:59 PM",
+  "createdAt": 1788988619650,
+  "updatedAt": 1788988619650,
+  "messages": [],
+  "agentId": "defaultAgent",
+  "modelId": "global.anthropic.claude-sonnet-4-6",
+  "systemPrompt": ""
+}

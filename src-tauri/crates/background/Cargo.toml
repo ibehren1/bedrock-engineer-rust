@@ -1,0 +1,25 @@
+[package]
+name = "background"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+agents = { path = "../agents" }
+store = { path = "../store" }
+common = { path = "../common" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio = { version = "=1.53.1", features = ["time", "sync", "macros", "rt"] }
+chrono = { version = "=0.4.45", default-features = false, features = ["clock", "std"] }
+uuid = { version = "=1.26.1", features = ["v4"] }
+tracing = "=0.1.44"
+
+[dev-dependencies]
+tempfile.workspace = true
+tools = { path = "../tools" }
+bedrock = { path = "../bedrock" }
+async-trait = "=0.1.89"
+tokio = { version = "=1.53.1", features = ["time", "sync", "macros", "rt", "rt-multi-thread", "test-util"] }

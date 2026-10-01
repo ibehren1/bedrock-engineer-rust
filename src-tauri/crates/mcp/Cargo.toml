@@ -1,0 +1,23 @@
+[package]
+name = "mcp"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+common = { path = "../common" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+rmcp = { version = "=3.5.0", default-features = false, features = ["client", "transport-child-process", "transport-streamable-http-client-reqwest", "reqwest"] }
+reqwest = { version = "=0.13.5", features = ["json", "stream"] }
+tokio = { version = "=1.53.1", features = ["process", "sync", "rt", "macros", "time"] }
+futures-util = "=0.3.34"
+sse-stream = "=0.2.6"
+tracing = "=0.1.44"
+indexmap = { version = "=2.14.2", features = ["serde"] }
+
+[dev-dependencies]
+tokio = { version = "=1.53.1", features = ["process", "sync", "rt", "rt-multi-thread", "macros", "time", "net", "io-util"] }
+tempfile.workspace = true

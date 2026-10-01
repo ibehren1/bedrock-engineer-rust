@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Hardened-runtime entitlements for the macOS bundle (tauri.conf.json bundle.macOS.entitlements).
+  Carries over the device entitlements from the Electron build's build/entitlements.mac.plist.
+  The Electron-only V8 entries (allow-jit, allow-unsigned-executable-memory,
+  allow-dyld-environment-variables) are dropped: WKWebView runs its JIT out of process.
+-->
+<plist version="1.0">
+  <dict>
+    <key>com.apple.security.device.camera</key>
+    <true/>
+    <key>com.apple.security.device.microphone</key>
+    <true/>
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
+  </dict>
+</plist>

@@ -1,0 +1,7 @@
+node_modules
+dist
+out
+.gitignore
+src-tauri/target
+src-tauri/app/gen
+notices

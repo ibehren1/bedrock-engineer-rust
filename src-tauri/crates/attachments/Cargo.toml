@@ -1,0 +1,19 @@
+[package]
+name = "attachments"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+sha1 = "=0.10.6"
+base64 = "=0.22.1"
+unicode-normalization = "=0.1.25"
+common = { path = "../common" }
+tracing = "=0.1.44"
+
+[dev-dependencies]
+tempfile.workspace = true

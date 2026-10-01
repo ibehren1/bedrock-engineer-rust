@@ -1,0 +1,252 @@
+/* ============================================================================
+   CHAT PROSE
+
+   This is the typographic system for every answer the model writes, so it is
+   the single highest-leverage stylesheet in the app. It used to be derived from
+   browser UA defaults — no line-height at all, a pure-black 1px border on code
+   blocks, every table cell pinned to exactly 100px, and images forced to 50%
+   width. All of that is replaced here.
+
+   Everything colour-bearing goes through the semantic tokens in
+   src/renderer/index.css. That is not just tidiness: the previous version keyed
+   its dark styling to `@media (prefers-color-scheme: dark)` while the app
+   switches on `[data-theme]`, so choosing the "dim" appearance on a dark OS
+   rendered light-grey code blocks inside dark surroundings. Reading tokens means
+   the prose follows the app's own theme by construction, in all five
+   appearances, with no media query to keep in step.
+
+   Used by both renderers: components/Markdown/MD.tsx and
+   pages/ChatPage/components/Code/CodeRenderer.tsx.
+   ============================================================================ */
+
+.reactMarkDown {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  /* The one change that matters most. This was previously unset, so the entire
+     transcript rendered at the browser default of roughly 1.2. */
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+/* Collapse the outer margins so the block sits flush in its container. */
+.reactMarkDown > :first-child {
+  margin-top: 0;
+}
+.reactMarkDown > :last-child {
+  margin-bottom: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Headings
+   A designed six-step ladder. Previously h1/h2/h3 used the UA ratios
+   (2em/1.5em/1.17em → 28/21/16.4px inside a 14px body) and h4-h6 were not
+   styled at all, which left h6 rendering at 9.4px.
+   --------------------------------------------------------------------------- */
+.reactMarkDown h1,
+.reactMarkDown h2,
+.reactMarkDown h3,
+.reactMarkDown h4,
+.reactMarkDown h5,
+.reactMarkDown h6 {
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.011em;
+  margin: 1.4em 0 0.4em;
+  color: var(--ink);
+}
+
+.reactMarkDown h1 {
+  font-size: 19px;
+  letter-spacing: -0.015em;
+}
+.reactMarkDown h2 {
+  font-size: 16px;
+}
+.reactMarkDown h3 {
+  font-size: 15px;
+}
+.reactMarkDown h4 {
+  font-size: 14px;
+}
+.reactMarkDown h5 {
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+/* h6 becomes a labelled rule rather than tiny bold text. */
+.reactMarkDown h6 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+}
+
+/* ---------------------------------------------------------------------------
+   Body copy
+   `white-space: pre-wrap` is deliberately NOT set here. It used to be, which
+   meant every soft line break in the model's source text became a hard break in
+   the rendered output.
+   --------------------------------------------------------------------------- */
+.reactMarkDown p {
+  margin: 0 0 0.7em;
+}
+
+.reactMarkDown strong {
+  font-weight: 600;
+}
+
+.reactMarkDown a {
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+.reactMarkDown a:hover {
+  color: var(--accent-strong);
+}
+
+/* ---------------------------------------------------------------------------
+   Lists
+   --------------------------------------------------------------------------- */
+.reactMarkDown ul,
+.reactMarkDown ol {
+  margin: 0 0 0.7em;
+  padding-left: 1.3em;
+}
+.reactMarkDown ul {
+  list-style: disc outside none;
+}
+.reactMarkDown ol {
+  list-style: decimal outside none;
+}
+.reactMarkDown li {
+  display: list-item;
+  margin: 0.2em 0;
+}
+/* Markers recede so the text edge reads as the left margin. */
+.reactMarkDown li::marker {
+  color: var(--ink-faint);
+}
+/* Nested lists tighten rather than repeating the full block spacing. */
+.reactMarkDown li > ul,
+.reactMarkDown li > ol {
+  margin: 0.2em 0 0.3em;
+}
+
+/* ---------------------------------------------------------------------------
+   Code
+   Block code scrolls instead of wrapping. It previously had
+   `white-space: pre-wrap` alongside `overflow-x: auto`, so long lines wrapped
+   and indentation-sensitive code was mangled on screen.
+   --------------------------------------------------------------------------- */
+.reactMarkDown pre {
+  margin: 0 0 0.7em;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background-color: var(--surface-2);
+  overflow-x: auto;
+  white-space: pre;
+  tab-size: 2;
+}
+
+.reactMarkDown pre code {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.55;
+  /* `!=` and `=>` should read as the characters they are. */
+  font-variant-ligatures: none;
+  color: var(--ink);
+}
+
+/* Inline code previously had no styling whatsoever — it was visually identical
+   to body text apart from the UA monospace switch. */
+.reactMarkDown :not(pre) > code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  font-variant-ligatures: none;
+  background-color: var(--raised);
+  border-radius: var(--radius-control);
+  padding: 0.12em 0.36em;
+  /* Long identifiers and paths should break rather than force a scrollbar. */
+  overflow-wrap: break-word;
+}
+
+.reactMarkDown kbd {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background-color: var(--surface-2);
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-control);
+  padding: 0.08em 0.35em;
+}
+
+/* ---------------------------------------------------------------------------
+   Tables
+   Cells were pinned to exactly `min-width: 100px; max-width: 100px`, so any
+   table with more than about six columns overflowed and short values wasted the
+   width. Now: automatic widths, horizontal rules only, and figures aligned.
+   --------------------------------------------------------------------------- */
+.reactMarkDown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 0.7em;
+  font-variant-numeric: tabular-nums;
+}
+
+.reactMarkDown table th {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+  text-align: left;
+  padding: 0.25rem 0.5rem;
+  border-bottom: 1px solid var(--border-strong);
+  white-space: nowrap;
+}
+
+.reactMarkDown table td {
+  padding: 0.25rem 0.5rem;
+  border-bottom: 1px solid var(--border-soft);
+  vertical-align: top;
+}
+
+.reactMarkDown table tr:last-child td {
+  border-bottom: 0;
+}
+
+/* remark-gfm carries column alignment through as an align attribute, so a
+   right-aligned column of numbers lines up on its digits. */
+.reactMarkDown table th[align='right'],
+.reactMarkDown table td[align='right'] {
+  text-align: right;
+}
+.reactMarkDown table th[align='center'],
+.reactMarkDown table td[align='center'] {
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------------------
+   Blocks and media
+   --------------------------------------------------------------------------- */
+.reactMarkDown blockquote {
+  margin: 0 0 0.7em;
+  padding: 0.1em 0 0.1em 0.8em;
+  border-left: 2px solid var(--border-strong);
+  color: var(--ink-muted);
+}
+
+.reactMarkDown hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 1.2em 0;
+}
+
+/* Was `width: 50%`, which resized every image regardless of its intrinsic size. */
+.reactMarkDown img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-control);
+}

@@ -1,0 +1,33 @@
+#!/bin/sh
+# pre-commit: stamp package.json with the version of the commit being created.
+#
+# The version is git-derived (see scripts/compute-version.sh). In --pending
+# mode it accounts for the fact that this commit does not exist yet, so the
+# value written is correct FOR the commit that will include it. We then stage
+# package.json so it rides along in the same commit.
+#
+# git is the source of truth; package.json is kept in sync as a convenience so
+# the in-repo value is always correct. The build (Makefile) independently
+# recomputes from HEAD, so a skipped hook (--no-verify) never ships a wrong
+# version — it just leaves package.json momentarily stale until the next commit.
+#
+# Skips cleanly if the version can't be computed (e.g. not in a git work tree).
+set -e
+
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+compute="$repo_root/scripts/compute-version.sh"
+[ -x "$compute" ] || exit 0
+
+version=$("$compute" --pending 2>/dev/null) || exit 0
+[ -n "$version" ] || exit 0
+
+current=$(node -p "require('$repo_root/package.json').version" 2>/dev/null || echo "")
+
+if [ "$version" != "$current" ]; then
+  # npm pkg set rewrites package.json in place, preserving formatting.
+  (cd "$repo_root" && npm pkg set "version=$version" >/dev/null 2>&1)
+  git add "$repo_root/package.json"
+  echo "pre-commit: package.json version set to $version"
+fi
+
+exit 0

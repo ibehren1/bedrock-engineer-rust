@@ -1,0 +1,12 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "camera-preview",
+  "description": "Camera preview windows (camera_show_preview_window): dragging the frameless window and the two commands camera-preview.html invokes.",
+  "windows": ["camera-preview-*"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-start-dragging",
+    "allow-camera-close-preview-window",
+    "allow-camera-hide-preview-window"
+  ]
+}

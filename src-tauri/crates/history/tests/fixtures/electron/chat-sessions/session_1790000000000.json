@@ -1,0 +1,20 @@
+{
+  "id": "session_1790000000000",
+  "title": "No system prompt",
+  "createdAt": 1790000000000,
+  "updatedAt": 1790000100000,
+  "messages": [
+    {
+      "id": "m1",
+      "role": "user",
+      "content": [
+        {
+          "text": "hi"
+        }
+      ],
+      "timestamp": 1790000100000
+    }
+  ],
+  "agentId": "defaultAgent",
+  "modelId": "us.amazon.nova-pro-v1:0"
+}

@@ -1,0 +1,591 @@
+import { AspectRatio, ImageGeneratorModel } from './image'
+
+// 組み込みツール名の明確な定義
+export type BuiltInToolName =
+  | 'createFolder'
+  | 'readFiles'
+  | 'writeToFile'
+  | 'listFiles'
+  | 'moveFile'
+  | 'copyFile'
+  | 'tavilySearch'
+  | 'fetchWebsite'
+  | 'generateImage'
+  | 'generateVideo'
+  | 'checkVideoStatus'
+  | 'downloadVideo'
+  | 'retrieve'
+  | 'invokeBedrockAgent'
+  | 'executeCommand'
+  | 'applyDiffEdit'
+  | 'think'
+  | 'recognizeImage'
+  | 'invokeFlow'
+  | 'codeInterpreter'
+  | 'dockerSandbox'
+  | 'mcp'
+  | 'screenCapture'
+  | 'cameraCapture'
+  | 'todo'
+  | 'todoInit'
+  | 'todoUpdate'
+  | 'invokeAgent'
+
+// MCPツール名の型安全な定義（元のツール名をそのまま使用）
+export type McpToolName = string
+
+// 統合されたToolName型
+export type ToolName = BuiltInToolName | McpToolName
+
+// 組み込みツールの定数配列（型ガード用）
+export const BUILT_IN_TOOLS: readonly BuiltInToolName[] = [
+  'createFolder',
+  'readFiles',
+  'writeToFile',
+  'listFiles',
+  'moveFile',
+  'copyFile',
+  'tavilySearch',
+  'fetchWebsite',
+  'generateImage',
+  'generateVideo',
+  'checkVideoStatus',
+  'downloadVideo',
+  'retrieve',
+  'invokeBedrockAgent',
+  'executeCommand',
+  'applyDiffEdit',
+  'think',
+  'recognizeImage',
+  'invokeFlow',
+  'codeInterpreter',
+  'dockerSandbox',
+  'mcp',
+  'screenCapture',
+  'cameraCapture',
+  'todo',
+  'todoInit',
+  'todoUpdate',
+  'invokeAgent'
+] as const
+
+// 組み込みツール名であるかを判定する型ガード
+export const isBuiltInTool = (name: string): name is BuiltInToolName => {
+  return BUILT_IN_TOOLS.includes(name as BuiltInToolName)
+}
+
+// MCPツール名であるかを判定する型ガード（組み込みツールでなければMCPツール）
+export const isMcpTool = (name: string): name is McpToolName => {
+  return !isBuiltInTool(name)
+}
+
+// 後方互換性のため、元のツール名を取得する関数（今は単純に元の名前を返すだけ）
+export const getOriginalMcpToolName = (name: string): string => {
+  // 旧形式（mcp_ツール名）の場合は後方互換性のためにプリフィックスを除去
+  if (name.startsWith('mcp_')) {
+    return name.substring(4)
+  }
+
+  return name
+}
+
+// 旧形式のmcp_プリフィックス判定（後方互換性のため）
+export const isLegacyMcpTool = (name: string): boolean => {
+  return name.startsWith('mcp_')
+}
+
+// ToolName全体の型ガード
+export const isValidToolName = (name: string): name is ToolName => {
+  return isBuiltInTool(name) || isMcpTool(name)
+}
+
+export interface ToolResult<T = any> {
+  name: ToolName
+  success: boolean
+  message?: string
+  error?: string
+  result: T
+}
+
+// Line range interface for tools
+export interface LineRange {
+  from?: number
+  to?: number
+}
+
+// ツールごとの入力型定義
+export type CreateFolderInput = {
+  type: 'createFolder'
+  path: string
+}
+
+export type ReadFilesInput = {
+  type: 'readFiles'
+  paths: string[] // 複数のファイルパスを受け取るように変更
+  options?: {
+    encoding?: BufferEncoding
+    lines?: LineRange
+  }
+}
+
+export type WriteToFileInput = {
+  type: 'writeToFile'
+  path: string
+  content: string
+}
+
+export type ListFilesInput = {
+  type: 'listFiles'
+  path: string
+  options?: {
+    maxDepth?: number
+    ignoreFiles?: string[]
+    lines?: LineRange
+    recursive?: boolean
+  }
+}
+
+export type MoveFileInput = {
+  type: 'moveFile'
+  source: string
+  destination: string
+}
+
+export type CopyFileInput = {
+  type: 'copyFile'
+  source: string
+  destination: string
+}
+
+export type TavilySearchInput = {
+  type: 'tavilySearch'
+  query: string
+  option: {
+    include_raw_content: boolean
+  }
+}
+
+export type FetchWebsiteInput = {
+  type: 'fetchWebsite'
+  url: string
+  options?: {
+    method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS'
+    headers?: Record<string, string>
+    body?: string
+    cleaning?: boolean
+    lines?: LineRange
+  }
+}
+
+export type GenerateImageInput = {
+  type: 'generateImage'
+  prompt: string
+  outputPath: string
+  modelId: ImageGeneratorModel
+  negativePrompt?: string
+  aspect_ratio?: AspectRatio
+  seed?: number
+  output_format?: 'png' | 'jpeg' | 'webp'
+}
+
+export type StartMovieGenerationInput = {
+  type: 'generateVideo'
+  prompt: string
+  durationSeconds: number
+  outputPath?: string
+  seed?: number
+}
+
+export type CheckVideoStatusInput = {
+  type: 'checkVideoStatus'
+  invocationArn: string
+}
+
+export type DownloadVideoInput = {
+  type: 'downloadVideo'
+  invocationArn: string
+  localPath?: string
+}
+
+export type RetrieveInput = {
+  type: 'retrieve'
+  knowledgeBaseId: string
+  query: string
+}
+
+export type InvokeBedrockAgentInput = {
+  type: 'invokeBedrockAgent'
+  agentId: string
+  agentAliasId: string
+  inputText: string
+  sessionId?: string
+  file?: {
+    filePath: string
+    useCase: 'CODE_INTERPRETER' | 'CHAT'
+  }
+}
+
+export type ExecuteCommandInput = {
+  type: 'executeCommand'
+} & (
+  | {
+      command: string
+      cwd: string
+      /**
+       * Where to run the command. Defaults to the chat's Docker sandbox when the
+       * dockerSandbox tool is enabled, otherwise the host shell.
+       */
+      target?: 'sandbox' | 'host'
+      /** Sandbox service to exec into. Ignored on the host. */
+      service?: string
+      /** Start the command in the background and return immediately. */
+      detach?: boolean
+      pid?: never
+      stdin?: never
+    }
+  | {
+      command?: never
+      cwd?: never
+      target?: never
+      service?: never
+      detach?: never
+      pid: number
+      stdin: string
+    }
+)
+
+// dockerSandbox ツールの入力型（操作別にディスクリミネーテッドユニオン化）
+export type DockerSandboxInput =
+  | DockerSandboxCreateInput
+  | DockerSandboxStatusInput
+  | DockerSandboxStopInput
+  | DockerSandboxStartInput
+  | DockerSandboxRemoveInput
+  | DockerSandboxLogsInput
+
+export type DockerSandboxPort = { host: number; container: number }
+
+export type DockerSandboxServiceSpec = {
+  name: string
+  image?: string
+  command?: string
+  ports?: DockerSandboxPort[]
+  environment?: Record<string, string>
+  dataVolumes?: { name: string; containerPath: string }[]
+}
+
+// サンドボックスの作成（既存の場合は再利用、recreate で作り直し）
+export type DockerSandboxCreateInput = {
+  type: 'dockerSandbox'
+  operation: 'create'
+  services?: DockerSandboxServiceSpec[]
+  composeYaml?: string
+  env?: Record<string, string>
+  recreate?: boolean
+}
+
+export type DockerSandboxStatusInput = {
+  type: 'dockerSandbox'
+  operation: 'status'
+}
+
+export type DockerSandboxStopInput = {
+  type: 'dockerSandbox'
+  operation: 'stop'
+}
+
+export type DockerSandboxStartInput = {
+  type: 'dockerSandbox'
+  operation: 'start'
+}
+
+export type DockerSandboxRemoveInput = {
+  type: 'dockerSandbox'
+  operation: 'remove'
+  deleteData?: boolean
+}
+
+export type DockerSandboxLogsInput = {
+  type: 'dockerSandbox'
+  operation: 'logs'
+  service?: string
+  tail?: number
+}
+
+// 新しい applyDiffEdit ツールの入力型
+export type ApplyDiffEditInput = {
+  type: 'applyDiffEdit'
+  path: string
+  originalText: string
+  updatedText: string
+}
+
+// think ツールの入力型
+export type ThinkInput = {
+  type: 'think'
+  thought: string
+}
+
+// recognizeImage ツールの入力型
+export type RecognizeImageInput = {
+  type: 'recognizeImage'
+  imagePaths: string[] // 複数画像をサポート（最大5枚）
+  prompt?: string
+}
+
+// screenCapture ツールの入力型
+export type ScreenCaptureInput = {
+  type: 'screenCapture'
+  recognizePrompt?: string // 画像認識用のプロンプト（空の場合はキャプチャのみ）
+  windowTarget?: string // ウィンドウ名またはアプリケーション名による指定（部分一致）
+}
+
+// cameraCapture ツールの入力型
+export type CameraCaptureInput = {
+  type: 'cameraCapture'
+  deviceId?: string // 使用するカメラデバイスID（指定がない場合はデフォルトカメラ）
+  recognizePrompt?: string // AI画像認識用のプロンプト（空の場合は撮影のみ）
+  quality?: 'low' | 'medium' | 'high' // 画像品質 (low: 640x480, medium: 1280x720, high: 1920x1080)
+  format?: 'jpg' | 'png' // 出力形式（デフォルト: jpg）
+}
+
+// カメラデバイス情報の型定義
+export interface CameraInfo {
+  id: string // カメラデバイスID
+  name: string // カメラ名（例：FaceTime HDカメラ）
+  enabled: boolean // 選択状態
+  thumbnail?: string // プレビュー画像（base64エンコード）
+  capabilities: {
+    maxWidth: number // 最大解像度（幅）
+    maxHeight: number // 最大解像度（高さ）
+    supportedFormats: string[] // サポートされている形式
+  }
+}
+
+// エージェント固有のカメラ設定
+export interface CameraConfig {
+  id: string // カメラデバイスID
+  name: string // カメラ名
+  enabled: boolean // 許可状態
+}
+
+// codeInterpreter ツールの入力型（操作別にディスクリミネーテッドユニオン化）
+export type CodeInterpreterInput =
+  | CodeInterpreterExecuteInput
+  | CodeInterpreterStatusInput
+  | CodeInterpreterCancelInput
+  | CodeInterpreterListInput
+
+// コード実行操作
+export type CodeInterpreterExecuteInput = {
+  type: 'codeInterpreter'
+  operation?: 'execute'
+  code: string // Python コードのみ - 最大限シンプル！
+  inputFiles?: Array<{ path: string }> // Optional: files to mount in container
+  environment?: 'basic' | 'datascience' // Python environment selection
+  async?: boolean // 非同期実行モード（デフォルト: false）
+}
+
+// タスクステータス確認操作
+export type CodeInterpreterStatusInput = {
+  type: 'codeInterpreter'
+  operation: 'status'
+  taskId: string // 状態確認用のタスクID
+}
+
+// タスクキャンセル操作
+export type CodeInterpreterCancelInput = {
+  type: 'codeInterpreter'
+  operation: 'cancel'
+  taskId: string // キャンセル用のタスクID
+}
+
+// タスク一覧表示操作
+export type CodeInterpreterListInput = {
+  type: 'codeInterpreter'
+  operation: 'list'
+  statusFilter?: string // タスクステータスフィルター（optional）
+}
+
+// invokeFlow ツールの入力型
+export type InvokeFlowInput = {
+  type: 'invokeFlow'
+  flowIdentifier: string
+  flowAliasIdentifier: string
+  input: {
+    content: {
+      document: any // string | number | boolean | object | any[] から any に変更
+    }
+    nodeName: string
+    nodeOutputName: string
+  }
+}
+
+// Todo 関連の詳細型定義
+export type TodoItemStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled'
+
+export interface TodoItem {
+  id: string
+  description: string
+  status: TodoItemStatus
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TodoList {
+  id: string
+  items: TodoItem[]
+  createdAt: string
+  updatedAt: string
+  sessionId: string
+  projectPath: string
+}
+
+export interface TodoItemUpdate {
+  id: string
+  status?: TodoItemStatus
+  description?: string
+}
+
+export interface TodoUpdateResult {
+  success: boolean
+  updatedList?: TodoList
+  currentList?: TodoList
+  error?: string
+}
+
+// todo 仮想ツールの入力型
+export type TodoInput = {
+  type: 'todo'
+}
+
+// todoInit ツールの入力型
+export type TodoInitInput = {
+  type: 'todoInit'
+  items: string[]
+}
+
+// todoUpdate ツールの入力型
+export type TodoUpdateInput = {
+  type: 'todoUpdate'
+  updates: TodoItemUpdate[]
+}
+
+// invokeAgent ツールの入力型
+// _ 付きフィールドは呼び出し側が注入するメタデータで、モデルは生成しない。
+// toolInput の組み立て時は必ずモデル入力の後ろに展開すること（上書き防止）。
+export type InvokeAgentInput = {
+  type: 'invokeAgent'
+  agentId: string
+  task: string
+  context?: string
+  expectedOutput?: string
+  _agentId?: string
+  _mcpServers?: any[]
+  _delegationDepth?: number
+  _delegationLineage?: string[]
+  _allowedAgentIds?: string[]
+  _modelId?: string
+}
+
+// invokeAgent ツールの結果型（親モデルのコンテキストに入るため意図的にフラット）
+export type InvokeAgentResult = {
+  name: 'invokeAgent'
+  success: boolean
+  message: string
+  result: {
+    agentId: string
+    agentName: string
+    agentIcon?: string
+    agentIconColor?: string
+    task: string
+    finalText: string
+    truncated?: boolean
+    toolCallCount: number
+    toolNames: string[]
+    durationMs: number
+    depth: number
+    stoppedReason: 'completed' | 'maxToolExecutions'
+    usage?: {
+      inputTokens?: number
+      outputTokens?: number
+      totalTokens?: number
+      cacheReadInputTokens?: number
+      cacheWriteInputTokens?: number
+    }
+    sessionId: string
+  }
+  error?: string
+}
+
+// MCPツールの入力型
+export type McpToolInput = {
+  type: string // MCPツール名
+  // BackgroundAgentService用のメタデータ（オプション）
+  _agentId?: string
+  _mcpServers?: any[] // McpServerConfig[]だが循環依存回避のためanyを使用
+  [key: string]: any // MCPツールの任意のパラメータ
+}
+
+// ディスクリミネーテッドユニオン型
+export type ToolInput =
+  | CreateFolderInput
+  | ReadFilesInput
+  | WriteToFileInput
+  | ListFilesInput
+  | MoveFileInput
+  | CopyFileInput
+  | TavilySearchInput
+  | FetchWebsiteInput
+  | GenerateImageInput
+  | StartMovieGenerationInput
+  | CheckVideoStatusInput
+  | DownloadVideoInput
+  | RecognizeImageInput
+  | RetrieveInput
+  | InvokeBedrockAgentInput
+  | ExecuteCommandInput
+  | ApplyDiffEditInput
+  | ThinkInput
+  | ScreenCaptureInput
+  | CameraCaptureInput
+  | InvokeFlowInput
+  | CodeInterpreterInput
+  | DockerSandboxInput
+  | TodoInput
+  | TodoInitInput
+  | TodoUpdateInput
+  | InvokeAgentInput
+  | McpToolInput // MCPツール入力を追加
+
+// ツール名から入力型を取得するユーティリティ型
+export type ToolInputTypeMap = {
+  createFolder: CreateFolderInput
+  readFiles: ReadFilesInput
+  writeToFile: WriteToFileInput
+  listFiles: ListFilesInput
+  moveFile: MoveFileInput
+  copyFile: CopyFileInput
+  tavilySearch: TavilySearchInput
+  fetchWebsite: FetchWebsiteInput
+  generateImage: GenerateImageInput
+  generateVideo: StartMovieGenerationInput
+  checkVideoStatus: CheckVideoStatusInput
+  downloadVideo: DownloadVideoInput
+  recognizeImage: RecognizeImageInput
+  retrieve: RetrieveInput
+  invokeBedrockAgent: InvokeBedrockAgentInput
+  executeCommand: ExecuteCommandInput
+  applyDiffEdit: ApplyDiffEditInput
+  think: ThinkInput
+  screenCapture: ScreenCaptureInput
+  cameraCapture: CameraCaptureInput
+  invokeFlow: InvokeFlowInput
+  codeInterpreter: CodeInterpreterInput
+  dockerSandbox: DockerSandboxInput
+  todo: TodoInput
+  todoInit: TodoInitInput
+  todoUpdate: TodoUpdateInput
+  invokeAgent: InvokeAgentInput
+  [key: string]: any // MCPツールに対応するためのインデックスシグネチャ
+}

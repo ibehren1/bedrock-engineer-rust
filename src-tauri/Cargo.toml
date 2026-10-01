@@ -1,0 +1,33 @@
+[workspace]
+resolver = "2"
+members = [
+    "app",
+    "crates/store",
+    "crates/models",
+    "crates/bedrock",
+    "crates/tools",
+    "crates/docker",
+    "crates/mcp",
+    "crates/attachments",
+    "crates/common",
+    "crates/history",
+    "crates/agents",
+    "crates/background",
+    "crates/strands",
+]
+
+[workspace.package]
+version = "2026.930.0"
+edition = "2021"
+license = "MIT-0"
+authors = ["Isaac Behrens <ibehr@amazon.com>"]
+
+[workspace.dependencies]
+# devtools: View > Toggle Developer Tools works in release builds, as it did in Electron.
+tauri = { version = "=2.12.0", features = ["devtools"] }
+tauri-build = { version = "=2.7.0", features = [] }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = { version = "=1.0.151", features = ["preserve_order"] }
+thiserror = "=2.0.21"
+tempfile = "=3.27.0"
+dirs = "=6.0.0"

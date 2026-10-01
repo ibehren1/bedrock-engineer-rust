@@ -1,0 +1,24 @@
+[package]
+name = "common"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+serde_norway = "=0.9.42"
+regex = "=1.13.1"
+chrono = { version = "=0.4.45", default-features = false, features = ["clock", "std"] }
+tracing = "=0.1.44"
+tracing-subscriber = { version = "=0.3.23", default-features = false, features = ["std", "fmt", "registry", "ansi"] }
+tracing-appender = "=0.2.5"
+indexmap = { version = "=2.14.2", features = ["serde"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "=0.2.189"
+
+[dev-dependencies]
+tempfile.workspace = true

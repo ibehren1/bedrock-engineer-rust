@@ -1,0 +1,97 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Bedrock Engineer",
+  "version": "../../package.json",
+  "identifier": "com.bedrock-engineer",
+  "build": {
+    "frontendDist": "../../dist/renderer",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm run dev:renderer",
+    "beforeBuildCommand": "npm run build:renderer"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "create": false,
+        "title": "Bedrock Engineer",
+        "width": 1800,
+        "height": 1340,
+        "minWidth": 640,
+        "minHeight": 416,
+        "center": true,
+        "visible": false,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": {
+        "default-src": "'self'",
+        "script-src": "'self'",
+        "style-src": "'self' 'unsafe-inline'",
+        "img-src": "'self' data: blob: https:",
+        "font-src": "'self' data:",
+        "media-src": "'self' data: blob:",
+        "connect-src": "'self' ipc: http://ipc.localhost chathistory: http://chathistory.localhost",
+        "frame-src": "htmlpreview: http://htmlpreview.localhost https://*.codesandbox.io https://embed.diagrams.net",
+        "worker-src": "'self' blob:",
+        "object-src": "'none'",
+        "base-uri": "'self'",
+        "form-action": "'self'",
+        "frame-ancestors": "'none'"
+      },
+      "devCsp": {
+        "default-src": "'self'",
+        "script-src": "'self' 'unsafe-inline' http://localhost:5173",
+        "style-src": "'self' 'unsafe-inline' http://localhost:5173",
+        "img-src": "'self' data: blob: https: http://localhost:5173",
+        "font-src": "'self' data: http://localhost:5173",
+        "media-src": "'self' data: blob:",
+        "connect-src": "'self' ipc: http://ipc.localhost chathistory: http://chathistory.localhost http://localhost:5173 ws://localhost:5173",
+        "frame-src": "htmlpreview: http://htmlpreview.localhost https://*.codesandbox.io https://embed.diagrams.net",
+        "worker-src": "'self' blob: http://localhost:5173",
+        "object-src": "'none'",
+        "base-uri": "'self'",
+        "form-action": "'self'",
+        "frame-ancestors": "'none'"
+      },
+      "dangerousDisableAssetCspModification": ["style-src"]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "app",
+      "dmg",
+      "nsis",
+      "appimage",
+      "deb"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "bundle-resources/directory-agents/": "directory-agents/",
+      "bundle-resources/docs/USER_GUIDE.md": "docs/USER_GUIDE.md",
+      "bundle-resources/notices/": "notices/",
+      "bundle-resources/LICENSE": "LICENSE",
+      "bundle-resources/NOTICE": "NOTICE"
+    },
+    "publisher": "Isaac Behrens",
+    "copyright": "Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.",
+    "license": "MIT-0",
+    "licenseFile": "bundle-resources/installer-license.rtf",
+    "category": "Utility",
+    "shortDescription": "Autonomous AI agent desktop app powered by Amazon Bedrock",
+    "homepage": "https://github.com/aws-samples/bedrock-engineer",
+    "macOS": {
+      "signingIdentity": "-",
+      "hardenedRuntime": true,
+      "entitlements": "./entitlements.mac.plist"
+    }
+  }
+}

@@ -1,0 +1,47 @@
+id: shared-nova-sonic-voice-chat-mbjkfl02
+name: Nova Sonic Voice Chat
+description: Voice chat using Nova Sonic
+system: >-
+  You are a friend. The user and you will engage in a spoken
+
+  dialog exchanging the transcripts of a natural real-time conversation. Keep your responses short generally two or
+  three sentences for chatty scenarios.
+scenarios:
+  - title: Daily Check-in
+    content: Hey Nova! How's your day going so far?
+  - title: Seeking Advice
+    content: I'm feeling really stressed about this job interview tomorrow. Any tips to help me calm down?
+  - title: Sharing Excitement
+    content: Oh my gosh, you won't believe what just happened! I finally got tickets to that concert we talked about!
+  - title: Weekend Planning
+    content: I'm so bored this weekend. Got any fun ideas for what I could do?
+  - title: Relationship Talk
+    content: My friend has been acting weird lately and I'm not sure if I did something wrong. What do you think I should do?
+  - title: Celebrating Success
+    content: I just aced my final exam! I had to tell someone who'd understand how big this is for me.
+  - title: Random Chat
+    content: I just saw the funniest meme and it reminded me of our conversation yesterday. Want to hear about it?
+  - title: Comfort and Support
+    content: I'm having one of those days where everything feels overwhelming. Just need someone to talk to.
+tags:
+  - bedrock
+  - voice
+isCustom: true
+icon: parent
+iconColor: '#d2288e'
+tools:
+  - readFiles
+  - tavilySearch
+  - executeCommand
+category: all
+additionalInstruction: ''
+environmentContextSettings:
+  projectRule: false
+  visualExpressionRules: false
+mcpServers: []
+knowledgeBases: []
+allowedCommands: []
+bedrockAgents: []
+flows: []
+isShared: true
+author: daisuke-awaji

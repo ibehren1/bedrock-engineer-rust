@@ -1,0 +1,2396 @@
+{
+  "_generated": "by scripts/port/gen-models-json.mjs from src/common/models/models.ts; do not edit",
+  "textModels": [
+    {
+      "baseId": "claude-haiku-4-5-20251001-v1:0",
+      "name": "Claude Haiku 4.5",
+      "provider": "anthropic",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 64000,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "enabled"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "global",
+          "prefix": "global",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-1",
+            "us-west-2",
+            "eu-central-1",
+            "eu-central-2",
+            "eu-north-1",
+            "eu-south-1",
+            "eu-south-2",
+            "eu-west-1",
+            "eu-west-2",
+            "eu-west-3",
+            "ap-northeast-1",
+            "ap-northeast-2",
+            "ap-northeast-3",
+            "ap-south-1",
+            "ap-south-2",
+            "ap-southeast-1",
+            "ap-southeast-2",
+            "ap-southeast-3",
+            "ap-southeast-4",
+            "ca-central-1",
+            "sa-east-1"
+          ],
+          "displaySuffix": "(Global)"
+        },
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-1",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        },
+        {
+          "type": "regional-eu",
+          "prefix": "eu",
+          "regions": [
+            "eu-central-1",
+            "eu-central-2",
+            "eu-north-1",
+            "eu-south-1",
+            "eu-south-2",
+            "eu-west-1",
+            "eu-west-2",
+            "eu-west-3"
+          ],
+          "displaySuffix": "(EU)"
+        },
+        {
+          "type": "jp",
+          "prefix": "jp",
+          "regions": [
+            "ap-northeast-1",
+            "ap-northeast-3"
+          ],
+          "displaySuffix": "(JP)"
+        }
+      ],
+      "pricing": {
+        "input": 0.001,
+        "output": 0.005,
+        "cacheRead": 0.0001,
+        "cacheWrite": 0.00125
+      },
+      "cache": {
+        "supported": true,
+        "cacheableFields": [
+          "messages",
+          "system",
+          "tools"
+        ]
+      }
+    },
+    {
+      "baseId": "claude-opus-4-1-20250805-v1:0",
+      "name": "Claude Opus 4.1",
+      "provider": "anthropic",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 32000,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "enabled"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        }
+      ],
+      "pricing": {
+        "input": 0.015,
+        "output": 0.075,
+        "cacheRead": 0.0015,
+        "cacheWrite": 0.01875
+      },
+      "cache": {
+        "supported": true,
+        "cacheableFields": [
+          "messages",
+          "system",
+          "tools"
+        ]
+      }
+    },
+    {
+      "baseId": "claude-sonnet-4-20250514-v1:0",
+      "name": "Claude Sonnet 4",
+      "provider": "anthropic",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 64000,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "enabled"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        }
+      ],
+      "pricing": {
+        "input": 0.003,
+        "output": 0.015,
+        "cacheRead": 0.0003,
+        "cacheWrite": 0.00375
+      },
+      "cache": {
+        "supported": true,
+        "cacheableFields": [
+          "messages",
+          "system",
+          "tools"
+        ]
+      }
+    },
+    {
+      "baseId": "claude-opus-4-20250514-v1:0",
+      "name": "Claude Opus 4",
+      "provider": "anthropic",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 32000,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "enabled"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        }
+      ],
+      "pricing": {
+        "input": 0.015,
+        "output": 0.075,
+        "cacheRead": 0.0015,
+        "cacheWrite": 0.01875
+      },
+      "cache": {
+        "supported": true,
+        "cacheableFields": [
+          "messages",
+          "system",
+          "tools"
+        ]
+      }
+    },
+    {
+      "baseId": "claude-sonnet-4-5-20250929-v1:0",
+      "name": "Claude Sonnet 4.5",
+      "provider": "anthropic",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 64000,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "enabled"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "jp",
+          "prefix": "jp",
+          "regions": [
+            "ap-northeast-1",
+            "ap-northeast-3"
+          ],
+          "displaySuffix": "(JP)"
+        },
+        {
+          "type": "global",
+          "prefix": "global",
+          "regions": [
+            "us-west-2",
+            "us-east-1",
+            "us-east-2",
+            "eu-west-1",
+            "ap-northeast-1"
+          ],
+          "displaySuffix": "(Global)"
+        },
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-1",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        },
+        {
+          "type": "regional-eu",
+          "prefix": "eu",
+          "regions": [
+            "eu-central-1",
+            "eu-central-2",
+            "eu-north-1",
+            "eu-south-1",
+            "eu-south-2",
+            "eu-west-1",
+            "eu-west-2",
+            "eu-west-3"
+          ],
+          "displaySuffix": "(EU)"
+        }
+      ],
+      "pricing": {
+        "input": 0.003,
+        "output": 0.015,
+        "cacheRead": 0.0003,
+        "cacheWrite": 0.00375
+      },
+      "cache": {
+        "supported": true,
+        "cacheableFields": [
+          "messages",
+          "system",
+          "tools"
+        ]
+      }
+    },
+    {
+      "baseId": "claude-sonnet-4-6",
+      "name": "Claude Sonnet 4.6",
+      "provider": "anthropic",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 64000,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "adaptive"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "jp",
+          "prefix": "jp",
+          "regions": [
+            "ap-northeast-1",
+            "ap-northeast-3"
+          ],
+          "displaySuffix": "(JP)"
+        },
+        {
+          "type": "global",
+          "prefix": "global",
+          "regions": [
+            "us-west-2",
+            "us-east-1",
+            "us-east-2",
+            "eu-west-1",
+            "ap-northeast-1"
+          ],
+          "displaySuffix": "(Global)"
+        },
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-1",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        },
+        {
+          "type": "regional-eu",
+          "prefix": "eu",
+          "regions": [
+            "eu-central-1",
+            "eu-central-2",
+            "eu-north-1",
+            "eu-south-1",
+            "eu-south-2",
+            "eu-west-1",
+            "eu-west-2",
+            "eu-west-3"
+          ],
+          "displaySuffix": "(EU)"
+        }
+      ],
+      "pricing": {
+        "input": 0.003,
+        "output": 0.015,
+        "cacheRead": 0.0003,
+        "cacheWrite": 0.00375
+      },
+      "cache": {
+        "supported": true,
+        "cacheableFields": [
+          "messages",
+          "system",
+          "tools"
+        ]
+      }
+    },
+    {
+      "baseId": "claude-sonnet-5",
+      "name": "Claude Sonnet 5",
+      "provider": "anthropic",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 128000,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "adaptive"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "global",
+          "prefix": "global",
+          "regions": [
+            "us-west-2",
+            "us-east-1",
+            "us-east-2",
+            "eu-west-1",
+            "ap-northeast-1"
+          ],
+          "displaySuffix": "(Global)"
+        },
+        {
+          "type": "jp",
+          "prefix": "jp",
+          "regions": [
+            "ap-northeast-1",
+            "ap-northeast-3"
+          ],
+          "displaySuffix": "(JP)"
+        },
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-1",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        },
+        {
+          "type": "regional-eu",
+          "prefix": "eu",
+          "regions": [
+            "eu-central-1",
+            "eu-central-2",
+            "eu-north-1",
+            "eu-south-1",
+            "eu-south-2",
+            "eu-west-1",
+            "eu-west-2",
+            "eu-west-3"
+          ],
+          "displaySuffix": "(EU)"
+        }
+      ],
+      "pricing": {
+        "input": 0.002,
+        "output": 0.01,
+        "cacheRead": 0.0002,
+        "cacheWrite": 0.0025
+      },
+      "cache": {
+        "supported": true,
+        "cacheableFields": [
+          "messages",
+          "system",
+          "tools"
+        ]
+      }
+    },
+    {
+      "baseId": "claude-sonnet-5-5",
+      "name": "Claude Sonnet 5.5",
+      "provider": "anthropic",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 128000,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "adaptive"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "global",
+          "prefix": "global",
+          "regions": [
+            "us-west-2",
+            "us-east-1",
+            "us-east-2",
+            "eu-west-1",
+            "ap-northeast-1"
+          ],
+          "displaySuffix": "(Global)"
+        },
+        {
+          "type": "jp",
+          "prefix": "jp",
+          "regions": [
+            "ap-northeast-1",
+            "ap-northeast-3"
+          ],
+          "displaySuffix": "(JP)"
+        },
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-1",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        },
+        {
+          "type": "regional-eu",
+          "prefix": "eu",
+          "regions": [
+            "eu-central-1",
+            "eu-central-2",
+            "eu-north-1",
+            "eu-south-1",
+            "eu-south-2",
+            "eu-west-1",
+            "eu-west-2",
+            "eu-west-3"
+          ],
+          "displaySuffix": "(EU)"
+        }
+      ],
+      "pricing": {
+        "input": 0.002,
+        "output": 0.01,
+        "cacheRead": 0.0002,
+        "cacheWrite": 0.0025
+      },
+      "cache": {
+        "supported": true,
+        "cacheableFields": [
+          "messages",
+          "system",
+          "tools"
+        ]
+      }
+    },
+    {
+      "baseId": "claude-opus-4-6-v1",
+      "name": "Claude Opus 4.6",
+      "provider": "anthropic",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 128000,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "adaptive"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "global",
+          "prefix": "global",
+          "regions": [
+            "us-west-2",
+            "us-east-1",
+            "us-east-2",
+            "eu-west-1",
+            "ap-northeast-1"
+          ],
+          "displaySuffix": "(Global)"
+        },
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-1",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        }
+      ],
+      "pricing": {
+        "input": 0.005,
+        "output": 0.025,
+        "cacheRead": 0.0005,
+        "cacheWrite": 0.00625
+      },
+      "cache": {
+        "supported": true,
+        "cacheableFields": [
+          "messages",
+          "system",
+          "tools"
+        ]
+      }
+    },
+    {
+      "baseId": "claude-opus-4-7",
+      "name": "Claude Opus 4.7",
+      "provider": "anthropic",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 128000,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "adaptive"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "global",
+          "prefix": "global",
+          "regions": [
+            "us-west-2",
+            "us-east-1",
+            "us-east-2",
+            "eu-west-1",
+            "ap-northeast-1"
+          ],
+          "displaySuffix": "(Global)"
+        },
+        {
+          "type": "jp",
+          "prefix": "jp",
+          "regions": [
+            "ap-northeast-1",
+            "ap-northeast-3"
+          ],
+          "displaySuffix": "(JP)"
+        },
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-1",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        }
+      ],
+      "pricing": {
+        "input": 0.005,
+        "output": 0.025,
+        "cacheRead": 0.0005,
+        "cacheWrite": 0.00625
+      },
+      "cache": {
+        "supported": true,
+        "cacheableFields": [
+          "messages",
+          "system",
+          "tools"
+        ]
+      }
+    },
+    {
+      "baseId": "claude-opus-4-8",
+      "name": "Claude Opus 4.8",
+      "provider": "anthropic",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 128000,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "adaptive"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "global",
+          "prefix": "global",
+          "regions": [
+            "us-west-2",
+            "us-east-1",
+            "us-east-2",
+            "eu-west-1",
+            "ap-northeast-1"
+          ],
+          "displaySuffix": "(Global)"
+        },
+        {
+          "type": "jp",
+          "prefix": "jp",
+          "regions": [
+            "ap-northeast-1",
+            "ap-northeast-3"
+          ],
+          "displaySuffix": "(JP)"
+        },
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-1",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        }
+      ],
+      "pricing": {
+        "input": 0.005,
+        "output": 0.025,
+        "cacheRead": 0.0005,
+        "cacheWrite": 0.00625
+      },
+      "cache": {
+        "supported": true,
+        "cacheableFields": [
+          "messages",
+          "system",
+          "tools"
+        ]
+      }
+    },
+    {
+      "baseId": "claude-opus-5",
+      "name": "Claude Opus 5",
+      "provider": "anthropic",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 128000,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "adaptive"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "global",
+          "prefix": "global",
+          "regions": [
+            "us-west-2",
+            "us-east-1",
+            "us-east-2",
+            "eu-west-1",
+            "ap-northeast-1"
+          ],
+          "displaySuffix": "(Global)"
+        },
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-1",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        },
+        {
+          "type": "regional-eu",
+          "prefix": "eu",
+          "regions": [
+            "eu-central-1",
+            "eu-central-2",
+            "eu-north-1",
+            "eu-south-1",
+            "eu-south-2",
+            "eu-west-1",
+            "eu-west-2",
+            "eu-west-3"
+          ],
+          "displaySuffix": "(EU)"
+        }
+      ],
+      "pricing": {
+        "input": 0.005,
+        "output": 0.025,
+        "cacheRead": 0.0005,
+        "cacheWrite": 0.00625
+      },
+      "cache": {
+        "supported": true,
+        "cacheableFields": [
+          "messages",
+          "system",
+          "tools"
+        ]
+      }
+    },
+    {
+      "baseId": "claude-opus-5-5",
+      "name": "Claude Opus 5.5",
+      "provider": "anthropic",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 128000,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "adaptive"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "global",
+          "prefix": "global",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-1",
+            "us-west-2",
+            "ca-central-1",
+            "eu-central-1",
+            "eu-central-2",
+            "eu-north-1",
+            "eu-south-1",
+            "eu-south-2",
+            "eu-west-1",
+            "eu-west-2",
+            "eu-west-3",
+            "ap-northeast-1",
+            "ap-northeast-2",
+            "ap-northeast-3",
+            "ap-south-1",
+            "ap-south-2",
+            "ap-southeast-1",
+            "ap-southeast-2",
+            "ap-southeast-3",
+            "ap-southeast-4",
+            "sa-east-1"
+          ],
+          "displaySuffix": "(Global)"
+        },
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-1",
+            "us-west-2",
+            "ca-central-1"
+          ],
+          "displaySuffix": "(US)"
+        },
+        {
+          "type": "regional-eu",
+          "prefix": "eu",
+          "regions": [
+            "eu-central-1",
+            "eu-central-2",
+            "eu-north-1",
+            "eu-south-1",
+            "eu-south-2",
+            "eu-west-1",
+            "eu-west-2",
+            "eu-west-3"
+          ],
+          "displaySuffix": "(EU)"
+        },
+        {
+          "type": "jp",
+          "prefix": "jp",
+          "regions": [
+            "ap-northeast-1",
+            "ap-northeast-3"
+          ],
+          "displaySuffix": "(JP)"
+        }
+      ],
+      "pricing": {
+        "input": 0.004,
+        "output": 0.02,
+        "cacheRead": 0.0004,
+        "cacheWrite": 0.005
+      },
+      "cache": {
+        "supported": true,
+        "cacheableFields": [
+          "messages",
+          "system",
+          "tools"
+        ]
+      }
+    },
+    {
+      "baseId": "claude-fable-5",
+      "name": "Claude Fable 5",
+      "provider": "anthropic",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 128000,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "adaptive"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "global",
+          "prefix": "global",
+          "regions": [
+            "us-west-2",
+            "us-east-1",
+            "us-east-2",
+            "eu-west-1",
+            "eu-central-1",
+            "ap-northeast-1",
+            "ap-northeast-3",
+            "ap-southeast-1",
+            "ap-southeast-2"
+          ],
+          "displaySuffix": "(Global)"
+        },
+        {
+          "type": "regional-eu",
+          "prefix": "eu",
+          "regions": [
+            "eu-north-1",
+            "eu-west-3",
+            "eu-south-1",
+            "eu-south-2",
+            "eu-west-1",
+            "eu-central-1"
+          ],
+          "displaySuffix": "(EU)"
+        },
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-1",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        }
+      ],
+      "pricing": {
+        "input": 0.01,
+        "output": 0.05,
+        "cacheRead": 0.001,
+        "cacheWrite": 0.0125
+      },
+      "cache": {
+        "supported": true,
+        "cacheableFields": [
+          "messages",
+          "system",
+          "tools"
+        ]
+      }
+    },
+    {
+      "baseId": "claude-fable-5-1",
+      "name": "Claude Fable 5.1",
+      "provider": "anthropic",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 128000,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "adaptive"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "global",
+          "prefix": "global",
+          "regions": [
+            "us-west-2",
+            "us-east-1",
+            "us-east-2",
+            "eu-west-1",
+            "eu-central-1",
+            "ap-northeast-1",
+            "ap-northeast-3",
+            "ap-southeast-1",
+            "ap-southeast-2"
+          ],
+          "displaySuffix": "(Global)"
+        },
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1"
+          ],
+          "displaySuffix": "(US)"
+        }
+      ],
+      "pricing": {
+        "input": 0.01,
+        "output": 0.05,
+        "cacheRead": 0.001,
+        "cacheWrite": 0.0125
+      },
+      "cache": {
+        "supported": true,
+        "cacheableFields": [
+          "messages",
+          "system",
+          "tools"
+        ]
+      }
+    },
+    {
+      "baseId": "nova-premier-v1:0",
+      "name": "Amazon Nova Premier",
+      "provider": "amazon",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 32000,
+      "inferenceProfiles": [
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        }
+      ]
+    },
+    {
+      "baseId": "nova-pro-v1:0",
+      "name": "Amazon Nova Pro",
+      "provider": "amazon",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 5120,
+      "inferenceProfiles": [
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        },
+        {
+          "type": "regional-eu",
+          "prefix": "eu",
+          "regions": [
+            "eu-central-1",
+            "eu-north-1",
+            "eu-south-1",
+            "eu-west-1",
+            "eu-west-3"
+          ],
+          "displaySuffix": "(EU)"
+        },
+        {
+          "type": "regional-apac",
+          "prefix": "apac",
+          "regions": [
+            "ap-northeast-1",
+            "ap-northeast-2",
+            "ap-south-1",
+            "ap-southeast-1",
+            "ap-southeast-2"
+          ],
+          "displaySuffix": "(APAC)"
+        }
+      ],
+      "pricing": {
+        "input": 0.0008,
+        "output": 0.0032,
+        "cacheRead": 0.0002,
+        "cacheWrite": 0
+      },
+      "cache": {
+        "supported": true,
+        "cacheableFields": [
+          "messages",
+          "system"
+        ]
+      }
+    },
+    {
+      "baseId": "nova-lite-v1:0",
+      "name": "Amazon Nova Lite",
+      "provider": "amazon",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 5120,
+      "inferenceProfiles": [
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        },
+        {
+          "type": "regional-eu",
+          "prefix": "eu",
+          "regions": [
+            "eu-central-1",
+            "eu-north-1",
+            "eu-south-1",
+            "eu-south-2",
+            "eu-west-3"
+          ],
+          "displaySuffix": "(EU)"
+        },
+        {
+          "type": "regional-apac",
+          "prefix": "apac",
+          "regions": [
+            "ap-northeast-1",
+            "ap-northeast-2",
+            "ap-south-1",
+            "ap-southeast-1",
+            "ap-southeast-2"
+          ],
+          "displaySuffix": "(APAC)"
+        }
+      ],
+      "pricing": {
+        "input": 0.00006,
+        "output": 0.00024,
+        "cacheRead": 0.000015,
+        "cacheWrite": 0
+      },
+      "cache": {
+        "supported": true,
+        "cacheableFields": [
+          "messages",
+          "system"
+        ]
+      }
+    },
+    {
+      "baseId": "nova-2-lite-v1:0",
+      "name": "Amazon Nova 2 Lite",
+      "provider": "amazon",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 64000,
+      "inferenceProfiles": [
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        },
+        {
+          "type": "global",
+          "prefix": "global",
+          "regions": [
+            "us-east-1",
+            "us-west-2"
+          ],
+          "displaySuffix": "(Global)"
+        }
+      ]
+    },
+    {
+      "baseId": "nova-micro-v1:0",
+      "name": "Amazon Nova Micro",
+      "provider": "amazon",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 5120,
+      "inferenceProfiles": [
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        },
+        {
+          "type": "regional-eu",
+          "prefix": "eu",
+          "regions": [
+            "eu-central-1",
+            "eu-north-1",
+            "eu-south-1",
+            "eu-south-2",
+            "eu-west-3"
+          ],
+          "displaySuffix": "(EU)"
+        },
+        {
+          "type": "regional-apac",
+          "prefix": "apac",
+          "regions": [
+            "ap-northeast-1",
+            "ap-northeast-2",
+            "ap-south-1",
+            "ap-southeast-1",
+            "ap-southeast-2"
+          ],
+          "displaySuffix": "(APAC)"
+        }
+      ],
+      "pricing": {
+        "input": 0.000035,
+        "output": 0.00014,
+        "cacheRead": 0.00000875,
+        "cacheWrite": 0
+      },
+      "cache": {
+        "supported": true,
+        "cacheableFields": [
+          "messages",
+          "system"
+        ]
+      }
+    },
+    {
+      "baseId": "r1-v1:0",
+      "name": "DeepSeek R1",
+      "provider": "deepseek",
+      "category": "text",
+      "toolUse": false,
+      "maxTokensLimit": 32768,
+      "inferenceProfiles": [
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        }
+      ]
+    },
+    {
+      "baseId": "gpt-6-astra",
+      "name": "GPT-6 Astra",
+      "provider": "openai",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 128000,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "enabled"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "global",
+          "prefix": "global",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(Global)"
+        },
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        }
+      ],
+      "pricing": {
+        "input": 0.011,
+        "output": 0.055,
+        "cacheRead": 0.0011,
+        "cacheWrite": 0.01375
+      }
+    },
+    {
+      "baseId": "gpt-6.1-sol",
+      "name": "GPT-6.1 Sol",
+      "provider": "openai",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 131072,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "enabled"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        }
+      ],
+      "pricing": {
+        "input": 0.0022,
+        "output": 0.011,
+        "cacheRead": 0.00011,
+        "cacheWrite": 0.00275
+      }
+    },
+    {
+      "baseId": "gpt-6-sol",
+      "name": "GPT-6 Sol",
+      "provider": "openai",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 128000,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "enabled"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "global",
+          "prefix": "global",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(Global)"
+        },
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        }
+      ],
+      "pricing": {
+        "input": 0.002,
+        "output": 0.01,
+        "cacheRead": 0.0002,
+        "cacheWrite": 0.0025
+      }
+    },
+    {
+      "baseId": "gpt-6-luna",
+      "name": "GPT-6 Luna",
+      "provider": "openai",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 128000,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "enabled"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "global",
+          "prefix": "global",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(Global)"
+        },
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        }
+      ],
+      "pricing": {
+        "input": 0.0001,
+        "output": 0.0005,
+        "cacheRead": 0.00001,
+        "cacheWrite": 0.000125
+      }
+    },
+    {
+      "baseId": "gpt-5.6-sol",
+      "name": "GPT-5.6 Sol",
+      "provider": "openai",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 128000,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "enabled"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "global",
+          "prefix": "global",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(Global)"
+        },
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        }
+      ],
+      "pricing": {
+        "input": 0.0055,
+        "output": 0.033,
+        "cacheRead": 0.00055,
+        "cacheWrite": 0.00688
+      }
+    },
+    {
+      "baseId": "gpt-5.6-terra",
+      "name": "GPT-5.6 Terra",
+      "provider": "openai",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 128000,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "enabled"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "global",
+          "prefix": "global",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(Global)"
+        },
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        }
+      ],
+      "pricing": {
+        "input": 0.0022,
+        "output": 0.0132,
+        "cacheRead": 0.00022,
+        "cacheWrite": 0.00275
+      }
+    },
+    {
+      "baseId": "gpt-5.6-luna",
+      "name": "GPT-5.6 Luna",
+      "provider": "openai",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 128000,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "enabled"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "global",
+          "prefix": "global",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(Global)"
+        },
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        }
+      ],
+      "pricing": {
+        "input": 0.00022,
+        "output": 0.00132,
+        "cacheRead": 0.000022,
+        "cacheWrite": 0.000275
+      }
+    },
+    {
+      "baseId": "gpt-oss-120b-1:0",
+      "name": "GPT-OSS 120B",
+      "provider": "openai",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 16384,
+      "supportsThinking": false,
+      "inferenceProfiles": [
+        {
+          "type": "base",
+          "regions": [
+            "us-west-2"
+          ]
+        }
+      ],
+      "pricing": {
+        "input": 0.0001545,
+        "output": 0.000618,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    {
+      "baseId": "gpt-oss-20b-1:0",
+      "name": "GPT-OSS 20B",
+      "provider": "openai",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 16384,
+      "supportsThinking": false,
+      "inferenceProfiles": [
+        {
+          "type": "base",
+          "regions": [
+            "us-west-2"
+          ]
+        }
+      ],
+      "pricing": {
+        "input": 0.0000721,
+        "output": 0.000309,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    {
+      "baseId": "kimi-k3",
+      "name": "Kimi K3",
+      "provider": "moonshotai",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 16384,
+      "supportsThinking": false,
+      "inferenceProfiles": [
+        {
+          "type": "global",
+          "prefix": "global",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-1",
+            "us-west-2",
+            "ca-central-1",
+            "eu-central-1",
+            "eu-central-2",
+            "eu-north-1",
+            "eu-south-1",
+            "eu-south-2",
+            "eu-west-1",
+            "eu-west-2",
+            "eu-west-3",
+            "ap-northeast-1",
+            "ap-northeast-2",
+            "ap-northeast-3",
+            "ap-south-1",
+            "ap-south-2",
+            "ap-southeast-1",
+            "ap-southeast-2",
+            "ap-southeast-3",
+            "ap-southeast-4",
+            "sa-east-1"
+          ],
+          "displaySuffix": "(Global)"
+        },
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-1",
+            "us-west-2",
+            "ca-central-1"
+          ],
+          "displaySuffix": "(US)"
+        }
+      ],
+      "pricing": {
+        "input": 0.0033,
+        "output": 0.0165,
+        "cacheRead": 0.00033,
+        "cacheWrite": 0
+      }
+    },
+    {
+      "baseId": "kimi-k2.5",
+      "name": "Kimi K2.5",
+      "provider": "moonshotai",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 16384,
+      "supportsThinking": false,
+      "inferenceProfiles": [
+        {
+          "type": "base",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2",
+            "eu-north-1",
+            "eu-west-2",
+            "ap-northeast-1",
+            "ap-south-1",
+            "ap-southeast-2",
+            "ap-southeast-3",
+            "ap-southeast-4",
+            "sa-east-1"
+          ]
+        }
+      ],
+      "pricing": {
+        "input": 0.0006,
+        "output": 0.003,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    {
+      "baseId": "grok-4.6",
+      "name": "Grok 4.6",
+      "provider": "xai",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 32768,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "enabled"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "global",
+          "prefix": "global",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-1",
+            "us-west-2",
+            "ca-central-1",
+            "eu-central-1",
+            "eu-central-2",
+            "eu-north-1",
+            "eu-south-1",
+            "eu-south-2",
+            "eu-west-1",
+            "eu-west-2",
+            "eu-west-3",
+            "ap-northeast-1",
+            "ap-northeast-2",
+            "ap-northeast-3",
+            "ap-south-1",
+            "ap-south-2",
+            "ap-southeast-1",
+            "ap-southeast-2",
+            "sa-east-1"
+          ],
+          "displaySuffix": "(Global)"
+        },
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-1",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        }
+      ],
+      "pricing": {
+        "input": 0.0022,
+        "output": 0.0066,
+        "cacheRead": 0.00055,
+        "cacheWrite": 0
+      }
+    },
+    {
+      "baseId": "grok-4.7",
+      "name": "Grok 4.7",
+      "provider": "xai",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 32768,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "enabled"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "global",
+          "prefix": "global",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-1",
+            "us-west-2",
+            "ca-central-1",
+            "eu-central-1",
+            "eu-central-2",
+            "eu-north-1",
+            "eu-south-1",
+            "eu-south-2",
+            "eu-west-1",
+            "eu-west-2",
+            "eu-west-3",
+            "ap-northeast-1",
+            "ap-northeast-2",
+            "ap-northeast-3",
+            "ap-south-1",
+            "ap-south-2",
+            "ap-southeast-1",
+            "ap-southeast-2",
+            "ap-southeast-3",
+            "ap-southeast-4",
+            "sa-east-1"
+          ],
+          "displaySuffix": "(Global)"
+        },
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-1",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        }
+      ],
+      "pricing": {
+        "input": 0.002,
+        "output": 0.006,
+        "cacheRead": 0.0005,
+        "cacheWrite": 0
+      }
+    }
+  ],
+  "imageModels": [
+    {
+      "baseId": "stability.sd3-5-large-v1:0",
+      "name": "Stability SD3.5 Large",
+      "provider": "stability",
+      "category": "image",
+      "toolUse": false,
+      "maxTokensLimit": 0,
+      "inferenceProfiles": [
+        {
+          "type": "base",
+          "regions": [
+            "us-west-2"
+          ]
+        }
+      ]
+    },
+    {
+      "baseId": "stability.sd3-large-v1:0",
+      "name": "Stability SD3 Large",
+      "provider": "stability",
+      "category": "image",
+      "toolUse": false,
+      "maxTokensLimit": 0,
+      "inferenceProfiles": [
+        {
+          "type": "base",
+          "regions": [
+            "us-west-2"
+          ]
+        }
+      ]
+    },
+    {
+      "baseId": "stability.stable-image-core-v1:0",
+      "name": "Stability Stable Image Core v1.0",
+      "provider": "stability",
+      "category": "image",
+      "toolUse": false,
+      "maxTokensLimit": 0,
+      "inferenceProfiles": [
+        {
+          "type": "base",
+          "regions": [
+            "us-west-2"
+          ]
+        }
+      ]
+    },
+    {
+      "baseId": "stability.stable-image-core-v1:1",
+      "name": "Stability Stable Image Core v1.1",
+      "provider": "stability",
+      "category": "image",
+      "toolUse": false,
+      "maxTokensLimit": 0,
+      "inferenceProfiles": [
+        {
+          "type": "base",
+          "regions": [
+            "us-west-2"
+          ]
+        }
+      ]
+    },
+    {
+      "baseId": "stability.stable-image-ultra-v1:0",
+      "name": "Stability Stable Image Ultra v1.0",
+      "provider": "stability",
+      "category": "image",
+      "toolUse": false,
+      "maxTokensLimit": 0,
+      "inferenceProfiles": [
+        {
+          "type": "base",
+          "regions": [
+            "us-west-2"
+          ]
+        }
+      ]
+    },
+    {
+      "baseId": "stability.stable-image-ultra-v1:1",
+      "name": "Stability Stable Image Ultra v1.1",
+      "provider": "stability",
+      "category": "image",
+      "toolUse": false,
+      "maxTokensLimit": 0,
+      "inferenceProfiles": [
+        {
+          "type": "base",
+          "regions": [
+            "us-west-2"
+          ]
+        }
+      ]
+    },
+    {
+      "baseId": "amazon.nova-canvas-v1:0",
+      "name": "Amazon Nova Canvas",
+      "provider": "amazon",
+      "category": "image",
+      "toolUse": false,
+      "maxTokensLimit": 0,
+      "inferenceProfiles": [
+        {
+          "type": "base",
+          "regions": [
+            "us-east-1",
+            "ap-northeast-1",
+            "eu-west-1"
+          ]
+        }
+      ]
+    },
+    {
+      "baseId": "amazon.titan-image-generator-v2:0",
+      "name": "Amazon Titan Image Generator v2",
+      "provider": "amazon",
+      "category": "image",
+      "toolUse": false,
+      "maxTokensLimit": 0,
+      "inferenceProfiles": [
+        {
+          "type": "base",
+          "regions": [
+            "us-east-1",
+            "us-west-2"
+          ]
+        }
+      ]
+    },
+    {
+      "baseId": "amazon.titan-image-generator-v1",
+      "name": "Amazon Titan Image Generator v1",
+      "provider": "amazon",
+      "category": "image",
+      "toolUse": false,
+      "maxTokensLimit": 0,
+      "inferenceProfiles": [
+        {
+          "type": "base",
+          "regions": [
+            "us-east-1",
+            "us-west-2",
+            "eu-west-1",
+            "eu-west-2",
+            "ap-south-1"
+          ]
+        }
+      ]
+    }
+  ],
+  "regionOrder": {
+    "ap-northeast-1": [
+      "apac.amazon.nova-lite-v1:0",
+      "apac.amazon.nova-micro-v1:0",
+      "apac.amazon.nova-pro-v1:0",
+      "global.anthropic.claude-fable-5",
+      "global.anthropic.claude-fable-5-1",
+      "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "jp.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "global.anthropic.claude-opus-4-6-v1",
+      "global.anthropic.claude-opus-4-7",
+      "jp.anthropic.claude-opus-4-7",
+      "global.anthropic.claude-opus-4-8",
+      "jp.anthropic.claude-opus-4-8",
+      "global.anthropic.claude-opus-5",
+      "global.anthropic.claude-opus-5-5",
+      "jp.anthropic.claude-opus-5-5",
+      "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+      "jp.anthropic.claude-sonnet-4-5-20250929-v1:0",
+      "global.anthropic.claude-sonnet-4-6",
+      "jp.anthropic.claude-sonnet-4-6",
+      "global.anthropic.claude-sonnet-5",
+      "jp.anthropic.claude-sonnet-5",
+      "global.anthropic.claude-sonnet-5-5",
+      "jp.anthropic.claude-sonnet-5-5",
+      "global.xai.grok-4.6",
+      "global.xai.grok-4.7",
+      "moonshotai.kimi-k2.5",
+      "global.moonshotai.kimi-k3"
+    ],
+    "ap-northeast-2": [
+      "apac.amazon.nova-lite-v1:0",
+      "apac.amazon.nova-micro-v1:0",
+      "apac.amazon.nova-pro-v1:0",
+      "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "global.anthropic.claude-opus-5-5",
+      "global.xai.grok-4.6",
+      "global.xai.grok-4.7",
+      "global.moonshotai.kimi-k3"
+    ],
+    "ap-northeast-3": [
+      "global.anthropic.claude-fable-5",
+      "global.anthropic.claude-fable-5-1",
+      "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "jp.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "jp.anthropic.claude-opus-4-7",
+      "jp.anthropic.claude-opus-4-8",
+      "global.anthropic.claude-opus-5-5",
+      "jp.anthropic.claude-opus-5-5",
+      "jp.anthropic.claude-sonnet-4-5-20250929-v1:0",
+      "jp.anthropic.claude-sonnet-4-6",
+      "jp.anthropic.claude-sonnet-5",
+      "jp.anthropic.claude-sonnet-5-5",
+      "global.xai.grok-4.6",
+      "global.xai.grok-4.7",
+      "global.moonshotai.kimi-k3"
+    ],
+    "ap-south-1": [
+      "apac.amazon.nova-lite-v1:0",
+      "apac.amazon.nova-micro-v1:0",
+      "apac.amazon.nova-pro-v1:0",
+      "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "global.anthropic.claude-opus-5-5",
+      "global.xai.grok-4.6",
+      "global.xai.grok-4.7",
+      "moonshotai.kimi-k2.5",
+      "global.moonshotai.kimi-k3"
+    ],
+    "ap-south-2": [
+      "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "global.anthropic.claude-opus-5-5",
+      "global.xai.grok-4.6",
+      "global.xai.grok-4.7",
+      "global.moonshotai.kimi-k3"
+    ],
+    "ap-southeast-1": [
+      "apac.amazon.nova-lite-v1:0",
+      "apac.amazon.nova-micro-v1:0",
+      "apac.amazon.nova-pro-v1:0",
+      "global.anthropic.claude-fable-5",
+      "global.anthropic.claude-fable-5-1",
+      "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "global.anthropic.claude-opus-5-5",
+      "global.xai.grok-4.6",
+      "global.xai.grok-4.7",
+      "global.moonshotai.kimi-k3"
+    ],
+    "ap-southeast-2": [
+      "apac.amazon.nova-lite-v1:0",
+      "apac.amazon.nova-micro-v1:0",
+      "apac.amazon.nova-pro-v1:0",
+      "global.anthropic.claude-fable-5",
+      "global.anthropic.claude-fable-5-1",
+      "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "global.anthropic.claude-opus-5-5",
+      "global.xai.grok-4.6",
+      "global.xai.grok-4.7",
+      "moonshotai.kimi-k2.5",
+      "global.moonshotai.kimi-k3"
+    ],
+    "ap-southeast-3": [
+      "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "global.anthropic.claude-opus-5-5",
+      "global.xai.grok-4.7",
+      "moonshotai.kimi-k2.5",
+      "global.moonshotai.kimi-k3"
+    ],
+    "ap-southeast-4": [
+      "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "global.anthropic.claude-opus-5-5",
+      "global.xai.grok-4.7",
+      "moonshotai.kimi-k2.5",
+      "global.moonshotai.kimi-k3"
+    ],
+    "ca-central-1": [
+      "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "global.anthropic.claude-opus-5-5",
+      "us.anthropic.claude-opus-5-5",
+      "global.xai.grok-4.6",
+      "global.xai.grok-4.7",
+      "global.moonshotai.kimi-k3",
+      "us.moonshotai.kimi-k3"
+    ],
+    "eu-central-1": [
+      "eu.amazon.nova-lite-v1:0",
+      "eu.amazon.nova-micro-v1:0",
+      "eu.amazon.nova-pro-v1:0",
+      "eu.anthropic.claude-fable-5",
+      "global.anthropic.claude-fable-5",
+      "global.anthropic.claude-fable-5-1",
+      "eu.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "eu.anthropic.claude-opus-5",
+      "eu.anthropic.claude-opus-5-5",
+      "global.anthropic.claude-opus-5-5",
+      "eu.anthropic.claude-sonnet-4-5-20250929-v1:0",
+      "eu.anthropic.claude-sonnet-4-6",
+      "eu.anthropic.claude-sonnet-5",
+      "eu.anthropic.claude-sonnet-5-5",
+      "global.xai.grok-4.6",
+      "global.xai.grok-4.7",
+      "global.moonshotai.kimi-k3"
+    ],
+    "eu-central-2": [
+      "eu.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "eu.anthropic.claude-opus-5",
+      "eu.anthropic.claude-opus-5-5",
+      "global.anthropic.claude-opus-5-5",
+      "eu.anthropic.claude-sonnet-4-5-20250929-v1:0",
+      "eu.anthropic.claude-sonnet-4-6",
+      "eu.anthropic.claude-sonnet-5",
+      "eu.anthropic.claude-sonnet-5-5",
+      "global.xai.grok-4.6",
+      "global.xai.grok-4.7",
+      "global.moonshotai.kimi-k3"
+    ],
+    "eu-north-1": [
+      "eu.amazon.nova-lite-v1:0",
+      "eu.amazon.nova-micro-v1:0",
+      "eu.amazon.nova-pro-v1:0",
+      "eu.anthropic.claude-fable-5",
+      "eu.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "eu.anthropic.claude-opus-5",
+      "eu.anthropic.claude-opus-5-5",
+      "global.anthropic.claude-opus-5-5",
+      "eu.anthropic.claude-sonnet-4-5-20250929-v1:0",
+      "eu.anthropic.claude-sonnet-4-6",
+      "eu.anthropic.claude-sonnet-5",
+      "eu.anthropic.claude-sonnet-5-5",
+      "global.xai.grok-4.6",
+      "global.xai.grok-4.7",
+      "moonshotai.kimi-k2.5",
+      "global.moonshotai.kimi-k3"
+    ],
+    "eu-south-1": [
+      "eu.amazon.nova-lite-v1:0",
+      "eu.amazon.nova-micro-v1:0",
+      "eu.amazon.nova-pro-v1:0",
+      "eu.anthropic.claude-fable-5",
+      "eu.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "eu.anthropic.claude-opus-5",
+      "eu.anthropic.claude-opus-5-5",
+      "global.anthropic.claude-opus-5-5",
+      "eu.anthropic.claude-sonnet-4-5-20250929-v1:0",
+      "eu.anthropic.claude-sonnet-4-6",
+      "eu.anthropic.claude-sonnet-5",
+      "eu.anthropic.claude-sonnet-5-5",
+      "global.xai.grok-4.6",
+      "global.xai.grok-4.7",
+      "global.moonshotai.kimi-k3"
+    ],
+    "eu-south-2": [
+      "eu.amazon.nova-lite-v1:0",
+      "eu.amazon.nova-micro-v1:0",
+      "eu.anthropic.claude-fable-5",
+      "eu.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "eu.anthropic.claude-opus-5",
+      "eu.anthropic.claude-opus-5-5",
+      "global.anthropic.claude-opus-5-5",
+      "eu.anthropic.claude-sonnet-4-5-20250929-v1:0",
+      "eu.anthropic.claude-sonnet-4-6",
+      "eu.anthropic.claude-sonnet-5",
+      "eu.anthropic.claude-sonnet-5-5",
+      "global.xai.grok-4.6",
+      "global.xai.grok-4.7",
+      "global.moonshotai.kimi-k3"
+    ],
+    "eu-west-1": [
+      "eu.amazon.nova-pro-v1:0",
+      "eu.anthropic.claude-fable-5",
+      "global.anthropic.claude-fable-5",
+      "global.anthropic.claude-fable-5-1",
+      "eu.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "global.anthropic.claude-opus-4-6-v1",
+      "global.anthropic.claude-opus-4-7",
+      "global.anthropic.claude-opus-4-8",
+      "eu.anthropic.claude-opus-5",
+      "global.anthropic.claude-opus-5",
+      "eu.anthropic.claude-opus-5-5",
+      "global.anthropic.claude-opus-5-5",
+      "eu.anthropic.claude-sonnet-4-5-20250929-v1:0",
+      "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+      "eu.anthropic.claude-sonnet-4-6",
+      "global.anthropic.claude-sonnet-4-6",
+      "eu.anthropic.claude-sonnet-5",
+      "global.anthropic.claude-sonnet-5",
+      "eu.anthropic.claude-sonnet-5-5",
+      "global.anthropic.claude-sonnet-5-5",
+      "global.xai.grok-4.6",
+      "global.xai.grok-4.7",
+      "global.moonshotai.kimi-k3"
+    ],
+    "eu-west-2": [
+      "eu.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "eu.anthropic.claude-opus-5",
+      "eu.anthropic.claude-opus-5-5",
+      "global.anthropic.claude-opus-5-5",
+      "eu.anthropic.claude-sonnet-4-5-20250929-v1:0",
+      "eu.anthropic.claude-sonnet-4-6",
+      "eu.anthropic.claude-sonnet-5",
+      "eu.anthropic.claude-sonnet-5-5",
+      "global.xai.grok-4.6",
+      "global.xai.grok-4.7",
+      "moonshotai.kimi-k2.5",
+      "global.moonshotai.kimi-k3"
+    ],
+    "eu-west-3": [
+      "eu.amazon.nova-lite-v1:0",
+      "eu.amazon.nova-micro-v1:0",
+      "eu.amazon.nova-pro-v1:0",
+      "eu.anthropic.claude-fable-5",
+      "eu.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "eu.anthropic.claude-opus-5",
+      "eu.anthropic.claude-opus-5-5",
+      "global.anthropic.claude-opus-5-5",
+      "eu.anthropic.claude-sonnet-4-5-20250929-v1:0",
+      "eu.anthropic.claude-sonnet-4-6",
+      "eu.anthropic.claude-sonnet-5",
+      "eu.anthropic.claude-sonnet-5-5",
+      "global.xai.grok-4.6",
+      "global.xai.grok-4.7",
+      "global.moonshotai.kimi-k3"
+    ],
+    "sa-east-1": [
+      "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "global.anthropic.claude-opus-5-5",
+      "global.xai.grok-4.6",
+      "global.xai.grok-4.7",
+      "moonshotai.kimi-k2.5",
+      "global.moonshotai.kimi-k3"
+    ],
+    "us-east-1": [
+      "global.amazon.nova-2-lite-v1:0",
+      "us.amazon.nova-2-lite-v1:0",
+      "us.amazon.nova-lite-v1:0",
+      "us.amazon.nova-micro-v1:0",
+      "us.amazon.nova-premier-v1:0",
+      "us.amazon.nova-pro-v1:0",
+      "global.anthropic.claude-fable-5",
+      "us.anthropic.claude-fable-5",
+      "global.anthropic.claude-fable-5-1",
+      "us.anthropic.claude-fable-5-1",
+      "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "us.anthropic.claude-opus-4-20250514-v1:0",
+      "us.anthropic.claude-opus-4-1-20250805-v1:0",
+      "global.anthropic.claude-opus-4-6-v1",
+      "us.anthropic.claude-opus-4-6-v1",
+      "global.anthropic.claude-opus-4-7",
+      "us.anthropic.claude-opus-4-7",
+      "global.anthropic.claude-opus-4-8",
+      "us.anthropic.claude-opus-4-8",
+      "global.anthropic.claude-opus-5",
+      "us.anthropic.claude-opus-5",
+      "global.anthropic.claude-opus-5-5",
+      "us.anthropic.claude-opus-5-5",
+      "us.anthropic.claude-sonnet-4-20250514-v1:0",
+      "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+      "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+      "global.anthropic.claude-sonnet-4-6",
+      "us.anthropic.claude-sonnet-4-6",
+      "global.anthropic.claude-sonnet-5",
+      "us.anthropic.claude-sonnet-5",
+      "global.anthropic.claude-sonnet-5-5",
+      "us.anthropic.claude-sonnet-5-5",
+      "us.deepseek.r1-v1:0",
+      "global.openai.gpt-5.6-luna",
+      "us.openai.gpt-5.6-luna",
+      "global.openai.gpt-5.6-sol",
+      "us.openai.gpt-5.6-sol",
+      "global.openai.gpt-5.6-terra",
+      "us.openai.gpt-5.6-terra",
+      "global.openai.gpt-6-astra",
+      "us.openai.gpt-6-astra",
+      "global.openai.gpt-6-luna",
+      "us.openai.gpt-6-luna",
+      "global.openai.gpt-6-sol",
+      "us.openai.gpt-6-sol",
+      "us.openai.gpt-6.1-sol",
+      "global.xai.grok-4.6",
+      "us.xai.grok-4.6",
+      "global.xai.grok-4.7",
+      "us.xai.grok-4.7",
+      "moonshotai.kimi-k2.5",
+      "global.moonshotai.kimi-k3",
+      "us.moonshotai.kimi-k3"
+    ],
+    "us-east-2": [
+      "us.amazon.nova-lite-v1:0",
+      "us.amazon.nova-micro-v1:0",
+      "us.amazon.nova-premier-v1:0",
+      "us.amazon.nova-pro-v1:0",
+      "global.anthropic.claude-fable-5",
+      "us.anthropic.claude-fable-5",
+      "global.anthropic.claude-fable-5-1",
+      "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "us.anthropic.claude-opus-4-20250514-v1:0",
+      "us.anthropic.claude-opus-4-1-20250805-v1:0",
+      "global.anthropic.claude-opus-4-6-v1",
+      "us.anthropic.claude-opus-4-6-v1",
+      "global.anthropic.claude-opus-4-7",
+      "us.anthropic.claude-opus-4-7",
+      "global.anthropic.claude-opus-4-8",
+      "us.anthropic.claude-opus-4-8",
+      "global.anthropic.claude-opus-5",
+      "us.anthropic.claude-opus-5",
+      "global.anthropic.claude-opus-5-5",
+      "us.anthropic.claude-opus-5-5",
+      "us.anthropic.claude-sonnet-4-20250514-v1:0",
+      "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+      "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+      "global.anthropic.claude-sonnet-4-6",
+      "us.anthropic.claude-sonnet-4-6",
+      "global.anthropic.claude-sonnet-5",
+      "us.anthropic.claude-sonnet-5",
+      "global.anthropic.claude-sonnet-5-5",
+      "us.anthropic.claude-sonnet-5-5",
+      "us.deepseek.r1-v1:0",
+      "global.openai.gpt-5.6-luna",
+      "us.openai.gpt-5.6-luna",
+      "global.openai.gpt-5.6-sol",
+      "us.openai.gpt-5.6-sol",
+      "global.openai.gpt-5.6-terra",
+      "us.openai.gpt-5.6-terra",
+      "global.openai.gpt-6-astra",
+      "us.openai.gpt-6-astra",
+      "global.openai.gpt-6-luna",
+      "us.openai.gpt-6-luna",
+      "global.openai.gpt-6-sol",
+      "us.openai.gpt-6-sol",
+      "us.openai.gpt-6.1-sol",
+      "global.xai.grok-4.6",
+      "us.xai.grok-4.6",
+      "global.xai.grok-4.7",
+      "us.xai.grok-4.7",
+      "moonshotai.kimi-k2.5",
+      "global.moonshotai.kimi-k3",
+      "us.moonshotai.kimi-k3"
+    ],
+    "us-west-1": [
+      "us.anthropic.claude-fable-5",
+      "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "us.anthropic.claude-opus-4-6-v1",
+      "us.anthropic.claude-opus-4-7",
+      "us.anthropic.claude-opus-4-8",
+      "us.anthropic.claude-opus-5",
+      "global.anthropic.claude-opus-5-5",
+      "us.anthropic.claude-opus-5-5",
+      "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+      "us.anthropic.claude-sonnet-4-6",
+      "us.anthropic.claude-sonnet-5",
+      "us.anthropic.claude-sonnet-5-5",
+      "global.xai.grok-4.6",
+      "us.xai.grok-4.6",
+      "global.xai.grok-4.7",
+      "us.xai.grok-4.7",
+      "global.moonshotai.kimi-k3",
+      "us.moonshotai.kimi-k3"
+    ],
+    "us-west-2": [
+      "global.amazon.nova-2-lite-v1:0",
+      "us.amazon.nova-2-lite-v1:0",
+      "us.amazon.nova-lite-v1:0",
+      "us.amazon.nova-micro-v1:0",
+      "us.amazon.nova-premier-v1:0",
+      "us.amazon.nova-pro-v1:0",
+      "global.anthropic.claude-fable-5",
+      "us.anthropic.claude-fable-5",
+      "global.anthropic.claude-fable-5-1",
+      "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "us.anthropic.claude-opus-4-20250514-v1:0",
+      "us.anthropic.claude-opus-4-1-20250805-v1:0",
+      "global.anthropic.claude-opus-4-6-v1",
+      "us.anthropic.claude-opus-4-6-v1",
+      "global.anthropic.claude-opus-4-7",
+      "us.anthropic.claude-opus-4-7",
+      "global.anthropic.claude-opus-4-8",
+      "us.anthropic.claude-opus-4-8",
+      "global.anthropic.claude-opus-5",
+      "us.anthropic.claude-opus-5",
+      "global.anthropic.claude-opus-5-5",
+      "us.anthropic.claude-opus-5-5",
+      "us.anthropic.claude-sonnet-4-20250514-v1:0",
+      "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+      "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+      "global.anthropic.claude-sonnet-4-6",
+      "us.anthropic.claude-sonnet-4-6",
+      "global.anthropic.claude-sonnet-5",
+      "us.anthropic.claude-sonnet-5",
+      "global.anthropic.claude-sonnet-5-5",
+      "us.anthropic.claude-sonnet-5-5",
+      "us.deepseek.r1-v1:0",
+      "global.openai.gpt-5.6-luna",
+      "us.openai.gpt-5.6-luna",
+      "global.openai.gpt-5.6-sol",
+      "us.openai.gpt-5.6-sol",
+      "global.openai.gpt-5.6-terra",
+      "us.openai.gpt-5.6-terra",
+      "global.openai.gpt-6-astra",
+      "us.openai.gpt-6-astra",
+      "global.openai.gpt-6-luna",
+      "us.openai.gpt-6-luna",
+      "global.openai.gpt-6-sol",
+      "us.openai.gpt-6-sol",
+      "us.openai.gpt-6.1-sol",
+      "openai.gpt-oss-120b-1:0",
+      "openai.gpt-oss-20b-1:0",
+      "global.xai.grok-4.6",
+      "us.xai.grok-4.6",
+      "global.xai.grok-4.7",
+      "us.xai.grok-4.7",
+      "moonshotai.kimi-k2.5",
+      "global.moonshotai.kimi-k3",
+      "us.moonshotai.kimi-k3"
+    ]
+  },
+  "imageRegionOrder": {
+    "ap-northeast-1": [
+      "amazon.nova-canvas-v1:0"
+    ],
+    "ap-northeast-2": [],
+    "ap-northeast-3": [],
+    "ap-south-1": [
+      "amazon.titan-image-generator-v1"
+    ],
+    "ap-south-2": [],
+    "ap-southeast-1": [],
+    "ap-southeast-2": [],
+    "ap-southeast-3": [],
+    "ap-southeast-4": [],
+    "ca-central-1": [],
+    "eu-central-1": [],
+    "eu-central-2": [],
+    "eu-north-1": [],
+    "eu-south-1": [],
+    "eu-south-2": [],
+    "eu-west-1": [
+      "amazon.nova-canvas-v1:0",
+      "amazon.titan-image-generator-v1"
+    ],
+    "eu-west-2": [
+      "amazon.titan-image-generator-v1"
+    ],
+    "eu-west-3": [],
+    "sa-east-1": [],
+    "us-east-1": [
+      "amazon.nova-canvas-v1:0",
+      "amazon.titan-image-generator-v1",
+      "amazon.titan-image-generator-v2:0"
+    ],
+    "us-east-2": [],
+    "us-west-1": [],
+    "us-west-2": [
+      "amazon.titan-image-generator-v1",
+      "amazon.titan-image-generator-v2:0",
+      "stability.sd3-large-v1:0",
+      "stability.sd3-5-large-v1:0",
+      "stability.stable-image-core-v1:0",
+      "stability.stable-image-core-v1:1",
+      "stability.stable-image-ultra-v1:0",
+      "stability.stable-image-ultra-v1:1"
+    ]
+  }
+}

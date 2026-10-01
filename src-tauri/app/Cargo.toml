@@ -1,0 +1,67 @@
+[package]
+name = "app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "bedrock-engineer"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build.workspace = true
+
+[dependencies]
+tauri.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+dirs.workspace = true
+store = { path = "../crates/store" }
+history = { path = "../crates/history" }
+common = { path = "../crates/common" }
+bedrock = { path = "../crates/bedrock" }
+models = { path = "../crates/models" }
+tools = { path = "../crates/tools" }
+agents = { path = "../crates/agents" }
+mcp = { path = "../crates/mcp" }
+attachments = { path = "../crates/attachments" }
+docker = { path = "../crates/docker" }
+background = { path = "../crates/background" }
+strands = { path = "../crates/strands" }
+tokio = { version = "=1.53.1", features = ["rt", "sync", "macros", "time", "process"] }
+reqwest = "=0.13.5"
+async-trait = "=0.1.89"
+tauri-plugin-notification = "=2.5.0"
+tauri-plugin-dialog = "=2.8.0"
+tauri-plugin-opener = "=2.7.0"
+tauri-plugin-single-instance = "=2.5.1"
+aws-sdk-s3 = "=1.150.0"
+anyhow = "=1.0.104"
+base64 = "=0.22.1"
+percent-encoding = "=2.3.2"
+tracing = "=0.1.44"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "=0.6.4"
+mac-notification-sys = "=0.6.15"
+# PDF export (src/pdf/macos.rs): NSPrintOperation on the WKWebView.
+objc2-foundation = { version = "=0.3.2", features = ["NSString", "NSURL", "NSGeometry", "NSDictionary"] }
+objc2-app-kit = { version = "=0.3.2", features = ["NSPrintInfo", "NSPrintOperation", "NSView", "NSWindow", "NSResponder", "NSApplication"] }
+objc2-web-kit = { version = "=0.3.2", features = ["WKWebView", "objc2-app-kit"] }
+
+# PDF export (src/pdf/windows.rs): WebView2 PrintToPdf.
+[target.'cfg(windows)'.dependencies]
+webview2-com = "=0.39.1"
+windows = "=0.62.2"
+
+# PDF export (src/pdf/linux.rs): WebKitGTK PrintOperation.
+[target.'cfg(target_os = "linux")'.dependencies]
+gtk = "=0.18.2"
+webkit2gtk = { version = "=2.0.2", features = ["v2_38"] }
+
+[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+notify-rust = "=4.18.1"
+
+[dev-dependencies]
+tempfile.workspace = true

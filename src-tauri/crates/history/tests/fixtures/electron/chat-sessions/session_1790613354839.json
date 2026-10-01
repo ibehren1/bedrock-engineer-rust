@@ -1,0 +1,133 @@
+{
+  "id": "session_1790613354839",
+  "title": "Refactor the parser — 日本語 ✓",
+  "createdAt": 1790613354839,
+  "updatedAt": 1790613999001,
+  "messages": [
+    {
+      "id": "msg_a1",
+      "role": "user",
+      "content": [
+        {
+          "text": "Read src/index.ts and explain \"why\"\n\ttabs\\slashes"
+        }
+      ],
+      "timestamp": 1790613354900,
+      "metadata": {
+        "modelId": "global.anthropic.claude-sonnet-4-6",
+        "tools": []
+      }
+    },
+    {
+      "id": "msg_a2",
+      "role": "assistant",
+      "content": [
+        {
+          "toolUse": {
+            "toolUseId": "tooluse_1",
+            "name": "readFiles",
+            "input": {
+              "paths": [
+                "/tmp/a.ts"
+              ],
+              "options": {}
+            }
+          }
+        },
+        {
+          "toolUse": {
+            "toolUseId": "tooluse_2",
+            "name": "think",
+            "input": {
+              "thought": "x"
+            }
+          }
+        }
+      ],
+      "timestamp": 1790613356000,
+      "metadata": {
+        "modelId": "global.anthropic.claude-sonnet-4-6",
+        "tools": [],
+        "converseMetadata": {
+          "usage": {
+            "inputTokens": 12,
+            "outputTokens": 35,
+            "totalTokens": 47,
+            "cacheReadInputTokens": 0,
+            "cacheWriteInputTokens": 0
+          },
+          "metrics": {
+            "latencyMs": 812
+          }
+        }
+      }
+    },
+    {
+      "id": "msg_a3",
+      "role": "user",
+      "content": [
+        {
+          "toolResult": {
+            "toolUseId": "tooluse_1",
+            "content": [
+              {
+                "text": "{\"ok\":true}"
+              }
+            ],
+            "status": "success"
+          }
+        },
+        {
+          "toolResult": {
+            "toolUseId": "tooluse_2",
+            "content": [
+              {
+                "json": {
+                  "nested": {
+                    "deep": [
+                      1,
+                      2.25,
+                      -3,
+                      null,
+                      true
+                    ]
+                  }
+                }
+              }
+            ],
+            "status": "success"
+          }
+        }
+      ],
+      "timestamp": 1790613357000,
+      "metadata": {
+        "modelId": "global.anthropic.claude-sonnet-4-6",
+        "tools": []
+      }
+    },
+    {
+      "id": "msg_a4",
+      "role": "assistant",
+      "content": [
+        {
+          "reasoningContent": {
+            "reasoningText": {
+              "text": "thinking…",
+              "signature": "EqQBCkYI"
+            }
+          }
+        },
+        {
+          "text": "Done. </script> & <b>"
+        }
+      ],
+      "timestamp": 1790613999001,
+      "metadata": {
+        "modelId": "global.anthropic.claude-sonnet-4-6"
+      }
+    }
+  ],
+  "agentId": "softwareAgent",
+  "modelId": "global.anthropic.claude-sonnet-4-6",
+  "systemPrompt": "You are a helpful assistant.\n\nRules:\n- be brief"
+}
