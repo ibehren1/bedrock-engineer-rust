@@ -53,6 +53,12 @@ overview of the fork with screenshots.
 - Exporting a chat to Word now leaves out images that aren't PNG, JPEG, GIF, WebP or BMP. The
   image reader built into the Word converter could hang forever on some malformed image types, so
   those images are skipped instead of freezing the export.
+- The macOS install instructions now cover a step that was missing: macOS 15 and later won't let
+  Terminal change anything in your Applications folder until you enable it under System Settings →
+  Privacy & Security → App Management. Without that, the required signing command fails with
+  "Operation not permitted" and the app can hang on launch with no window and no error. The
+  instructions also now clear the download flag your browser leaves on the app, which is what causes
+  that hang.
 
 ### 2026-09-30
 

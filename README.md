@@ -43,25 +43,33 @@ Installers for every build are attached to this fork's releases:
 ### macOS
 
 1. Open the DMG, accept the license, and drag **Bedrock Engineer** into Applications.
-2. **Sign the app on your Mac (required).** Bedrock Engineer is self-signed (ad hoc), not signed with
+2. **Let Terminal manage apps (required).** macOS 15 and later protect everything in Applications:
+   until Terminal is allowed to change installed apps, the signing step below fails with
+   `Operation not permitted`, and the app can hang on launch — no window, no error — while macOS
+   waits on a security check it can't finish. Open **System Settings → Privacy & Security → App
+   Management**, turn on **Terminal**, then quit and reopen Terminal so the change takes effect.
+3. **Sign the app on your Mac (required).** Bedrock Engineer is self-signed (ad hoc), not signed with
    an Apple developer certificate, so each install has to be signed on the machine it runs on. Run
    this in Terminal after every install or update, before opening the app:
 
    ```bash
    sudo codesign --force --deep --sign - "/Applications/Bedrock Engineer.app"
+   sudo xattr -dr com.apple.quarantine "/Applications/Bedrock Engineer.app"
    ```
 
-   Without it the app may not work correctly, including the system permission dialogs for screen
-   recording and the camera. From a checkout of this repo, `make sign` does the same.
+   The first command signs the app; the second clears the download flag your browser set, which is
+   what makes macOS stall on first launch. Without them the app may not open at all, or may not work
+   correctly — including the system permission dialogs for screen recording and the camera. From a
+   checkout of this repo, `make sign` does the same.
 
-3. Open the app. The first time, macOS may say it can't verify the developer, or that the app was
+4. Open the app. The first time, macOS may say it can't verify the developer, or that the app was
    blocked, because it isn't distributed through the Mac App Store. Click **Done**, open **System
    Settings → Privacy & Security**, scroll down to the Security section, find "Bedrock Engineer was
    blocked to protect your Mac", and click **Open Anyway**.
 
    ![Security Warning Privacy Setting](./assets/macos-security-warning-pkg-privacy-setting.png)
 
-4. macOS asks for **Screen Recording** and **Camera** permission the first time an agent uses the
+5. macOS asks for **Screen Recording** and **Camera** permission the first time an agent uses the
    screen or camera capture tools.
 
 ### Windows
@@ -390,6 +398,9 @@ make build-mac     # installs npm packages, adds the Rust mac targets, builds th
 make install       # opens the new .dmg; drag Bedrock Engineer into Applications
 make sign          # sign the installed app (required, as for downloaded builds)
 ```
+
+`make sign` needs Terminal enabled under **System Settings → Privacy & Security → App Management**,
+same as a downloaded build; without it macOS refuses to modify anything in Applications.
 
 The `.app` and `.dmg` are in
 `src-tauri/target/universal-apple-darwin/release/bundle/`. `make build-native` builds for this Mac's
