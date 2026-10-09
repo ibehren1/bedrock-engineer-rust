@@ -106,6 +106,26 @@ function removeTraces(messages) {
   })
 }
 
+// reasoningText も redactedContent も持たない reasoningContent ブロックを除外する関数。
+// 以前のバージョンは署名のみの思考ブロック（新しい Claude モデルは思考テキストを省略して署名のみ返す）を
+// 空の {} として保存しており、Bedrock が送信時に拒否するため、保存済み履歴を修復する。
+function removeEmptyReasoningContent(messages: Message[]): Message[] {
+  return messages.map((message) => {
+    if (message.content && Array.isArray(message.content)) {
+      return {
+        ...message,
+        content: message.content.filter(
+          (block) =>
+            !('reasoningContent' in block) ||
+            !!block.reasoningContent?.reasoningText ||
+            !!block.reasoningContent?.redactedContent
+        )
+      }
+    }
+    return message
+  })
+}
+
 // reasoningContentを含むブロックを除外する関数
 function removeReasoningContent(messages: Message[]): Message[] {
   return messages.map((message) => {
@@ -478,6 +498,8 @@ export const useAgentChat = (
       // モデルがthinkingをサポートしていない場合、reasoningContentを除外
       if (!supportsThinking) {
         limitedMessages = removeReasoningContent(limitedMessages)
+      } else {
+        limitedMessages = removeEmptyReasoningContent(limitedMessages)
       }
 
       // 添付ファイルはターン開始時に一度読み込み、リクエストごとに再適用する。
@@ -518,6 +540,7 @@ export const useAgentChat = (
       let reasoningContentText = ''
       let reasoningContentSignature = ''
       let redactedContent
+      let reasoningPushed = false
       let input = ''
       let role: ConversationRole = 'assistant' // デフォルト値を設定
       let toolUse: ToolUseBlockStart | undefined = undefined
@@ -608,31 +631,37 @@ export const useAgentChat = (
                 toolUse: { name: toolUse?.name, toolUseId: uniqueToolUseId, input: parseInput }
               })
             } else {
-              if (s.length > 0) {
-                const getReasoningBlock = () => {
-                  if (reasoningContentText.length > 0) {
-                    return {
-                      reasoningContent: {
-                        reasoningText: {
-                          text: reasoningContentText,
-                          signature: reasoningContentSignature
-                        }
+              // 署名のみ（思考テキスト省略）の場合も reasoningText として保持する。
+              // 署名は次のリクエストで思考ブロックを検証するために必要。
+              const getReasoningBlock = () => {
+                if (redactedContent) {
+                  return { reasoningContent: { redactedContent: redactedContent } }
+                } else if (
+                  reasoningContentText.length > 0 ||
+                  reasoningContentSignature.length > 0
+                ) {
+                  return {
+                    reasoningContent: {
+                      reasoningText: {
+                        text: reasoningContentText,
+                        signature: reasoningContentSignature
                       }
                     }
-                  } else if (reasoningContentSignature.length > 0) {
-                    return {
-                      reasoningContent: {
-                        redactedContent: redactedContent
-                      }
-                    }
-                  } else {
-                    return null
                   }
+                } else {
+                  return null
                 }
+              }
 
-                const reasoningBlock = getReasoningBlock()
-                const contentBlocks = reasoningBlock ? [reasoningBlock, { text: s }] : [{ text: s }]
-                content.push(...contentBlocks)
+              // 思考ブロックは自身の contentBlockStop で追加する。テキストなしで
+              // toolUse が続く場合でも失われないようにするため。
+              const reasoningBlock = reasoningPushed ? null : getReasoningBlock()
+              if (reasoningBlock) {
+                content.push(reasoningBlock)
+                reasoningPushed = true
+              }
+              if (s.length > 0) {
+                content.push({ text: s })
               }
             }
             input = ''

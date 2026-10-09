@@ -7,6 +7,19 @@ dated section here for anything user-visible.
 See the [README](./README.md#whats-different-in-this-fork) for a feature-by-feature
 overview of the fork with screenshots.
 
+### 2026-10-08
+
+- Fixed follow-up messages failing with "reasoningContent needs reasoningText or redactedContent"
+  on newer Claude models (Opus 4.8, Opus 5, Opus 5.5, Sonnet 5). These models return their
+  thinking without the text, and the app was saving that thinking as an empty block that the next
+  request rejected. Existing chats that hit the error work again without any action.
+- The macOS install instructions now cover a step that was missing: macOS 15 and later won't let
+  Terminal change anything in your Applications folder until you enable it under System Settings →
+  Privacy & Security → App Management. Without that, the required signing command fails with
+  "Operation not permitted" and the app can hang on launch with no window and no error. The
+  instructions also now clear the download flag your browser leaves on the app, which is what causes
+  that hang.
+
 ### 2026-10-01
 
 - The app is now called **Bedrock Engineer** everywhere: the window title, the app in your
@@ -53,12 +66,6 @@ overview of the fork with screenshots.
 - Exporting a chat to Word now leaves out images that aren't PNG, JPEG, GIF, WebP or BMP. The
   image reader built into the Word converter could hang forever on some malformed image types, so
   those images are skipped instead of freezing the export.
-- The macOS install instructions now cover a step that was missing: macOS 15 and later won't let
-  Terminal change anything in your Applications folder until you enable it under System Settings →
-  Privacy & Security → App Management. Without that, the required signing command fails with
-  "Operation not permitted" and the app can hang on launch with no window and no error. The
-  instructions also now clear the download flag your browser leaves on the app, which is what causes
-  that hang.
 
 ### 2026-09-30
 
