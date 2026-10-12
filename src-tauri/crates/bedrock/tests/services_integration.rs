@@ -325,7 +325,7 @@ async fn generate(req: Value) {
 #[ignore = "requires AWS credentials"]
 async fn image_core_model() {
     generate(json!({
-        "modelId": "stability.stable-image-core-v1:1",
+        "modelId": "stability.stable-image-core-v1:0",
         "prompt": "A serene mountain landscape at sunset with a calm lake reflection",
         "aspect_ratio": "1:1", "output_format": "png"
     }))
@@ -346,48 +346,7 @@ async fn image_ultra_model_with_negative_prompt() {
 
 #[tokio::test]
 #[ignore = "requires AWS credentials"]
-async fn image_sd3_model() {
-    generate(json!({ "modelId": "stability.sd3-large-v1:0", "prompt": "A cityscape at night", "aspect_ratio": "16:9" }))
-        .await;
-}
-
-#[tokio::test]
-#[ignore = "requires AWS credentials"]
 async fn image_sd35_model() {
     generate(json!({ "modelId": "stability.sd3-5-large-v1:0", "prompt": "A cityscape at night", "aspect_ratio": "16:9" }))
         .await;
-}
-
-#[tokio::test]
-#[ignore = "requires AWS credentials"]
-async fn image_nova_canvas() {
-    generate(json!({
-        "modelId": "amazon.nova-canvas-v1:0",
-        "prompt": "A watercolor painting of a cherry blossom tree",
-        "aspect_ratio": "1:1", "output_format": "png"
-    }))
-    .await;
-}
-
-#[tokio::test]
-#[ignore = "requires AWS credentials"]
-async fn image_titan_v2() {
-    generate(json!({
-        "modelId": "amazon.titan-image-generator-v2:0",
-        "prompt": "A futuristic cityscape with flying cars",
-        "negativePrompt": "blurry, low quality, distorted",
-        "aspect_ratio": "16:9", "output_format": "png"
-    }))
-    .await;
-}
-
-#[tokio::test]
-#[ignore = "requires AWS credentials"]
-async fn image_titan_v1() {
-    generate(json!({
-        "modelId": "amazon.titan-image-generator-v1",
-        "prompt": "An underwater scene with colorful coral and fish",
-        "aspect_ratio": "4:5", "output_format": "png"
-    }))
-    .await;
 }

@@ -93,7 +93,7 @@ const TEST_REGIONS: [&str; 14] = [
 ];
 
 /// Same inference config rules as the TS test: maxTokens 10; no sampling fields for
-/// reasoning-effort / Kimi K3 models; no topP for Claude Sonnet 4.5 and Nova.
+/// reasoning-effort / Kimi K3 models; no topP for Nova.
 fn connectivity_inference(model_id: &str) -> aws_sdk_bedrockruntime::types::InferenceConfiguration {
     let skip_sampling = model_id.contains("openai.gpt-5")
         || model_id.contains("openai.gpt-6")
@@ -102,9 +102,7 @@ fn connectivity_inference(model_id: &str) -> aws_sdk_bedrockruntime::types::Infe
     let mut b = aws_sdk_bedrockruntime::types::InferenceConfiguration::builder().max_tokens(10);
     if !skip_sampling {
         b = b.temperature(1.0);
-        let skip_top_p = model_id.contains("claude-sonnet-4-5")
-            || model_id.contains("nova-")
-            || model_id.contains("nova.");
+        let skip_top_p = model_id.contains("nova-") || model_id.contains("nova.");
         if !skip_top_p {
             b = b.top_p(0.9);
         }

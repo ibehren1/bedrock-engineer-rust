@@ -473,7 +473,7 @@ mod tests {
             "inferenceParams": {"maxTokens": 4096.0, "temperature": 0.5},
             "thinkingMode": "garbage",
             "bedrockSettings": {"enableRegionFailover": true, "availableFailoverRegions": ["us-west-2"]},
-            "generateImageTool": {"modelId": "amazon.nova-canvas-v1:0"},
+            "generateImageTool": {"modelId": "stability.stable-image-ultra-v1:0"},
             "recognizeImageTool": {"modelId": ""}
         }));
         assert_eq!(s.converse.aws.region, "us-east-1");
@@ -483,7 +483,7 @@ mod tests {
         assert!(s.converse.bedrock_settings.unwrap().enable_region_failover);
         assert_eq!(
             s.generate_image_model_id.as_deref(),
-            Some("amazon.nova-canvas-v1:0")
+            Some("stability.stable-image-ultra-v1:0")
         );
         assert_eq!(s.recognize_image_model_id, None);
     }

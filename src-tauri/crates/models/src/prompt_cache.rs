@@ -138,7 +138,7 @@ fn is_truthy(v: Option<&Value>) -> bool {
 mod tests {
     use super::*;
 
-    const CLAUDE: &str = "us.anthropic.claude-sonnet-4-20250514-v1:0";
+    const CLAUDE: &str = "us.anthropic.claude-haiku-4-5-20251001-v1:0";
 
     fn msg(blocks: Value) -> Value {
         json!({ "role": "user", "content": blocks })

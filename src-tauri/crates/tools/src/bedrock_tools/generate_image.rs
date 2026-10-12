@@ -14,7 +14,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 const NAME: &str = "generateImage";
-const DESCRIPTION: &str = "Generate an image using Amazon Bedrock Foundation Models. By default uses stability.sd3-5-large-v1:0. Images are saved to the specified path. For Titan models, specific aspect ratios and sizes are supported.\n\nGenerate images using AI models. Always ask user permission before creating images.";
+const DESCRIPTION: &str = "Generate an image using Amazon Bedrock Foundation Models. By default uses stability.sd3-5-large-v1:0. Images are saved to the specified path.\n\nGenerate images using AI models. Always ask user permission before creating images.";
 
 /// `DEFAULT_IMAGE_MODEL`.
 pub const DEFAULT_IMAGE_MODEL: &str = "stability.sd3-5-large-v1:0";
@@ -98,12 +98,12 @@ impl Tool for GenerateImageTool {
                     },
                     "aspect_ratio": {
                         "type": "string",
-                        "description": "Optional. Aspect ratio of the generated image. For Titan models, specific sizes will be chosen based on the aspect ratio.",
-                        "enum": ["1:1", "16:9", "2:3", "3:2", "4:5", "5:4", "9:16", "9:21", "5:3", "3:5", "7:9", "9:7", "6:11", "11:6", "5:11", "11:5", "9:5"]
+                        "description": "Optional. Aspect ratio of the generated image.",
+                        "enum": ["1:1", "16:9", "2:3", "3:2", "4:5", "5:4", "9:16", "9:21"]
                     },
                     "seed": {
                         "type": "number",
-                        "description": "Optional. Seed for deterministic generation. For Titan models, range is 0 to 2147483647."
+                        "description": "Optional. Seed for deterministic generation."
                     },
                     "output_format": {
                         "type": "string",
@@ -296,7 +296,7 @@ mod tests {
         let v = run_tool(
             &t,
             json!({"type": NAME, "prompt": "a cat", "outputPath": out_s, "aspect_ratio": "16:9"}),
-            &ctx(Some("amazon.nova-canvas-v1:0")),
+            &ctx(Some("stability.stable-image-ultra-v1:0")),
         )
         .await
         .unwrap()
@@ -312,7 +312,7 @@ mod tests {
                     "imagePath": out_s,
                     "prompt": "a cat",
                     "aspect_ratio": "16:9",
-                    "modelUsed": "amazon.nova-canvas-v1:0",
+                    "modelUsed": "stability.stable-image-ultra-v1:0",
                     "seed": 42
                 }
             })
@@ -321,7 +321,7 @@ mod tests {
         assert_eq!(calls[0].1["region"], "us-west-2");
         assert_eq!(
             calls[0].1["req"],
-            json!({"modelId": "amazon.nova-canvas-v1:0", "prompt": "a cat", "aspect_ratio": "16:9", "output_format": "png"})
+            json!({"modelId": "stability.stable-image-ultra-v1:0", "prompt": "a cat", "aspect_ratio": "16:9", "output_format": "png"})
         );
     }
 
@@ -355,14 +355,14 @@ mod tests {
         *fake.image.lock().unwrap() = Some(Err("Invalid request parameters: bad".into()));
         let err = run_tool(
             &t,
-            json!({"type": NAME, "prompt": "p", "outputPath": "/tmp/y.png", "modelId": "amazon.titan-image-generator-v2:0"}),
+            json!({"type": NAME, "prompt": "p", "outputPath": "/tmp/y.png", "modelId": "stability.stable-image-core-v1:0"}),
             &ctx(Some("configured")),
         )
         .await
         .unwrap_err();
         assert_eq!(
             fake.calls()[1].1["req"]["modelId"],
-            "amazon.titan-image-generator-v2:0"
+            "stability.stable-image-core-v1:0"
         );
         assert_eq!(
             response(&err)["error"],

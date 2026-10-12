@@ -1,8 +1,8 @@
 import { test, expect } from '@jest/globals'
 import { PricingCalculator } from '../../../../common/models/pricing'
 
-test('should calculate cost for Claude Sonnet 4', () => {
-  const modelId = 'anthropic.claude-sonnet-4-20250514-v1:0'
+test('should calculate cost for Claude Sonnet 4.6', () => {
+  const modelId = 'anthropic.claude-sonnet-4-6'
   const pricingCalculator = new PricingCalculator(modelId)
 
   const inputTokens = 1000
@@ -15,58 +15,6 @@ test('should calculate cost for Claude Sonnet 4', () => {
       outputTokens * 0.015 +
       cacheReadTokens * 0.0003 +
       cacheWriteTokens * 0.00375) /
-    1000
-
-  const actualCost = pricingCalculator.calculateTotalCost(
-    inputTokens,
-    outputTokens,
-    cacheReadTokens,
-    cacheWriteTokens
-  )
-
-  expect(actualCost).toBeCloseTo(expectedCost, 6)
-})
-
-test('should calculate cost for Claude Opus 4', () => {
-  const modelId = 'anthropic.claude-opus-4-20250514-v1:0'
-  const pricingCalculator = new PricingCalculator(modelId)
-
-  const inputTokens = 1000
-  const outputTokens = 500
-  const cacheReadTokens = 200
-  const cacheWriteTokens = 100
-
-  const expectedCost =
-    (inputTokens * 0.015 +
-      outputTokens * 0.075 +
-      cacheReadTokens * 0.0015 +
-      cacheWriteTokens * 0.01875) /
-    1000
-
-  const actualCost = pricingCalculator.calculateTotalCost(
-    inputTokens,
-    outputTokens,
-    cacheReadTokens,
-    cacheWriteTokens
-  )
-
-  expect(actualCost).toBeCloseTo(expectedCost, 6)
-})
-
-test('should calculate cost for Claude Opus 4.1', () => {
-  const modelId = 'anthropic.claude-opus-4-1-20250805-v1:0'
-  const pricingCalculator = new PricingCalculator(modelId)
-
-  const inputTokens = 1000
-  const outputTokens = 500
-  const cacheReadTokens = 200
-  const cacheWriteTokens = 100
-
-  const expectedCost =
-    (inputTokens * 0.015 +
-      outputTokens * 0.075 +
-      cacheReadTokens * 0.0015 +
-      cacheWriteTokens * 0.01875) /
     1000
 
   const actualCost = pricingCalculator.calculateTotalCost(
@@ -114,7 +62,7 @@ test('should return 0 for unknown model', () => {
 })
 
 test('should handle zero tokens', () => {
-  const modelId = 'anthropic.claude-sonnet-4-20250514-v1:0'
+  const modelId = 'anthropic.claude-sonnet-4-6'
   const pricingCalculator = new PricingCalculator(modelId)
   const cost = pricingCalculator.calculateTotalCost(0, 0, 0, 0)
 
@@ -122,7 +70,7 @@ test('should handle zero tokens', () => {
 })
 
 test('should calculate cost without cache tokens', () => {
-  const modelId = 'anthropic.claude-sonnet-4-20250514-v1:0'
+  const modelId = 'anthropic.claude-sonnet-4-6'
   const pricingCalculator = new PricingCalculator(modelId)
 
   const inputTokens = 1000
@@ -135,7 +83,7 @@ test('should calculate cost without cache tokens', () => {
 })
 
 test('should calculate individual cost components', () => {
-  const modelId = 'anthropic.claude-sonnet-4-20250514-v1:0'
+  const modelId = 'anthropic.claude-sonnet-4-6'
   const pricingCalculator = new PricingCalculator(modelId)
 
   const inputTokens = 1000
@@ -162,7 +110,7 @@ test('should calculate individual cost components', () => {
 })
 
 test('should get pricing information', () => {
-  const modelId = 'anthropic.claude-sonnet-4-20250514-v1:0'
+  const modelId = 'anthropic.claude-sonnet-4-6'
   const pricingCalculator = new PricingCalculator(modelId)
 
   const pricing = pricingCalculator.getPricing()

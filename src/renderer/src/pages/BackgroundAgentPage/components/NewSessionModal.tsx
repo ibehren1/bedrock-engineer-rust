@@ -36,7 +36,7 @@ export const NewSessionModal: React.FC<NewSessionModalProps> = ({
     }
 
     // 現在選択されているモデルIDを取得
-    const modelId = currentLLM?.modelId || 'anthropic.claude-3-haiku-20240307-v1:0'
+    const modelId = currentLLM?.modelId || 'global.anthropic.claude-haiku-5-5'
 
     // エージェントのシステムプロンプトを使用
     const systemPrompt = selectedAgent?.system || 'You are a helpful assistant.'

@@ -263,7 +263,9 @@ mod tests {
         assert!(is_nova_model("amazon.nova-lite-v1:0"));
         assert!(is_nova_model("us.amazon.nova-pro-v1:0"));
         assert!(is_nova_model("apac.amazon.nova-pro-v1:0"));
-        assert!(!is_nova_model("us.anthropic.claude-sonnet-4-20250514-v1:0"));
+        assert!(!is_nova_model(
+            "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+        ));
     }
 
     #[test]

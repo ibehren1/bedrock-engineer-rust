@@ -191,123 +191,64 @@ const MODEL_REGISTRY: ModelConfig[] = [
     }
   },
 
-  // Claude Opus 4.1
+  // Claude Haiku 5.5
+  // The fastest model in the Claude 5.5 family (launched 2026-10-07), and the
+  // first Haiku with effort controls. 1M context window, 128K max output,
+  // adaptive thinking on by default. Model ID carries no version suffix:
+  // invoked as e.g. `global.anthropic.claude-haiku-5-5`.
+  // Bedrock offers no in-region invocation of the bare model ID, so there is no
+  // `base` profile — only the global endpoint and the US/EU/JP geo profiles. The
+  // model card also lists an `au.` geo (Sydney/Melbourne), which this registry
+  // has no profile type for; Australian users can reach the model through the
+  // global endpoint.
+  // Pricing: $0.10 in / $0.50 out per 1M tokens at the global rate, stored per
+  // 1K; cache read is 10% of input and a 5-minute cache write 1.25x it. The geo
+  // profiles cost 10% more, and a request whose prompt is over 100K tokens bills
+  // at 5x every rate, so the displayed cost is a floor in both cases.
   {
-    baseId: 'claude-opus-4-1-20250805-v1:0',
-    name: 'Claude Opus 4.1',
+    baseId: 'claude-haiku-5-5',
+    name: 'Claude Haiku 5.5',
     provider: 'anthropic',
     category: 'text',
     toolUse: true,
-    maxTokensLimit: 32000,
+    maxTokensLimit: 128000,
     supportsThinking: true,
-    supportedThinkingTypes: ['enabled'],
+    supportedThinkingTypes: ['adaptive'],
     inferenceProfiles: [
-      {
-        type: 'regional-us',
-        prefix: 'us',
-        regions: ['us-east-1', 'us-east-2', 'us-west-2'],
-        displaySuffix: '(US)'
-      }
-    ],
-    pricing: {
-      input: 0.015,
-      output: 0.075,
-      cacheRead: 0.0015,
-      cacheWrite: 0.01875
-    },
-    cache: {
-      supported: true,
-      cacheableFields: ['messages', 'system', 'tools']
-    }
-  },
-
-  // Claude Sonnet 4
-  {
-    baseId: 'claude-sonnet-4-20250514-v1:0',
-    name: 'Claude Sonnet 4',
-    provider: 'anthropic',
-    category: 'text',
-    toolUse: true,
-    maxTokensLimit: 64000,
-    supportsThinking: true,
-    supportedThinkingTypes: ['enabled'],
-    inferenceProfiles: [
-      {
-        type: 'regional-us',
-        prefix: 'us',
-        regions: ['us-east-1', 'us-east-2', 'us-west-2'],
-        displaySuffix: '(US)'
-      }
-    ],
-    pricing: {
-      input: 0.003,
-      output: 0.015,
-      cacheRead: 0.0003,
-      cacheWrite: 0.00375
-    },
-    cache: {
-      supported: true,
-      cacheableFields: ['messages', 'system', 'tools']
-    }
-  },
-
-  // Claude Opus 4
-  {
-    baseId: 'claude-opus-4-20250514-v1:0',
-    name: 'Claude Opus 4',
-    provider: 'anthropic',
-    category: 'text',
-    toolUse: true,
-    maxTokensLimit: 32000,
-    supportsThinking: true,
-    supportedThinkingTypes: ['enabled'],
-    inferenceProfiles: [
-      {
-        type: 'regional-us',
-        prefix: 'us',
-        regions: ['us-east-1', 'us-east-2', 'us-west-2'],
-        displaySuffix: '(US)'
-      }
-    ],
-    pricing: {
-      input: 0.015,
-      output: 0.075,
-      cacheRead: 0.0015,
-      cacheWrite: 0.01875
-    },
-    cache: {
-      supported: true,
-      cacheableFields: ['messages', 'system', 'tools']
-    }
-  },
-
-  // Claude Sonnet 4.5
-  {
-    baseId: 'claude-sonnet-4-5-20250929-v1:0',
-    name: 'Claude Sonnet 4.5',
-    provider: 'anthropic',
-    category: 'text',
-    toolUse: true,
-    maxTokensLimit: 64000,
-    supportsThinking: true,
-    supportedThinkingTypes: ['enabled'],
-    inferenceProfiles: [
-      {
-        type: 'jp',
-        prefix: 'jp',
-        regions: ['ap-northeast-1', 'ap-northeast-3'],
-        displaySuffix: '(JP)'
-      },
       {
         type: 'global',
         prefix: 'global',
-        regions: ['us-west-2', 'us-east-1', 'us-east-2', 'eu-west-1', 'ap-northeast-1'],
+        regions: [
+          'us-east-1',
+          'us-east-2',
+          'us-west-1',
+          'us-west-2',
+          'ca-central-1',
+          'eu-central-1',
+          'eu-central-2',
+          'eu-north-1',
+          'eu-south-1',
+          'eu-south-2',
+          'eu-west-1',
+          'eu-west-2',
+          'eu-west-3',
+          'ap-northeast-1',
+          'ap-northeast-2',
+          'ap-northeast-3',
+          'ap-south-1',
+          'ap-south-2',
+          'ap-southeast-1',
+          'ap-southeast-2',
+          'ap-southeast-3',
+          'ap-southeast-4',
+          'sa-east-1'
+        ],
         displaySuffix: '(Global)'
       },
       {
         type: 'regional-us',
         prefix: 'us',
-        regions: ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2'],
+        regions: ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2', 'ca-central-1'],
         displaySuffix: '(US)'
       },
       {
@@ -324,13 +265,19 @@ const MODEL_REGISTRY: ModelConfig[] = [
           'eu-west-3'
         ],
         displaySuffix: '(EU)'
+      },
+      {
+        type: 'jp',
+        prefix: 'jp',
+        regions: ['ap-northeast-1', 'ap-northeast-3'],
+        displaySuffix: '(JP)'
       }
     ],
     pricing: {
-      input: 0.003,
-      output: 0.015,
-      cacheRead: 0.0003,
-      cacheWrite: 0.00375
+      input: 0.0001,
+      output: 0.0005,
+      cacheRead: 0.00001,
+      cacheWrite: 0.000125
     },
     cache: {
       supported: true,
@@ -895,24 +842,6 @@ const MODEL_REGISTRY: ModelConfig[] = [
     }
   },
 
-  // Amazon Nova Premier
-  {
-    baseId: 'nova-premier-v1:0',
-    name: 'Amazon Nova Premier',
-    provider: 'amazon',
-    category: 'text',
-    toolUse: true,
-    maxTokensLimit: 32000,
-    inferenceProfiles: [
-      {
-        type: 'regional-us',
-        prefix: 'us',
-        regions: ['us-east-1', 'us-east-2', 'us-west-2'],
-        displaySuffix: '(US)'
-      }
-    ]
-  },
-
   // Amazon Nova Pro
   {
     baseId: 'nova-pro-v1:0',
@@ -1140,16 +1069,18 @@ const MODEL_REGISTRY: ModelConfig[] = [
   // Launched 2026-09-29: Sol-tier pricing with quality approaching GPT-6 Astra
   // on demanding evaluations, aimed at codebase investigation, document
   // understanding and multi-step computer-use workflows.
-  // On bedrock-runtime, Converse is reachable only through the US geo
-  // cross-region inference profile (`us.openai.gpt-6.1-sol`). Neither in-region
-  // invocation of the bare model ID nor a global profile is offered for this
-  // launch, so `regional-us` is the only profile declared.
+  // On bedrock-runtime, Converse is reachable only through a cross-region
+  // inference profile (`us.openai.gpt-6.1-sol` / `global.openai.gpt-6.1-sol`);
+  // in-region invocation of the bare model ID is not supported. It launched
+  // US-only; the global profile was added later (listed by 2026-10-12).
   // 1M-token context window, 131,072 max output tokens, text and image input.
   // Explicit prompt caching is not supported, so no `cache` block is declared —
   // a cachePoint block would be rejected. Implicit caching is still billed, so
   // cache pricing is recorded.
   // Pricing (US CRIS short context, per 1M in/out/cache-read/cache-write):
-  // $2.20/$11.00/$0.11/$2.75, stored per 1K. Input above 272K tokens bills at
+  // $2.20/$11.00/$0.11/$2.75, stored per 1K. The (Global) profile is 10%
+  // cheaper ($2.00/$10.00/$0.10/$2.50), so its displayed cost runs slightly
+  // high. Input above 272K tokens bills at
   // the long-context tier (2x input, 1.5x output) for the whole request, so the
   // displayed cost is a floor rather than an exact figure on very long prompts.
   {
@@ -1162,6 +1093,12 @@ const MODEL_REGISTRY: ModelConfig[] = [
     supportsThinking: true,
     supportedThinkingTypes: ['enabled'],
     inferenceProfiles: [
+      {
+        type: 'global',
+        prefix: 'global',
+        regions: ['us-east-1', 'us-east-2', 'us-west-2'],
+        displaySuffix: '(Global)'
+      },
       {
         type: 'regional-us',
         prefix: 'us',
@@ -1712,36 +1649,8 @@ const IMAGE_GENERATION_MODELS: ModelConfig[] = [
     ]
   },
   {
-    baseId: 'stability.sd3-large-v1:0',
-    name: 'Stability SD3 Large',
-    provider: 'stability',
-    category: 'image',
-    toolUse: false,
-    maxTokensLimit: 0,
-    inferenceProfiles: [
-      {
-        type: 'base',
-        regions: ['us-west-2']
-      }
-    ]
-  },
-  {
     baseId: 'stability.stable-image-core-v1:0',
     name: 'Stability Stable Image Core v1.0',
-    provider: 'stability',
-    category: 'image',
-    toolUse: false,
-    maxTokensLimit: 0,
-    inferenceProfiles: [
-      {
-        type: 'base',
-        regions: ['us-west-2']
-      }
-    ]
-  },
-  {
-    baseId: 'stability.stable-image-core-v1:1',
-    name: 'Stability Stable Image Core v1.1',
     provider: 'stability',
     category: 'image',
     toolUse: false,
@@ -1764,63 +1673,6 @@ const IMAGE_GENERATION_MODELS: ModelConfig[] = [
       {
         type: 'base',
         regions: ['us-west-2']
-      }
-    ]
-  },
-  {
-    baseId: 'stability.stable-image-ultra-v1:1',
-    name: 'Stability Stable Image Ultra v1.1',
-    provider: 'stability',
-    category: 'image',
-    toolUse: false,
-    maxTokensLimit: 0,
-    inferenceProfiles: [
-      {
-        type: 'base',
-        regions: ['us-west-2']
-      }
-    ]
-  },
-  // Amazon models
-  {
-    baseId: 'amazon.nova-canvas-v1:0',
-    name: 'Amazon Nova Canvas',
-    provider: 'amazon',
-    category: 'image',
-    toolUse: false,
-    maxTokensLimit: 0,
-    inferenceProfiles: [
-      {
-        type: 'base',
-        regions: ['us-east-1', 'ap-northeast-1', 'eu-west-1']
-      }
-    ]
-  },
-  {
-    baseId: 'amazon.titan-image-generator-v2:0',
-    name: 'Amazon Titan Image Generator v2',
-    provider: 'amazon',
-    category: 'image',
-    toolUse: false,
-    maxTokensLimit: 0,
-    inferenceProfiles: [
-      {
-        type: 'base',
-        regions: ['us-east-1', 'us-west-2']
-      }
-    ]
-  },
-  {
-    baseId: 'amazon.titan-image-generator-v1',
-    name: 'Amazon Titan Image Generator v1',
-    provider: 'amazon',
-    category: 'image',
-    toolUse: false,
-    maxTokensLimit: 0,
-    inferenceProfiles: [
-      {
-        type: 'base',
-        regions: ['us-east-1', 'us-west-2', 'eu-west-1', 'eu-west-2', 'ap-south-1']
       }
     ]
   }

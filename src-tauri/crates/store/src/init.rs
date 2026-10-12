@@ -154,6 +154,10 @@ pub fn init(data: &mut Map<String, Value>, env: &Env) {
         data.insert("appTheme".into(), json!("charcoal"));
     }
 
+    // Saved selections of retired models would keep failing; move them to the
+    // replacement model (see `retired_models` for the table and the keys).
+    crate::retired_models::migrate(data);
+
     missing(data, "appFontSans", json!("inter"));
     missing(data, "appFontMono", json!("jetbrains"));
 }

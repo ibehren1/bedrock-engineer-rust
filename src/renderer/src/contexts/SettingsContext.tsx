@@ -335,8 +335,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   )
 
   // generateImage Tool Settings
-  const [generateImageModel, setStateGenerateImageModel] =
-    useState<string>('amazon.nova-canvas-v1:0')
+  const [generateImageModel, setStateGenerateImageModel] = useState<string>(
+    'stability.sd3-5-large-v1:0'
+  )
 
   // generateVideo Tool Settings
   const [generateVideoS3Uri, setStateGenerateVideoS3Uri] = useState<string>('')
@@ -1148,10 +1149,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       )
 
       if (!isGenerateModelAvailable && availableImageModels.length > 0) {
-        // 代替モデルを検索（Amazonプロバイダーを優先）
-        const alternativeModel =
-          availableImageModels.find((model) => model.id.startsWith('amazon')) ||
-          availableImageModels[0]
+        const alternativeModel = availableImageModels[0]
 
         setStateGenerateImageModel(alternativeModel.id)
         window.store.set('generateImageTool', { modelId: alternativeModel.id })
@@ -1167,14 +1165,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const updatedAgents = customAgents.map((agent) => {
         // エージェント固有のツール設定がある場合のみ更新
         if (agent.tools && agent.tools.length > 0) {
-          const isGenerateImageSupported = [
-            'us-east-1',
-            'us-west-2',
-            'ap-northeast-1',
-            'eu-west-1',
-            'eu-west-2',
-            'ap-south-1'
-          ].includes(region)
+          const isGenerateImageSupported =
+            getImageGenerationModelsForRegion(regionAsBedrockRegion).length > 0
 
           // generateImageツールがリストに含まれているか確認
           const hasGenerateImageTool = agent.tools.includes('generateImage')

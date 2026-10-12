@@ -115,21 +115,24 @@ describe('OpenAI GPT model registry integration', () => {
   })
 })
 
-// GPT-6.1 Sol launched with the US geo cross-region profile only: no global
-// profile and no in-region invocation of the bare model ID on bedrock-runtime.
+// GPT-6.1 Sol is exposed through the US geo and global cross-region profiles;
+// there is no in-region invocation of the bare model ID on bedrock-runtime.
 // Its base ID also sits next to GPT-6 Sol's, which costs half as much, so
 // config resolution must keep the two apart.
 describe('OpenAI GPT-6.1 Sol registry integration', () => {
-  test('is exposed as the us.* profile only (no global profile, no bare model ID)', () => {
+  test('is exposed as the us.* and global.* profiles (no bare model ID)', () => {
     const ids = allModels.map((m) => m.modelId)
     expect(ids).toContain('us.openai.gpt-6.1-sol')
-    expect(ids).not.toContain('global.openai.gpt-6.1-sol')
+    expect(ids).toContain('global.openai.gpt-6.1-sol')
     expect(ids).not.toContain('openai.gpt-6.1-sol')
   })
 
   test('display name carries the routing suffix and capabilities are set', () => {
     const model = allModels.find((m) => m.modelId === 'us.openai.gpt-6.1-sol')
     expect(model?.modelName).toBe('GPT-6.1 Sol (US)')
+    expect(allModels.find((m) => m.modelId === 'global.openai.gpt-6.1-sol')?.modelName).toBe(
+      'GPT-6.1 Sol (Global)'
+    )
     expect(model?.toolUse).toBe(true)
     expect(model?.supportsThinking).toBe(true)
     expect(model?.maxTokensLimit).toBe(131072)
@@ -137,7 +140,9 @@ describe('OpenAI GPT-6.1 Sol registry integration', () => {
 
   test('is offered in the three US regions and nowhere else', () => {
     for (const region of ['us-east-1', 'us-east-2', 'us-west-2'] as const) {
-      expect(getModelsForRegion(region).map((m) => m.modelId)).toContain('us.openai.gpt-6.1-sol')
+      const ids = getModelsForRegion(region).map((m) => m.modelId)
+      expect(ids).toContain('us.openai.gpt-6.1-sol')
+      expect(ids).toContain('global.openai.gpt-6.1-sol')
     }
     for (const region of ['eu-west-1', 'ap-northeast-1'] as const) {
       expect(getModelsForRegion(region).map((m) => m.modelId)).not.toContain(
@@ -148,6 +153,7 @@ describe('OpenAI GPT-6.1 Sol registry integration', () => {
 
   test('does not resolve to GPT-6 Sol, which costs half as much', () => {
     expect(getModelConfig('us.openai.gpt-6.1-sol')?.name).toBe('GPT-6.1 Sol')
+    expect(getModelConfig('global.openai.gpt-6.1-sol')?.name).toBe('GPT-6.1 Sol')
     expect(getModelConfig('us.openai.gpt-6-sol')?.name).toBe('GPT-6 Sol')
   })
 
@@ -207,6 +213,49 @@ describe('Claude Opus 5.5 registry integration', () => {
     // Same shape one generation earlier: Fable 5 vs Fable 5.1.
     expect(getModelConfig('us.anthropic.claude-fable-5-1')?.name).toBe('Claude Fable 5.1')
     expect(getModelConfig('global.anthropic.claude-fable-5')?.name).toBe('Claude Fable 5')
+  })
+})
+
+// Claude Haiku 5.5 is offered only through inference profiles, and its
+// unsuffixed base ID must not resolve to Haiku 4.5's dated one.
+describe('Claude Haiku 5.5 registry integration', () => {
+  test('is exposed as global/US/EU/JP profiles and no bare model ID', () => {
+    const ids = allModels.map((m) => m.modelId)
+    expect(ids).toContain('global.anthropic.claude-haiku-5-5')
+    expect(ids).toContain('us.anthropic.claude-haiku-5-5')
+    expect(ids).toContain('eu.anthropic.claude-haiku-5-5')
+    expect(ids).toContain('jp.anthropic.claude-haiku-5-5')
+    expect(ids).not.toContain('anthropic.claude-haiku-5-5')
+  })
+
+  test('display names carry the routing suffix and capabilities are set', () => {
+    const usModel = allModels.find((m) => m.modelId === 'us.anthropic.claude-haiku-5-5')
+    expect(usModel?.modelName).toBe('Claude Haiku 5.5 (US)')
+    expect(usModel?.toolUse).toBe(true)
+    expect(usModel?.supportsThinking).toBe(true)
+    expect(usModel?.supportedThinkingTypes).toEqual(['adaptive'])
+    expect(usModel?.maxTokensLimit).toBe(128000)
+  })
+
+  test('pricing uses the global rate ($0.10/$0.50 per 1M, cache read a tenth of input)', () => {
+    const calc = new PricingCalculator('global.anthropic.claude-haiku-5-5')
+    expect(calc.calculateInputCost(1_000_000)).toBeCloseTo(0.1, 5)
+    expect(calc.calculateOutputCost(1_000_000)).toBeCloseTo(0.5, 5)
+    expect(calc.calculateCacheReadCost(1_000_000)).toBeCloseTo(0.01, 5)
+    expect(calc.calculateCacheWriteCost(1_000_000)).toBeCloseTo(0.125, 5)
+  })
+
+  test('prompt caching is declared on messages, system and tools', () => {
+    const cache = getModelConfig('us.anthropic.claude-haiku-5-5')?.cache
+    expect(cache?.supported).toBe(true)
+    expect(cache?.cacheableFields).toEqual(['messages', 'system', 'tools'])
+  })
+
+  test('config resolution keeps Haiku 5.5 and Haiku 4.5 apart', () => {
+    expect(getModelConfig('global.anthropic.claude-haiku-5-5')?.name).toBe('Claude Haiku 5.5')
+    expect(getModelConfig('us.anthropic.claude-haiku-4-5-20251001-v1:0')?.name).toBe(
+      'Claude Haiku 4.5'
+    )
   })
 })
 
@@ -413,13 +462,14 @@ describe('clampMaxTokensToModelLimit', () => {
 describe('model output ceilings', () => {
   test.each([
     ['us.anthropic.claude-haiku-4-5-20251001-v1:0', 64000],
-    ['us.anthropic.claude-sonnet-4-5-20250929-v1:0', 64000],
-    ['us.anthropic.claude-opus-4-1-20250805-v1:0', 32000],
+    ['us.anthropic.claude-haiku-5-5', 128000],
+    ['us.anthropic.claude-sonnet-4-6', 64000],
+    ['us.anthropic.claude-opus-4-8', 128000],
     ['us.anthropic.claude-opus-5', 128000],
     ['us.anthropic.claude-opus-5-5', 128000],
     ['us.anthropic.claude-sonnet-5', 128000],
     ['us.anthropic.claude-sonnet-5-5', 128000],
-    ['us.amazon.nova-premier-v1:0', 32000],
+    ['us.amazon.nova-lite-v1:0', 5120],
     ['us.amazon.nova-pro-v1:0', 5120],
     ['us.amazon.nova-2-lite-v1:0', 64000],
     ['us.deepseek.r1-v1:0', 32768],

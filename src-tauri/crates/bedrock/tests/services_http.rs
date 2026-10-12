@@ -185,7 +185,7 @@ async fn generate_image_sends_model_body_and_maps_response() {
         json!({ "images": ["iVBOR"], "seeds": [5], "finish_reasons": [null] }),
     )]);
     let req: image::GenerateImageRequest = serde_json::from_value(json!({
-        "modelId": "stability.stable-image-core-v1:1", "prompt": "mountains",
+        "modelId": "stability.stable-image-core-v1:0", "prompt": "mountains",
         "aspect_ratio": "1:1", "output_format": "png"
     }))
     .unwrap();
@@ -200,7 +200,7 @@ async fn generate_image_sends_model_body_and_maps_response() {
     assert_eq!(r.method, "POST");
     assert!(
         r.uri
-            .ends_with("/model/stability.stable-image-core-v1%3A1/invoke"),
+            .ends_with("/model/stability.stable-image-core-v1%3A0/invoke"),
         "{}",
         r.uri
     );
@@ -219,7 +219,7 @@ async fn generate_image_error_messages() {
         json_response(200, &[], json!({ "error": "unsafe prompt" })),
     ]);
     let req = image::GenerateImageRequest {
-        model_id: "amazon.nova-canvas-v1:0".into(),
+        model_id: "stability.sd3-5-large-v1:0".into(),
         prompt: "p".into(),
         ..Default::default()
     };
@@ -237,7 +237,7 @@ async fn generate_image_error_messages() {
     let e = image::generate_image(fake.as_ref(), &aws(), &req)
         .await
         .unwrap_err();
-    assert_eq!(e.to_string(), "Nova error: unsafe prompt");
+    assert_eq!(e.to_string(), "Invalid response format from Bedrock");
 
     let unsupported = image::GenerateImageRequest {
         model_id: "amazon.nova-reel-v1:0".into(),
@@ -248,7 +248,7 @@ async fn generate_image_error_messages() {
         .unwrap_err();
     assert!(e
         .to_string()
-        .starts_with("Model amazon.nova-reel-v1:0 is not supported. Supported models: stability.sd3-large-v1:0, "));
+        .starts_with("Model amazon.nova-reel-v1:0 is not supported. Supported models: stability.sd3-5-large-v1:0, "));
     assert_eq!(fake.requests().len(), 3);
 }
 
@@ -489,7 +489,7 @@ async fn retrieve_and_generate_round_trip_and_not_found() {
             "type": "KNOWLEDGE_BASE",
             "knowledgeBaseConfiguration": {
                 "knowledgeBaseId": "KB1",
-                "modelArn": "arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-3-haiku-20240307-v1:0",
+                "modelArn": "arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
                 "generationConfiguration": { "promptTemplate": { "textPromptTemplate": "$search_results$" } }
             }
         }
@@ -834,7 +834,7 @@ async fn structured_output_forces_tool_and_returns_input() {
     let req = structured_output::WebsiteRecommendationsRequest {
         website_code: "<html></html>".into(),
         language: "English".into(),
-        model_id: "us.anthropic.claude-sonnet-4-20250514-v1:0".into(),
+        model_id: "us.anthropic.claude-sonnet-4-6".into(),
     };
     let out = structured_output::get_website_recommendations(&svc, &converse_settings(), &req)
         .await
@@ -892,7 +892,7 @@ async fn recognize_image_claude_and_nova_paths() {
     let claude = image_recognition::RecognizeImageRequest {
         image_path: path.clone(),
         prompt: None,
-        model_id: Some("anthropic.claude-3-haiku-20240307-v1:0".into()),
+        model_id: Some("us.anthropic.claude-haiku-4-5-20251001-v1:0".into()),
     };
     let text =
         image_recognition::recognize_image(fake.as_ref(), &svc, &converse_settings(), &claude)

@@ -7,6 +7,35 @@ dated section here for anything user-visible.
 See the [README](./README.md#whats-different-in-this-fork) for a feature-by-feature
 overview of the fork with screenshots.
 
+### 2026-10-12
+
+- **OpenAI GPT-6.1 Sol** is now also available as **(Global)**, next to **(US)**. Bedrock has added a
+  global option for it, which is 10% cheaper than US: $2.00 per million tokens in and $10 per
+  million out, against $2.20 and $11. The cost the app shows is based on the US rate for both, so
+  for **(Global)** it runs about 10% high.
+- **Claude Haiku 5.5** is now in the model dropdown, as **(Global)**, **(US)**, **(EU)** and
+  **(JP)**. It is the fastest model in the Claude 5.5 family and the first Haiku that thinks
+  adaptively: it decides for itself how much to think. It does better than Haiku 4.5 on coding and
+  agent work, takes text and images, has a 1M-token context window, and can return up to 128,000
+  tokens in one answer. At $0.10 per million tokens in and $0.50 per million out, it is a tenth of
+  the price of Haiku 4.5. Prompts over 100,000 tokens bill at five times those rates, and the US,
+  EU and JP options cost 10% more than Global, so in both cases the cost the app shows is a floor.
+  It also shows up in the light-model list in Settings.
+- **Retired and older models have been removed.** Claude Opus 4, Opus 4.1, Sonnet 4 and Sonnet 4.5
+  and Amazon Nova Premier are gone from the model list. Bedrock has retired them or is about to, and
+  the newer models that replace them are cheaper. Image generation drops Amazon Nova Canvas, both
+  Titan Image Generator models, Stability SD3 Large, and the v1.1 versions of Stable Image Core and
+  Ultra, which Bedrock no longer offers. That leaves SD3.5 Large (now the default), Stable Image Core
+  and Stable Image Ultra, all in US West (Oregon) only, so image generation is now available only
+  in that region. The Nova Canvas agent is also removed from the Agent Directory.
+- If you had a removed model selected, the app switches you to its replacement the next time it
+  starts: Opus 4 and 4.1 become Opus 5.5, Sonnet 4 and 4.5 become Sonnet 5.5, Nova Premier becomes
+  Nova 2 Lite, Claude 3 Haiku becomes Haiku 5.5, and removed image models become SD3.5 Large. This
+  covers the chat model, the light model, the image tools, your visible-models list and scheduled
+  background agents. You keep the same US, EU, JP or Global option where the new model offers it.
+  New background sessions with no model chosen now use Haiku 5.5 instead of the retired Claude 3
+  Haiku.
+
 ### 2026-10-08
 
 - Fixed follow-up messages failing with "reasoningContent needs reasoningText or redactedContent"

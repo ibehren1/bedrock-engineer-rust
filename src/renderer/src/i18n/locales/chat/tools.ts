@@ -349,7 +349,7 @@ export const tools = {
       },
       generateImage: {
         description:
-          'Lets the AI create custom images based on your descriptions. Ideal for design mockups, UI elements, conceptual illustrations, storyboards, product images, marketing content, or visualizing ideas without needing design skills. Available models include Stability AI and Amazon Titan image generators.',
+          'Lets the AI create custom images based on your descriptions. Ideal for design mockups, UI elements, conceptual illustrations, storyboards, product images, marketing content, or visualizing ideas without needing design skills. Uses Stability AI image models (SD3.5 Large, Stable Image Core and Stable Image Ultra).',
         tip: 'Use this when you need visual elements for your project, want to quickly prototype UI designs, or need to visualize concepts before implementation.'
       },
       retrieve: {
@@ -824,7 +824,7 @@ export const tools = {
       },
       generateImage: {
         description:
-          'AIがあなたの説明に基づいてカスタム画像を作成できるようにします。デザインモックアップ、UI要素、概念図、紙芝居、商品画像、マーケティングコンテンツなど、幅広い用途に活用できます。Stability AIやAmazon Titan画像生成モデルなどが利用可能です。',
+          'AIがあなたの説明に基づいてカスタム画像を作成できるようにします。デザインモックアップ、UI要素、概念図、紙芝居、商品画像、マーケティングコンテンツなど、幅広い用途に活用できます。Stability AI の画像生成モデル（SD3.5 Large、Stable Image Core、Stable Image Ultra）を利用します。',
         tip: 'プロジェクトの視覚的要素が必要な場合、UIデザインを素早くプロトタイプ化したい場合、または実装前にコンセプトを視覚化する必要がある場合に使用してください。'
       },
       retrieve: {

@@ -226,8 +226,8 @@ to use `us-east-1`, do this while `us-east-1` is the selected region.
    configurations_).
 4. Click **Modify model access** (or **Enable specific models** on a fresh account).
 5. Tick the models you want. At a minimum, tick the Anthropic **Claude** models — those are the ones
-   this app is built around. Ticking Amazon **Nova** models as well is worth it: Nova Canvas and
-   Reel are used by the image and video tools.
+   this app is built around. Ticking Amazon **Nova Reel** (used by the video tool) and the
+   **Stability AI** image models (used by the image tool) is worth it too.
 6. Some model families — Anthropic's in particular — ask for a short **use case description**. A
    sentence or two about what you intend to do with it is enough ("internal engineering
    productivity assistant for my own use").
@@ -498,7 +498,7 @@ aws bedrock list-foundation-models --region us-east-1 --profile bedrock \
 
 # 3. Can it actually invoke a model? (Adjust the model ID to one you enabled.)
 aws bedrock-runtime converse \
-  --model-id us.anthropic.claude-sonnet-4-5-20250929-v1:0 \
+  --model-id us.anthropic.claude-sonnet-5-5 \
   --messages '[{"role":"user","content":[{"text":"Say hi"}]}]' \
   --region us-east-1 --profile bedrock
 ```
@@ -1071,16 +1071,16 @@ whichever site you name.
 
 These call Amazon Bedrock services and cost money per use, separate from the conversation itself.
 
-| Tool                 | What it does                                                                                                                                                                                                                                                                                                                        | Notes                                                                                                                                                                           |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `generateImage`      | Makes an image from a text description. Defaults to Stability SD 3.5 Large, and also supports Amazon Nova Canvas and Titan Image Generator. Choose aspect ratio and size; output as PNG, JPEG or WebP. Supports a **negative prompt** (things to leave out) and a **seed** (the same seed and prompt gives the same picture again). | Only offered in regions that have image models: `us-east-1`, `us-west-2`, `ap-northeast-1`, `eu-west-1`, `eu-west-2`, `ap-south-1`. Which models you get depends on the region. |
-| `recognizeImage`     | Looks at an image file and describes it: objects, text in the picture, the scene, a caption.                                                                                                                                                                                                                                        | Good for pulling text out of screenshots, describing images for accessibility, or tagging a folder of photos.                                                                   |
-| `generateVideo`      | Makes a video with Amazon Nova Reel, from text or from a starting image. Modes: `TEXT_VIDEO` (6 seconds), `MULTI_SHOT_AUTOMATED` (12–120 seconds), `MULTI_SHOT_MANUAL`.                                                                                                                                                             | Video takes minutes, so this returns a job reference immediately rather than waiting. Requires an S3 bucket configured.                                                         |
-| `checkVideoStatus`   | Checks whether a video job has finished.                                                                                                                                                                                                                                                                                            | Use the job reference from `generateVideo`.                                                                                                                                     |
-| `downloadVideo`      | Downloads a finished video from S3 to your project folder.                                                                                                                                                                                                                                                                          | Only works once `checkVideoStatus` reports "Completed".                                                                                                                         |
-| `retrieve`           | Searches an Amazon Bedrock Knowledge Base — a collection of your own documents that AWS has indexed.                                                                                                                                                                                                                                | Needs a knowledge base ID listed on the agent. This is how you get an agent to answer from _your_ documents rather than from general knowledge.                                 |
-| `invokeBedrockAgent` | Calls an Amazon Bedrock Agent you built in the AWS console, and returns its answer. Keeps a session ID so a conversation can continue across calls.                                                                                                                                                                                 | Needs the agent ID and alias ID on the agent config.                                                                                                                            |
-| `invokeFlow`         | Runs an Amazon Bedrock Flow — a data-processing pipeline you designed in AWS. Accepts text, numbers, true/false, objects and lists as input.                                                                                                                                                                                        | Needs the flow configured on the agent. Useful for multi-step processing you have already built elsewhere and do not want to rebuild in a prompt.                               |
+| Tool                 | What it does                                                                                                                                                                                                                                                                                                                         | Notes                                                                                                                                             |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `generateImage`      | Makes an image from a text description. Defaults to Stability SD 3.5 Large, and also supports Stability Stable Image Core and Stable Image Ultra. Choose the aspect ratio; output as PNG, JPEG or WebP. Supports a **negative prompt** (things to leave out) and a **seed** (the same seed and prompt gives the same picture again). | Only offered in `us-west-2`, the region where Bedrock offers these image models.                                                                  |
+| `recognizeImage`     | Looks at an image file and describes it: objects, text in the picture, the scene, a caption.                                                                                                                                                                                                                                         | Good for pulling text out of screenshots, describing images for accessibility, or tagging a folder of photos.                                     |
+| `generateVideo`      | Makes a video with Amazon Nova Reel, from text or from a starting image. Modes: `TEXT_VIDEO` (6 seconds), `MULTI_SHOT_AUTOMATED` (12–120 seconds), `MULTI_SHOT_MANUAL`.                                                                                                                                                              | Video takes minutes, so this returns a job reference immediately rather than waiting. Requires an S3 bucket configured.                           |
+| `checkVideoStatus`   | Checks whether a video job has finished.                                                                                                                                                                                                                                                                                             | Use the job reference from `generateVideo`.                                                                                                       |
+| `downloadVideo`      | Downloads a finished video from S3 to your project folder.                                                                                                                                                                                                                                                                           | Only works once `checkVideoStatus` reports "Completed".                                                                                           |
+| `retrieve`           | Searches an Amazon Bedrock Knowledge Base — a collection of your own documents that AWS has indexed.                                                                                                                                                                                                                                 | Needs a knowledge base ID listed on the agent. This is how you get an agent to answer from _your_ documents rather than from general knowledge.   |
+| `invokeBedrockAgent` | Calls an Amazon Bedrock Agent you built in the AWS console, and returns its answer. Keeps a session ID so a conversation can continue across calls.                                                                                                                                                                                  | Needs the agent ID and alias ID on the agent config.                                                                                              |
+| `invokeFlow`         | Runs an Amazon Bedrock Flow — a data-processing pipeline you designed in AWS. Accepts text, numbers, true/false, objects and lists as input.                                                                                                                                                                                         | Needs the flow configured on the agent. Useful for multi-step processing you have already built elsewhere and do not want to rebuild in a prompt. |
 
 ### 9.5 System tools
 
@@ -1598,19 +1598,18 @@ before you commit.
 
 Which of these you see depends on your region and your **Visible Models** allowlist.
 
-**Anthropic (Claude):** Haiku 4.5, Sonnet 4, Sonnet 4.5, Sonnet 4.6, Sonnet 5, Sonnet 5.5, Opus 4,
-Opus 4.1, Opus 4.6, Opus 4.7, Opus 4.8, Opus 5, Opus 5.5, Fable 5, Fable 5.1
+**Anthropic (Claude):** Haiku 4.5, Haiku 5.5, Sonnet 4.6, Sonnet 5, Sonnet 5.5, Opus 4.6, Opus 4.7,
+Opus 4.8, Opus 5, Opus 5.5, Fable 5, Fable 5.1
 
-**Amazon (Nova):** Nova Micro, Nova Lite, Nova 2 Lite, Nova Pro, Nova Premier
+**Amazon (Nova):** Nova Micro, Nova Lite, Nova 2 Lite, Nova Pro
 
 **OpenAI:** GPT-6 Astra, GPT-6.1 Sol, GPT-6 Sol, GPT-6 Luna, GPT-5.6 Sol, GPT-5.6 Terra, GPT-5.6 Luna,
 GPT-OSS 20B, GPT-OSS 120B
 
-**Others:** DeepSeek R1, Kimi K2.5, Grok 4.6, Grok 4.7
+**Others:** DeepSeek R1, Kimi K3, Kimi K2.5, Grok 4.6, Grok 4.7
 
-**Image models** (used by `generateImage`): Amazon Nova Canvas, Amazon Titan Image Generator v1 and
-v2, Stability SD3 Large, SD3.5 Large, Stable Image Core v1.0 and v1.1, Stable Image Ultra v1.0 and
-v1.1
+**Image models** (used by `generateImage`, `us-west-2` only): Stability SD3.5 Large, Stable Image
+Core v1.0, Stable Image Ultra v1.0
 
 ### 18.3 Routing: why some models appear twice
 
@@ -2002,8 +2001,8 @@ put it in **Settings → Chat → Tavily Search API Key**.
 
 ### Image generation is not available
 
-Image models only exist in some regions: `us-east-1`, `us-west-2`, `ap-northeast-1`, `eu-west-1`,
-`eu-west-2`, `ap-south-1`. Switch region, or use a different approach.
+The image models the app supports (Stability SD3.5 Large, Stable Image Core and Stable Image Ultra)
+are only offered in `us-west-2`. Switch to that region, or use a different approach.
 
 ### I get the screen recording or camera permission dialog twice
 

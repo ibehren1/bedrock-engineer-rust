@@ -586,7 +586,7 @@ mod tests {
     #[test]
     fn thinking_enabled_with_budget() {
         let p = prepare_request(
-            &req("us.anthropic.claude-sonnet-4-20250514-v1:0"),
+            &req("us.anthropic.claude-sonnet-4-6"),
             &settings(Some(("enabled", Some(4096)))),
             &claude_info(),
         );
@@ -690,7 +690,7 @@ mod tests {
         assert_eq!(p.additional_model_request_fields, None);
         // model without thinking support
         let p = prepare_request(
-            &req("anthropic.claude-3-haiku"),
+            &req("anthropic.claude-haiku"),
             &settings(Some(("enabled", Some(4096)))),
             &info,
         );

@@ -190,7 +190,7 @@ fn service(fake: &Fake) -> ConverseService {
 
 fn chat_request() -> ConverseRequest {
     serde_json::from_value(json!({
-        "modelId": "us.anthropic.claude-sonnet-4-20250514-v1:0",
+        "modelId": "us.anthropic.claude-sonnet-4-6",
         "system": [{ "text": "You are helpful." }, { "cachePoint": { "type": "default" } }],
         "messages": [
             { "id": "m0", "role": "user", "content": [

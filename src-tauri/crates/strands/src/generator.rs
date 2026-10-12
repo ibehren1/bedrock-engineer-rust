@@ -16,7 +16,7 @@ use chrono::{DateTime, SecondsFormat, Utc};
 use serde_json::Value;
 
 /// Default Bedrock model in the generated `agent.py`.
-const DEFAULT_MODEL: &str = "us.anthropic.claude-sonnet-4-20250514-v1:0";
+const DEFAULT_MODEL: &str = "us.anthropic.claude-sonnet-4-6";
 /// Region of the generated boto3 session.
 const DEFAULT_AWS_REGION: &str = "us-east-1";
 

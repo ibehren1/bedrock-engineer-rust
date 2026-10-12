@@ -159,10 +159,10 @@ mod openai_gpt_6_1_sol {
     use super::*;
 
     #[test]
-    fn us_profile_only() {
+    fn us_and_global_profiles() {
         let ids = ids();
         assert!(has(&ids, "us.openai.gpt-6.1-sol"));
-        assert!(!has(&ids, "global.openai.gpt-6.1-sol"));
+        assert!(has(&ids, "global.openai.gpt-6.1-sol"));
         assert!(!has(&ids, "openai.gpt-6.1-sol"));
     }
 
@@ -170,6 +170,10 @@ mod openai_gpt_6_1_sol {
     fn display_name_and_capabilities() {
         let m = find("us.openai.gpt-6.1-sol").unwrap();
         assert_eq!(m.model_name, "GPT-6.1 Sol (US)");
+        assert_eq!(
+            find("global.openai.gpt-6.1-sol").unwrap().model_name,
+            "GPT-6.1 Sol (Global)"
+        );
         assert!(m.tool_use);
         assert_eq!(m.supports_thinking, Some(true));
         assert_eq!(m.max_tokens_limit, Some(131072));
@@ -178,10 +182,9 @@ mod openai_gpt_6_1_sol {
     #[test]
     fn offered_in_us_regions_only() {
         for region in ["us-east-1", "us-east-2", "us-west-2"] {
-            assert!(
-                has(&region_ids(region), "us.openai.gpt-6.1-sol"),
-                "{region}"
-            );
+            let ids = region_ids(region);
+            assert!(has(&ids, "us.openai.gpt-6.1-sol"), "{region}");
+            assert!(has(&ids, "global.openai.gpt-6.1-sol"), "{region}");
         }
         for region in ["eu-west-1", "ap-northeast-1"] {
             assert!(
@@ -194,6 +197,7 @@ mod openai_gpt_6_1_sol {
     #[test]
     fn does_not_resolve_to_gpt_6_sol() {
         assert_eq!(name_of("us.openai.gpt-6.1-sol"), Some("GPT-6.1 Sol"));
+        assert_eq!(name_of("global.openai.gpt-6.1-sol"), Some("GPT-6.1 Sol"));
         assert_eq!(name_of("us.openai.gpt-6-sol"), Some("GPT-6 Sol"));
     }
 
@@ -215,7 +219,7 @@ mod openai_gpt_6_1_sol {
     }
 }
 
-/// Shared shape of the Opus 5.5 / Sonnet 5.5 describe blocks.
+/// Shared shape of the Opus 5.5 / Sonnet 5.5 / Haiku 5.5 describe blocks.
 fn assert_geo_profiles_only(base: &str) {
     let ids = ids();
     for prefix in ["global", "us", "eu", "jp"] {
@@ -297,6 +301,47 @@ mod claude_opus_5_5 {
         assert_eq!(
             name_of("global.anthropic.claude-fable-5"),
             Some("Claude Fable 5")
+        );
+    }
+}
+
+/// describe('Claude Haiku 5.5 registry integration')
+mod claude_haiku_5_5 {
+    use super::*;
+
+    #[test]
+    fn geo_profiles_no_bare_id() {
+        assert_geo_profiles_only("claude-haiku-5-5");
+    }
+
+    #[test]
+    fn display_names_and_capabilities() {
+        assert_adaptive_capabilities("us.anthropic.claude-haiku-5-5", "Claude Haiku 5.5 (US)");
+    }
+
+    #[test]
+    fn pricing_global_rate() {
+        let calc = PricingCalculator::new("global.anthropic.claude-haiku-5-5");
+        assert_close(calc.calculate_input_cost(1_000_000), 0.1);
+        assert_close(calc.calculate_output_cost(1_000_000), 0.5);
+        assert_close(calc.calculate_cache_read_cost(1_000_000), 0.01);
+        assert_close(calc.calculate_cache_write_cost(1_000_000), 0.125);
+    }
+
+    #[test]
+    fn prompt_caching_declared() {
+        assert_full_cache("us.anthropic.claude-haiku-5-5");
+    }
+
+    #[test]
+    fn not_confused_with_haiku_4_5() {
+        assert_eq!(
+            name_of("global.anthropic.claude-haiku-5-5"),
+            Some("Claude Haiku 5.5")
+        );
+        assert_eq!(
+            name_of("us.anthropic.claude-haiku-4-5-20251001-v1:0"),
+            Some("Claude Haiku 4.5")
         );
     }
 }
@@ -525,13 +570,14 @@ mod clamp_max_tokens {
 fn model_output_ceilings() {
     let cases = [
         ("us.anthropic.claude-haiku-4-5-20251001-v1:0", 64000),
-        ("us.anthropic.claude-sonnet-4-5-20250929-v1:0", 64000),
-        ("us.anthropic.claude-opus-4-1-20250805-v1:0", 32000),
+        ("us.anthropic.claude-haiku-5-5", 128000),
+        ("us.anthropic.claude-sonnet-4-6", 64000),
+        ("us.anthropic.claude-opus-4-8", 128000),
         ("us.anthropic.claude-opus-5", 128000),
         ("us.anthropic.claude-opus-5-5", 128000),
         ("us.anthropic.claude-sonnet-5", 128000),
         ("us.anthropic.claude-sonnet-5-5", 128000),
-        ("us.amazon.nova-premier-v1:0", 32000),
+        ("us.amazon.nova-lite-v1:0", 5120),
         ("us.amazon.nova-pro-v1:0", 5120),
         ("us.amazon.nova-2-lite-v1:0", 64000),
         ("us.deepseek.r1-v1:0", 32768),
@@ -644,9 +690,14 @@ fn helper_lookups() {
     ));
     assert!(supports_streaming_with_tool_use("unknown"));
 
-    let images = get_image_generation_models_for_region("us-west-2");
-    assert!(images.first().unwrap().id.starts_with("amazon"));
-    assert!(images.last().unwrap().id.starts_with("stability"));
+    let images: Vec<String> = get_image_generation_models_for_region("us-west-2")
+        .into_iter()
+        .map(|m| m.id)
+        .collect();
+    assert_eq!(images.len(), 3);
+    assert!(images.iter().all(|id| id.starts_with("stability.")));
+    assert!(images.contains(&"stability.sd3-5-large-v1:0".to_string()));
+    assert!(get_image_generation_models_for_region("us-east-1").is_empty());
 }
 
 fn normalize(v: serde_json::Value) -> serde_json::Value {

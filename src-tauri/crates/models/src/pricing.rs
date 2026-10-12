@@ -73,7 +73,7 @@ mod tests {
 
     #[test]
     fn total_is_sum_of_components() {
-        let calc = PricingCalculator::new("anthropic.claude-sonnet-4-20250514-v1:0");
+        let calc = PricingCalculator::new("anthropic.claude-sonnet-4-6");
         let expected = (1000.0 * 0.003 + 500.0 * 0.015 + 200.0 * 0.0003 + 100.0 * 0.00375) / 1000.0;
         assert!((calc.calculate_total_cost(1000, 500, 200, 100) - expected).abs() < 1e-9);
         assert_eq!(

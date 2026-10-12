@@ -35,6 +35,7 @@ use std::time::SystemTime;
 
 pub mod init;
 pub use init::Env;
+mod retired_models;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -447,6 +448,24 @@ mod tests {
         Store::open(&p).unwrap();
         let text = fs::read_to_string(&p).unwrap();
         assert!(text.contains("charcoal"));
+    }
+
+    #[test]
+    fn retired_model_migration_persisted_on_open() {
+        let (_d, p) = tmp();
+        fs::create_dir_all(p.parent().unwrap()).unwrap();
+        fs::write(
+            &p,
+            r#"{"llm":{"modelId":"us.anthropic.claude-sonnet-4-20250514-v1:0","modelName":"Claude Sonnet 4","toolUse":true,"regions":["us-east-1"]}}"#,
+        )
+        .unwrap();
+        Store::open(&p).unwrap();
+        let on_disk: Value = serde_json::from_str(&fs::read_to_string(&p).unwrap()).unwrap();
+        let expected = models::all_models()
+            .iter()
+            .find(|m| m.model_id == "us.anthropic.claude-sonnet-5-5")
+            .unwrap();
+        assert_eq!(on_disk["llm"], serde_json::to_value(expected).unwrap());
     }
 
     #[test]
