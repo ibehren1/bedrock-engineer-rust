@@ -13,6 +13,11 @@ overview of the fork with screenshots.
   diagrams, moves to 0.18 to close a prototype-pollution bypass of its trust settings. Libraries
   used only to build the app (source maps, CSS selector parsing, test tooling) were also updated.
   Math should look the same as before.
+- Fixed "Failed to generate title" (and similar failures in other quick background requests) when
+  the lightweight model is a recent Claude model: Opus 4.7 and 4.8, Sonnet 5, Opus 5, and Claude
+  Sonnet, Opus and Haiku 5.5. Bedrock no longer accepts the temperature and Top P settings for those
+  models, so the app now leaves both out and the model's own defaults apply. Your temperature and
+  Top P settings still apply to older models.
 
 ### 2026-10-12
 

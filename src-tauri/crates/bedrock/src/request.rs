@@ -263,7 +263,8 @@ fn log_empty_text_fields(messages: &[Value]) {
 ///    field (enabled+budget or adaptive per model support), optional interleaved beta,
 ///    `temperature = 1`, no `topP`;
 /// 6. OpenAI GPT-5.x/6 and xAI Grok: no sampling fields, `reasoning.effort` from the budget;
-/// 7. Kimi K3: no sampling fields;
+/// 7. Kimi K3 and the Claude models that deprecated sampling (Opus 4.7 onwards): no sampling
+///    fields;
 /// 8. Amazon Nova: `inferenceConfig.topK = 1`, `topP = temperature = 1`, sequential tool hint in
 ///    the system prompt;
 /// 9. guardrail: request override, else the stored guardrail when enabled.
@@ -390,7 +391,7 @@ pub fn prepare_request(
         };
     }
 
-    if is_kimi_k3 {
+    if is_kimi_k3 || rejects_sampling_params(model_id) {
         inference.temperature = None;
         inference.top_p = None;
     }
@@ -435,6 +436,25 @@ pub fn prepare_request(
         additional_model_request_fields: additional,
         guardrail_config,
     }
+}
+
+/// Claude models that reject `temperature` and `topP` on Converse ("`temperature` is deprecated
+/// for this model"). Both fields are dropped so the model default applies; the thinking path's
+/// `temperature = 1` is that default anyway. Fable 5 is handled on its own above.
+const SAMPLING_DEPRECATED_CLAUDE: &[&str] = &[
+    "claude-opus-4-7",
+    "claude-opus-4-8",
+    "claude-sonnet-5",
+    "claude-opus-5",
+    "claude-haiku-5-5",
+];
+
+/// True for model IDs Bedrock rejects any sampling field for. `claude-sonnet-5` and
+/// `claude-opus-5` also match their `-5-5` successors.
+fn rejects_sampling_params(model_id: &str) -> bool {
+    SAMPLING_DEPRECATED_CLAUDE
+        .iter()
+        .any(|base| model_id.contains(base))
 }
 
 /// Thinking budget -> reasoning effort for reasoning-effort models.
@@ -772,6 +792,42 @@ mod tests {
         assert_eq!(p.inference_config.temperature, None);
         assert_eq!(p.inference_config.top_p, None);
         assert_eq!(p.inference_config.max_tokens, Some(4096));
+    }
+
+    #[test]
+    fn deprecated_sampling_claude_drops_sampling() {
+        for model in [
+            "global.anthropic.claude-haiku-5-5",
+            "us.anthropic.claude-sonnet-5-5",
+            "global.anthropic.claude-opus-5-5",
+            "global.anthropic.claude-sonnet-5",
+            "us.anthropic.claude-opus-5",
+            "global.anthropic.claude-opus-4-8",
+            "global.anthropic.claude-opus-4-7",
+        ] {
+            // thinking off (title generation, structured output) and thinking on
+            for thinking in [None, Some(("adaptive", None))] {
+                let mut r = req(model);
+                r.disable_thinking = Some(thinking.is_none());
+                r.inference_config = Some(InferenceConfig {
+                    max_tokens: Some(64),
+                    temperature: Some(0.2),
+                    top_p: Some(0.9),
+                    stop_sequences: None,
+                });
+                let p = prepare_request(&r, &settings(thinking), &claude_info());
+                assert_eq!(p.inference_config.temperature, None, "{model}");
+                assert_eq!(p.inference_config.top_p, None, "{model}");
+                assert_eq!(p.inference_config.max_tokens, Some(64), "{model}");
+            }
+        }
+        // older Claude models still take the request's sampling fields
+        let p = prepare_request(
+            &req("global.anthropic.claude-sonnet-4-6"),
+            &settings(None),
+            &NoInfo,
+        );
+        assert_eq!(p.inference_config.temperature, Some(0.5));
     }
 
     #[test]
