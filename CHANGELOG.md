@@ -7,6 +7,13 @@ dated section here for anything user-visible.
 See the [README](./README.md#whats-different-in-this-fork) for a feature-by-feature
 overview of the fork with screenshots.
 
+### 2026-10-16
+
+- Security updates for bundled libraries: KaTeX, the math renderer used in chat and in Mermaid
+  diagrams, moves to 0.18 to close a prototype-pollution bypass of its trust settings. Libraries
+  used only to build the app (source maps, CSS selector parsing, test tooling) were also updated.
+  Math should look the same as before.
+
 ### 2026-10-12
 
 - **OpenAI GPT-6.1 Sol** is now also available as **(Global)**, next to **(US)**. Bedrock has added a

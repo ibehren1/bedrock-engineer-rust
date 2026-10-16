@@ -1,7 +1,7 @@
 {
   "name": "bedrock-engineer",
   "productName": "Bedrock Engineer",
-  "version": "2026.1012.2",
+  "version": "2026.1016.0",
   "browserslist": [
     "chrome >= 105",
     "safari >= 15"
@@ -95,8 +95,11 @@
     "brace-expansion@1": "^1.1.21",
     "brace-expansion@2": "^2.1.7",
     "browserslist": "^4.28.8",
-    "postcss-selector-parser": "^6.1.4",
-    "image-size": "^2.0.3"
+    "postcss-selector-parser": "^7.1.6",
+    "image-size": "^2.0.3",
+    "katex": "^0.18.11",
+    "source-map-js": "^1.2.2",
+    "handlebars": "^4.7.10"
   },
   "devDependencies": {
     "@smithy/types": "^4.17.2",
