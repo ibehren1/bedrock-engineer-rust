@@ -16,7 +16,7 @@ type HtmlBlockProps = {
  * The model's page in an opaque-origin sandbox (see ./htmlPreview), rendered by the
  * `htmlpreview://` shell.
  */
-const SandboxedHtmlPreview: React.FC<{ html: string }> = ({ html }) => {
+export const SandboxedHtmlPreview: React.FC<{ html: string }> = ({ html }) => {
   const frameRef = useRef<HTMLIFrameElement>(null)
   const htmlRef = useRef(html)
   htmlRef.current = html

@@ -40,6 +40,10 @@ export interface ChatSession {
   agentId: string
   systemPrompt?: string
   modelId: string
+  /** Whether enabled memory items go into this chat's system prompt. Missing means true. */
+  useMemoryItems?: boolean
+  /** Project-relative paths the agent created or changed in this chat (Files panel). */
+  touchedFiles?: string[]
 }
 
 export interface ChatHistoryStore {

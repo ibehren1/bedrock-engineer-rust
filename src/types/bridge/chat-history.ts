@@ -20,4 +20,7 @@ export type ChatHistoryApi = {
     updatedMessage: ChatMessage
   ): Promise<void>
   deleteMessage(sessionId: string, messageIndex: number): Promise<void>
+  setUseMemoryItems(sessionId: string, value: boolean): Promise<void>
+  /** Merge project-relative paths into the session's `touchedFiles` (deduplicated). */
+  addTouchedFiles(sessionId: string, paths: string[]): Promise<void>
 }

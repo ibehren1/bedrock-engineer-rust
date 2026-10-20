@@ -19,6 +19,8 @@ type SandboxPanelProps = {
   onStop: () => void
   onRemove: (deleteData: boolean) => void
   onOpenFolder: () => void
+  /** Inside the chat's right panel, which draws the frame and sets the width. */
+  embedded?: boolean
 }
 
 type TabKey = 'overview' | 'compose' | 'terminal' | 'activity'
@@ -45,7 +47,8 @@ export const SandboxPanel: React.FC<SandboxPanelProps> = ({
   onStart,
   onStop,
   onRemove,
-  onOpenFolder
+  onOpenFolder,
+  embedded = false
 }) => {
   const { t } = useTranslation()
   const [tab, setTab] = useState<TabKey>('overview')
@@ -104,7 +107,13 @@ export const SandboxPanel: React.FC<SandboxPanelProps> = ({
   ]
 
   return (
-    <div className="w-[40rem] h-full flex flex-col bg-surface border border-subtle rounded-container shadow-raised overflow-hidden">
+    <div
+      className={
+        embedded
+          ? 'w-full h-full flex flex-col bg-surface overflow-hidden'
+          : 'w-[40rem] h-full flex flex-col bg-surface border border-subtle rounded-container shadow-raised overflow-hidden'
+      }
+    >
       <div className="flex items-center gap-2 px-3 py-2 border-b border-subtle">
         <FaDocker className="text-[#2496ED] size-4 shrink-0" />
         <div className="min-w-0">

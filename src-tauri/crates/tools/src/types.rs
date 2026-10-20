@@ -142,6 +142,9 @@ pub const BUILT_IN_TOOLS: &[&str] = &[
     "todo",
     "todoInit",
     "todoUpdate",
+    "addMemory",
+    "updateMemory",
+    "removeMemory",
     "invokeAgent",
 ];
 
@@ -172,6 +175,9 @@ pub const TOOL_SPEC_ORDER: &[&str] = &[
     "cameraCapture",
     "todoInit",
     "todoUpdate",
+    "addMemory",
+    "updateMemory",
+    "removeMemory",
     "invokeAgent",
 ];
 

@@ -1,0 +1,79 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Memory Items mockup</title>
+<style>
+:root{--canvas:#111827;--surface:#1f2937;--surface2:#171f2b;--raised:#374151;--ink:#f9fafb;--muted:#9ca3af;--faint:#6b7280;--accent:#4f7ffa;--tint:rgba(79,127,250,.12);--ok:#34d399;--danger:#f87171}
+*{box-sizing:border-box}body{margin:0;font:12.5px system-ui,sans-serif;background:var(--canvas);color:var(--ink);height:100vh;display:flex}
+.rail{background:var(--surface);margin:4px;border:1px solid var(--raised);border-radius:3px;display:flex;flex-direction:column;justify-content:space-between;padding:2px}
+.ico{width:28px;height:28px;margin:2px;border-radius:3px;display:grid;place-items:center;color:var(--muted);cursor:pointer;position:relative}
+.ico:hover{background:var(--raised);color:var(--ink)}.ico.on{background:var(--accent);color:#fff}
+.ico svg{width:16px;height:16px}.new::after{content:"";position:absolute;top:3px;right:3px;width:6px;height:6px;border-radius:50%;background:var(--ok)}
+main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.tabs{display:flex;gap:6px;padding:6px 10px;border-bottom:1px solid var(--raised)}.tabs button{background:var(--surface2);color:var(--muted);border:1px solid var(--raised);border-radius:999px;padding:4px 12px;cursor:pointer}.tabs button.on{background:var(--accent);color:#fff}
+.view{display:none;flex:1;overflow:auto;padding:10px}.view.on{display:flex;flex-direction:column}
+.msg{max-width:70%;padding:8px 10px;border-radius:5px;margin:6px 0}.u{align-self:flex-end;background:var(--raised)}.a{background:var(--surface)}
+.chip{display:inline-flex;gap:6px;align-items:center;font-size:11px;color:var(--ok);background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.4);border-radius:999px;padding:2px 8px;margin-top:6px}
+.input{margin-top:auto}.row{display:flex;align-items:center;gap:10px;margin-bottom:6px;font-size:11px;color:var(--muted)}
+.cb{display:flex;align-items:center;gap:6px;color:var(--ink);cursor:pointer}.cb input{accent-color:var(--accent);width:14px;height:14px}
+.badge{background:var(--tint);color:var(--accent);border-radius:999px;padding:0 6px;font-size:11px}
+.ta{border:1px solid #4b5563;border-radius:5px;background:var(--surface)}.ta textarea{width:100%;height:60px;background:transparent;border:0;color:var(--ink);padding:10px;resize:none;font:inherit}
+.bar{display:flex;justify-content:space-between;padding:4px 10px;color:var(--muted);font-size:11px}
+h1{font-size:16px;margin:0}.sub{color:var(--muted);margin:4px 0 12px}
+.add{display:flex;gap:6px;margin-bottom:10px}.add input{flex:1;background:var(--surface);border:1px solid #4b5563;color:var(--ink);border-radius:3px;padding:6px}
+.btn{background:var(--accent);color:#fff;border:0;border-radius:3px;padding:6px 12px;cursor:pointer}.ghost{background:transparent;color:var(--muted);border:1px solid var(--raised)}
+.item{display:flex;align-items:center;gap:10px;padding:10px;border-radius:5px;background:var(--surface);margin-bottom:4px}.item:hover .act{opacity:1}
+.item .t{flex:1}.item .m{font-size:11px;color:var(--muted);margin-top:2px}.act{opacity:0;display:flex;gap:6px;color:var(--faint);cursor:pointer}.act span:hover{color:var(--danger)}
+.tag{font-size:10px;border-radius:3px;padding:1px 5px;background:var(--surface2);color:var(--muted);border:1px solid var(--raised)}
+pre{background:var(--surface2);border:1px solid var(--raised);border-radius:5px;padding:10px;white-space:pre-wrap;color:var(--muted)}pre b{color:var(--accent)}
+</style></head><body>
+<nav class="rail"><div>
+ <div class="ico" title="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8v10H3z"/></svg></div>
+ <div class="ico" id="nChat" title="Chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+ <div class="ico" title="My Agents"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="8" width="14" height="11" rx="2"/><path d="M12 4v4M9 13h.01M15 13h.01"/></svg></div>
+ <div class="ico new" id="nMem" title="Memory (new)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 5 3 3 0 0 0 6 1V5a2 2 0 0 0-3-2zM15 3a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-2 5 3 3 0 0 1-6 1"/></svg></div>
+</div><div>
+ <div class="ico" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></div>
+</div></nav>
+<main>
+<div class="tabs"><button data-v="chat" class="on">Chat screen</button><button data-v="mem">Memory page</button><button data-v="sys">System prompt</button></div>
+
+<section class="view on" id="chat">
+ <div class="msg u">Add a rule: always answer with TypeScript examples, never JavaScript.</div>
+ <div class="msg a">Got it — I'll use TypeScript for all examples from now on.<br><span class="chip">✓ Memory saved: "Always answer with TypeScript examples, never JavaScript." · <u>View</u> · <u>Undo</u></span></div>
+ <div class="msg u">Remember that our prod region is eu-west-1.</div>
+ <div class="msg a">Noted.<br><span class="chip">✓ Memory saved: "Prod region is eu-west-1." · <u>View</u> · <u>Undo</u></span></div>
+ <div class="input">
+  <div class="row"><span>🔧 Tools</span><span>📁 ~/projects/app</span>
+   <label class="cb" title="Inject all memory items into the system prompt"><input type="checkbox" checked id="useMem"> Use Memory Items <span class="badge" id="cnt">3</span></label></div>
+  <div class="ta"><textarea placeholder="Type your message..."></textarea>
+   <div class="bar"><span>Agent: Software Developer · Model: Claude Opus 5.5 · Thinking</span><span>Plan | <b style="color:var(--ink)">Act</b> ➤</span></div></div>
+ </div>
+</section>
+
+<section class="view" id="mem">
+ <h1>Memory</h1><div class="sub">Items saved here are added to every chat's context when "Use Memory Items" is checked.</div>
+ <div class="add"><input placeholder="Add a memory or rule…"><button class="btn">Add</button></div>
+ <div id="list"></div>
+</section>
+
+<section class="view" id="sys">
+ <h1>System prompt preview</h1><div class="sub">Shown in the SYSTEM_PROMPT modal. Block omitted when the checkbox is off.</div>
+ <pre>You are a software developer agent…
+
+&lt;context&gt;…&lt;/context&gt;
+
+<b>&lt;memory&gt;
+The user asked you to remember the following. Follow these rules unless the user overrides them in this chat:
+- Always answer with TypeScript examples, never JavaScript.
+- Prod region is eu-west-1.
+- Prefer pnpm over npm.
+&lt;/memory&gt;</b></pre>
+</section>
+</main>
+<script>
+const items=[["Always answer with TypeScript examples, never JavaScript.","rule","from chat · Oct 20"],["Prod region is eu-west-1.","memory","from chat · Oct 20"],["Prefer pnpm over npm.","rule","added manually · Oct 18"]];
+function render(){document.getElementById('list').innerHTML=items.map((i,k)=>`<div class="item" style="opacity:${i[3]===false?.5:1}"><label class="cb" title="Include in context"><input type="checkbox" ${i[3]===false?'':'checked'} onchange="items[${k}][3]=this.checked;render()"></label><div class="t" contenteditable="true">${i[0]}<div class="m" contenteditable="false">${i[2]}</div></div><span class="tag" onclick="items[${k}][1]=items[${k}][1]==='rule'?'memory':'rule';render()" style="cursor:pointer">${i[1]}</span><div class="act"><span title="Edit">✎</span><span title="Delete" onclick="items.splice(${k},1);render()">🗑</span></div></div>`).join('');document.getElementById('cnt').textContent=items.filter(i=>i[3]!==false).length}
+render();
+const show=v=>{document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id===v));document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));nChat.classList.toggle('on',v!=='mem');nMem.classList.toggle('on',v==='mem')};
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>show(b.dataset.v));nMem.onclick=()=>show('mem');nChat.onclick=()=>show('chat');show('chat');
+document.querySelector('.add .btn').onclick=()=>{const i=document.querySelector('.add input');if(i.value){items.unshift([i.value,'memory','added manually · now']);i.value='';render()}};
+</script></body></html>

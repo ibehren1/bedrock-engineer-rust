@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "file-viewer",
+  "description": "Pop-out file viewer windows (window_open_file_viewer): on top of the full app UI in default.json, closing themselves after the renderer's unsaved-edits prompt (getCurrentWindow().onCloseRequested destroys the window).",
+  "windows": ["file-viewer-*"],
+  "permissions": ["core:window:allow-destroy"]
+}

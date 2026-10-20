@@ -15,6 +15,7 @@ pub mod file;
 pub mod help;
 pub mod logger;
 pub mod mcp;
+pub mod memory;
 pub mod screen;
 pub mod store;
 pub mod strands;
@@ -22,6 +23,7 @@ pub mod todo;
 pub mod tools;
 pub mod video;
 pub mod window;
+pub mod workspace_files;
 
 use serde_json::Value;
 use tauri::ipc::{InvokeBody, Request};
@@ -75,6 +77,22 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         chat_history::chat_history_get_active_session_id,
         chat_history::chat_history_update_message_content,
         chat_history::chat_history_delete_message,
+        chat_history::chat_history_set_use_memory_items,
+        chat_history::chat_history_add_touched_files,
+        // window.workspaceFiles (Files panel)
+        workspace_files::workspace_files_list,
+        workspace_files::workspace_files_read_text,
+        workspace_files::workspace_files_write_text,
+        workspace_files::workspace_files_open,
+        workspace_files::workspace_files_reveal,
+        workspace_files::workspace_files_exists,
+        workspace_files::workspace_files_watch,
+        workspace_files::workspace_files_unwatch,
+        // window.memory
+        memory::memory_list,
+        memory::memory_add,
+        memory::memory_update,
+        memory::memory_delete,
         // window.file / window.api (files and dialogs)
         file::open_file,
         file::open_directory,
@@ -172,6 +190,7 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         camera::camera_capture_response,
         // window.api.window
         window::window_open_task_history,
+        window::window_open_file_viewer,
         // app menu / context menu (src/main/index.ts createMenu, context-menu)
         crate::menu::context_menu_popup,
         crate::menu::app_menu_action,

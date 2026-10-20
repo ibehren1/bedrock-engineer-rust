@@ -25,6 +25,7 @@ import {
   FaUsers
 } from 'react-icons/fa'
 import { FaListCheck } from 'react-icons/fa6'
+import { LuBrain } from 'react-icons/lu'
 import { FaDocker } from 'react-icons/fa'
 import { BiFace } from 'react-icons/bi'
 import { MdDifference } from 'react-icons/md'
@@ -61,7 +62,10 @@ const standardToolIcons = {
   todo: <FaListCheck className="text-accent size-4" />,
   todoInit: <FaListCheck className="text-accent size-4" />,
   todoUpdate: <FaListCheck className="text-accent size-4" />,
-  invokeAgent: <FaUsers className="text-fuchsia-500 size-4" />
+  invokeAgent: <FaUsers className="text-fuchsia-500 size-4" />,
+  addMemory: <LuBrain className="text-accent size-4" />,
+  updateMemory: <LuBrain className="text-accent size-4" />,
+  removeMemory: <LuBrain className="text-accent size-4" />
 }
 
 // MCPツール用のアイコン（すべてのMCPツールで共通）

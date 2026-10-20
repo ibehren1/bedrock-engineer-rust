@@ -141,6 +141,29 @@ pub async fn chat_history_delete_message(
     Ok(())
 }
 
+/// Sets the session's `useMemoryItems` flag (missing counts as `true`).
+#[tauri::command]
+pub async fn chat_history_set_use_memory_items(
+    state: History<'_>,
+    session_id: String,
+    value: bool,
+) -> Result<(), String> {
+    state.lock()?.set_use_memory_items(&session_id, value);
+    Ok(())
+}
+
+/// Merges `paths` (project-relative) into the session's `touchedFiles` list, deduplicated and in
+/// first-seen order.
+#[tauri::command]
+pub async fn chat_history_add_touched_files(
+    state: History<'_>,
+    session_id: String,
+    paths: Vec<String>,
+) -> Result<(), String> {
+    state.lock()?.add_touched_files(&session_id, &paths);
+    Ok(())
+}
+
 /// URI scheme for synchronous session reads: `chathistory://localhost/<sessionId>` (macOS/Linux)
 /// or `http://chathistory.localhost/<sessionId>` (Windows) — what `convertFileSrc(id,
 /// 'chathistory')` builds. Responds with the session JSON, or `404` with body `null`.

@@ -155,7 +155,7 @@ export const JSONCodeBlock: React.FC<{ json: any }> = ({ json }) => {
 
   const jsonStr = JSON.stringify(json, null, 2)
   return (
-    <pre className="bg-sunken text-ink p-2.5 rounded-container overflow-x-auto whitespace-pre-wrap max-h-[50vh] max-w-[90vw] shadow-raised border border-subtle">
+    <pre className="bg-sunken text-ink p-2.5 rounded-container overflow-x-auto whitespace-pre-wrap max-h-[50vh] max-w-full shadow-raised border border-subtle">
       <code>{jsonStr}</code>
     </pre>
   )

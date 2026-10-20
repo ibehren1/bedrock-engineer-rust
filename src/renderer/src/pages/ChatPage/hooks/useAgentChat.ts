@@ -38,6 +38,8 @@ import { AttachedImage } from '../components/InputForm/TextArea'
 import { ChatMessage } from '@/types/chat/history'
 import { isMcpTool } from '@/types/tools'
 import { clearHostApproval, requestHostApproval } from '../lib/hostCommandApproval'
+import { extractTouchedPaths } from '@renderer/lib/workspaceFiles/paths'
+import { recordTouchedFiles, trackTurnFileChanges } from '@renderer/lib/workspaceFiles/touchedFiles'
 import { injectAttachmentBlocks } from '../lib/attachmentContext'
 import { notificationService } from '@renderer/services/NotificationService'
 import { limitContextLength } from '@renderer/lib/contextLength'
@@ -1023,6 +1025,16 @@ export const useAgentChat = (
 
         const toolResult = await window.api.bedrock.executeTool(toolInput, callerContext)
 
+        // Files this chat created or changed, for the Files panel's "This chat" view.
+        if (turnSessionId) {
+          const touched = extractTouchedPaths(
+            toolInput.type,
+            toolInput,
+            window.store.get('projectPath')
+          )
+          if (touched.length > 0) void recordTouchedFiles(turnSessionId, touched)
+        }
+
         // 実行中ツールセットから削除
         updateRunField(turnKey, 'executingTools', (prev) => {
           const next = new Set(prev)
@@ -1276,6 +1288,14 @@ export const useAgentChat = (
       }
     }
 
+    // Files that change in the project folder during this turn (e.g. written by a command)
+    // count as touched by this chat.
+    const turnProjectPath = window.store.get('projectPath')
+    const stopTrackingFiles =
+      turnSessionId && turnProjectPath
+        ? trackTurnFileChanges(turnSessionId, turnProjectPath)
+        : undefined
+
     let result
     try {
       patchRunState(turnKey, { loading: true })
@@ -1401,6 +1421,8 @@ export const useAgentChat = (
       toast.error(error.message || 'An error occurred')
     } finally {
       patchRunState(turnKey, { loading: false, executingTools: new Set() })
+      // The watcher is debounced; give the last writes of the turn a moment to arrive.
+      if (stopTrackingFiles) setTimeout(stopTrackingFiles, 1500)
     }
     return result
   }

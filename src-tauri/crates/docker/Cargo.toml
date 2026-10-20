@@ -9,20 +9,20 @@ authors.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
-tokio = { version = "=1.53.1", features = ["process", "io-util", "net", "time", "sync", "rt", "macros", "fs"] }
+tokio = { version = "=1.54.0", features = ["process", "io-util", "net", "time", "sync", "rt", "macros", "fs"] }
 yaml_serde = "=0.10.7"
 regex = "=1.13.1"
 sha1 = "=0.10.6"
-unicode-normalization = "=0.1.25"
-uuid = { version = "=1.26.1", features = ["v4"] }
+unicode-normalization = "=0.1.26"
+uuid = { version = "=1.28.0", features = ["v4"] }
 chrono = { version = "=0.4.45", default-features = false, features = ["clock", "std"] }
 log = "=0.4.34"
 
 [target.'cfg(unix)'.dependencies]
-libc = "=0.2.189"
+libc = "=0.2.191"
 
 [dev-dependencies]
 tempfile.workspace = true
-tokio = { version = "=1.53.1", features = ["process", "io-util", "net", "time", "sync", "rt", "rt-multi-thread", "macros", "fs"] }
-aws-config = { version = "=1.12.0", features = ["behavior-version-latest"] }
-aws-sdk-sts = { version = "=1.118.0", default-features = false, features = ["sigv4a", "default-https-client", "rt-tokio"] }
+tokio = { version = "=1.54.0", features = ["process", "io-util", "net", "time", "sync", "rt", "rt-multi-thread", "macros", "fs"] }
+aws-config = { version = "=1.13.0", features = ["behavior-version-latest"] }
+aws-sdk-sts = { version = "=1.120.0", default-features = false, features = ["sigv4a", "default-https-client", "rt-tokio"] }

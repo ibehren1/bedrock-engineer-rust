@@ -7,6 +7,41 @@ dated section here for anything user-visible.
 See the [README](./README.md#whats-different-in-this-fork) for a feature-by-feature
 overview of the fork with screenshots.
 
+### 2026-10-20
+
+- **Memory.** Tell the assistant to "add a rule" or "remember" something and it saves the item to a
+  memory list that every chat can use. Ask it to "forget" something and it removes the item. When an
+  item is saved, changed or removed, the reply shows a small note with **View** and **Undo**. The new
+  **Memory** page in the sidebar lists every item. There you can add items yourself, edit them, mark
+  each one as a rule or a fact, switch single items off, or delete them. A **Use Memory Items**
+  checkbox above the message box adds all switched-on items to the chat's context. It is checked for
+  every new chat, and unchecking it only affects that chat.
+- **Files panel.** A new panel on the right of the chat shows your project folder, so you no longer
+  have to find the agent's output in Finder or Explorer. Click a file to view it in the panel. Text,
+  code, Markdown, HTML, images, PDF and Word documents all preview there, and text files can be
+  edited and saved. Each file has buttons to open it in its default app or show it in Finder or
+  Explorer. **This chat** narrows the list to the files the agent created or changed in the current
+  chat, which are also marked with a fuchsia dot. The list updates as files change, and file paths in
+  the agent's replies can be clicked to open the file. The panel can be resized by dragging its
+  edge, and the Docker sandbox now appears as a second tab in it.
+- Files in the Files panel can be popped out into a window of their own with the new **Pop out**
+  button, for reading or editing next to the chat. Each file gets one window, and popping out the
+  same file again brings its window to the front. The window updates when the file changes on disk,
+  says so if the file is deleted, and asks before closing if there are unsaved edits.
+- The strip at the right edge of the chat that opens the Files and Sandbox panel is now easy to
+  spot: while the panel is closed it is drawn in the accent colour, pulses briefly when it first
+  appears in a chat, when the chat gets a sandbox and when the agent changes files, and shows a dot
+  until the panel is opened. The pulse is skipped when your system is set to reduce motion.
+- In the Files panel's project tree, the folders that hold the files the agent created or changed
+  in the chat now open on their own, so those files are visible without clicking through. Folders
+  you collapse stay collapsed.
+- The conversation now re-flows to fit when a side panel is opened or resized, instead of growing
+  a sideways scroll bar. Long words, links and paths wrap at the edge. Wide tables, code blocks and
+  equations scroll within their own box.
+- Routine library updates to the latest point releases: the Tauri app framework and its plugins,
+  the AWS SDK used for Bedrock, the MCP client, and the code editor and router in the interface.
+  Nothing should look or behave differently.
+
 ### 2026-10-16
 
 - Security updates for bundled libraries: KaTeX, the math renderer used in chat and in Mermaid

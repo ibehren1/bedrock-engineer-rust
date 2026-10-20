@@ -2,6 +2,8 @@ const invokeMock = jest.fn()
 
 jest.mock('@tauri-apps/api/core', () => ({
   invoke: (...args: any[]) => invokeMock(...args),
+  convertFileSrc: (path: string, protocol: string) =>
+    `${protocol}://localhost/${encodeURIComponent(path)}`,
   Channel: class {
     onmessage: (m: any) => void = () => {}
   }
@@ -13,8 +15,15 @@ jest.mock('@tauri-apps/api/event', () => ({
     return () => {}
   })
 }))
+let mockCloseHandler: ((event: { preventDefault: () => void }) => Promise<void>) | undefined
 jest.mock('@tauri-apps/api/window', () => ({
-  getCurrentWindow: () => ({ isFocused: async () => true })
+  getCurrentWindow: () => ({
+    isFocused: async () => true,
+    onCloseRequested: async (handler: typeof mockCloseHandler) => {
+      mockCloseHandler = handler
+      return () => {}
+    }
+  })
 }))
 
 import {
@@ -232,6 +241,113 @@ describe('installTauriBridge', () => {
     await expect(g.window.file.readSharedAgents()).resolves.toMatchObject({ agents: [] })
     await expect(g.window.api.bedrock.translateText({})).rejects.toBeInstanceOf(NotPortedError)
     expect(document.title).toBe('Test App')
+  })
+
+  it('maps window.memory to the memory_* commands and memory-changed', async () => {
+    await installTauriBridge()
+    invokeMock.mockReset()
+    invokeMock.mockResolvedValue([])
+
+    await g.window.memory.list()
+    await g.window.memory.add({ content: 'Use pnpm', kind: 'rule', source: 'manual' })
+    await g.window.memory.update({ id: 'm1', enabled: false })
+    await g.window.memory.delete('m1')
+    await g.window.chatHistory.setUseMemoryItems('s1', false)
+    expect(invokeMock).toHaveBeenCalledWith('memory_list', undefined)
+    expect(invokeMock).toHaveBeenCalledWith('memory_add', {
+      content: 'Use pnpm',
+      kind: 'rule',
+      source: 'manual'
+    })
+    expect(invokeMock).toHaveBeenCalledWith('memory_update', { id: 'm1', enabled: false })
+    expect(invokeMock).toHaveBeenCalledWith('memory_delete', { id: 'm1' })
+    expect(invokeMock).toHaveBeenCalledWith('chat_history_set_use_memory_items', {
+      sessionId: 's1',
+      value: false
+    })
+
+    const seen: unknown[] = []
+    g.window.memory.onChanged((items: unknown) => seen.push(items))
+    await tick()
+    mockListeners.get('memory-changed')?.({ payload: [{ id: 'm2' }] })
+    expect(seen).toEqual([[{ id: 'm2' }]])
+  })
+
+  it('maps window.workspaceFiles to the workspace_files_* commands', async () => {
+    await installTauriBridge()
+    invokeMock.mockReset()
+    invokeMock.mockResolvedValue(null)
+    const wf = g.window.workspaceFiles
+
+    await wf.list('')
+    await wf.readText('docs/a.md')
+    await wf.writeText('docs/a.md', 'x', 42)
+    await wf.writeText('docs/a.md', 'y')
+    await wf.open('docs/a.md')
+    await wf.reveal()
+    await wf.reveal('docs')
+    await wf.exists(['/p/a.md', 'b.md'])
+    await wf.popOut('docs/a.md')
+    await g.window.chatHistory.addTouchedFiles('s1', ['out/r.md'])
+    await g.window.chatHistory.addTouchedFiles('s1', [])
+    expect(invokeMock.mock.calls).toEqual([
+      ['workspace_files_list', { dir: '' }],
+      ['workspace_files_read_text', { path: 'docs/a.md' }],
+      ['workspace_files_write_text', { path: 'docs/a.md', content: 'x', expectedModifiedMs: 42 }],
+      ['workspace_files_write_text', { path: 'docs/a.md', content: 'y' }],
+      ['workspace_files_open', { path: 'docs/a.md' }],
+      ['workspace_files_reveal', undefined],
+      ['workspace_files_reveal', { path: 'docs' }],
+      ['workspace_files_exists', { paths: ['/p/a.md', 'b.md'] }],
+      ['window_open_file_viewer', { path: 'docs/a.md' }],
+      ['chat_history_add_touched_files', { sessionId: 's1', paths: ['out/r.md'] }]
+    ])
+
+    expect(wf.fileUrl('a b/c.pdf')).toBe('workspacefile://localhost/a%20b%2Fc.pdf')
+    expect(wf.fileUrl('c.pdf', 7)).toBe('workspacefile://localhost/c.pdf?v=7')
+
+    const seen: unknown[] = []
+    wf.onChanged((e: unknown) => seen.push(e))
+    await tick()
+    mockListeners.get('workspace-files-changed')?.({ payload: { root: '/p', paths: ['a.md'] } })
+    expect(seen).toEqual([{ root: '/p', paths: ['a.md'] }])
+  })
+
+  it('reference-counts the workspace file watcher', async () => {
+    await installTauriBridge()
+    invokeMock.mockReset()
+    invokeMock.mockResolvedValue(null)
+    const wf = g.window.workspaceFiles
+
+    await wf.watch()
+    await wf.watch()
+    await wf.unwatch()
+    expect(invokeMock.mock.calls).toEqual([['workspace_files_watch', undefined]])
+    await wf.unwatch()
+    await wf.unwatch() // extra unwatch is a no-op
+    expect(invokeMock.mock.calls).toEqual([
+      ['workspace_files_watch', undefined],
+      ['workspace_files_unwatch', undefined]
+    ])
+  })
+
+  it('asks before a window closes and flushes the store when it may', async () => {
+    await installTauriBridge()
+    invokeMock.mockReset()
+    invokeMock.mockResolvedValue(null)
+    let allow = false
+    await g.window.appWindow.onCloseRequested(async () => allow)
+    const preventDefault = jest.fn()
+
+    await mockCloseHandler!({ preventDefault })
+    expect(preventDefault).toHaveBeenCalledTimes(1)
+
+    // Allowed: a queued store write lands before the handler returns (then the window closes).
+    allow = true
+    g.window.store.set('rightPanelWidth', 500)
+    await mockCloseHandler!({ preventDefault })
+    expect(preventDefault).toHaveBeenCalledTimes(1)
+    expect(invokeMock).toHaveBeenCalledWith('store_set', { key: 'rightPanelWidth', value: 500 })
   })
 })
 

@@ -3,7 +3,16 @@ import { ToolState } from '@/types/agent-chat'
 // カテゴリー毎のデフォルトツール設定（名前のみを定義）
 const DEFAULT_TOOL_NAMES: Record<string, string[]> = {
   // 一般的な目的向け - 基本的なツールのみ
-  general: ['readFiles', 'listFiles', 'tavilySearch', 'fetchWebsite', 'think'],
+  general: [
+    'readFiles',
+    'listFiles',
+    'tavilySearch',
+    'fetchWebsite',
+    'think',
+    'addMemory',
+    'updateMemory',
+    'removeMemory'
+  ],
 
   // ソフトウェア開発向け - コード関連ツールを強化
   coding: [
@@ -17,11 +26,24 @@ const DEFAULT_TOOL_NAMES: Record<string, string[]> = {
     'tavilySearch',
     'executeCommand',
     'invokeFlow',
-    'think'
+    'think',
+    'addMemory',
+    'updateMemory',
+    'removeMemory'
   ],
 
   // デザインとクリエイティブ向け
-  design: ['readFiles', 'listFiles', 'fetchWebsite', 'tavilySearch', 'generateImage', 'think'],
+  design: [
+    'readFiles',
+    'listFiles',
+    'fetchWebsite',
+    'tavilySearch',
+    'generateImage',
+    'think',
+    'addMemory',
+    'updateMemory',
+    'removeMemory'
+  ],
 
   // データ分析向け
   data: [
@@ -31,11 +53,24 @@ const DEFAULT_TOOL_NAMES: Record<string, string[]> = {
     'fetchWebsite',
     'retrieve',
     'executeCommand',
-    'think'
+    'think',
+    'addMemory',
+    'updateMemory',
+    'removeMemory'
   ],
 
   // ビジネスと生産性向け
-  business: ['readFiles', 'listFiles', 'tavilySearch', 'fetchWebsite', 'retrieve', 'think'],
+  business: [
+    'readFiles',
+    'listFiles',
+    'tavilySearch',
+    'fetchWebsite',
+    'retrieve',
+    'think',
+    'addMemory',
+    'updateMemory',
+    'removeMemory'
+  ],
 
   // ダイアグラム生成向け
   diagram: ['tavilySearch', 'think'],
@@ -58,7 +93,10 @@ const DEFAULT_TOOL_NAMES: Record<string, string[]> = {
     'invokeBedrockAgent',
     'executeCommand',
     'invokeFlow',
-    'think'
+    'think',
+    'addMemory',
+    'updateMemory',
+    'removeMemory'
   ],
 
   // カスタム設定用（すべて名前指定なし - 空配列）

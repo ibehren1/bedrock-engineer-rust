@@ -30,6 +30,9 @@ export type BuiltInToolName =
   | 'todoInit'
   | 'todoUpdate'
   | 'invokeAgent'
+  | 'addMemory'
+  | 'updateMemory'
+  | 'removeMemory'
 
 // MCPツール名の型安全な定義（元のツール名をそのまま使用）
 export type McpToolName = string
@@ -66,7 +69,10 @@ export const BUILT_IN_TOOLS: readonly BuiltInToolName[] = [
   'todo',
   'todoInit',
   'todoUpdate',
-  'invokeAgent'
+  'invokeAgent',
+  'addMemory',
+  'updateMemory',
+  'removeMemory'
 ] as const
 
 // 組み込みツール名であるかを判定する型ガード
@@ -471,6 +477,26 @@ export type TodoUpdateInput = {
   updates: TodoItemUpdate[]
 }
 
+// Memory tools: the global memory items list (rules and facts), see src/types/bridge/memory.ts
+export type AddMemoryInput = {
+  type: 'addMemory'
+  content: string
+  kind?: 'rule' | 'memory'
+}
+
+export type UpdateMemoryInput = {
+  type: 'updateMemory'
+  id: string
+  content?: string
+  kind?: 'rule' | 'memory'
+  enabled?: boolean
+}
+
+export type RemoveMemoryInput = {
+  type: 'removeMemory'
+  id: string
+}
+
 // invokeAgent ツールの入力型
 // _ 付きフィールドは呼び出し側が注入するメタデータで、モデルは生成しない。
 // toolInput の組み立て時は必ずモデル入力の後ろに展開すること（上書き防止）。
@@ -556,6 +582,9 @@ export type ToolInput =
   | TodoInitInput
   | TodoUpdateInput
   | InvokeAgentInput
+  | AddMemoryInput
+  | UpdateMemoryInput
+  | RemoveMemoryInput
   | McpToolInput // MCPツール入力を追加
 
 // ツール名から入力型を取得するユーティリティ型
@@ -587,5 +616,8 @@ export type ToolInputTypeMap = {
   todoInit: TodoInitInput
   todoUpdate: TodoUpdateInput
   invokeAgent: InvokeAgentInput
+  addMemory: AddMemoryInput
+  updateMemory: UpdateMemoryInput
+  removeMemory: RemoveMemoryInput
   [key: string]: any // MCPツールに対応するためのインデックスシグネチャ
 }

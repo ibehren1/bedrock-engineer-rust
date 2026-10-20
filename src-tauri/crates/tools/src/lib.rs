@@ -16,11 +16,12 @@
 //!
 //! ```ignore
 //! let todo = Arc::new(tools::todo::TodoService::new());
+//! let memory = Arc::new(tools::memory::MemoryService::open(&user_data));
 //! let mcp = Arc::new(mcp::McpManager::new(reqwest::Client::new()));
 //! let settings: Arc<dyn docker::Settings> = /* store lookups: |key| store.get(key) */;
 //! let sandbox = Arc::new(docker::SandboxManager::new(settings.clone(), sink));
 //! let interpreter = docker::interpreter::CodeInterpreter::new(settings, Arc::new(LogFacadeLogger));
-//! let registry = tools::full_registry(&tools::ToolDeps::new(todo, mcp, interpreter, sandbox.clone()));
+//! let registry = tools::full_registry(&tools::ToolDeps::new(todo, memory, mcp, interpreter, sandbox.clone()));
 //! let services = tools::ContextServices {
 //!     agents: Some(catalog),          // agents::AgentCatalog
 //!     sandbox: Some(sandbox),         // executeCommand -> the chat's sandbox
@@ -66,6 +67,7 @@ pub mod filesystem;
 pub mod gitignore;
 pub mod interpreter;
 pub mod mcp_adapter;
+pub mod memory;
 pub mod registry;
 pub mod system;
 pub mod thinking;
@@ -111,21 +113,28 @@ pub fn create_command_tools() -> Vec<Arc<dyn Tool>> {
 }
 
 /// All tools ported in this crate, in the TS `initializeToolSystem()` order
-/// (filesystem, web, thinking, command, todo, agent).
-pub fn builtin_tools(todo: Arc<todo::TodoService>) -> Vec<Arc<dyn Tool>> {
+/// (filesystem, web, thinking, command, todo, agent), with the memory tools after todo.
+pub fn builtin_tools(
+    todo: Arc<todo::TodoService>,
+    memory: Arc<memory::MemoryService>,
+) -> Vec<Arc<dyn Tool>> {
     let mut all = filesystem::create_filesystem_tools();
     all.extend(create_web_tools());
     all.extend(thinking::create_thinking_tools());
     all.extend(create_command_tools());
     all.extend(todo::create_todo_tools(todo));
+    all.extend(memory::create_memory_tools(memory));
     all.extend(agent::create_agent_tools());
     all
 }
 
 /// A registry with [`builtin_tools`] registered.
-pub fn create_builtin_registry(todo: Arc<todo::TodoService>) -> ToolRegistry {
+pub fn create_builtin_registry(
+    todo: Arc<todo::TodoService>,
+    memory: Arc<memory::MemoryService>,
+) -> ToolRegistry {
     let mut r = ToolRegistry::new();
-    r.register_many(builtin_tools(todo));
+    r.register_many(builtin_tools(todo, memory));
     r
 }
 
@@ -135,7 +144,11 @@ mod tests {
 
     #[test]
     fn builtin_registry_contents_and_spec_order() {
-        let r = create_builtin_registry(Arc::new(todo::TodoService::new()));
+        let dir = tempfile::tempdir().unwrap();
+        let r = create_builtin_registry(
+            Arc::new(todo::TodoService::new()),
+            Arc::new(memory::MemoryService::open(dir.path())),
+        );
         let names: Vec<String> = r
             .tool_specs()
             .iter()
@@ -157,6 +170,9 @@ mod tests {
                 "think",
                 "todoInit",
                 "todoUpdate",
+                "addMemory",
+                "updateMemory",
+                "removeMemory",
                 "invokeAgent"
             ]
         );
@@ -164,13 +180,14 @@ mod tests {
             assert_eq!(s["toolSpec"]["inputSchema"]["json"]["type"], "object");
         }
         let stats = r.get_statistics();
-        assert_eq!(stats.total_tools, 14);
+        assert_eq!(stats.total_tools, 17);
         assert_eq!(stats.tools_by_category[&ToolCategory::Agent], 1);
         assert_eq!(stats.tools_by_category[&ToolCategory::Filesystem], 7);
-        assert_eq!(stats.tools_by_category[&ToolCategory::Thinking], 3);
+        assert_eq!(stats.tools_by_category[&ToolCategory::Thinking], 6);
     }
 
     fn full() -> ToolRegistry {
+        let dir = tempfile::tempdir().unwrap();
         let settings: Arc<dyn docker::Settings> = Arc::new(|_: &str| None::<serde_json::Value>);
         let sandbox = Arc::new(docker::SandboxManager::new(
             settings.clone(),
@@ -182,6 +199,7 @@ mod tests {
         );
         full_registry(&ToolDeps::new(
             Arc::new(todo::TodoService::new()),
+            Arc::new(memory::MemoryService::open(dir.path())),
             Arc::new(mcp::McpManager::new(reqwest::Client::new())),
             interpreter,
             sandbox,
@@ -221,6 +239,9 @@ mod tests {
                 "cameraCapture",
                 "todoInit",
                 "todoUpdate",
+                "addMemory",
+                "updateMemory",
+                "removeMemory",
                 "invokeAgent"
             ]
         );
@@ -257,6 +278,9 @@ mod tests {
                 "cameraCapture",
                 "todoInit",
                 "todoUpdate",
+                "addMemory",
+                "updateMemory",
+                "removeMemory",
                 "invokeAgent"
             ]
         );
@@ -267,7 +291,7 @@ mod tests {
             ));
         }
         let stats = r.get_statistics();
-        assert_eq!(stats.total_tools, 27);
+        assert_eq!(stats.total_tools, 30);
         assert_eq!(stats.tools_by_category[&ToolCategory::System], 2);
         assert_eq!(stats.tools_by_category[&ToolCategory::Bedrock], 8);
         assert_eq!(stats.tools_by_category[&ToolCategory::Mcp], 1);

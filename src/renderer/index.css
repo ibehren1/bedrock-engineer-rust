@@ -121,6 +121,9 @@
   --success: #047857;
   --danger: #b91c1c;
   --warning: #b45309;
+  /* Files the agent created or changed in this chat (the Files panel's dots). Its own hue so it
+     never reads as a status. */
+  --touched: #c026d3;
 
   --radius-control: 3px;
   --radius-container: 5px;
@@ -173,6 +176,7 @@
   --success: #024a35;
   --danger: #7f1616;
   --warning: #73320a;
+  --touched: #a21caf;
 
   /* Square and flat. Only a one-line change because radius and shadow are
      tokens rather than literal utilities. */
@@ -207,6 +211,7 @@
   --success: #046c4e;
   --danger: #9b1c1c;
   --warning: #92400e;
+  --touched: #a21caf;
 
   --shadow-raised: 0 1px 1px 0 rgb(0 0 0 / 0.1);
 }
@@ -253,6 +258,7 @@
   --success: #34d399;
   --danger: #f87171;
   --warning: #fb923c; /* orange, not amber — amber is the accent */
+  --touched: #e879f9;
 
   --shadow-raised: 0 1px 2px 0 rgb(0 0 0 / 0.45);
 }
@@ -282,6 +288,7 @@
   --success: #34d399;
   --danger: #f87171;
   --warning: #fbbf24;
+  --touched: #e879f9;
 
   --shadow-raised: 0 1px 2px 0 rgb(0 0 0 / 0.4);
 }

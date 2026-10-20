@@ -665,6 +665,16 @@ mod tests {
         assert_eq!(state.step("main", MenuAction::Reload), None);
         state.forget("task-history");
         assert_eq!(state.step("task-history", MenuAction::ZoomIn), Some(1.1));
+        // Each pop-out file viewer has its own level.
+        assert_eq!(
+            state.step("file-viewer-aaaaaaaaaaaa", MenuAction::ZoomIn),
+            Some(1.1)
+        );
+        assert_eq!(
+            state.step("file-viewer-bbbbbbbbbbbb", MenuAction::ZoomOut),
+            Some(0.9)
+        );
+        assert_eq!(state.step("main", MenuAction::ZoomIn), Some(1.1));
     }
 
     #[test]

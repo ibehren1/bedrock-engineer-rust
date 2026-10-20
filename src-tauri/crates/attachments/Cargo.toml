@@ -11,7 +11,7 @@ serde_json.workspace = true
 thiserror.workspace = true
 sha1 = "=0.10.6"
 base64 = "=0.22.1"
-unicode-normalization = "=0.1.25"
+unicode-normalization = "=0.1.26"
 common = { path = "../common" }
 tracing = "=0.1.44"
 

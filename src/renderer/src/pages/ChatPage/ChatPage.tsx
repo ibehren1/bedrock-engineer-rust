@@ -18,7 +18,15 @@ import { useTokenAnalyticsModal, calculateAnalytics } from './modals/useTokenAna
 import { useTodoModal } from './modals/useTodoModal'
 import { HostCommandApprovalModal } from './modals/HostCommandApprovalModal'
 import { useChatSandbox } from './hooks/useChatSandbox'
-import { SandboxPanel } from './components/SandboxPanel'
+import { RightPanel, type RightPanelTab } from './components/RightPanel'
+import type { FilesOpenRequest } from './components/RightPanel/FilesTab'
+import {
+  FilesPanelContext,
+  type FilesPanelContextValue
+} from '@renderer/contexts/FilesPanelContext'
+import { forgetMissing } from '@renderer/lib/workspaceFiles/pathResolver'
+import { subscribeTouchedFiles, useTouchedFiles } from '@renderer/lib/workspaceFiles/touchedFiles'
+import { usePanelAttention } from './components/RightPanel/usePanelAttention'
 import { useChatAttachments } from './hooks/useChatAttachments'
 import { useChatHistory } from '@renderer/contexts/ChatHistoryContext'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -35,6 +43,8 @@ import { IdentifiableMessage } from '@/types/chat/message'
 import toast from 'react-hot-toast'
 import { HELP_AGENT_ID, HELP_AGENT_SYSTEM_PROMPT, HELP_CHAT_TITLE } from './constants/helpAgent'
 import { HelpSessionProvider } from './lib/helpSession'
+import { useMemoryItems } from '@renderer/contexts/MemoryContext'
+import { withMemoryPrompt } from '@common/agents/memoryPrompt'
 
 export default function ChatPage() {
   const { t } = useTranslation()
@@ -57,8 +67,14 @@ export default function ChatPage() {
 
   const inputFormRef = useRef<InputFormContainerRef>(null)
 
-  const { deleteMessage, getSession, updateSessionTitle, createSession, sessions } =
-    useChatHistory()
+  const {
+    deleteMessage,
+    getSession,
+    updateSessionTitle,
+    createSession,
+    sessions,
+    setUseMemoryItems
+  } = useChatHistory()
   const { getLightModelId } = useLightProcessingModel()
 
   // Help チャット。セッション自身の agentId から判定するので、履歴から開き直しても、
@@ -73,11 +89,20 @@ export default function ChatPage() {
   // setSelectedAgentId は永続化されるため呼ばない（通常のチャットが Help に固定されてしまう）。
   const activeAgentId = isHelpSession ? HELP_AGENT_ID : selectedAgentId
   const activeModelId = isHelpSession ? getLightModelId() : llm?.modelId
+  // Memory items go into normal chats whose "Use Memory Items" box is checked (per session,
+  // default on). The Help chat has no tools and its own prompt, so it never gets them.
+  const { items: memoryItems, enabledCount: enabledMemoryCount } = useMemoryItems()
+  const [useMemory, setUseMemory] = useState(true)
+  const chatSystemPrompt = useMemo(
+    () => withMemoryPrompt(systemPrompt, memoryItems, useMemory),
+    [systemPrompt, memoryItems, useMemory]
+  )
+
   const activeSystemPrompt = isHelpSession
     ? helpGuideText
       ? `${HELP_AGENT_SYSTEM_PROMPT}\n<user_guide>\n${helpGuideText}\n</user_guide>\n`
       : HELP_AGENT_SYSTEM_PROMPT
-    : systemPrompt
+    : chatSystemPrompt
 
   const currentScenarios = (isHelpSession ? helpAgent?.scenarios : currentAgent?.scenarios) || []
 
@@ -109,6 +134,24 @@ export default function ChatPage() {
     const agentId = currentSessionId ? getSession(currentSessionId)?.agentId : undefined
     setIsHelpSession(agentId === HELP_AGENT_ID)
   }, [currentSessionId, getSession])
+
+  // Load the chat's "Use Memory Items" setting; sessions without one (new chats) default to on.
+  useEffect(() => {
+    const session = currentSessionId ? getSession(currentSessionId) : null
+    setUseMemory(session?.useMemoryItems ?? true)
+  }, [currentSessionId, getSession])
+
+  const handleUseMemoryChange = useCallback(
+    (value: boolean) => {
+      if (!currentSessionId) return
+      setUseMemory(value)
+      setUseMemoryItems(currentSessionId, value).catch((error) => {
+        console.error('Failed to save the Use Memory Items setting:', error)
+        toast.error(error instanceof Error ? error.message : String(error))
+      })
+    },
+    [currentSessionId, setUseMemoryItems]
+  )
 
   // DrawIO diagrams render in an iframe, so a live component is needed to rasterize them.
   const drawioRasterizerRef = useRef<DrawioRasterizerRef>(null)
@@ -430,8 +473,67 @@ export default function ChatPage() {
   // 履歴は開いた状態で始める。ChatPage は画面遷移でアンマウントされるので、
   // Chat を開き直すたびに履歴が開く。
   const [isHistoryOpen, setIsHistoryOpen] = useState(true)
-  // サンドボックスパネルは既定で閉じる。履歴と違い、必要なときだけ開くもの。
-  const [isSandboxPanelOpen, setIsSandboxPanelOpen] = useState(false)
+  // 右パネル（Files / Sandbox）は既定で閉じる。履歴と違い、必要なときだけ開くもの。
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(false)
+  const [rightPanelTab, setRightPanelTab] = useState<RightPanelTab>('files')
+  const [filesOpenRequest, setFilesOpenRequest] = useState<FilesOpenRequest>()
+  const showRightPanel = !!projectPath || sandboxStatus.exists
+  // The opener strip pulses (and shows a dot) when there is something new in the closed panel.
+  const touchedFiles = useTouchedFiles(currentSessionId)
+  const panelAttention = usePanelAttention(
+    {
+      sessionId: currentSessionId,
+      visible: showRightPanel,
+      hasSandbox: sandboxStatus.exists,
+      touchedCount: touchedFiles.length
+    },
+    isRightPanelOpen
+  )
+
+  const openRightPanel = useCallback((tab: RightPanelTab) => {
+    setRightPanelTab(tab)
+    setIsRightPanelOpen(true)
+  }, [])
+
+  const toggleFilesPanel = useCallback(() => {
+    if (isRightPanelOpen && rightPanelTab === 'files') setIsRightPanelOpen(false)
+    else openRightPanel('files')
+  }, [isRightPanelOpen, rightPanelTab, openRightPanel])
+
+  // File paths in chat messages open here. Misses are looked up again when files change, since
+  // the agent often names a file before writing it.
+  const [filesVersion, setFilesVersion] = useState(0)
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const bump = () => {
+      if (timer) return
+      timer = setTimeout(() => {
+        timer = undefined
+        forgetMissing()
+        setFilesVersion((v) => v + 1)
+      }, 400)
+    }
+    const unlistenChanges = window.workspaceFiles.onChanged(bump)
+    const unsubscribeTouched = subscribeTouchedFiles(bump)
+    return () => {
+      if (timer) clearTimeout(timer)
+      unlistenChanges()
+      unsubscribeTouched()
+    }
+  }, [])
+
+  const openFileInPanel = useCallback(
+    (path: string, kind?: 'file' | 'dir') => {
+      setFilesOpenRequest((prev) => ({ path, kind, nonce: (prev?.nonce ?? 0) + 1 }))
+      openRightPanel('files')
+    },
+    [openRightPanel]
+  )
+
+  const filesPanelContext = useMemo<FilesPanelContextValue | null>(
+    () => (projectPath ? { projectPath, openFile: openFileInPanel, filesVersion } : null),
+    [projectPath, openFileInPanel, filesVersion]
+  )
   const DEFAULT_TEXTAREA_HEIGHT = 72 // Default height (3 lines * 24px)
 
   const [textareaHeight, setTextareaHeight] = useState(DEFAULT_TEXTAREA_HEIGHT)
@@ -545,262 +647,304 @@ export default function ChatPage() {
         modelId: activeModelId
       }}
     >
-      {/* Hidden DrawIO embed used to rasterize diagrams during markdown export */}
-      <DrawioRasterizer ref={drawioRasterizerRef} />
-      <div className="flex px-4 py-3 h-screen">
-        {/* チャット履歴サイドパネル - 全高。ヘッダーより上（ウィンドウ最上部）から始まる */}
-        <div
-          className={`bg-canvas flex-shrink-0 transition-all duration-300 ease-in-out ${
-            isHistoryOpen ? 'w-96' : 'w-0'
-          } overflow-y-auto overflow-x-hidden`}
-        >
-          {/* Fixed-width inner keeps content from reflowing while the panel
-              width animates, so the chat column slides smoothly. */}
-          <div className="w-96">
-            <ChatHistory
-              onSessionSelect={handleSessionSelect}
-              currentSessionId={currentSessionId}
-            />
-          </div>
-        </div>
-
-        {/* チャット履歴トグルバー */}
-        <div className="flex items-center">
-          <Tooltip
-            content={t(isHistoryOpen ? 'Hide chat history' : 'Show chat history')}
-            placement="right"
-            animation="duration-500"
+      <FilesPanelContext.Provider value={filesPanelContext}>
+        {/* Hidden DrawIO embed used to rasterize diagrams during markdown export */}
+        <DrawioRasterizer ref={drawioRasterizerRef} />
+        <div className="flex px-4 py-3 h-screen">
+          {/* チャット履歴サイドパネル - 全高。ヘッダーより上（ウィンドウ最上部）から始まる */}
+          <div
+            className={`bg-canvas flex-shrink-0 transition-all duration-300 ease-in-out ${
+              isHistoryOpen ? 'w-96' : 'w-0'
+            } overflow-y-auto overflow-x-hidden`}
           >
-            <div
-              onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-              className="w-4 h-16 bg-raised cursor-pointer flex items-center justify-center transition-colors duration-200 rounded-container m-2"
-            >
-              <FiChevronRight
-                className={`w-4 h-4 text-accent hover:text-accent-strong transition-transform duration-200 ${
-                  isHistoryOpen ? 'rotate-180' : ''
-                }`}
-              />
-            </div>
-          </Tooltip>
-        </div>
-
-        {/* チャット列（ヘッダー + メインコンテンツ） - フレックス成長。履歴表示時に右へスライド */}
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* ヘッダー - 固定 */}
-          <div className="flex justify-end items-center">
-            <div className="flex items-center gap-2">
-              {/* Only show TODO icon when there are messages */}
-              {messages.length > 0 && (
-                <FaListCheck
-                  key={todoFlash?.nonce ?? 0}
-                  className={`cursor-pointer ${
-                    todoFlashColor
-                      ? `${todoFlashColor} animate-todo-flash`
-                      : 'text-ink-faint hover:text-ink'
-                  }`}
-                  onClick={() => handleOpenTodoModal()}
-                  title={t('View TODO List')}
-                  size={16}
-                />
-              )}
-              {messages.length > 0 && (
-                <span
-                  className="text-xs text-ink-faint font-medium cursor-pointer hover:text-ink"
-                  onClick={handleOpenTokenAnalyticsModal}
-                  title={t('Conversation Cost')}
-                >
-                  {runningCost.toLocaleString('en-US', {
-                    style: 'currency',
-                    currency: 'USD',
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                  })}
-                </span>
-              )}
-              <FiBarChart2
-                className="text-ink-faint hover:text-ink cursor-pointer"
-                onClick={handleOpenTokenAnalyticsModal}
-                title={t('View Token Analytics')}
-                size={16}
-              />
-              <span
-                className="text-xs text-ink-faint font-thin cursor-pointer hover:text-ink"
-                onClick={handleOpenSystemPromptModal}
-              >
-                SYSTEM_PROMPT
-              </span>
-            </div>
-          </div>
-
-          {/* Modals */}
-          <HostCommandApprovalModal />
-          <SystemPromptModal
-            isOpen={showSystemPromptModal}
-            onClose={handleCloseSystemPromptModal}
-            systemPrompt={activeSystemPrompt}
-          />
-          <TokenAnalyticsModal
-            isOpen={showTokenAnalyticsModal}
-            onClose={handleCloseTokenAnalyticsModal}
-            messages={messages}
-            modelId={activeModelId || ''}
-          />
-          <TodoModal isOpen={showTodoModal} onClose={handleCloseTodoModal} />
-          <ToolSettingModal isOpen={showToolSettingModal} onClose={handleCloseToolSettingModal} />
-          <IgnoreSettingsModal
-            isOpen={showIgnoreSettingsModal}
-            onClose={handleCloseIgnoreFileModal}
-            projectPath={projectPath}
-          />
-
-          {/* メインコンテンツエリア - フレックス成長 */}
-          {/* pb-52 (13rem) reserves space for the fixed input form. */}
-          <div className="flex flex-col flex-1 min-h-0 pb-52">
-            {/* Adjusts the bottom padding of the message area based on the height of the text area */}
-            <div
-              ref={messageAreaRef}
-              className="flex-1 overflow-y-auto mb-2"
-              style={{
-                // Additional padding is applied only when the text area grows larger
-                // This ensures that as the text area gets taller, the bottom padding of the message area increases by the same amount
-                paddingBottom: `${textareaHeight - DEFAULT_TEXTAREA_HEIGHT * 2}px`
-              }}
-            >
-              {messages.length === 0 ? (
-                <div className="flex flex-col pt-12 h-full w-full justify-center items-center content-center gap-1">
-                  <div className="flex flex-row gap-3 items-center mb-2">
-                    <div className="bg-icon rounded-container p-1.5 flex items-center justify-center">
-                      <div className="h-4 w-4">
-                        <img
-                          src={AILogo}
-                          className="h-full w-full object-contain"
-                          alt="assistant"
-                        />
-                      </div>
-                    </div>
-                    <h1 className="text-title text-ink">
-                      {isHelpSession ? t('help.chatTitle') : 'Agent Chat'}
-                    </h1>
-                  </div>
-                  <div className="text-ink-faint">
-                    {t((isHelpSession ? helpAgent?.description : currentAgent?.description) ?? '')}
-                  </div>
-                  {(isHelpSession ? helpAgent : currentAgent) && (
-                    <ExampleScenarios
-                      scenarios={currentScenarios}
-                      onSelectScenario={handleSelectScenario}
-                    />
-                  )}
-                </div>
-              ) : (
-                <div className="py-8">
-                  <MessageList
-                    messages={messages}
-                    loading={loading}
-                    reasoning={reasoning}
-                    waitingForResponse={waitingForResponse}
-                    timeoutCountdown={timeoutCountdown}
-                    heartbeatCount={heartbeatCount}
-                    deleteMessage={handleDeleteMessage}
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* 入力フォーム - 固定 */}
-            <div className="mt-2 border-subtle bg-surface">
-              <InputFormContainer
-                ref={inputFormRef}
-                loading={loading}
-                projectPath={projectPath}
-                sendMsgKey={sendMsgKey}
-                onSubmit={onSubmit}
-                onOpenToolSettings={handleOpenToolSettingModal}
-                onSelectDirectory={selectDirectory}
-                onOpenIgnoreModal={handleOpenIgnoreFileModal}
-                onClearChat={handleClearChat}
-                onExportChat={handleExportChat}
-                isExporting={isExporting}
-                onExportWord={handleExportWord}
-                isExportingWord={isExportingWord}
-                onExportPdf={handleExportPdf}
-                isExportingPdf={isExportingPdf}
-                onStopGeneration={stopGeneration}
-                hasMessages={messages.length > 0}
-                onHeightChange={setTextareaHeight}
-                isHistoryOpen={isHistoryOpen}
-                attachments={{
-                  files: attachments.files,
-                  directory: attachments.directory,
-                  totalSize: attachments.totalSize,
-                  isBusy: attachments.isBusy,
-                  onAdd: attachments.addFromPicker,
-                  onRemove: attachments.remove,
-                  onOpenFolder: attachments.openFolder,
-                  onRefresh: attachments.refresh,
-                  onAddFiles: attachments.addFiles
-                }}
-                sandbox={{
-                  status: sandboxStatus,
-                  isBusy: isSandboxBusy,
-                  onStop: handleStopSandbox,
-                  onStart: handleStartSandbox,
-                  onRemove: handleRemoveSandbox,
-                  onOpenFolder: handleOpenSandboxFolder,
-                  onOpenPanel: () => setIsSandboxPanelOpen(true)
-                }}
+            {/* Fixed-width inner keeps content from reflowing while the panel
+              width animates, so the chat column slides smoothly. */}
+            <div className="w-96">
+              <ChatHistory
+                onSessionSelect={handleSessionSelect}
+                currentSessionId={currentSessionId}
               />
             </div>
           </div>
-        </div>
 
-        {/* サンドボックスパネルのトグルバー - サンドボックスがあるチャットにのみ出す */}
-        {sandboxStatus.exists && (
-          // pb-52 matches the message area's reservation for the fixed input box, so the
-          // strip stays centred against the panel rather than the whole window.
-          <div className="flex items-center pb-52">
+          {/* チャット履歴トグルバー */}
+          <div className="flex items-center">
             <Tooltip
-              content={t(
-                isSandboxPanelOpen ? 'dockerSandbox.panel.hide' : 'dockerSandbox.panel.show'
-              )}
-              placement="left"
+              content={t(isHistoryOpen ? 'Hide chat history' : 'Show chat history')}
+              placement="right"
               animation="duration-500"
             >
               <div
-                onClick={() => setIsSandboxPanelOpen(!isSandboxPanelOpen)}
+                onClick={() => setIsHistoryOpen(!isHistoryOpen)}
                 className="w-4 h-16 bg-raised cursor-pointer flex items-center justify-center transition-colors duration-200 rounded-container m-2"
               >
                 <FiChevronRight
                   className={`w-4 h-4 text-accent hover:text-accent-strong transition-transform duration-200 ${
-                    isSandboxPanelOpen ? '' : 'rotate-180'
+                    isHistoryOpen ? 'rotate-180' : ''
                   }`}
                 />
               </div>
             </Tooltip>
           </div>
-        )}
 
-        {/* サンドボックスパネル - 幅アニメーション。内側は固定幅なので
-            アニメーション中にチャット列が詰まって見えない */}
-        {/* pb-52 keeps the panel clear of the fixed input box and its icons, the same
-            reservation the message list makes, so the input can stay full width. */}
-        <div
-          className={`bg-canvas flex-shrink-0 transition-all duration-300 ease-in-out overflow-hidden pb-52 ${
-            isSandboxPanelOpen && sandboxStatus.exists ? 'w-[40rem]' : 'w-0'
-          }`}
-        >
-          <SandboxPanel
-            sessionId={currentSessionId}
-            status={sandboxStatus}
-            isBusy={isSandboxBusy}
-            isOpen={isSandboxPanelOpen && sandboxStatus.exists}
-            onStart={handleStartSandbox}
-            onStop={handleStopSandbox}
-            onRemove={handleRemoveSandbox}
-            onOpenFolder={handleOpenSandboxFolder}
-          />
+          {/* チャット列（ヘッダー + メインコンテンツ） - フレックス成長。履歴表示時に右へスライド */}
+          <div className="flex-1 flex flex-col min-w-0">
+            {/* ヘッダー - 固定 */}
+            <div className="flex justify-end items-center">
+              <div className="flex items-center gap-2">
+                {/* Only show TODO icon when there are messages */}
+                {messages.length > 0 && (
+                  <FaListCheck
+                    key={todoFlash?.nonce ?? 0}
+                    className={`cursor-pointer ${
+                      todoFlashColor
+                        ? `${todoFlashColor} animate-todo-flash`
+                        : 'text-ink-faint hover:text-ink'
+                    }`}
+                    onClick={() => handleOpenTodoModal()}
+                    title={t('View TODO List')}
+                    size={16}
+                  />
+                )}
+                {messages.length > 0 && (
+                  <span
+                    className="text-xs text-ink-faint font-medium cursor-pointer hover:text-ink"
+                    onClick={handleOpenTokenAnalyticsModal}
+                    title={t('Conversation Cost')}
+                  >
+                    {runningCost.toLocaleString('en-US', {
+                      style: 'currency',
+                      currency: 'USD',
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    })}
+                  </span>
+                )}
+                <FiBarChart2
+                  className="text-ink-faint hover:text-ink cursor-pointer"
+                  onClick={handleOpenTokenAnalyticsModal}
+                  title={t('View Token Analytics')}
+                  size={16}
+                />
+                <span
+                  className="text-xs text-ink-faint font-thin cursor-pointer hover:text-ink"
+                  onClick={handleOpenSystemPromptModal}
+                >
+                  SYSTEM_PROMPT
+                </span>
+              </div>
+            </div>
+
+            {/* Modals */}
+            <HostCommandApprovalModal />
+            <SystemPromptModal
+              isOpen={showSystemPromptModal}
+              onClose={handleCloseSystemPromptModal}
+              systemPrompt={activeSystemPrompt}
+            />
+            <TokenAnalyticsModal
+              isOpen={showTokenAnalyticsModal}
+              onClose={handleCloseTokenAnalyticsModal}
+              messages={messages}
+              modelId={activeModelId || ''}
+            />
+            <TodoModal isOpen={showTodoModal} onClose={handleCloseTodoModal} />
+            <ToolSettingModal isOpen={showToolSettingModal} onClose={handleCloseToolSettingModal} />
+            <IgnoreSettingsModal
+              isOpen={showIgnoreSettingsModal}
+              onClose={handleCloseIgnoreFileModal}
+              projectPath={projectPath}
+            />
+
+            {/* メインコンテンツエリア - フレックス成長 */}
+            {/* pb-52 (13rem) reserves space for the fixed input form. */}
+            <div className="flex flex-col flex-1 min-h-0 pb-52">
+              {/* Adjusts the bottom padding of the message area based on the height of the text area */}
+              <div
+                ref={messageAreaRef}
+                className="flex-1 overflow-y-auto mb-2"
+                style={{
+                  // Additional padding is applied only when the text area grows larger
+                  // This ensures that as the text area gets taller, the bottom padding of the message area increases by the same amount
+                  paddingBottom: `${textareaHeight - DEFAULT_TEXTAREA_HEIGHT * 2}px`
+                }}
+              >
+                {messages.length === 0 ? (
+                  <div className="flex flex-col pt-12 h-full w-full justify-center items-center content-center gap-1">
+                    <div className="flex flex-row gap-3 items-center mb-2">
+                      <div className="bg-icon rounded-container p-1.5 flex items-center justify-center">
+                        <div className="h-4 w-4">
+                          <img
+                            src={AILogo}
+                            className="h-full w-full object-contain"
+                            alt="assistant"
+                          />
+                        </div>
+                      </div>
+                      <h1 className="text-title text-ink">
+                        {isHelpSession ? t('help.chatTitle') : 'Agent Chat'}
+                      </h1>
+                    </div>
+                    <div className="text-ink-faint">
+                      {t(
+                        (isHelpSession ? helpAgent?.description : currentAgent?.description) ?? ''
+                      )}
+                    </div>
+                    {(isHelpSession ? helpAgent : currentAgent) && (
+                      <ExampleScenarios
+                        scenarios={currentScenarios}
+                        onSelectScenario={handleSelectScenario}
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <div className="py-8">
+                    <MessageList
+                      messages={messages}
+                      loading={loading}
+                      reasoning={reasoning}
+                      waitingForResponse={waitingForResponse}
+                      timeoutCountdown={timeoutCountdown}
+                      heartbeatCount={heartbeatCount}
+                      deleteMessage={handleDeleteMessage}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* 入力フォーム - 固定 */}
+              <div className="mt-2 border-subtle bg-surface">
+                <InputFormContainer
+                  ref={inputFormRef}
+                  loading={loading}
+                  projectPath={projectPath}
+                  sendMsgKey={sendMsgKey}
+                  onSubmit={onSubmit}
+                  onOpenToolSettings={handleOpenToolSettingModal}
+                  onSelectDirectory={selectDirectory}
+                  onOpenIgnoreModal={handleOpenIgnoreFileModal}
+                  onClearChat={handleClearChat}
+                  onExportChat={handleExportChat}
+                  isExporting={isExporting}
+                  onExportWord={handleExportWord}
+                  isExportingWord={isExportingWord}
+                  onExportPdf={handleExportPdf}
+                  isExportingPdf={isExportingPdf}
+                  onStopGeneration={stopGeneration}
+                  hasMessages={messages.length > 0}
+                  onHeightChange={setTextareaHeight}
+                  isHistoryOpen={isHistoryOpen}
+                  memoryToggle={
+                    isHelpSession
+                      ? undefined
+                      : {
+                          checked: useMemory,
+                          enabledCount: enabledMemoryCount,
+                          disabled: !currentSessionId,
+                          onChange: handleUseMemoryChange
+                        }
+                  }
+                  attachments={{
+                    files: attachments.files,
+                    directory: attachments.directory,
+                    totalSize: attachments.totalSize,
+                    isBusy: attachments.isBusy,
+                    onAdd: attachments.addFromPicker,
+                    onRemove: attachments.remove,
+                    onOpenFolder: attachments.openFolder,
+                    onRefresh: attachments.refresh,
+                    onAddFiles: attachments.addFiles
+                  }}
+                  sandbox={{
+                    status: sandboxStatus,
+                    isBusy: isSandboxBusy,
+                    onStop: handleStopSandbox,
+                    onStart: handleStartSandbox,
+                    onRemove: handleRemoveSandbox,
+                    onOpenFolder: handleOpenSandboxFolder,
+                    onOpenPanel: () => openRightPanel('sandbox')
+                  }}
+                  filesPanel={
+                    projectPath
+                      ? {
+                          isOpen: isRightPanelOpen && rightPanelTab === 'files',
+                          onToggle: toggleFilesPanel
+                        }
+                      : undefined
+                  }
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 右パネルのトグルバー - プロジェクトフォルダかサンドボックスがあるときだけ出す */}
+          {showRightPanel && (
+            // pb-52 matches the message area's reservation for the fixed input box, so the
+            // strip stays centred against the panel rather than the whole window.
+            <div className="flex items-center pb-52">
+              <Tooltip
+                content={t(isRightPanelOpen ? 'filesPanel.hide' : 'filesPanel.openPanel')}
+                placement="left"
+                animation="duration-500"
+              >
+                {/* Closed: the only way into Files / Sandbox, so it is an accent tab rather than
+                    a grey sliver. Open: neutral, it then just closes the panel. */}
+                <button
+                  type="button"
+                  onClick={() => setIsRightPanelOpen(!isRightPanelOpen)}
+                  aria-label={t(isRightPanelOpen ? 'filesPanel.hide' : 'filesPanel.openPanel')}
+                  className={`relative flex items-center justify-center rounded-container m-2 cursor-pointer transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                    isRightPanelOpen
+                      ? 'w-4 h-16 bg-raised text-accent hover:text-accent-strong'
+                      : 'w-5 h-20 bg-accent text-accent-fg hover:bg-accent-strong shadow-raised'
+                  }`}
+                >
+                  {/* Attention halo: three pings, restarted by the key; none with reduced motion. */}
+                  {!isRightPanelOpen && panelAttention.pulseKey > 0 && (
+                    <span
+                      key={panelAttention.pulseKey}
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0 rounded-container bg-accent opacity-0 motion-safe:animate-attention-ping"
+                    />
+                  )}
+                  <FiChevronRight
+                    className={`relative w-4 h-4 transition-transform duration-200 ${
+                      isRightPanelOpen ? '' : 'rotate-180'
+                    }`}
+                  />
+                  {!isRightPanelOpen && panelAttention.badge && (
+                    <span
+                      className="absolute -top-1 -right-1 size-2.5 rounded-full bg-touched ring-2 ring-canvas"
+                      title={t('filesPanel.newActivity')}
+                    />
+                  )}
+                </button>
+              </Tooltip>
+            </div>
+          )}
+
+          {/* 右パネル（Files / Sandbox） */}
+          {showRightPanel && (
+            <RightPanel
+              isOpen={isRightPanelOpen}
+              tab={rightPanelTab}
+              onTabChange={setRightPanelTab}
+              onClose={() => setIsRightPanelOpen(false)}
+              projectPath={projectPath ?? ''}
+              sessionId={currentSessionId}
+              filesOpenRequest={filesOpenRequest}
+              sandbox={{
+                status: sandboxStatus,
+                isBusy: isSandboxBusy,
+                onStart: handleStartSandbox,
+                onStop: handleStopSandbox,
+                onRemove: handleRemoveSandbox,
+                onOpenFolder: handleOpenSandboxFolder
+              }}
+            />
+          )}
         </div>
-      </div>
+      </FilesPanelContext.Provider>
     </HelpSessionProvider>
   )
 }

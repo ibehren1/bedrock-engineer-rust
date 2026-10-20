@@ -22,6 +22,8 @@ import { thinkingMode } from './thinkingMode'
 import { agentDirectory } from './agentDirectory'
 import { planActMode } from './planActMode'
 import { help } from './help'
+import { memoryItems } from './memoryItems'
+import { filesPanel } from './filesPanel'
 
 const HomePage = {
   'set your aws credential':
@@ -954,6 +956,8 @@ const en = {
   ...AgentFormTabs,
   ...planActMode.en,
   ...help.en,
+  ...memoryItems.en,
+  ...filesPanel.en,
   ...TodoModal,
   backgroundAgent: BackgroundAgent,
   ignoreSettings: IgnoreSettings,

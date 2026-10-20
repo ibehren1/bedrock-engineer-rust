@@ -1,8 +1,8 @@
 /**
  * Tauri bridge shim.
  *
- * Installs `window.api`, `window.store`, `window.file`, `window.chatHistory`, `window.appWindow`,
- * `window.ipc` and `window.logger` (typed in src/types/window.ts), backed by `invoke()` / events.
+ * Installs `window.api`, `window.store`, `window.file`, `window.chatHistory`, `window.memory`,
+ * `window.workspaceFiles`, `window.appWindow`, `window.ipc` and `window.logger` (typed in src/types/window.ts), backed by `invoke()` / events.
  * These are the objects the Electron preload script used to expose, with the same shapes, so the
  * renderer components were ported unchanged.
  *
@@ -46,6 +46,13 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 import { getImageGenerationModelsForRegion } from '@common/models/models'
 import { captureCameraFrame, type CameraFrameRequest } from './cameraCapture'
 import type { ChatMessage, ChatSession, SessionMetadata } from '@/types/chat/history'
+import type { MemoryItem } from '@/types/bridge/memory'
+import type {
+  WorkspaceExistsResult,
+  WorkspaceFilesChangedEvent,
+  WorkspaceListResult,
+  WorkspaceTextFile
+} from '@/types/bridge/workspace-files'
 
 // ---------------------------------------------------------------------------------------------
 // invoke helpers
@@ -484,8 +491,94 @@ function createChatHistory(): Window['chatHistory'] {
     async deleteMessage(sessionId: string, messageIndex: number) {
       await call(`${M}.deleteMessage`, 'chat_history_delete_message', { sessionId, messageIndex })
       await refreshChat(sessionId)
+    },
+    async setUseMemoryItems(sessionId: string, value: boolean) {
+      // Update the cache first so a getSession right after the toggle sees the new value.
+      const cached = chat.sessions[sessionId]
+      if (cached) cached.useMemoryItems = value
+      await call(`${M}.setUseMemoryItems`, 'chat_history_set_use_memory_items', {
+        sessionId,
+        value
+      })
+      await refreshChat(sessionId)
+    },
+    async addTouchedFiles(sessionId: string, paths: string[]) {
+      if (paths.length === 0) return
+      // Merge into the cache first so the Files panel's dots don't wait for the round trip.
+      const cached = chat.sessions[sessionId]
+      if (cached) cached.touchedFiles = [...new Set([...(cached.touchedFiles ?? []), ...paths])]
+      await call(`${M}.addTouchedFiles`, 'chat_history_add_touched_files', { sessionId, paths })
     }
   } as Window['chatHistory']
+}
+
+// ---------------------------------------------------------------------------------------------
+// window.memory — the global memory items list (`memory_*` commands, `memory-changed` event)
+// ---------------------------------------------------------------------------------------------
+
+function createMemory(): Window['memory'] {
+  const M = 'memory'
+  return {
+    list: () => call<MemoryItem[]>(`${M}.list`, 'memory_list'),
+    add: (params) => call<MemoryItem>(`${M}.add`, 'memory_add', { ...params }),
+    update: (params) => call<MemoryItem>(`${M}.update`, 'memory_update', { ...params }),
+    delete: (id) => call<boolean>(`${M}.delete`, 'memory_delete', { id }),
+    onChanged: (callback) => on<MemoryItem[]>('memory-changed', callback)
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// window.workspaceFiles — the chat's Files panel (`workspace_files_*`, `workspace-files-changed`)
+// ---------------------------------------------------------------------------------------------
+
+/** The URI scheme serving project file bytes (src-tauri/app). */
+export const WORKSPACE_FILE_SCHEME = 'workspacefile'
+
+function createWorkspaceFiles(): Window['workspaceFiles'] {
+  const M = 'workspaceFiles'
+  // The Files panel and running chat turns each want the watcher; it runs while anyone does.
+  let watchers = 0
+  return {
+    list: (dir) => call<WorkspaceListResult>(`${M}.list`, 'workspace_files_list', { dir }),
+    readText: (path) =>
+      call<WorkspaceTextFile>(`${M}.readText`, 'workspace_files_read_text', { path }),
+    writeText: (path, content, expectedModifiedMs) =>
+      call<{ modifiedMs: number }>(`${M}.writeText`, 'workspace_files_write_text', {
+        path,
+        content,
+        ...(expectedModifiedMs !== undefined ? { expectedModifiedMs } : {})
+      }),
+    open: (path) => call<void>(`${M}.open`, 'workspace_files_open', { path }),
+    reveal: (path) =>
+      call<void>(`${M}.reveal`, 'workspace_files_reveal', path ? { path } : undefined),
+    exists: (paths) =>
+      call<WorkspaceExistsResult>(`${M}.exists`, 'workspace_files_exists', { paths }),
+    async watch() {
+      watchers += 1
+      if (watchers === 1) {
+        try {
+          await call<void>(`${M}.watch`, 'workspace_files_watch')
+        } catch (e) {
+          watchers -= 1
+          throw e
+        }
+      }
+    },
+    async unwatch() {
+      if (watchers === 0) return
+      watchers -= 1
+      if (watchers === 0) await call<void>(`${M}.unwatch`, 'workspace_files_unwatch')
+    },
+    onChanged: (callback) => on<WorkspaceFilesChangedEvent>('workspace-files-changed', callback),
+    popOut: (path) =>
+      call<{ windowId: string; reused: boolean }>(`${M}.popOut`, 'window_open_file_viewer', {
+        path
+      }),
+    fileUrl: (path, modifiedMs) => {
+      const url = convertFileSrc(path, WORKSPACE_FILE_SCHEME)
+      return modifiedMs !== undefined ? `${url}?v=${modifiedMs}` : url
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -592,6 +685,30 @@ async function hydrateToolSpecs() {
   } catch (e) {
     if (!(e instanceof NotPortedError)) console.error('[tauriBridge] tool specs hydrate failed', e)
   }
+}
+
+/**
+ * `appWindow.onCloseRequested`: ask `shouldClose` before this window closes (e.g. unsaved
+ * edits). When it allows the close, queued store writes are drained first; Rust does that for
+ * the main and task history windows, but not for windows that handle their own close (the
+ * file viewers, see store_sync.rs). Resolves to the unlisten function.
+ */
+async function onWindowCloseRequested(
+  shouldClose: () => boolean | Promise<boolean>
+): Promise<() => void> {
+  return getCurrentWindow().onCloseRequested(async (event) => {
+    let allow = true
+    try {
+      allow = await shouldClose()
+    } catch (e) {
+      console.error('[tauriBridge] close handler failed', e)
+    }
+    if (!allow) {
+      event.preventDefault()
+      return
+    }
+    await storeFlush()
+  })
 }
 
 async function isWindowFocused(): Promise<boolean> {
@@ -1109,6 +1226,8 @@ export function installTauriBridge(): Promise<void> {
     w.store = createStore()
     w.logger = createLogger()
     w.chatHistory = createChatHistory()
+    w.memory = createMemory()
+    w.workspaceFiles = createWorkspaceFiles()
     w.file = createFile()
     w.api = createApi()
     // wry already defines a read-only `window.ipc` (Tauri's postMessage IPC fallback). Assigning
@@ -1116,7 +1235,7 @@ export function installTauriBridge(): Promise<void> {
     // renderer uses `window.ipc` today, so leave wry's object alone and expose ours only when the
     // name is free.
     if (!('ipc' in w)) w.ipc = createIpc()
-    w.appWindow = { isFocused: isWindowFocused }
+    w.appWindow = { isFocused: isWindowFocused, onCloseRequested: onWindowCloseRequested }
     // Only the main window answers cameraCapture frame requests (the task history window loads
     // the bridge too).
     if (getCurrentWindow().label === 'main') installCameraCaptureResponder()

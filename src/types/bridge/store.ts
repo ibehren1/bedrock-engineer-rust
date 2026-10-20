@@ -179,6 +179,9 @@ export type StoreScheme = {
 
   /** チャットのユーザーラベルに表示する名前（空の場合はデフォルトの "user" ラベル） */
   userName?: string
+
+  /** Width in px of the chat page's right panel (Files / Sandbox), 360–1000. Default 640 */
+  rightPanelWidth?: number
 }
 
 type Key = keyof StoreScheme

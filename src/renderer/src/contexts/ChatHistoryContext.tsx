@@ -21,6 +21,10 @@ interface ChatHistoryContextType {
     updatedMessage: ChatMessage
   ) => Promise<void>
   deleteMessage: (sessionId: string, messageIndex: number) => Promise<void>
+  /** Persist the chat's "Use Memory Items" checkbox. */
+  setUseMemoryItems: (sessionId: string, value: boolean) => Promise<void>
+  /** Record project-relative paths the agent created or changed in this chat. */
+  addTouchedFiles: (sessionId: string, paths: string[]) => Promise<void>
 }
 
 const ChatHistoryContext = createContext<ChatHistoryContextType | undefined>(undefined)
@@ -205,6 +209,18 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
     [loadSessions]
   )
 
+  const setUseMemoryItems = useCallback(
+    (sessionId: string, value: boolean): Promise<void> =>
+      window.chatHistory.setUseMemoryItems(sessionId, value),
+    []
+  )
+
+  const addTouchedFiles = useCallback(
+    (sessionId: string, paths: string[]): Promise<void> =>
+      window.chatHistory.addTouchedFiles(sessionId, paths),
+    []
+  )
+
   const value = {
     sessions,
     currentSessionId,
@@ -218,7 +234,9 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
     getSessionsWithSandbox,
     setActiveSession,
     updateMessageContent,
-    deleteMessage
+    deleteMessage,
+    setUseMemoryItems,
+    addTouchedFiles
   }
 
   return <ChatHistoryContext.Provider value={value}>{children}</ChatHistoryContext.Provider>

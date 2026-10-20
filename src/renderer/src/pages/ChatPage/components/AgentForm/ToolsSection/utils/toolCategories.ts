@@ -50,6 +50,12 @@ export const TOOL_CATEGORIES: ToolCategory[] = [
     tools: ['think', 'todo']
   },
   {
+    id: 'memory',
+    name: 'Memory',
+    description: 'Tools for saving, changing and forgetting memory items',
+    tools: ['addMemory', 'updateMemory', 'removeMemory']
+  },
+  {
     id: 'agent-delegation',
     name: 'Agent Delegation',
     description: 'Tools for delegating tasks to other configured agents',

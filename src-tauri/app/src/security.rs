@@ -84,6 +84,10 @@ pub fn navigation(url: &Url, dev_url: Option<&Url>) -> Navigation {
         "http" if host == format!("{}.localhost", crate::html_preview::PROTOCOL) => {
             Navigation::Allow
         }
+        // Project files are fetched (pdf.js, <img>), never shown as a page.
+        "http" if host == format!("{}.localhost", crate::workspace_file::PROTOCOL) => {
+            Navigation::Block
+        }
         "https"
             if EMBED_HOSTS.contains(&host.as_str())
                 || EMBED_HOST_SUFFIXES.iter().any(|s| host.ends_with(s)) =>
@@ -166,6 +170,8 @@ mod tests {
             "tauri://localhost.evil",
             "http://tauri.localhost.evil.com",
             "chathistory://localhost",
+            "workspacefile://localhost",
+            "http://workspacefile.localhost",
         ] {
             assert!(!is_app_origin(o, Some(&dev)), "{o}");
         }
@@ -206,6 +212,8 @@ mod tests {
             ("http://localhost:3000/", OpenExternally),
             ("file:///etc/passwd", Block),
             ("chathistory://localhost/session_1", Block),
+            ("workspacefile://localhost/report.pdf", Block),
+            ("http://workspacefile.localhost/report.pdf", Block),
             ("data:text/html,<script>1</script>", Block),
             ("javascript:alert(1)", Block),
         ];
@@ -240,6 +248,12 @@ mod tests {
         assert!(!allow_permission(
             &PermissionKind::Camera,
             "task-history",
+            Some(&app),
+            None
+        ));
+        assert!(!allow_permission(
+            &PermissionKind::Camera,
+            "file-viewer-0123456789ab",
             Some(&app),
             None
         ));

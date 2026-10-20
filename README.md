@@ -95,8 +95,8 @@ AWS CLI, and writing the `~/.aws/credentials` and `~/.aws/config` files.
 
 ### Where settings and history live
 
-Settings (`config.json`), chat history (`chat-sessions/`, `chat-sessions-meta.json`) and logs
-(`logs/`) are kept in one folder named after the app:
+Settings (`config.json`), chat history (`chat-sessions/`, `chat-sessions-meta.json`), memory items
+(`memory.json`) and logs (`logs/`) are kept in one folder named after the app:
 
 | System  | Folder                                            |
 | ------- | ------------------------------------------------- |
@@ -259,6 +259,44 @@ are in the [MCP Server Configuration Guide](./docs/mcp-server/MCP_SERVER_CONFIGU
   trimmed with a pointer to read the rest, and formats nothing can extract are passed along as paths.
   Deleting the chat deletes its attachments folder.
 - Chat history supports multi-select delete.
+
+### Memory
+
+Rules and facts you want every chat to know live in one shared memory list.
+
+- Say "add a rule: always use TypeScript", "remember that prod is eu-west-1" or "forget the pnpm
+  rule" and the agent saves, changes or removes the item with its memory tools. The reply shows a
+  note with **View** (opens the Memory page) and **Undo**.
+- The **Memory** page in the sidebar lists every item. You can add items, edit their text, mark each
+  one as a **rule** or a **memory**, switch single items off without deleting them, and delete them.
+- The **Use Memory Items** checkbox above the message box adds every switched-on item to the
+  system prompt, which you can see in the SYSTEM_PROMPT view. It starts checked for each new chat,
+  and unchecking it only affects that chat.
+
+### Files panel
+
+A panel on the right of the chat shows the project folder, so the agent's output is one click away.
+
+- Open it with the **Files** button above the message box or the strip at the right edge. While the
+  panel is closed the strip is drawn in the accent colour; it pulses briefly when it first appears in
+  a chat, when the chat gets a sandbox and when the agent touches new files, and a fuchsia dot on it
+  stays until you open the panel (no animation when the system asks for reduced motion). Drag the
+  panel's left edge to resize it. When the chat has a Docker sandbox, the sandbox is a second tab in
+  the same panel.
+- Click a file to preview it: text and code with syntax highlighting, Markdown (rendered or as
+  source), HTML, images, PDF (page by page, with zoom) and Word documents. Text files can be edited
+  and saved; if the file changed on disk in the meantime, you are asked before anything is
+  overwritten.
+- **Open** opens the file in its default app, **Reveal** shows it in Finder or Explorer, and the
+  header button opens the whole project folder.
+- **Pop out** opens the file in a window of its own (one per file; popping out the same file again
+  brings its window forward), with the same preview, editing and buttons. It follows changes on
+  disk, says so if the file is deleted, and asks before closing over unsaved edits.
+- **This chat** lists only the files the agent created or changed in the current chat. Those files
+  carry a fuchsia dot in the full tree as well, and the folders holding them open automatically
+  (a folder you collapse stays collapsed).
+- The tree refreshes as files change, and file paths in the agent's replies are links that open the
+  file in the panel.
 
 ### A Docker sandbox per chat
 

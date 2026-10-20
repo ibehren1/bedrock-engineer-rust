@@ -38,7 +38,7 @@ const LoadingMessage = memo(function LoadingMessage({
           <img src={AILogo} className="h-full w-full object-contain" alt="assistant" />
         </div>
       </div>
-      <div className="flex flex-col gap-2 w-full">
+      <div className="flex flex-col gap-2 w-full min-w-0">
         <span className="animate-pulse h-2 w-12 bg-raised rounded-control"></span>
         {waiting && countdown !== undefined && (
           <div className="text-xs text-warning mb-2">

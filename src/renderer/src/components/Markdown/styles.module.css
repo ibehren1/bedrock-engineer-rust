@@ -26,6 +26,14 @@
      transcript rendered at the browser default of roughly 1.2. */
   line-height: 1.6;
   color: var(--ink);
+  /* Long words, URLs and paths wrap at the column edge instead of pushing it wider. */
+  overflow-wrap: break-word;
+}
+
+/* Display math scrolls on its own when wider than the column. */
+.reactMarkDown :global(.katex-display) {
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 /* Collapse the outer margins so the block sits flush in its container. */
@@ -188,10 +196,16 @@
    table with more than about six columns overflowed and short values wasted the
    width. Now: automatic widths, horizontal rules only, and figures aligned.
    --------------------------------------------------------------------------- */
+.tableScroll {
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 0 0 0.7em;
+}
+
 .reactMarkDown table {
   width: 100%;
   border-collapse: collapse;
-  margin: 0 0 0.7em;
+  margin: 0;
   font-variant-numeric: tabular-nums;
 }
 
@@ -209,6 +223,7 @@
 
 .reactMarkDown table td {
   padding: 0.25rem 0.5rem;
+  overflow-wrap: anywhere;
   border-bottom: 1px solid var(--border-soft);
   vertical-align: top;
 }

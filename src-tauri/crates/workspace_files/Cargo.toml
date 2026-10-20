@@ -1,0 +1,17 @@
+[package]
+name = "workspace_files"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tempfile.workspace = true
+percent-encoding = "=2.3.2"
+tracing = "=0.1.44"
+notify = { version = "=8.2.0", default-features = false, features = ["macos_fsevent"] }
+notify-debouncer-full = { version = "=0.7.0", default-features = false, features = ["macos_fsevent"] }
+tools = { path = "../tools" }

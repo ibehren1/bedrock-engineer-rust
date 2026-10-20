@@ -4,6 +4,7 @@ import { AttachedImage } from '../InputForm/TextArea'
 import { SendMsgKey } from '@/types/agent-chat'
 import type { ChatSandboxStatus } from '../../hooks/useChatSandbox'
 import type { ChatAttachment } from '../../hooks/useChatAttachments'
+import type { MemoryToggleProps } from '../InputForm/MemoryToggle'
 
 // InputFormContainer の参照タイプを定義
 export type InputFormContainerRef = {
@@ -38,6 +39,11 @@ type InputFormContainerProps = {
     onOpenFolder: () => void
     onOpenPanel: () => void
   }
+  /** The Files button, shown when a project folder is set. */
+  filesPanel?: {
+    isOpen: boolean
+    onToggle: () => void
+  }
   attachments?: {
     files: ChatAttachment[]
     directory: string
@@ -49,6 +55,7 @@ type InputFormContainerProps = {
     onRefresh: () => void
     onAddFiles: (files: File[]) => Promise<void>
   }
+  memoryToggle?: MemoryToggleProps
 }
 
 /**
@@ -77,7 +84,9 @@ const InputFormContainer = React.forwardRef<InputFormContainerRef, InputFormCont
       onHeightChange,
       isHistoryOpen,
       sandbox,
-      attachments
+      filesPanel,
+      attachments,
+      memoryToggle
     },
     ref
   ) => {
@@ -126,7 +135,9 @@ const InputFormContainer = React.forwardRef<InputFormContainerRef, InputFormCont
         onHeightChange={onHeightChange}
         isHistoryOpen={isHistoryOpen}
         sandbox={sandbox}
+        filesPanel={filesPanel}
         attachments={attachments}
+        memoryToggle={memoryToggle}
       />
     )
   }

@@ -19,6 +19,7 @@ mod store_sync;
 mod webview_proxy;
 mod window_startup;
 mod window_state;
+mod workspace_file;
 
 use state::{AppPaths, HistoryState};
 use std::sync::Mutex;
@@ -127,6 +128,7 @@ fn main() {
         .manage(state::LoggerState(logger))
         .manage(commands::camera::CameraState::default())
         .manage(store_sync::FlushState::default())
+        .manage(commands::workspace_files::WatchState::default())
         // Reopen windows where they were last closed.
         .manage(window_state::Remembered::open(&user_data))
         // Application menu (Electron createMenu): every platform, not only Tauri's macOS default.
@@ -159,6 +161,11 @@ fn main() {
         .register_uri_scheme_protocol(pdf::PROTOCOL, pdf::protocol)
         // Sandboxed origin for the chat's HTML previews.
         .register_uri_scheme_protocol(html_preview::PROTOCOL, html_preview::protocol)
+        // Files panel viewers: bytes of files under the project folder.
+        .register_asynchronous_uri_scheme_protocol(
+            workspace_file::PROTOCOL,
+            workspace_file::protocol,
+        )
         .invoke_handler(commands::handler())
         .setup(move |app| {
             // Bedrock / tools / MCP / agents / background / Docker services need the AppHandle
@@ -238,6 +245,7 @@ fn main() {
                 if let Some(backend) = window.try_state::<backend::Backend>() {
                     backend.background.pubsub().unsubscribe_all(window.label());
                 }
+                commands::workspace_files::on_window_destroyed(window.app_handle(), window.label());
             }
         })
         .build(context)

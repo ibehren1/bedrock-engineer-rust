@@ -9,7 +9,9 @@
 //!   right after a settings change could drop the queued write. Closing a bridge window (and
 //!   quitting the app) first sends `store-flush-request { token }`; the bridge drains its write
 //!   queue and answers with `store_flush_done { token }`, then the window is destroyed (or the app
-//!   exits). A window that doesn't answer within [`FLUSH_TIMEOUT`] is closed anyway.
+//!   exits). A window that doesn't answer within [`FLUSH_TIMEOUT`] is closed anyway. File viewer
+//!   windows handle their own close in the renderer instead (it asks before discarding unsaved
+//!   edits, then drains the write queue); they are still flushed on quit.
 //! - **Single instance**: a second launch focuses the running app's main window instead of
 //!   starting a second backend (two schedulers would run every task twice, and two stores would
 //!   race on `config.json`).
@@ -29,8 +31,21 @@ pub const STORE_CHANGED_EVENT: &str = "store-changed";
 pub const FLUSH_REQUEST_EVENT: &str = "store-flush-request";
 /// How long a window (or the app) waits for the bridge to confirm its writes are flushed.
 pub const FLUSH_TIMEOUT: Duration = Duration::from_secs(3);
-/// Windows that run the renderer bridge (and so have a store write queue).
+/// Fixed-label windows that run the renderer bridge (and so have a store write queue). The
+/// pop-out file viewers (`file-viewer-*`) run it too; see [`is_bridge_window`].
 const BRIDGE_WINDOWS: [&str; 2] = ["main", "task-history"];
+
+/// Whether the window `label` runs the renderer bridge.
+pub fn is_bridge_window(label: &str) -> bool {
+    BRIDGE_WINDOWS.contains(&label) || crate::commands::window::is_file_viewer_label(label)
+}
+
+/// Whether closing `label` waits here for its store writes. File viewers register a JS
+/// close-requested handler (unsaved-edits prompt) that flushes the store itself; holding their
+/// close here and then destroying the window would skip that prompt.
+fn flush_on_close(label: &str) -> bool {
+    is_bridge_window(label) && !crate::commands::window::is_file_viewer_label(label)
+}
 
 /// The `store-changed` payload.
 pub fn change_payload(key: &str, value: Option<&Value>) -> Value {
@@ -43,6 +58,7 @@ pub fn install_store_listener<R: Runtime>(app: &AppHandle<R>) {
     match app.state::<StoreMutex>().lock() {
         Ok(mut store) => store.set_listener(move |key, value| {
             crate::webview_proxy::on_store_change(&handle, key, value);
+            crate::commands::workspace_files::on_store_change(&handle, key, value);
             if let Err(e) = handle.emit(STORE_CHANGED_EVENT, change_payload(key, value)) {
                 tracing::warn!(key, error = %e, "Failed to emit store-changed");
             }
@@ -115,7 +131,7 @@ pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
     let WindowEvent::CloseRequested { api, .. } = event else {
         return;
     };
-    if !BRIDGE_WINDOWS.contains(&window.label()) || window.try_state::<FlushState>().is_none() {
+    if !flush_on_close(window.label()) || window.try_state::<FlushState>().is_none() {
         return;
     }
     api.prevent_close();
@@ -139,10 +155,10 @@ pub fn on_run_event<R: Runtime>(app: &AppHandle<R>, event: &RunEvent) {
     if state.exit_flushed.load(Ordering::SeqCst) {
         return;
     }
-    let open: Vec<String> = BRIDGE_WINDOWS
-        .iter()
-        .filter(|l| app.get_webview_window(l).is_some())
-        .map(|l| l.to_string())
+    let open: Vec<String> = app
+        .webview_windows()
+        .into_keys()
+        .filter(|l| is_bridge_window(l))
         .collect();
     if open.is_empty() {
         return;
@@ -174,6 +190,20 @@ pub fn focus_main_window<R: Runtime>(app: &AppHandle<R>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn bridge_windows() {
+        for label in ["main", "task-history", "file-viewer-0123456789ab"] {
+            assert!(is_bridge_window(label), "{label}");
+        }
+        for label in ["camera-preview-1", "pdf-export-1", "file-viewer-", "other"] {
+            assert!(!is_bridge_window(label), "{label}");
+        }
+        assert!(flush_on_close("main"));
+        assert!(flush_on_close("task-history"));
+        assert!(!flush_on_close("file-viewer-0123456789ab"));
+        assert!(!flush_on_close("pdf-export-1"));
+    }
 
     #[test]
     fn payload_shape() {

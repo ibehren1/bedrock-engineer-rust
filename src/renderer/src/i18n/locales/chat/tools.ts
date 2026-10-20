@@ -203,7 +203,9 @@ export const tools = {
       'File System Description': 'Tools for managing files and directories',
       'Web & Search Description': 'Tools for interacting with web resources',
       'AI Services Description': 'Tools that utilize AWS AI services',
-      'System Description': 'Tools for system interaction'
+      'System Description': 'Tools for system interaction',
+      Memory: 'Memory',
+      'Memory Description': 'Tools for saving, changing and forgetting memory items'
     },
     'tool descriptions': {
       createFolder: 'Create new directories in your project',
@@ -230,7 +232,10 @@ export const tools = {
       checkVideoStatus: 'Check the status of video generation jobs',
       downloadVideo: 'Download generated videos from S3 to local storage',
       screenCapture: 'Capture the current screen for AI analysis and debugging',
-      invokeAgent: 'Delegate a task to another configured agent'
+      invokeAgent: 'Delegate a task to another configured agent',
+      addMemory: 'Save a rule or fact the user asks the AI to remember',
+      updateMemory: 'Change, enable or disable a saved memory item',
+      removeMemory: 'Forget a saved memory item'
     },
     'tool info': {
       invokeAgent: {
@@ -287,6 +292,20 @@ export const tools = {
       }
     },
     'tool usage': {
+      addMemory: {
+        description:
+          'Lets the AI save a rule or fact when you say "remember…" or "add a rule…". Saved items are listed on the Memory page and added to the system prompt of chats that have "Use Memory Items" checked.',
+        tip: 'Enable this together with updateMemory and removeMemory so the AI can also change or forget items when asked.'
+      },
+      updateMemory: {
+        description:
+          'Lets the AI reword, re-classify, enable or disable a saved memory item, using the id shown in the system prompt.',
+        tip: 'You can also edit items yourself on the Memory page.'
+      },
+      removeMemory: {
+        description: 'Lets the AI delete a saved memory item when you say "forget…".',
+        tip: 'A removal can be undone from the chip under the reply.'
+      },
       invokeAgent: {
         description:
           'Enables the AI to delegate a task to another agent you have configured. Type @ in the chat box to pick which agents are allowed for a message; the current agent then decides whether to delegate.',
@@ -683,7 +702,9 @@ export const tools = {
       'Web & Search Description': 'ウェブリソースを操作するツール',
       'AI Services Description': 'AWS AIサービスを利用するツール',
       'System Description': 'システムと連携するツール',
-      'Thinking Description': '拡張された推論と複雑な問題解決のためのツール'
+      'Thinking Description': '拡張された推論と複雑な問題解決のためのツール',
+      Memory: 'メモリ',
+      'Memory Description': 'メモリ項目を保存、変更、削除するツール'
     },
     'tool descriptions': {
       createFolder: 'プロジェクトに新しいディレクトリを作成',
@@ -709,7 +730,10 @@ export const tools = {
       checkVideoStatus: '動画生成ジョブのステータスを確認',
       downloadVideo: '生成された動画をS3からローカルストレージにダウンロード',
       screenCapture: 'AI分析とデバッグのために現在の画面をキャプチャ',
-      invokeAgent: '設定済みの別のエージェントにタスクを委譲'
+      invokeAgent: '設定済みの別のエージェントにタスクを委譲',
+      addMemory: 'ユーザーが覚えておくよう頼んだルールや事実を保存',
+      updateMemory: '保存済みのメモリ項目を変更、有効化、無効化',
+      removeMemory: '保存済みのメモリ項目を削除'
     },
     'tool info': {
       invokeAgent: {
@@ -762,6 +786,20 @@ export const tools = {
       }
     },
     'tool usage': {
+      addMemory: {
+        description:
+          '「覚えておいて」「ルールを追加して」と伝えると、AIがルールや事実を保存できるようにします。保存した項目はメモリページに表示され、「メモリ項目を使用」がオンのチャットのシステムプロンプトに追加されます。',
+        tip: 'updateMemory と removeMemory も有効にすると、AIが項目の変更や削除にも対応できます。'
+      },
+      updateMemory: {
+        description:
+          'システムプロンプトに表示される ID を使って、AIが保存済みのメモリ項目の書き換え、種類の変更、有効化・無効化を行えるようにします。',
+        tip: 'メモリページから自分で編集することもできます。'
+      },
+      removeMemory: {
+        description: '「忘れて」と伝えると、AIが保存済みのメモリ項目を削除できるようにします。',
+        tip: '削除は返信の下に表示されるチップから元に戻せます。'
+      },
       invokeAgent: {
         description:
           'AIが設定済みの別のエージェントにタスクを委譲できるようにします。チャット欄で @ を入力すると、そのメッセージで許可するエージェントを選択できます。委譲するかどうかは現在のエージェントが判断します。',

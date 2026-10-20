@@ -32,6 +32,9 @@ const fn unsupported(reason: &'static str) -> StrandsTool {
 const TODO_REASON: &str =
     "TODO tools are excluded from conversion. Can be replaced with Workflow tools";
 
+const MEMORY_REASON: &str =
+    "Memory tools edit Bedrock Engineer's global memory list and have no Strands Agents equivalent";
+
 /// `TOOL_MAPPING`, in the TS declaration order.
 pub const TOOL_MAPPING: &[(&str, StrandsTool)] = &[
     // File system operations
@@ -81,6 +84,9 @@ pub const TOOL_MAPPING: &[(&str, StrandsTool)] = &[
     ("todo", unsupported(TODO_REASON)),
     ("todoInit", unsupported(TODO_REASON)),
     ("todoUpdate", unsupported(TODO_REASON)),
+    ("addMemory", unsupported(MEMORY_REASON)),
+    ("updateMemory", unsupported(MEMORY_REASON)),
+    ("removeMemory", unsupported(MEMORY_REASON)),
     (
         "invokeAgent",
         unsupported(

@@ -34,10 +34,14 @@ pub const BUILT_IN_TOOLS: &[&str] = &[
     "todo",
     "todoInit",
     "todoUpdate",
+    "addMemory",
+    "updateMemory",
+    "removeMemory",
     "invokeAgent",
 ];
 
-/// `READ_ONLY_TOOLS` — tools usable in PLAN MODE.
+/// `READ_ONLY_TOOLS` — tools usable in PLAN MODE. The memory tools are included: they change the
+/// user's memory list, never the project.
 pub const READ_ONLY_TOOLS: &[&str] = &[
     "readFiles",
     "listFiles",
@@ -47,6 +51,9 @@ pub const READ_ONLY_TOOLS: &[&str] = &[
     "retrieve",
     "invokeBedrockAgent",
     "think",
+    "addMemory",
+    "updateMemory",
+    "removeMemory",
 ];
 
 const LEGACY_MCP_PREFIX: &str = "mcp_";
@@ -107,6 +114,8 @@ mod tests {
         assert_eq!(get_original_mcp_tool_name("mcp_foo"), "foo");
         assert_eq!(get_original_mcp_tool_name("foo"), "foo");
         assert!(is_plan_mode_compatible("think"));
+        assert!(is_plan_mode_compatible("addMemory"));
+        assert!(is_built_in_tool("removeMemory"));
         assert!(!is_plan_mode_compatible("writeToFile"));
     }
 

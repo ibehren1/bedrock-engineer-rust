@@ -19,6 +19,7 @@ use serde_json::{json, Value};
 use std::path::Path;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Manager};
+use tools::memory::MemoryService;
 use tools::todo::TodoService;
 use tools::{ContextServices, ToolDeps, ToolRegistry};
 
@@ -31,6 +32,8 @@ pub struct Backend {
     pub sdk: Arc<dyn SdkConfigSource>,
     pub translate: TranslateService,
     pub todo: Arc<TodoService>,
+    /// `<userData>/memory.json`, shared by the memory tools and the `memory_*` commands.
+    pub memory: Arc<MemoryService>,
     pub mcp: Arc<McpManager>,
     pub sandbox: Arc<SandboxManager>,
     pub registry: Arc<ToolRegistry>,
@@ -183,9 +186,25 @@ impl Backend {
         let interpreter = CodeInterpreter::new(docker_settings, Arc::new(LogFacadeLogger));
 
         let todo = Arc::new(TodoService::new());
+        let memory = Arc::new(MemoryService::open(user_data));
+        memory.set_listener({
+            let app = app.clone();
+            move |items| {
+                let event = crate::commands::memory::MEMORY_CHANGED_EVENT;
+                if let Err(e) = app.emit(event, items) {
+                    tracing::warn!(event, error = %e, "Failed to emit event");
+                }
+            }
+        });
         // URL servers use the proxy configured at startup.
         let mcp = Arc::new(McpManager::new(settings::http_client(&snapshot())));
-        let mut tool_deps = ToolDeps::new(todo.clone(), mcp.clone(), interpreter, sandbox.clone());
+        let mut tool_deps = ToolDeps::new(
+            todo.clone(),
+            memory.clone(),
+            mcp.clone(),
+            interpreter,
+            sandbox.clone(),
+        );
         // cameraCapture grabs frames in the main webview.
         tool_deps.camera = Arc::new(crate::commands::camera::WebviewCamera::new(
             app.clone(),
@@ -242,6 +261,7 @@ impl Backend {
             sdk: Arc::new(DefaultSdkConfig),
             translate: TranslateService::new(),
             todo,
+            memory,
             mcp,
             sandbox,
             registry,

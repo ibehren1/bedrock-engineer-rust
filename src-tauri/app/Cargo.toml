@@ -29,21 +29,22 @@ attachments = { path = "../crates/attachments" }
 docker = { path = "../crates/docker" }
 background = { path = "../crates/background" }
 strands = { path = "../crates/strands" }
-tokio = { version = "=1.53.1", features = ["rt", "sync", "macros", "time", "process"] }
+workspace_files = { path = "../crates/workspace_files" }
+tokio = { version = "=1.54.0", features = ["rt", "sync", "macros", "time", "process"] }
 reqwest = "=0.13.5"
-async-trait = "=0.1.89"
-tauri-plugin-notification = "=2.5.0"
-tauri-plugin-dialog = "=2.8.0"
-tauri-plugin-opener = "=2.7.0"
-tauri-plugin-single-instance = "=2.5.1"
-aws-sdk-s3 = { version = "=1.150.0", default-features = false, features = ["sigv4a", "http-1x", "default-https-client", "rt-tokio"] }
+async-trait = "=0.1.92"
+tauri-plugin-notification = "=2.7.0"
+tauri-plugin-dialog = "=2.8.3"
+tauri-plugin-opener = "=2.7.2"
+tauri-plugin-single-instance = "=2.5.4"
+aws-sdk-s3 = { version = "=1.152.0", default-features = false, features = ["sigv4a", "http-1x", "default-https-client", "rt-tokio"] }
 anyhow = "=1.0.104"
 base64 = "=0.22.1"
 percent-encoding = "=2.3.2"
 tracing = "=0.1.44"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-objc2 = "=0.6.4"
+objc2 = "=0.6.5"
 mac-notification-sys = "=0.6.15"
 # PDF export (src/pdf/macos.rs): NSPrintOperation on the WKWebView.
 objc2-foundation = { version = "=0.3.2", features = ["NSString", "NSURL", "NSGeometry", "NSDictionary"] }
@@ -61,7 +62,7 @@ gtk = "=0.18.2"
 webkit2gtk = { version = "=2.0.2", features = ["v2_38"] }
 
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
-notify-rust = "=4.18.1"
+notify-rust = "=4.18.2"
 
 [dev-dependencies]
 tempfile.workspace = true

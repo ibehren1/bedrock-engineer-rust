@@ -13,6 +13,7 @@ const HANDLER_SOURCE: &str = include_str!("mod.rs");
 const ALL_COMMANDS_SET: &str = include_str!("../../permissions/app-commands.toml");
 const DEFAULT_CAPABILITY: &str = include_str!("../../capabilities/default.json");
 const CAMERA_CAPABILITY: &str = include_str!("../../capabilities/camera-preview.json");
+const FILE_VIEWER_CAPABILITY: &str = include_str!("../../capabilities/file-viewer.json");
 const CAMERA_PREVIEW_HTML: &str = include_str!("../../../../src/renderer/camera-preview.html");
 
 fn commands() -> Vec<String> {
@@ -20,10 +21,14 @@ fn commands() -> Vec<String> {
 }
 
 fn capabilities() -> Vec<Value> {
-    [DEFAULT_CAPABILITY, CAMERA_CAPABILITY]
-        .iter()
-        .map(|s| serde_json::from_str(s).expect("capability JSON"))
-        .collect()
+    [
+        DEFAULT_CAPABILITY,
+        CAMERA_CAPABILITY,
+        FILE_VIEWER_CAPABILITY,
+    ]
+    .iter()
+    .map(|s| serde_json::from_str(s).expect("capability JSON"))
+    .collect()
 }
 
 fn strings(v: &Value, key: &str) -> Vec<String> {
@@ -115,8 +120,13 @@ fn every_granted_app_permission_is_a_registered_command() {
 
 #[test]
 fn windows_get_only_what_they_use() {
-    // The full UI windows get every command.
-    for label in ["main", "task-history"] {
+    // The full UI windows get every command; file viewers match by prefix, whatever the hash.
+    for label in [
+        "main",
+        "task-history",
+        "file-viewer-0123456789ab",
+        &crate::commands::window::file_viewer_label("docs/a b.md"),
+    ] {
         assert_eq!(
             app_permissions_for(label),
             BTreeSet::from(["app-commands".to_string()])
@@ -136,8 +146,24 @@ fn windows_get_only_what_they_use() {
     assert_eq!(invoked.len(), 2, "{invoked:?}");
     assert_eq!(app_permissions_for("camera-preview-1"), invoked);
 
+    // File viewers may also destroy themselves (the JS close-requested handler does); nothing
+    // else gets that.
+    let destroy = |label: &str| {
+        capabilities().iter().any(|c| {
+            strings(c, "windows")
+                .iter()
+                .any(|w| matches_window(w, label))
+                && strings(c, "permissions")
+                    .iter()
+                    .any(|p| p == "core:window:allow-destroy")
+        })
+    };
+    assert!(destroy("file-viewer-0123456789ab"));
+    assert!(!destroy("main"));
+    assert!(!destroy("task-history"));
+
     // PDF export windows (hidden, printing model-derived HTML) and anything unknown: nothing.
-    for label in ["pdf-export-1", "some-other-window"] {
+    for label in ["pdf-export-1", "some-other-window", "file-viewer"] {
         assert!(
             capabilities().iter().all(|c| !strings(c, "windows")
                 .iter()

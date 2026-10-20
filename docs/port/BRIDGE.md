@@ -34,9 +34,10 @@ the renderer needs to change.
    console. Nothing throws synchronously, so the UI still loads.
 5. **Events.** Main → renderer pushes keep their Electron channel as the Tauri event name:
    `background-agent:task-notification`, `background-agent:task-execution-start`,
-   `background-agent:task-skipped`, `context-menu-command`. Pub/sub messages for channel `c` are
-   emitted as the event `pubsubEventName(c)` = `pubsub:` + `c` with every character outside
-   `[A-Za-z0-9-/:_]` replaced by `_`; the payload is the published `data`.
+   `background-agent:task-skipped`, `context-menu-command`. New pushes without an Electron
+   ancestor: `memory-changed` (payload `MemoryItem[]`, the whole list). Pub/sub messages for
+   channel `c` are emitted as the event `pubsubEventName(c)` = `pubsub:` + `c` with every
+   character outside `[A-Za-z0-9-/:_]` replaced by `_`; the payload is the published `data`.
 6. **Binary data** can't go through JSON as `Uint8Array`, so it is sent as `number[]`
    (serde `Vec<u8>`): `chatAttachments.add` files, the sandbox terminal's live `data` frames
    (`bytes`, which `new Uint8Array(bytes)` accepts as is) and its backlogs (the shim converts
@@ -109,7 +110,10 @@ After each async chat-history mutation (and in the background after the sync one
 Implemented in the renderer, no command needed: `api.bedrock.getImageGenerationModelsForRegion`
 (shared model table), `api.bedrock.convertInferenceProfileToLLM` (copy of
 `InferenceProfileService.convertProfileToLLM`), `appWindow.isFocused` / `api.window.isFocused`
-(`getCurrentWindow().isFocused()`, falling back to `document.hasFocus()`).
+(`getCurrentWindow().isFocused()`, falling back to `document.hasFocus()`), and
+`appWindow.onCloseRequested(shouldClose)` (`getCurrentWindow().onCloseRequested`: keeps the window
+open when `shouldClose` returns false, else drains queued store writes first; the pop-out file
+viewers use it, and Rust leaves their close to it).
 `api.codeInterpreter.getCurrentWorkspacePath` is synchronous with no
 backend yet and returns `null`.
 
@@ -197,6 +201,26 @@ Commands marked "(params object as-is)" take the params object's keys as their a
   ported tool, including MCP, Bedrock, code interpreter and Docker sandbox); the tool context
   carries the chat's `sessionId`, the Docker sandbox, the agent catalog and the sub-agent runner.
   screenCapture / cameraCapture are registered too (see "Screen, camera and task history").
+- **Memory**: `tools::memory::MemoryService` holds the global memory list in
+  `<userData>/memory.json` (`{ items: MemoryItem[] }`, newest first; a corrupt file is moved
+  aside as `memory.json.corrupt-<ms>`). `MemoryItem` is `{ id, content, kind: 'rule' | 'memory',
+  enabled, source: 'chat' | 'manual', createdAt, updatedAt }` (Unix ms). The `memory_*` commands
+  and the addMemory / updateMemory / removeMemory tools share it; after every successful write
+  Rust emits `memory-changed` with the full list to every window. The tools return
+  `{ name, success: true, result: { item }, message }` with the added / updated / removed item.
+- **Files panel** (`commands/workspace_files.rs`, logic in `crates/workspace_files`): the root is
+  the store's current `projectPath` (every command rejects `No project folder is set` without
+  one). Path arguments are root-relative or absolute; each is resolved with symlinks and `..`
+  applied (a not-yet-existing write target through its parent, which must exist) and rejects
+  `Path is outside the project folder` unless it stays under the root. Returned paths are
+  root-relative with forward slashes. Listings are one level, dirs first then by name
+  (case-insensitive), without `.git`, `node_modules`, `target`, `.DS_Store`, `docker-sandboxes`
+  (at any depth) or anything the root `.gitignore` matches. Writes go to a temp file in the same
+  folder that is renamed over the target (permissions kept). `workspace_files_watch` starts a
+  recursive watcher (notify, 300 ms debounce) that stays on while any window that called it has
+  neither called `workspace_files_unwatch` nor closed (tracked per window label; the bridge
+  reference-counts callers within a window) and follows `projectPath` changes; it emits `workspace-files-changed { root, paths }` (root-relative,
+  deduplicated, same filters as the listing; access-only events dropped) to every window.
 - **Agents**: one `AgentEngine` (Bedrock Converse, full registry, MCP tool specs, background
   session store and listener) is shared by background agents and `sub_agent_invoke`, as
   Electron shared its `BackgroundAgentService`.
@@ -272,6 +296,21 @@ Notes on the file commands (`src-tauri/app/src/commands/{file,agent_files}.rs`):
 | `chatHistory.setActiveSession` | `chat_history_set_active_session` | `{ sessionId? }` |
 | `chatHistory.updateMessageContent` | `chat_history_update_message_content` | `{ sessionId, messageIndex, updatedMessage }` |
 | `chatHistory.deleteMessage` | `chat_history_delete_message` | `{ sessionId, messageIndex }` |
+| `chatHistory.setUseMemoryItems` | `chat_history_set_use_memory_items` | `{ sessionId, value }` (sets the session's top-level `useMemoryItems`; missing = `true`) |
+| `memory.list` | `memory_list` | — → `MemoryItem[]`, newest first |
+| `memory.add` | `memory_add` | `{ content, kind?, source? }` → `MemoryItem` (`kind` defaults to `'memory'`, `source` to `'manual'`; blank content rejects) |
+| `memory.update` | `memory_update` | `{ id, content?, kind?, enabled? }` → `MemoryItem` (bumps `updatedAt`; unknown id rejects) |
+| `memory.delete` | `memory_delete` | `{ id }` → `boolean` (`true` if removed) |
+| `chatHistory.addTouchedFiles` | `chat_history_add_touched_files` | `{ sessionId, paths }` (merges project-relative paths into the session's top-level `touchedFiles: string[]`, deduplicated, first-seen order; unknown session = no-op) |
+| `workspaceFiles.list` | `workspace_files_list` | `{ dir }` (`""` = root) → `{ root, entries: { name, path, kind: 'file' \| 'dir', size, modifiedMs, ext }[] }` |
+| `workspaceFiles.readText` | `workspace_files_read_text` | `{ path }` → `{ content, truncated, size, modifiedMs }` (first 2 MB; rejects `Not a text file`) |
+| `workspaceFiles.writeText` | `workspace_files_write_text` | `{ path, content, expectedModifiedMs? }` → `{ modifiedMs }` (rejects `CONFLICT: ...` when the mtime differs) |
+| `workspaceFiles.open` | `workspace_files_open` | `{ path }` (OS default app) |
+| `workspaceFiles.reveal` | `workspace_files_reveal` | `{ path? }` (selected in Finder / Explorer; no path opens the root) |
+| `workspaceFiles.exists` | `workspace_files_exists` | `{ paths }` → `Record<input, { path, kind } \| null>` |
+| `workspaceFiles.watch` | `workspace_files_watch` | — (start / retarget the watcher; idempotent) |
+| `workspaceFiles.unwatch` | `workspace_files_unwatch` | — |
+| `workspaceFiles.popOut` | `window_open_file_viewer` | `{ path }` → `{ windowId, reused }` (opens `file-viewer-<hash>` at `#/file-viewer?path=<root-relative>`, titled `<name> — <folder>`, or focuses the open one; rejects unless `path` is a file under the root) |
 | `file.handleFolderOpen` | `open_directory` | — |
 | `file.handleFileOpen` | `open_file` | — |
 | `file.readSharedAgents` | `file_read_shared_agents` | — |
@@ -534,8 +573,9 @@ is present per event. Field names are the SDK's camelCase:
   (Tailwind/emotion/sandpack/monaco/mermaid inject styles; `dangerousDisableAssetCspModification:
   ["style-src"]` keeps Tauri from adding nonces there, which would disable `'unsafe-inline'`),
   `img-src 'self' data: blob: https:` (chat markdown, Tavily result images and GitHub avatars are
-  remote), `font-src 'self' data:`, `connect-src 'self' ipc: http://ipc.localhost chathistory:
-  http://chathistory.localhost`, `frame-src htmlpreview: http://htmlpreview.localhost
+  remote; plus `workspacefile: http://workspacefile.localhost` for the Files panel's image
+  viewer), `font-src 'self' data:`, `connect-src 'self' ipc: http://ipc.localhost chathistory:
+  http://chathistory.localhost workspacefile: http://workspacefile.localhost`, `frame-src htmlpreview: http://htmlpreview.localhost
   https://*.codesandbox.io https://embed.diagrams.net` (HTML previews, Website Generator,
   draw.io), `worker-src 'self' blob:`, `object-src 'none'`, `base-uri 'self'`,
   `form-action 'self'`, `frame-ancestors 'none'`. Consequences: monaco is bundled
@@ -548,6 +588,17 @@ is present per event. Field names are the SDK's camelCase:
   the `htmlpreview://localhost/preview` shell (`src-tauri/app/src/html_preview.rs`, its own
   permissive CSP plus `sandbox allow-scripts`), which announces `html-preview:ready` and renders
   the `html-preview:render { html }` message the parent answers with.
+- **Project files** (`workspacefile://localhost/<encodeURIComponent(path)>`, or
+  `http://workspacefile.localhost/<...>` on Windows, from `convertFileSrc(path, 'workspacefile')`;
+  `src-tauri/app/src/workspace_file.rs`): the bytes of a file under `projectPath` for the Files
+  panel's PDF / DOCX / image viewers. The query is ignored; the path goes through the same
+  root check as the commands (`403` outside, `404` missing). `GET` / `HEAD`, single `Range:
+  bytes=` requests (`206`), `OPTIONS` preflight; `Cache-Control: no-store`, `nosniff`, a
+  `default-src 'none'; ...; sandbox` CSP, and a `Content-Type` by extension that is never a
+  document type (HTML is `text/plain`, unknown types `application/octet-stream`). A request with
+  an `Origin` must come from an app origin (echoed in `Access-Control-Allow-Origin`), others get
+  `403`; requests without one (`<img>`) are served without CORS headers. Windows never navigate
+  to the scheme (the navigation guard blocks it).
 - **Other embedded content**: sandpack's bundler iframe (`*.codesandbox.io`, `allow-same-origin`
   refers to its own origin) and draw.io (`embed.diagrams.net`) are cross-origin frames; Tauri
   injects its IPC globals into the main frame only. Mermaid runs with `securityLevel:

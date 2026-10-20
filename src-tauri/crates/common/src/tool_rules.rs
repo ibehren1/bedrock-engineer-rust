@@ -135,7 +135,7 @@ mod tests {
         let rule = ctx.find("<project rule>").unwrap();
         let visual = ctx.find("<visual expression rule>").unwrap();
         assert!(act < rule && rule < visual);
-        assert!(ctx.contains("readFiles, listFiles, tavilySearch, fetchWebsite, recognizeImage, retrieve, invokeBedrockAgent, think."));
+        assert!(ctx.contains("readFiles, listFiles, tavilySearch, fetchWebsite, recognizeImage, retrieve, invokeBedrockAgent, think, addMemory, updateMemory, removeMemory."));
     }
 
     #[test]

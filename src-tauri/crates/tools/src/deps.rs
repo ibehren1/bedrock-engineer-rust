@@ -13,7 +13,7 @@ use crate::interpreter::CodeInterpreterTool;
 use crate::mcp_adapter::{McpExecutor, McpTool};
 use crate::registry::ToolRegistry;
 use crate::system::{create_system_tools, CameraSource, NoCameraSource, ScreenService};
-use crate::{agent, filesystem, thinking, todo, Tool};
+use crate::{agent, filesystem, memory, thinking, todo, Tool};
 use docker::interpreter::CodeInterpreter;
 use serde_json::Value;
 use std::sync::Arc;
@@ -21,6 +21,8 @@ use std::sync::Arc;
 /// Long-lived services the tools are constructed with.
 pub struct ToolDeps {
     pub todo: Arc<todo::TodoService>,
+    /// The global memory list (addMemory / updateMemory / removeMemory).
+    pub memory: Arc<memory::MemoryService>,
     /// `bedrock:*` handlers; [`SdkBedrockBackend`] in production.
     pub bedrock: Arc<dyn BedrockBackend>,
     /// `mcp:executeTool`; an `Arc<mcp::McpManager>` in production.
@@ -41,12 +43,14 @@ impl ToolDeps {
     /// passed to [`ContextServices::sandbox`] so `executeCommand` routes into it.
     pub fn new(
         todo: Arc<todo::TodoService>,
+        memory: Arc<memory::MemoryService>,
         mcp: Arc<mcp::McpManager>,
         interpreter: Arc<CodeInterpreter>,
         sandbox: Arc<docker::SandboxManager>,
     ) -> Self {
         ToolDeps {
             todo,
+            memory,
             bedrock: Arc::new(SdkBedrockBackend::default()),
             mcp,
             interpreter,
@@ -58,7 +62,7 @@ impl ToolDeps {
 }
 
 /// Every ported tool, in the TS registration order: filesystem, web, thinking, command, mcp,
-/// bedrock, interpreter, docker, system, todo, agent.
+/// bedrock, interpreter, docker, system, todo, agent (memory tools right after todo).
 pub fn all_tools(deps: &ToolDeps) -> Vec<Arc<dyn Tool>> {
     let mut all = filesystem::create_filesystem_tools();
     all.extend(crate::create_web_tools());
@@ -74,6 +78,7 @@ pub fn all_tools(deps: &ToolDeps) -> Vec<Arc<dyn Tool>> {
         deps.bedrock.clone(),
     ));
     all.extend(todo::create_todo_tools(deps.todo.clone()));
+    all.extend(memory::create_memory_tools(deps.memory.clone()));
     all.extend(agent::create_agent_tools());
     all
 }

@@ -76,7 +76,10 @@ Remember: Your goal is to provide complete, production-ready solutions that foll
       'copyFile',
       'tavilySearch',
       'executeCommand',
-      'think'
+      'think',
+      'addMemory',
+      'updateMemory',
+      'removeMemory'
     ],
     // ソフトウェア開発者用の許可コマンド設定
     allowedCommands: [
@@ -158,7 +161,10 @@ Remember: The goal is to empower learning through understanding, not just proble
       'copyFile',
       'tavilySearch',
       'executeCommand',
-      'think'
+      'think',
+      'addMemory',
+      'updateMemory',
+      'removeMemory'
     ],
     allowedCommands: [
       { pattern: 'node *', description: 'Node.js command' },
@@ -237,7 +243,10 @@ Maintain a creative, professional, and supportive tone while providing actionabl
       'generateImage',
       'tavilySearch',
       'executeCommand',
-      'think'
+      'think',
+      'addMemory',
+      'updateMemory',
+      'removeMemory'
     ],
     allowedCommands: [
       { pattern: 'ls *', description: 'List directory command' },

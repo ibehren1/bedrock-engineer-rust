@@ -314,6 +314,51 @@ impl ChatSessionManager {
         self.update_metadata(session_id, &session);
     }
 
+    /// Sets the session's top-level `useMemoryItems` flag (whether the chat's system prompt gets
+    /// the memory list; a session without the field counts as `true`). Like the title, it doesn't
+    /// touch `updatedAt` or the recent list. Unknown sessions are a no-op.
+    pub fn set_use_memory_items(&self, session_id: &str, value: bool) {
+        let Some(mut session) = self.read_session_file(session_id) else {
+            return;
+        };
+        if let Some(obj) = session.as_object_mut() {
+            obj.insert("useMemoryItems".into(), json!(value));
+        }
+        self.write_session_file(session_id, &session);
+    }
+
+    /// Merges `paths` into the session's top-level `touchedFiles` list (project-relative paths
+    /// of files this chat wrote): existing entries keep their order, new ones are appended once,
+    /// empty strings are dropped. Doesn't touch `updatedAt` or the recent list, and writes
+    /// nothing when no path is new. Unknown sessions are a no-op.
+    pub fn add_touched_files(&self, session_id: &str, paths: &[String]) {
+        let Some(mut session) = self.read_session_file(session_id) else {
+            return;
+        };
+        let Some(obj) = session.as_object_mut() else {
+            return;
+        };
+        let mut list: Vec<String> = match obj.get("touchedFiles") {
+            Some(Value::Array(a)) => a
+                .iter()
+                .filter_map(|v| v.as_str().map(str::to_owned))
+                .collect(),
+            _ => Vec::new(),
+        };
+        let mut seen: HashSet<String> = list.iter().cloned().collect();
+        let before = list.len();
+        for p in paths {
+            if !p.is_empty() && seen.insert(p.clone()) {
+                list.push(p.clone());
+            }
+        }
+        if list.len() == before && obj.contains_key("touchedFiles") {
+            return;
+        }
+        obj.insert("touchedFiles".into(), json!(list));
+        self.write_session_file(session_id, &session);
+    }
+
     /// `deleteSession`. The metadata entry is only removed when the file could be deleted; the id
     /// is always dropped from the recent list. The active session id is left alone.
     pub fn delete_session(&self, session_id: &str) {

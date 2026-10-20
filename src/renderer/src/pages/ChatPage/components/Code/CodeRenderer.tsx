@@ -7,6 +7,7 @@ import { HtmlBlock } from './HtmlBlock'
 import { MermaidBlock } from './MermaidBlock'
 import { DrawIOBlock } from './DrawIOBlock'
 import LocalImage from '@renderer/components/LocalImage'
+import { FilePathAnchor, FilePathCode } from '@renderer/components/FilePathLink'
 import style from '@renderer/components/Markdown/styles.module.css'
 import { extractDrawioXml, isDrawioXml } from '@renderer/lib/drawio/xmlParser'
 import 'katex/dist/katex.min.css'
@@ -19,8 +20,8 @@ type CodeRendererProps = {
 
 type AnchorProps = {
   href?: string
+  title?: string
   children?: React.ReactNode
-  onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void
 }
 
 type ImgProps = {
@@ -39,17 +40,11 @@ type CodeProps = {
 export const CodeRenderer: React.FC<CodeRendererProps> = ({ text = '', className = '' }) => {
   const components: Partial<Components> = useMemo(() => {
     return {
-      a: (props: AnchorProps) => (
-        <a
-          {...props}
-          onClick={(e) => {
-            e.preventDefault()
-            if (props.href) {
-              open(props.href)
-            }
-          }}
-          style={{ cursor: 'pointer' }}
-        />
+      // A link to a project file opens it in the Files panel; others open externally.
+      a: ({ href, title, children }: AnchorProps) => (
+        <FilePathAnchor href={href} title={title}>
+          {children}
+        </FilePathAnchor>
       ),
       img: ({ src, alt, ...props }: ImgProps) => {
         // Check if it's a remote URL (has a valid protocol)
@@ -71,6 +66,12 @@ export const CodeRenderer: React.FC<CodeRendererProps> = ({ text = '', className
         // Treat everything else as local path
         return <LocalImage src={src || ''} alt={alt || ''} {...props} />
       },
+      // Wide tables scroll inside their own box instead of widening the whole transcript.
+      table: ({ children }: { children?: React.ReactNode }) => (
+        <div className={style.tableScroll}>
+          <table>{children}</table>
+        </div>
+      ),
       code: ({ inline, className, children, ...props }: CodeProps) => {
         const match = /language-(\w+)/.exec(className || '')
         const language = match ? match[1] : ''
@@ -105,7 +106,11 @@ export const CodeRenderer: React.FC<CodeRendererProps> = ({ text = '', className
           }
         }
 
-        // Inline code
+        // Inline code (react-markdown 9 has no `inline` flag: no language and one line). One
+        // naming a project file opens it in the Files panel.
+        if (!className && !codeContent.includes('\n')) {
+          return <FilePathCode text={codeContent}>{children}</FilePathCode>
+        }
         return (
           <code className={className} {...props}>
             {children}

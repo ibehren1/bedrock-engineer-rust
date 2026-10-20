@@ -14,6 +14,7 @@ members = [
     "crates/agents",
     "crates/background",
     "crates/strands",
+    "crates/workspace_files",
 ]
 
 [workspace.package]
@@ -24,10 +25,10 @@ authors = ["Isaac Behrens <ibehr@amazon.com>"]
 
 [workspace.dependencies]
 # devtools: View > Toggle Developer Tools works in release builds, as it did in Electron.
-tauri = { version = "=2.12.0", features = ["devtools"] }
-tauri-build = { version = "=2.7.0", features = [] }
+tauri = { version = "=2.12.4", features = ["devtools"] }
+tauri-build = { version = "=2.7.3", features = [] }
 serde = { version = "=1.0.229", features = ["derive"] }
-serde_json = { version = "=1.0.151", features = ["preserve_order"] }
+serde_json = { version = "=1.0.154", features = ["preserve_order"] }
 thiserror = "=2.0.21"
 tempfile = "=3.27.0"
 dirs = "=6.0.0"

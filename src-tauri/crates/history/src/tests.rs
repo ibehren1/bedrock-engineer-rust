@@ -288,6 +288,69 @@ fn recent_list_is_capped_at_ten() {
 }
 
 #[test]
+fn set_use_memory_items_persists_the_flag() {
+    let d = electron_user_data();
+    let m = ChatSessionManager::new(d.path()).unwrap();
+    assert!(m
+        .get_session(NO_PROMPT)
+        .unwrap()
+        .get("useMemoryItems")
+        .is_none());
+    m.set_use_memory_items(NO_PROMPT, false);
+    let s = m.get_session(NO_PROMPT).unwrap();
+    assert_eq!(s["useMemoryItems"], false);
+    assert_eq!(s["updatedAt"], 1790000100000_i64);
+    assert_eq!(m.recent_ids()[0], RICH);
+    // On disk, and the other fields are untouched.
+    let reopened = ChatSessionManager::new(d.path()).unwrap();
+    let mut on_disk = reopened.get_session(NO_PROMPT).unwrap();
+    assert_eq!(on_disk["useMemoryItems"], false);
+    on_disk.as_object_mut().unwrap().remove("useMemoryItems");
+    assert_eq!(
+        on_disk,
+        serde_json::from_str::<Value>(&fixture(NO_PROMPT)).unwrap()
+    );
+    m.set_use_memory_items(NO_PROMPT, true);
+    assert_eq!(m.get_session(NO_PROMPT).unwrap()["useMemoryItems"], true);
+    // Unknown sessions aren't created.
+    m.set_use_memory_items("nope", true);
+    assert!(!d.path().join(SESSIONS_DIR).join("nope.json").exists());
+}
+
+#[test]
+fn add_touched_files_merges_in_order_without_duplicates() {
+    let d = electron_user_data();
+    let m = ChatSessionManager::new(d.path()).unwrap();
+    assert!(m
+        .get_session(NO_PROMPT)
+        .unwrap()
+        .get("touchedFiles")
+        .is_none());
+    let paths = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+    m.add_touched_files(NO_PROMPT, &paths(&["b.md", "a/x.txt", "b.md", ""]));
+    m.add_touched_files(NO_PROMPT, &paths(&["a/x.txt", "c.pdf"]));
+    let s = m.get_session(NO_PROMPT).unwrap();
+    assert_eq!(
+        s["touchedFiles"],
+        serde_json::json!(["b.md", "a/x.txt", "c.pdf"])
+    );
+    assert_eq!(s["updatedAt"], 1790000100000_i64);
+    assert_eq!(m.recent_ids()[0], RICH);
+    // On disk, and the other fields are untouched.
+    let reopened = ChatSessionManager::new(d.path()).unwrap();
+    let mut on_disk = reopened.get_session(NO_PROMPT).unwrap();
+    assert_eq!(on_disk["touchedFiles"].as_array().unwrap().len(), 3);
+    on_disk.as_object_mut().unwrap().remove("touchedFiles");
+    assert_eq!(
+        on_disk,
+        serde_json::from_str::<Value>(&fixture(NO_PROMPT)).unwrap()
+    );
+    // Unknown sessions aren't created.
+    m.add_touched_files("nope", &paths(&["a"]));
+    assert!(!d.path().join(SESSIONS_DIR).join("nope.json").exists());
+}
+
+#[test]
 fn update_title_keeps_updated_at_and_recent() {
     let d = electron_user_data();
     let m = ChatSessionManager::new(d.path()).unwrap();

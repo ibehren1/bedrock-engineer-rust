@@ -32,6 +32,8 @@ export const agentToolsSettings = {
       'Tools for enhanced reasoning and complex problem solving',
     'Tool Categories.MCP': 'MCP',
     'Tool Categories.MCP Description': 'Model Context Protocol Tools',
+    'Tool Categories.Memory': 'Memory',
+    'Tool Categories.Memory Description': 'Tools for saving, changing and forgetting memory items',
     'Tool Categories.All Configuration': 'All',
     'tools.description': 'Select the tools this agent can use.',
     'Available Tools': 'Available Tools',
@@ -283,7 +285,10 @@ export const agentToolsSettings = {
       dockerSandbox: "Run commands in this chat's own Docker container instead of on your machine",
       screenCapture: 'Capture screenshots of the screen for analysis and documentation',
       invokeAgent:
-        'Delegate a self-contained task to another configured agent that the user @mentioned'
+        'Delegate a self-contained task to another configured agent that the user @mentioned',
+      addMemory: 'Save a rule or fact to memory when the user asks to remember something',
+      updateMemory: 'Change, enable or disable a saved memory item',
+      removeMemory: 'Forget a saved memory item'
     }
   },
   ja: {
@@ -318,6 +323,8 @@ export const agentToolsSettings = {
     'Tool Categories.Thinking Description': '高度な推論と複雑な問題解決のためのツール',
     'Tool Categories.MCP': 'MCP',
     'Tool Categories.MCP Description': 'Model Context Protocol ツール',
+    'Tool Categories.Memory': 'メモリ',
+    'Tool Categories.Memory Description': 'メモリ項目を保存、変更、削除するツール',
     'Tool Categories.All Configuration': '全て',
     'tools.description': 'このエージェントが使用できるツールを選択します。',
     'Available Tools': '利用可能なツール',
@@ -565,7 +572,10 @@ export const agentToolsSettings = {
       codeInterpreter: 'Pythonコードを実行しデータ分析機能とファイル操作を提供',
       dockerSandbox: 'ホストではなくチャット専用の Docker コンテナでコマンドを実行',
       screenCapture: 'スクリーンのスクリーンショットをキャプチャして分析・文書化',
-      invokeAgent: 'ユーザーが@メンションした別のエージェントに独立したタスクを委譲'
+      invokeAgent: 'ユーザーが@メンションした別のエージェントに独立したタスクを委譲',
+      addMemory: 'ユーザーに覚えておくよう頼まれたルールや事実をメモリに保存',
+      updateMemory: '保存済みのメモリ項目を変更、有効化、無効化',
+      removeMemory: '保存済みのメモリ項目を削除'
     }
   }
 }

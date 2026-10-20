@@ -5,7 +5,7 @@ import { flowbiteTheme } from './flowbiteTheme'
 import { createHashRouter, Link, Outlet, RouterProvider, useLocation } from 'react-router-dom'
 import CmdK from './command-palette'
 import { routes, subRoutes } from './routes'
-import { isRouteActive } from './lib/routeMatching'
+import { isRouteActive, isStandaloneWindowRoute } from './lib/routeMatching'
 import HomePage from './pages/HomePage/HomePage'
 import { Toaster } from 'react-hot-toast'
 import ErrorPage from './pages/ErrorPage/ErrorPage'
@@ -13,6 +13,7 @@ import { SettingsProvider } from './contexts/SettingsContext'
 import useSetting from './hooks/useSetting'
 import { ChatHistoryProvider } from './contexts/ChatHistoryContext'
 import { AgentDirectoryProvider } from './contexts/AgentDirectoryContext'
+import { MemoryProvider } from './contexts/MemoryContext'
 import { StepType, TourProvider } from '@reactour/tour'
 import { useTranslation } from 'react-i18next'
 import { ToastService } from './services/ToastService'
@@ -55,11 +56,11 @@ const Layout: React.FC = () => {
   // when 'system' is selected).
   useTheme()
 
-  // タスク履歴ウィンドウかどうかを判定
-  const isTaskHistoryWindow = location.pathname.includes('/task-history/')
+  // タスク履歴ウィンドウ・ファイルビューアウィンドウかどうかを判定
+  const isStandaloneWindow = isStandaloneWindowRoute(location.pathname)
 
-  // タスク履歴ウィンドウの場合はシンプルなレイアウト
-  if (isTaskHistoryWindow) {
+  // 別ウィンドウの場合はシンプルなレイアウト（サイドバーなし）
+  if (isStandaloneWindow) {
     return (
       <div className="bg-canvas min-h-screen h-screen">
         <Outlet />
@@ -187,10 +188,12 @@ function App(): JSX.Element {
         <SettingsProvider>
           <ChatHistoryProvider>
             <AgentDirectoryProvider>
-              <div>
-                <Toaster {...ToastService.getToasterConfig()} />
-                <RouterProvider router={router} />
-              </div>
+              <MemoryProvider>
+                <div>
+                  <Toaster {...ToastService.getToasterConfig()} />
+                  <RouterProvider router={router} />
+                </div>
+              </MemoryProvider>
             </AgentDirectoryProvider>
           </ChatHistoryProvider>
         </SettingsProvider>

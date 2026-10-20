@@ -10,3 +10,10 @@ export const isRouteActive = (pathname: string, href: string): boolean => {
   if (href === '/') return false
   return pathname.startsWith(`${href}/`)
 }
+
+/** The pop-out file viewer's route (`?path=<root-relative>`); matches `file_viewer_route` in Rust. */
+export const FILE_VIEWER_ROUTE = '/file-viewer'
+
+/** Routes shown in a window of their own, without the app sidebar. */
+export const isStandaloneWindowRoute = (pathname: string): boolean =>
+  pathname.startsWith('/background-agent/task-history/') || pathname === FILE_VIEWER_ROUTE

@@ -180,7 +180,7 @@ export const DrawIOBlock: React.FC<DrawIOBlockProps> = ({ xml, className = '' })
 
         {/* Source mode - always rendered but hidden when in preview mode */}
         <div
-          className={`max-w-[88vw] h-full overflow-y-scroll bg-surface-2 ${isPreviewMode ? 'hidden' : 'block'}`}
+          className={`max-w-full h-full overflow-y-scroll bg-surface-2 ${isPreviewMode ? 'hidden' : 'block'}`}
         >
           <SyntaxHighlighter
             language="xml"

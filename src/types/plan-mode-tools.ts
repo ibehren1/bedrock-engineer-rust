@@ -9,7 +9,11 @@ export const READ_ONLY_TOOLS: ToolName[] = [
   'recognizeImage',
   'retrieve',
   'invokeBedrockAgent',
-  'think'
+  'think',
+  // Memory items are app settings, not project files, so the model may manage them while planning.
+  'addMemory',
+  'updateMemory',
+  'removeMemory'
 ]
 
 // ツールがPlanモードで使用可能かどうかを判定する関数

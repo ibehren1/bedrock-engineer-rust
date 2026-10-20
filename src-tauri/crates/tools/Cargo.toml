@@ -9,13 +9,14 @@ authors.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
-async-trait = "=0.1.89"
-tokio = { version = "=1.53.1", features = ["process", "fs", "io-util", "time", "sync", "macros", "rt"] }
+async-trait = "=0.1.92"
+tokio = { version = "=1.54.0", features = ["process", "fs", "io-util", "time", "sync", "macros", "rt"] }
 regex = "=1.13.1"
 reqwest = "=0.13.5"
 url = "=2.5.8"
 chrono = { version = "=0.4.45", default-features = false, features = ["clock", "std"] }
 tracing = "=0.1.44"
+uuid = { version = "=1.28.0", features = ["v4"] }
 bedrock = { path = "../bedrock" }
 mcp = { path = "../mcp" }
 docker = { path = "../docker" }
@@ -29,8 +30,8 @@ image = { version = "=0.25.10", default-features = false, features = ["png", "jp
 xcap = "=0.9.8"
 
 [target.'cfg(unix)'.dependencies]
-libc = "=0.2.189"
+libc = "=0.2.191"
 
 [dev-dependencies]
 tempfile.workspace = true
-tokio = { version = "=1.53.1", features = ["process", "fs", "io-util", "time", "sync", "macros", "rt", "rt-multi-thread", "net"] }
+tokio = { version = "=1.54.0", features = ["process", "fs", "io-util", "time", "sync", "macros", "rt", "rt-multi-thread", "net"] }

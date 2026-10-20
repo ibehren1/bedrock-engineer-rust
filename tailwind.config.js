@@ -59,7 +59,9 @@ module.exports = {
           soft: 'var(--warning-soft)',
           'soft-strong': 'var(--warning-soft-strong)',
           strong: 'var(--warning-strong)'
-        }
+        },
+        // Files the agent created or changed in the current chat (fuchsia dots).
+        touched: 'var(--touched)'
       },
 
       borderColor: {
@@ -127,9 +129,16 @@ module.exports = {
       // are now static accent text, which also removed seven continuous
       // repaints.
       animation: {
-        'todo-flash': 'todoFlash 0.5s ease-in-out 2'
+        'todo-flash': 'todoFlash 0.5s ease-in-out 2',
+        // The right-panel opener's attention halo: three pings, then still. Use with
+        // motion-safe: so reduced motion gets no animation at all.
+        'attention-ping': 'attentionPing 1.2s cubic-bezier(0, 0, 0.2, 1) 3'
       },
       keyframes: {
+        attentionPing: {
+          '0%': { transform: 'scale(1)', opacity: '0.7' },
+          '75%, 100%': { transform: 'scale(1.6, 1.25)', opacity: '0' }
+        },
         todoFlash: {
           '0%, 100%': { opacity: '1', transform: 'scale(1)' },
           '50%': { opacity: '0.4', transform: 'scale(1.3)' }

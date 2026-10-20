@@ -21,6 +21,9 @@ import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { ReasoningContent } from '../CodeBlocks/Reasoning/ReasoningContent'
 import { GuardContent } from '../CodeBlocks/GuardContent'
+import { MemoryResultChip, getMemoryToolResult } from '../CodeBlocks/Memory/MemoryResultChip'
+import { FilePathChip } from '@renderer/components/FilePathLink'
+import { fileToolTargets } from '@renderer/lib/workspaceFiles/paths'
 
 type ChatMessageProps = {
   message: IdentifiableMessage
@@ -205,7 +208,7 @@ export const ChatMessage = memo(function ChatMessage({
           </div>
         )}
       </div>
-      <div className="flex flex-col gap-2 w-full">
+      <div className="flex flex-col gap-2 w-full min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-xs text-ink-muted relative">
             {message.role === 'user' && userName ? userName : message.role}
@@ -246,8 +249,17 @@ export const ChatMessage = memo(function ChatMessage({
               </div>
             )
           } else if ('toolUse' in c) {
+            // Files a file tool names, as chips that open them in the Files panel.
+            const fileTargets = fileToolTargets(c.toolUse?.name, c.toolUse?.input)
             return (
               <div key={index} className="flex flex-col gap-2 text-xs w-full relative">
+                {fileTargets.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {fileTargets.map((path) => (
+                      <FilePathChip key={path} path={path} />
+                    ))}
+                  </div>
+                )}
                 <Accordion className="w-full" collapseAll>
                   <Accordion.Panel>
                     <Accordion.Title>
@@ -270,8 +282,15 @@ export const ChatMessage = memo(function ChatMessage({
               </div>
             )
           } else if ('toolResult' in c) {
+            // Memory tool results also get a chip outside the collapsed accordion.
+            const memoryResults = (c.toolResult?.content ?? [])
+              .map((content) => ('json' in content ? getMemoryToolResult(content.json) : undefined))
+              .filter((r): r is NonNullable<typeof r> => !!r)
             return (
               <div key={index} className="flex flex-col gap-2 text-xs w-full relative">
+                {memoryResults.map((r, i) => (
+                  <MemoryResultChip key={`${r.item.id}-${i}`} name={r.name} item={r.item} />
+                ))}
                 <Accordion className="w-full" collapseAll>
                   <Accordion.Panel>
                     <Accordion.Title>

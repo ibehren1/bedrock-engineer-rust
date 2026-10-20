@@ -4,10 +4,11 @@ import { ToolSettings } from './ToolSettings'
 import { AttachmentsButton } from './AttachmentsButton'
 import { DirectorySelector } from './DirectorySelector'
 import { SandboxButton } from './SandboxButton'
+import { MemoryToggle, type MemoryToggleProps } from './MemoryToggle'
 import type { ChatSandboxStatus } from '../../hooks/useChatSandbox'
 import type { ChatAttachment } from '../../hooks/useChatAttachments'
 import { SendMsgKey } from '@/types/agent-chat'
-import { FiStopCircle } from 'react-icons/fi'
+import { FiFolder, FiStopCircle } from 'react-icons/fi'
 import { TbMarkdown, TbMessagePlus, TbFileTypeDocx, TbFileTypePdf } from 'react-icons/tb'
 import { useTranslation } from 'react-i18next'
 import { Tooltip } from 'flowbite-react'
@@ -42,6 +43,11 @@ type InputFormProps = {
     onOpenFolder: () => void
     onOpenPanel: () => void
   }
+  /** The Files button, shown when a project folder is set. */
+  filesPanel?: {
+    isOpen: boolean
+    onToggle: () => void
+  }
   attachments?: {
     files: ChatAttachment[]
     directory: string
@@ -53,6 +59,8 @@ type InputFormProps = {
     onRefresh: () => void
     onAddFiles: (files: File[]) => Promise<void>
   }
+  /** The per-chat "Use Memory Items" checkbox; hidden when not given. */
+  memoryToggle?: MemoryToggleProps
 }
 
 export const InputForm: React.FC<InputFormProps> = ({
@@ -77,7 +85,9 @@ export const InputForm: React.FC<InputFormProps> = ({
   onHeightChange,
   isHistoryOpen = false,
   sandbox,
-  attachments
+  filesPanel,
+  attachments,
+  memoryToggle
 }) => {
   const [isComposing, setIsComposing] = useState(false)
   const { t } = useTranslation()
@@ -100,6 +110,7 @@ export const InputForm: React.FC<InputFormProps> = ({
           <div className="flex flex-col justify-end gap-2 mb-1">
             <div className="flex gap-4 items-center">
               <ToolSettings onOpenToolSettings={onOpenToolSettings} />
+              {memoryToggle && <MemoryToggle {...memoryToggle} />}
             </div>
             <DirectorySelector
               projectPath={projectPath}
@@ -148,6 +159,30 @@ export const InputForm: React.FC<InputFormProps> = ({
                     onOpenPanel={sandbox.onOpenPanel}
                   />
                 )}
+              </>
+            )}
+            {/* Outside the hasMessages gate: the project's files can be browsed before the
+                first message. */}
+            {filesPanel && (
+              <Tooltip
+                content={t('filesPanel.toolbarButton')}
+                placement="top"
+                animation="duration-500"
+              >
+                <button
+                  onClick={filesPanel.onToggle}
+                  aria-label={t('filesPanel.toolbarButton')}
+                  aria-pressed={filesPanel.isOpen}
+                  className={`p-2 rounded-full hover:bg-surface transition-colors duration-200 ${
+                    filesPanel.isOpen ? 'text-accent' : 'text-ink-muted hover:text-ink'
+                  }`}
+                >
+                  <FiFolder />
+                </button>
+              </Tooltip>
+            )}
+            {hasMessages && (
+              <>
                 {onExportChat && (
                   <Tooltip
                     content={t('Export chat to Markdown')}

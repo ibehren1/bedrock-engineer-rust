@@ -1,6 +1,6 @@
 import { IconType } from 'react-icons'
 import { FiHome, FiFeather, FiSettings } from 'react-icons/fi'
-import { LuCombine, LuBookDown } from 'react-icons/lu'
+import { LuCombine, LuBookDown, LuBrain } from 'react-icons/lu'
 import { HiOutlineChatAlt2 } from 'react-icons/hi'
 import { BsLayoutWtf } from 'react-icons/bs'
 import { PiPulse } from 'react-icons/pi'
@@ -13,8 +13,11 @@ import ChatPage from './pages/ChatPage/ChatPage'
 import DiagramGeneratorPage from './pages/DiagramGeneratorPage/DiagramGeneratorPage'
 import { AgentDirectoryPage } from './pages/AgentDirectoryPage/AgentDirectoryPage'
 import { MyAgentsPage } from './pages/MyAgentsPage/MyAgentsPage'
+import { MemoryPage } from './pages/MemoryPage/MemoryPage'
 import BackgroundAgentPage from './pages/BackgroundAgentPage/BackgroundAgentPage'
 import TaskExecutionHistoryPage from './pages/BackgroundAgentPage/TaskExecutionHistoryPage'
+import FileViewerPage from './pages/FileViewerPage/FileViewerPage'
+import { FILE_VIEWER_ROUTE } from './lib/routeMatching'
 
 export interface AppRoute {
   name: string
@@ -45,6 +48,13 @@ export const routes: AppRoute[] = [
     icon: TbRobot,
     position: 'top',
     element: <MyAgentsPage />
+  },
+  {
+    name: 'Memory',
+    href: '/memory',
+    icon: LuBrain,
+    position: 'top',
+    element: <MemoryPage />
   },
   {
     name: 'Agent Directory',
@@ -111,5 +121,7 @@ export const routes: AppRoute[] = [
  * and a parameterized path has no business appearing in either.
  */
 export const subRoutes: { href: string; element: React.ReactElement }[] = [
-  { href: '/setting/:tab', element: <SettingPage /> }
+  { href: '/setting/:tab', element: <SettingPage /> },
+  // The pop-out file viewer window (`window_open_file_viewer`), shown without the sidebar.
+  { href: FILE_VIEWER_ROUTE, element: <FileViewerPage /> }
 ]
