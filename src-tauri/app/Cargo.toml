@@ -30,6 +30,7 @@ docker = { path = "../crates/docker" }
 background = { path = "../crates/background" }
 strands = { path = "../crates/strands" }
 workspace_files = { path = "../crates/workspace_files" }
+local_terminal = { path = "../crates/local_terminal" }
 tokio = { version = "=1.54.0", features = ["rt", "sync", "macros", "time", "process"] }
 reqwest = "=0.13.5"
 async-trait = "=0.1.92"
@@ -37,6 +38,7 @@ tauri-plugin-notification = "=2.7.0"
 tauri-plugin-dialog = "=2.8.3"
 tauri-plugin-opener = "=2.7.2"
 tauri-plugin-single-instance = "=2.5.4"
+tauri-plugin-updater = "=2.14.0"
 aws-sdk-s3 = { version = "=1.152.0", default-features = false, features = ["sigv4a", "http-1x", "default-https-client", "rt-tokio"] }
 anyhow = "=1.0.104"
 base64 = "=0.22.1"

@@ -126,15 +126,35 @@ jobs:
       # Packaging installers only happens on a public repo. The private repo is where work is
       # merged, so it still runs the checks above, but building installers there costs
       # multiplied runner minutes to produce binaries that are never published.
+      # With the update-signing key in the secrets, the build also produces the signed updater
+      # bundles (macOS .app.tar.gz, and .sig files for those, the NSIS .exe and the AppImage) that
+      # latest.json points the in-app updater at. Without it, installers only, as before:
+      # createUpdaterArtifacts stays off in tauri.conf.json so local builds need no key.
       - name: Build app
         if: github.event.repository.private == false
-        # The AppImage tooling is itself an AppImage, and Ubuntu 24.04 ships no FUSE 2 to mount it;
-        # extract-and-run avoids needing FUSE at all. Ignored on other platforms.
+        shell: bash
         env:
+          # The AppImage tooling is itself an AppImage, and Ubuntu 24.04 ships no FUSE 2 to mount
+          # it; extract-and-run avoids needing FUSE at all. Ignored on other platforms.
           APPIMAGE_EXTRACT_AND_RUN: 1
-        run: npm run tauri -- build ${{ matrix.tauri_args }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          updater=()
+          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            updater=(--config '{"bundle":{"createUpdaterArtifacts":true}}')
+            echo "Building signed updater bundles"
+          else
+            unset TAURI_SIGNING_PRIVATE_KEY TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+            echo "No TAURI_SIGNING_PRIVATE_KEY secret: installers only, no updater bundles"
+          fi
+          # ${a[@]+"${a[@]}"}: an empty array under `set -u` is an error in bash 3.2 (macOS).
+          npm run tauri -- build ${{ matrix.tauri_args }} ${updater[@]+"${updater[@]}"}
 
       # Give installers stable, space-free names: bedrock-engineer-rust-<version>-<arch>.<ext>.
+      # Updater bundles and their signatures keep the installer's name plus .app.tar.gz / .sig,
+      # which is what scripts/release/latest-json.mjs looks for.
       - name: Collect installers
         if: github.event.repository.private == false
         shell: bash
@@ -143,16 +163,24 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           mkdir -p dist-installers
           find src-tauri/target -path '*/release/bundle/*' -type f \
-            \( -name '*.dmg' -o -name '*-setup.exe' -o -name '*.AppImage' -o -name '*.deb' \) |
+            \( -name '*.dmg' -o -name '*-setup.exe' -o -name '*.AppImage' -o -name '*.deb' \
+               -o -name '*.app.tar.gz' -o -name '*.app.tar.gz.sig' -o -name '*-setup.exe.sig' \
+               -o -name '*.AppImage.sig' \) |
           while IFS= read -r f; do
             base=$(basename "$f")
             case "$base" in
               *.dmg)      ext=dmg ;;
               *-setup.exe) ext=setup.exe ;;
+              *-setup.exe.sig) ext=setup.exe.sig ;;
               *.AppImage) ext=AppImage ;;
+              *.AppImage.sig) ext=AppImage.sig ;;
+              *.app.tar.gz) ext=app.tar.gz ;;
+              *.app.tar.gz.sig) ext=app.tar.gz.sig ;;
               *.deb)      ext=deb ;;
             esac
-            case "$base" in
+            # By path, not name: the macOS .app.tar.gz is named after the app only, but it lives
+            # under the universal-apple-darwin target directory.
+            case "$f" in
               *universal*) arch=universal ;;
               *aarch64*|*arm64*) arch=arm64 ;;
               *) arch=x64 ;;
@@ -260,6 +288,19 @@ jobs:
           cat RELEASE_NOTES.md
           echo "---------------------------------"
 
+      # The in-app updater's manifest, when the build produced signed updater bundles (that is,
+      # the TAURI_SIGNING_PRIVATE_KEY secret is set). Fails if any platform is missing its bundle
+      # or signature, so a release never advertises an update it cannot deliver.
+      - name: Build updater manifest
+        if: steps.check-tag.outputs.skip != 'true'
+        run: |
+          if find ./artifacts -name '*.sig' 2>/dev/null | grep -q .; then
+            node scripts/release/latest-json.mjs --dir artifacts --version "$VERSION" \
+              --repo "${{ github.repository }}" --notes update-summary.md --out latest.json
+          else
+            echo "No updater signatures in the artifacts; publishing without latest.json."
+          fi
+
       - name: Create GitHub Release
         if: steps.check-tag.outputs.skip != 'true'
         uses: softprops/action-gh-release@v3
@@ -272,6 +313,9 @@ jobs:
             artifacts/**/*.exe
             artifacts/**/*.AppImage
             artifacts/**/*.deb
+            artifacts/**/*.app.tar.gz
+            artifacts/**/*.sig
+            latest.json
           # Publish even when no installers were built (notes-only release).
           fail_on_unmatched_files: false
           draft: false

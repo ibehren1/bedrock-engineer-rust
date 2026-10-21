@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { nextAttention, type AttentionSnapshot } from './panelAttention'
 
 /**
- * The opener's attention state (see `nextAttention`). `pulseKey` changes each time a pulse
+ * A tab's attention state (see `nextAttention`). `pulseKey` changes each time a pulse
  * should start (0: none yet), so it can key the halo element to restart its animation.
  */
 export function usePanelAttention(

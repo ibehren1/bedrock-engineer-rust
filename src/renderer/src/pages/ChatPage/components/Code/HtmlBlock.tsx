@@ -2,8 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { convertFileSrc } from '@tauri-apps/api/core'
 import { useTranslation } from 'react-i18next'
 import { VscCode, VscEye } from 'react-icons/vsc'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { tomorrow } from 'react-syntax-highlighter/dist/cjs/styles/prism'
+import { SourceView } from './SourceView'
 import { ResizableContainer } from './ResizableContainer'
 import { HTML_PREVIEW_SANDBOX, HTML_PREVIEW_SCHEME, previewReply } from './htmlPreview'
 
@@ -88,22 +87,7 @@ export const HtmlBlock: React.FC<HtmlBlockProps> = ({ code, className = '' }) =>
             <SandboxedHtmlPreview html={code} />
           </div>
         ) : (
-          <div className="h-full bg-surface-2 overflow-auto">
-            <SyntaxHighlighter
-              language="html"
-              style={tomorrow}
-              showLineNumbers
-              wrapLines
-              className="!m-0 !bg-transparent h-full"
-              customStyle={{
-                background: 'transparent',
-                padding: '1rem',
-                height: '100%'
-              }}
-            >
-              {code}
-            </SyntaxHighlighter>
-          </div>
+          <SourceView code={code} language="html" className="h-full overflow-auto" />
         )}
       </ResizableContainer>
     </div>

@@ -3,7 +3,7 @@
 
 [[set]]
 identifier = "app-commands"
-description = "Every app command (commands::handler())."
+description = "Every app command (commands::handler()) except the main-window-only ones."
 permissions = [
   "allow-store-get",
   "allow-store-set",

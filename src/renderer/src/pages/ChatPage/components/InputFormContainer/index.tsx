@@ -29,7 +29,6 @@ type InputFormContainerProps = {
   onStopGeneration?: () => void
   hasMessages: boolean
   onHeightChange?: (height: number) => void // Text area height change handler
-  isHistoryOpen?: boolean // Whether the chat history panel is expanded
   sandbox?: {
     status: ChatSandboxStatus
     isBusy: boolean
@@ -39,10 +38,18 @@ type InputFormContainerProps = {
     onOpenFolder: () => void
     onOpenPanel: () => void
   }
-  /** The Files button, shown when a project folder is set. */
+  /** The Files button (switches to the Files tab), shown when a project folder is set. */
   filesPanel?: {
     isOpen: boolean
     onToggle: () => void
+  }
+  /** The Terminal button: opens a shell on this computer in the Terminal tab. */
+  terminal?: {
+    /** The Terminal tab is showing, so a click opens another shell. */
+    isActive: boolean
+    /** No chat session yet, so the shell has nowhere to belong. */
+    disabled: boolean
+    onOpen: () => void
   }
   attachments?: {
     files: ChatAttachment[]
@@ -82,9 +89,9 @@ const InputFormContainer = React.forwardRef<InputFormContainerRef, InputFormCont
       onStopGeneration,
       hasMessages,
       onHeightChange,
-      isHistoryOpen,
       sandbox,
       filesPanel,
+      terminal,
       attachments,
       memoryToggle
     },
@@ -133,9 +140,9 @@ const InputFormContainer = React.forwardRef<InputFormContainerRef, InputFormCont
         onStopGeneration={onStopGeneration}
         hasMessages={hasMessages}
         onHeightChange={onHeightChange}
-        isHistoryOpen={isHistoryOpen}
         sandbox={sandbox}
         filesPanel={filesPanel}
+        terminal={terminal}
         attachments={attachments}
         memoryToggle={memoryToggle}
       />

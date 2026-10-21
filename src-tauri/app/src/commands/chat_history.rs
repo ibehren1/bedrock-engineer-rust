@@ -11,7 +11,7 @@ use crate::state::HistoryState;
 use history::Snapshot;
 use serde_json::Value;
 use tauri::http::{header, Request, Response, StatusCode};
-use tauri::{Manager, State, UriSchemeContext, Wry};
+use tauri::{AppHandle, Manager, State, UriSchemeContext, Wry};
 
 type History<'a> = State<'a, HistoryState>;
 
@@ -68,24 +68,33 @@ pub async fn chat_history_update_session_title(
 
 #[tauri::command]
 pub async fn chat_history_delete_session(
+    app: AppHandle,
     state: History<'_>,
     session_id: String,
 ) -> Result<(), String> {
+    // The chat's local shells go with it.
+    super::local_terminal::close_session_terminals(&app, std::slice::from_ref(&session_id));
     state.lock()?.delete_session(&session_id);
     Ok(())
 }
 
 #[tauri::command]
 pub async fn chat_history_delete_sessions(
+    app: AppHandle,
     state: History<'_>,
     session_ids: Vec<String>,
 ) -> Result<(), String> {
+    super::local_terminal::close_session_terminals(&app, &session_ids);
     state.lock()?.delete_sessions(&session_ids);
     Ok(())
 }
 
 #[tauri::command]
-pub async fn chat_history_delete_all_sessions(state: History<'_>) -> Result<(), String> {
+pub async fn chat_history_delete_all_sessions(
+    app: AppHandle,
+    state: History<'_>,
+) -> Result<(), String> {
+    super::local_terminal::close_all_terminals(&app);
     state.lock()?.delete_all_sessions();
     Ok(())
 }

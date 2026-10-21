@@ -24,6 +24,7 @@ import { planActMode } from './planActMode'
 import { help } from './help'
 import { memoryItems } from './memoryItems'
 import { filesPanel } from './filesPanel'
+import { appUpdate } from './appUpdate'
 
 const HomePage = {
   'set your aws credential':
@@ -549,6 +550,14 @@ const AgentFormTabs = {
 const CodeBlock = {
   Source: 'ソース',
   Preview: 'プレビュー',
+  'Copy source': 'ソースをコピー',
+  'Source copied': 'ソースをコピーしました',
+  'As written': '記述どおり',
+  'Fit to width': '幅に合わせる',
+  'Diagram turned to fit the chat; show it in the direction it was written':
+    'チャットに収まるよう図の向きを変えています。記述どおりの向きで表示します',
+  'Turn the diagram so it fits the chat with less scrolling':
+    'スクロールが少なくなるよう、図の向きを変えてチャットに収めます',
   'Toggle View': 'ビューを切り替え',
   'Camera Capture': 'カメラキャプチャ',
   'Camera Device': 'カメラデバイス'
@@ -978,6 +987,7 @@ const ja = {
   ...help.ja,
   ...memoryItems.ja,
   ...filesPanel.ja,
+  ...appUpdate.ja,
   ...TodoModal,
   backgroundAgent: BackgroundAgent,
   ignoreSettings: IgnoreSettings,

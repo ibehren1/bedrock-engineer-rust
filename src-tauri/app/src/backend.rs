@@ -43,6 +43,9 @@ pub struct Backend {
     pub background: Arc<BackgroundAgents>,
     /// `screen:*` handlers (shared with the screenCapture tool).
     pub screen: Arc<tools::ScreenService>,
+    /// Shells on the user's machine for the chat page's Terminal tab. Deliberately not in
+    /// `ToolDeps` / `ContextServices`: no tool can reach them.
+    pub local_terminals: local_terminal::LocalTerminalManager,
 }
 
 /// `store.all()`; `{}` if the lock is poisoned.
@@ -136,6 +139,23 @@ impl background::Notifier for TauriNotifier {
         }
     }
 }
+
+/// Local terminal output, as the pub/sub event for its channel (`pubsub:local-terminal:<id>`),
+/// sent to the main window only: no other window may read a local shell, whatever it
+/// subscribes to.
+struct LocalTerminalEvents(AppHandle);
+
+impl local_terminal::EventSink for LocalTerminalEvents {
+    fn publish(&self, channel: &str, message: local_terminal::TerminalMessage) {
+        let event = background::pubsub_event_name(channel);
+        if let Err(e) = self.0.emit_to(LOCAL_TERMINAL_WINDOW, &event, message) {
+            tracing::warn!(channel, error = %e, "Failed to send local terminal event");
+        }
+    }
+}
+
+/// The only window the local terminal commands and events are for.
+const LOCAL_TERMINAL_WINDOW: &str = "main";
 
 /// `getMcpToolSpecs(agent.mcpServers)` for Rust-side agent runs.
 struct McpSpecs(Arc<McpManager>);
@@ -269,12 +289,18 @@ impl Backend {
             sub_agents,
             background,
             screen,
+            local_terminals: local_terminal::LocalTerminalManager::new(Arc::new(
+                LocalTerminalEvents(app.clone()),
+            )),
         })
     }
 
-    /// App quit (Electron `before-quit`): close terminals before stopping their containers,
-    /// stop sandboxes (not removed), drop MCP clients, stop the scheduler.
+    /// App quit (Electron `before-quit`): end the local shells, close sandbox terminals before
+    /// stopping their containers, stop sandboxes (not removed), drop MCP clients, stop the
+    /// scheduler.
     pub fn shutdown(&self) {
+        // Local shells: SIGHUP, then SIGKILL whatever is left after a short grace.
+        self.local_terminals.close_all();
         self.sandbox.terminals().close_all_terminals();
         let sandbox = self.sandbox.clone();
         let mcp = self.mcp.clone();

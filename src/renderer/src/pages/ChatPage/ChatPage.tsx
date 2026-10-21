@@ -7,19 +7,30 @@ import { useAgentChat } from './hooks/useAgentChat'
 import useSetting from '@renderer/hooks/useSetting'
 import { IgnoreSettingsModal } from '@renderer/components/IgnoreSettingsModal'
 import { useToolSettingModal } from './modals/useToolSettingModal'
-import { FiChevronRight, FiBarChart2 } from 'react-icons/fi'
+import { FiBarChart2, FiFileText, FiFolder, FiMessageSquare } from 'react-icons/fi'
+import { TbTerminal2 } from 'react-icons/tb'
 import { FaListCheck } from 'react-icons/fa6'
-import { Tooltip } from 'flowbite-react'
+import { FaDocker } from 'react-icons/fa'
 import { useTranslation } from 'react-i18next'
 import { AttachedImage } from './components/InputForm/TextArea'
-import { ChatHistory } from './components/ChatHistory'
-import { useSystemPromptModal } from './modals/useSystemPromptModal'
-import { useTokenAnalyticsModal, calculateAnalytics } from './modals/useTokenAnalyticsModal'
-import { useTodoModal } from './modals/useTodoModal'
+import { HistorySidebar } from './components/HistorySidebar'
+import { SystemPromptView } from './modals/useSystemPromptModal'
+import { TokenAnalyticsView, calculateAnalytics } from './components/TokenAnalyticsView'
+import { TodoListView, useTodoList } from './components/TodoListView'
 import { HostCommandApprovalModal } from './modals/HostCommandApprovalModal'
 import { useChatSandbox } from './hooks/useChatSandbox'
-import { RightPanel, type RightPanelTab } from './components/RightPanel'
-import type { FilesOpenRequest } from './components/RightPanel/FilesTab'
+import { FilesTab, type FilesOpenRequest } from './components/RightPanel/FilesTab'
+import { SandboxPanel } from './components/SandboxPanel'
+import { LocalTerminalPanel } from './components/Terminal/LocalTerminalPanel'
+import { useLocalTerminals } from './components/Terminal/useLocalTerminals'
+import { ChatTabStrip, type ChatTabItem } from './components/ChatTabs/ChatTabStrip'
+import {
+  effectiveTab,
+  TabMemory,
+  visibleTabs,
+  type ChatTab,
+  type ChatTabConditions
+} from './components/ChatTabs/chatTabs'
 import {
   FilesPanelContext,
   type FilesPanelContextValue
@@ -121,12 +132,27 @@ export default function ChatPage() {
     stopGeneration
   } = useAgentChat(activeModelId, activeSystemPrompt, activeAgentId)
 
-  // 送信ハンドラをuseCallbackでメモ化
+  // The tab showing in each chat (see TabMemory); chats open on Chat.
+  const tabMemory = useRef(new TabMemory())
+  const [chosenTab, setChosenTab] = useState<ChatTab>('chat')
+  useEffect(() => {
+    setChosenTab(tabMemory.current.get(currentSessionId))
+  }, [currentSessionId])
+  const selectTab = useCallback(
+    (tab: ChatTab) => {
+      tabMemory.current.set(currentSessionId, tab)
+      setChosenTab(tab)
+    },
+    [currentSessionId]
+  )
+
+  // 送信ハンドラをuseCallbackでメモ化。送信すると Chat タブに戻り、返答が見えるようにする。
   const onSubmit = useCallback(
     (input: string, images: AttachedImage[]) => {
+      selectTab('chat')
       handleSubmit(input, images)
     },
-    [handleSubmit]
+    [handleSubmit, selectTab]
   )
 
   // 表示中のセッションが Help かどうかを追随させる。
@@ -163,8 +189,8 @@ export default function ChatPage() {
   const resolveModel = useCallback(
     (modelId?: string) =>
       modelId
-        ? availableModels.find((m) => m.modelId === modelId) ??
-          allModels.find((m) => m.modelId === modelId)
+        ? (availableModels.find((m) => m.modelId === modelId) ??
+          allModels.find((m) => m.modelId === modelId))
         : undefined,
     [availableModels]
   )
@@ -202,21 +228,7 @@ export default function ChatPage() {
   const handleOpenIgnoreFileModal = () => setShowIgnoreSettingsModal(true)
   const handleCloseIgnoreFileModal = () => setShowIgnoreSettingsModal(false)
 
-  const {
-    show: showSystemPromptModal,
-    handleClose: handleCloseSystemPromptModal,
-    handleOpen: handleOpenSystemPromptModal,
-    SystemPromptModal
-  } = useSystemPromptModal()
-
-  const {
-    show: showTokenAnalyticsModal,
-    handleClose: handleCloseTokenAnalyticsModal,
-    handleOpen: handleOpenTokenAnalyticsModal,
-    TokenAnalyticsModal
-  } = useTokenAnalyticsModal()
-
-  // 会話全体の実行コストを計算（ヘッダー表示用）。Help チャットは軽量モデルで動くので、
+  // 会話全体の実行コストを計算（Cost タブのラベル用）。Help チャットは軽量モデルで動くので、
   // グローバルの選択モデルではなく実際に使われているモデルで計算する。
   const runningCost = useMemo(
     () => calculateAnalytics(messages, activeModelId || '').costAnalysis.totalCost,
@@ -224,14 +236,13 @@ export default function ChatPage() {
   )
 
   const {
-    show: showTodoModal,
-    handleClose: handleCloseTodoModal,
-    handleOpen: handleOpenTodoModal,
+    todoList,
+    loading: todoLoading,
     flash: todoFlash,
-    TodoModal
-  } = useTodoModal(messages, currentSessionId, loading)
+    handleRefresh: refreshTodoList
+  } = useTodoList(messages, currentSessionId, loading, chosenTab === 'todo')
 
-  // Flash the TODO header icon in the changed task's status color on each update
+  // Flash the Todo tab's icon in the changed task's status color on each update
   const [todoFlashColor, setTodoFlashColor] = useState<string | null>(null)
   useEffect(() => {
     if (!todoFlash) return undefined
@@ -471,34 +482,72 @@ export default function ChatPage() {
   }, [])
 
   // 履歴は開いた状態で始める。ChatPage は画面遷移でアンマウントされるので、
-  // Chat を開き直すたびに履歴が開く。
+  // Chat を開き直すたびに履歴が開く。閉じると細いレールになる。
   const [isHistoryOpen, setIsHistoryOpen] = useState(true)
-  // 右パネル（Files / Sandbox）は既定で閉じる。履歴と違い、必要なときだけ開くもの。
-  const [isRightPanelOpen, setIsRightPanelOpen] = useState(false)
-  const [rightPanelTab, setRightPanelTab] = useState<RightPanelTab>('files')
+
+  // Shells on this computer, per chat (the Terminal tab).
+  const localTerminals = useLocalTerminals(currentSessionId)
+
+  const todoItems = todoList?.items ?? []
+  const tabConditions: ChatTabConditions = {
+    hasProject: !!projectPath,
+    hasSandbox: sandboxStatus.exists,
+    hasTerminal: localTerminals.terminals.length > 0,
+    hasTodo: todoItems.length > 0,
+    hasMessages: messages.length > 0
+  }
+  // The chosen tab can stop being listed (the sandbox was removed, say): show Chat until it is.
+  const activeTab = effectiveTab(chosenTab, tabConditions)
+
   const [filesOpenRequest, setFilesOpenRequest] = useState<FilesOpenRequest>()
-  const showRightPanel = !!projectPath || sandboxStatus.exists
-  // The opener strip pulses (and shows a dot) when there is something new in the closed panel.
+  // Files and Sandbox mount on first view, then stay mounted so the tree, editor and an open
+  // shell survive tab switches.
+  const [filesMounted, setFilesMounted] = useState(false)
+  useEffect(() => {
+    if (activeTab === 'files') setFilesMounted(true)
+  }, [activeTab])
+
+  // The Files and Sandbox tabs pulse (and keep a marker) when there is something new in them.
   const touchedFiles = useTouchedFiles(currentSessionId)
-  const panelAttention = usePanelAttention(
+  const filesAttention = usePanelAttention(
     {
       sessionId: currentSessionId,
-      visible: showRightPanel,
-      hasSandbox: sandboxStatus.exists,
+      visible: tabConditions.hasProject,
+      hasSandbox: false,
       touchedCount: touchedFiles.length
     },
-    isRightPanelOpen
+    activeTab === 'files'
+  )
+  const sandboxAttention = usePanelAttention(
+    {
+      sessionId: currentSessionId,
+      visible: tabConditions.hasSandbox,
+      hasSandbox: tabConditions.hasSandbox,
+      touchedCount: 0
+    },
+    activeTab === 'sandbox'
   )
 
-  const openRightPanel = useCallback((tab: RightPanelTab) => {
-    setRightPanelTab(tab)
-    setIsRightPanelOpen(true)
-  }, [])
+  const toggleFilesTab = useCallback(() => {
+    selectTab(activeTab === 'files' ? 'chat' : 'files')
+  }, [activeTab, selectTab])
 
-  const toggleFilesPanel = useCallback(() => {
-    if (isRightPanelOpen && rightPanelTab === 'files') setIsRightPanelOpen(false)
-    else openRightPanel('files')
-  }, [isRightPanelOpen, rightPanelTab, openRightPanel])
+  // The Terminal button: go to the chat's shells, starting one when there are none (or when the
+  // tab is already showing, which asks for another).
+  const { openTerminal } = localTerminals
+  const hasTerminal = tabConditions.hasTerminal
+  const openTerminalTab = useCallback(async () => {
+    try {
+      if (!hasTerminal || activeTab === 'terminal') await openTerminal()
+      selectTab('terminal')
+    } catch (error) {
+      toast.error(
+        t('filesPanel.terminalOpenFailed', {
+          error: error instanceof Error ? error.message : String(error)
+        })
+      )
+    }
+  }, [hasTerminal, activeTab, openTerminal, selectTab, t])
 
   // File paths in chat messages open here. Misses are looked up again when files change, since
   // the agent often names a file before writing it.
@@ -525,26 +574,21 @@ export default function ChatPage() {
   const openFileInPanel = useCallback(
     (path: string, kind?: 'file' | 'dir') => {
       setFilesOpenRequest((prev) => ({ path, kind, nonce: (prev?.nonce ?? 0) + 1 }))
-      openRightPanel('files')
+      selectTab('files')
     },
-    [openRightPanel]
+    [selectTab]
   )
 
   const filesPanelContext = useMemo<FilesPanelContextValue | null>(
     () => (projectPath ? { projectPath, openFile: openFileInPanel, filesVersion } : null),
     [projectPath, openFileInPanel, filesVersion]
   )
-  const DEFAULT_TEXTAREA_HEIGHT = 72 // Default height (3 lines * 24px)
-
-  const [textareaHeight, setTextareaHeight] = useState(DEFAULT_TEXTAREA_HEIGHT)
-
   // Streaming auto-scroll: follows tool-use output, then stops when the answer's first line
   // reaches the top. The signature changes on every streamed update so the hook re-evaluates.
   const messageAreaRef = useRef<HTMLDivElement>(null)
   const lastMessage = messages[messages.length - 1]
   const lastTextBlock = lastMessage?.content?.find((c) => 'text' in c) as
-    | { text?: string }
-    | undefined
+    { text?: string } | undefined
   const scrollSignature = `${messages.length}:${lastMessage?.content?.length ?? 0}:${lastTextBlock?.text?.length ?? 0}`
   useStreamingAutoScroll(messageAreaRef, { signature: scrollSignature, loading })
 
@@ -638,6 +682,106 @@ export default function ChatPage() {
     void openHelpChat()
   }, [location.search])
 
+  const paneClass = (tab: ChatTab) =>
+    `absolute inset-0 ${activeTab === tab ? '' : 'invisible pointer-events-none'}`
+
+  const todoDone = todoItems.filter((item) => item.status === 'completed').length
+  const formattedCost = runningCost.toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })
+  // Restarted by its key, so each new piece of attention pings again; none with reduced motion.
+  const attentionPing = (pulseKey: number) =>
+    pulseKey > 0 && (
+      <span
+        key={pulseKey}
+        aria-hidden
+        className="pointer-events-none absolute inset-0 rounded-full bg-touched opacity-0 motion-safe:animate-attention-ping"
+      />
+    )
+
+  const tabItem = (tab: ChatTab): ChatTabItem => {
+    switch (tab) {
+      case 'chat':
+        return {
+          key: tab,
+          label: t('filesPanel.tabChat'),
+          icon: <FiMessageSquare className="size-3.5" />
+        }
+      case 'files':
+        return {
+          key: tab,
+          label: t('filesPanel.tabFiles'),
+          icon: <FiFolder className="size-3.5" />,
+          adornment: filesAttention.badge && touchedFiles.length > 0 && (
+            <span className="relative" title={t('filesPanel.newFiles')}>
+              {attentionPing(filesAttention.pulseKey)}
+              <span className="relative block min-w-4 h-4 px-1 rounded-full bg-touched text-white text-micro leading-4 text-center">
+                {touchedFiles.length}
+              </span>
+            </span>
+          )
+        }
+      case 'sandbox':
+        return {
+          key: tab,
+          label: t('filesPanel.tabSandbox'),
+          icon: <FaDocker className="size-3.5 text-[#2496ED]" />,
+          adornment: sandboxAttention.badge && (
+            <span className="relative size-2" title={t('filesPanel.sandboxActivity')}>
+              {attentionPing(sandboxAttention.pulseKey)}
+              <span className="relative block size-2 rounded-full bg-touched" />
+            </span>
+          )
+        }
+      case 'todo':
+        return {
+          key: tab,
+          label: t('filesPanel.tabTodo'),
+          // Flashes in the changed task's status colour on each update.
+          icon: (
+            <FaListCheck
+              key={todoFlash?.nonce ?? 0}
+              className={`size-3.5 ${todoFlashColor ? `${todoFlashColor} animate-todo-flash` : ''}`}
+            />
+          ),
+          adornment: (
+            <span className="text-ink-faint tabular-nums">
+              {todoDone}/{todoItems.length}
+            </span>
+          ),
+          title: t('filesPanel.todoProgress', { done: todoDone, total: todoItems.length })
+        }
+      case 'cost':
+        return {
+          key: tab,
+          label: t('filesPanel.tabCost'),
+          icon: <FiBarChart2 className="size-3.5" />,
+          adornment: <span className="text-ink-faint tabular-nums">{formattedCost}</span>,
+          title: t('filesPanel.costTooltip')
+        }
+      case 'terminal':
+        return {
+          key: tab,
+          label: t('filesPanel.tabTerminal'),
+          icon: <TbTerminal2 className="size-3.5" />,
+          adornment:
+            localTerminals.terminals.length > 1 ? (
+              <span className="text-ink-faint tabular-nums">{localTerminals.terminals.length}</span>
+            ) : undefined
+        }
+      case 'systemPrompt':
+        return {
+          key: tab,
+          label: t('filesPanel.tabSystemPrompt'),
+          icon: <FiFileText className="size-3.5" />
+        }
+    }
+  }
+  const tabItems = visibleTabs(tabConditions).map(tabItem)
+
   return (
     <HelpSessionProvider
       value={{
@@ -650,105 +794,21 @@ export default function ChatPage() {
       <FilesPanelContext.Provider value={filesPanelContext}>
         {/* Hidden DrawIO embed used to rasterize diagrams during markdown export */}
         <DrawioRasterizer ref={drawioRasterizerRef} />
-        <div className="flex px-4 py-3 h-screen">
-          {/* チャット履歴サイドパネル - 全高。ヘッダーより上（ウィンドウ最上部）から始まる */}
-          <div
-            className={`bg-canvas flex-shrink-0 transition-all duration-300 ease-in-out ${
-              isHistoryOpen ? 'w-96' : 'w-0'
-            } overflow-y-auto overflow-x-hidden`}
-          >
-            {/* Fixed-width inner keeps content from reflowing while the panel
-              width animates, so the chat column slides smoothly. */}
-            <div className="w-96">
-              <ChatHistory
-                onSessionSelect={handleSessionSelect}
-                currentSessionId={currentSessionId}
-              />
-            </div>
-          </div>
+        <div className="flex h-screen">
+          <HistorySidebar
+            open={isHistoryOpen}
+            onOpenChange={setIsHistoryOpen}
+            currentSessionId={currentSessionId}
+            onSessionSelect={handleSessionSelect}
+            onNewChat={handleClearChat}
+          />
 
-          {/* チャット履歴トグルバー */}
-          <div className="flex items-center">
-            <Tooltip
-              content={t(isHistoryOpen ? 'Hide chat history' : 'Show chat history')}
-              placement="right"
-              animation="duration-500"
-            >
-              <div
-                onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-                className="w-4 h-16 bg-raised cursor-pointer flex items-center justify-center transition-colors duration-200 rounded-container m-2"
-              >
-                <FiChevronRight
-                  className={`w-4 h-4 text-accent hover:text-accent-strong transition-transform duration-200 ${
-                    isHistoryOpen ? 'rotate-180' : ''
-                  }`}
-                />
-              </div>
-            </Tooltip>
-          </div>
-
-          {/* チャット列（ヘッダー + メインコンテンツ） - フレックス成長。履歴表示時に右へスライド */}
-          <div className="flex-1 flex flex-col min-w-0">
-            {/* ヘッダー - 固定 */}
-            <div className="flex justify-end items-center">
-              <div className="flex items-center gap-2">
-                {/* Only show TODO icon when there are messages */}
-                {messages.length > 0 && (
-                  <FaListCheck
-                    key={todoFlash?.nonce ?? 0}
-                    className={`cursor-pointer ${
-                      todoFlashColor
-                        ? `${todoFlashColor} animate-todo-flash`
-                        : 'text-ink-faint hover:text-ink'
-                    }`}
-                    onClick={() => handleOpenTodoModal()}
-                    title={t('View TODO List')}
-                    size={16}
-                  />
-                )}
-                {messages.length > 0 && (
-                  <span
-                    className="text-xs text-ink-faint font-medium cursor-pointer hover:text-ink"
-                    onClick={handleOpenTokenAnalyticsModal}
-                    title={t('Conversation Cost')}
-                  >
-                    {runningCost.toLocaleString('en-US', {
-                      style: 'currency',
-                      currency: 'USD',
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2
-                    })}
-                  </span>
-                )}
-                <FiBarChart2
-                  className="text-ink-faint hover:text-ink cursor-pointer"
-                  onClick={handleOpenTokenAnalyticsModal}
-                  title={t('View Token Analytics')}
-                  size={16}
-                />
-                <span
-                  className="text-xs text-ink-faint font-thin cursor-pointer hover:text-ink"
-                  onClick={handleOpenSystemPromptModal}
-                >
-                  SYSTEM_PROMPT
-                </span>
-              </div>
-            </div>
+          {/* チャット列: タブ + タブの中身 + 入力フォーム（どのタブでも表示） */}
+          <div className="flex-1 flex flex-col min-w-0 px-4 pt-1 pb-3">
+            <ChatTabStrip items={tabItems} active={activeTab} onChange={selectTab} />
 
             {/* Modals */}
             <HostCommandApprovalModal />
-            <SystemPromptModal
-              isOpen={showSystemPromptModal}
-              onClose={handleCloseSystemPromptModal}
-              systemPrompt={activeSystemPrompt}
-            />
-            <TokenAnalyticsModal
-              isOpen={showTokenAnalyticsModal}
-              onClose={handleCloseTokenAnalyticsModal}
-              messages={messages}
-              modelId={activeModelId || ''}
-            />
-            <TodoModal isOpen={showTodoModal} onClose={handleCloseTodoModal} />
             <ToolSettingModal isOpen={showToolSettingModal} onClose={handleCloseToolSettingModal} />
             <IgnoreSettingsModal
               isOpen={showIgnoreSettingsModal}
@@ -756,19 +816,10 @@ export default function ChatPage() {
               projectPath={projectPath}
             />
 
-            {/* メインコンテンツエリア - フレックス成長 */}
-            {/* pb-52 (13rem) reserves space for the fixed input form. */}
-            <div className="flex flex-col flex-1 min-h-0 pb-52">
-              {/* Adjusts the bottom padding of the message area based on the height of the text area */}
-              <div
-                ref={messageAreaRef}
-                className="flex-1 overflow-y-auto mb-2"
-                style={{
-                  // Additional padding is applied only when the text area grows larger
-                  // This ensures that as the text area gets taller, the bottom padding of the message area increases by the same amount
-                  paddingBottom: `${textareaHeight - DEFAULT_TEXTAREA_HEIGHT * 2}px`
-                }}
-              >
+            {/* Tab bodies are stacked; the hidden ones keep their layout (visibility, not
+                display) so the chat keeps its scroll position and a shell its size. */}
+            <div className="relative flex-1 min-h-0">
+              <div ref={messageAreaRef} className={`${paneClass('chat')} overflow-y-auto`}>
                 {messages.length === 0 ? (
                   <div className="flex flex-col pt-12 h-full w-full justify-center items-center content-center gap-1">
                     <div className="flex flex-row gap-3 items-center mb-2">
@@ -812,137 +863,136 @@ export default function ChatPage() {
                 )}
               </div>
 
-              {/* 入力フォーム - 固定 */}
-              <div className="mt-2 border-subtle bg-surface">
-                <InputFormContainer
-                  ref={inputFormRef}
-                  loading={loading}
-                  projectPath={projectPath}
-                  sendMsgKey={sendMsgKey}
-                  onSubmit={onSubmit}
-                  onOpenToolSettings={handleOpenToolSettingModal}
-                  onSelectDirectory={selectDirectory}
-                  onOpenIgnoreModal={handleOpenIgnoreFileModal}
-                  onClearChat={handleClearChat}
-                  onExportChat={handleExportChat}
-                  isExporting={isExporting}
-                  onExportWord={handleExportWord}
-                  isExportingWord={isExportingWord}
-                  onExportPdf={handleExportPdf}
-                  isExportingPdf={isExportingPdf}
-                  onStopGeneration={stopGeneration}
-                  hasMessages={messages.length > 0}
-                  onHeightChange={setTextareaHeight}
-                  isHistoryOpen={isHistoryOpen}
-                  memoryToggle={
-                    isHelpSession
-                      ? undefined
-                      : {
-                          checked: useMemory,
-                          enabledCount: enabledMemoryCount,
-                          disabled: !currentSessionId,
-                          onChange: handleUseMemoryChange
-                        }
-                  }
-                  attachments={{
-                    files: attachments.files,
-                    directory: attachments.directory,
-                    totalSize: attachments.totalSize,
-                    isBusy: attachments.isBusy,
-                    onAdd: attachments.addFromPicker,
-                    onRemove: attachments.remove,
-                    onOpenFolder: attachments.openFolder,
-                    onRefresh: attachments.refresh,
-                    onAddFiles: attachments.addFiles
-                  }}
-                  sandbox={{
-                    status: sandboxStatus,
-                    isBusy: isSandboxBusy,
-                    onStop: handleStopSandbox,
-                    onStart: handleStartSandbox,
-                    onRemove: handleRemoveSandbox,
-                    onOpenFolder: handleOpenSandboxFolder,
-                    onOpenPanel: () => openRightPanel('sandbox')
-                  }}
-                  filesPanel={
-                    projectPath
-                      ? {
-                          isOpen: isRightPanelOpen && rightPanelTab === 'files',
-                          onToggle: toggleFilesPanel
-                        }
-                      : undefined
-                  }
-                />
-              </div>
+              {tabConditions.hasProject && filesMounted && (
+                <div className={paneClass('files')}>
+                  <FilesTab
+                    projectPath={projectPath ?? ''}
+                    sessionId={currentSessionId}
+                    active={activeTab === 'files'}
+                    openRequest={filesOpenRequest}
+                  />
+                </div>
+              )}
+
+              {tabConditions.hasSandbox && (
+                <div className={paneClass('sandbox')}>
+                  <SandboxPanel
+                    embedded
+                    sessionId={currentSessionId}
+                    status={sandboxStatus}
+                    isBusy={isSandboxBusy}
+                    isOpen={activeTab === 'sandbox'}
+                    onStart={handleStartSandbox}
+                    onStop={handleStopSandbox}
+                    onRemove={handleRemoveSandbox}
+                    onOpenFolder={handleOpenSandboxFolder}
+                  />
+                </div>
+              )}
+
+              {tabConditions.hasTerminal && (
+                <div className={paneClass('terminal')}>
+                  <LocalTerminalPanel
+                    terminals={localTerminals.terminals}
+                    selectedId={localTerminals.selectedId}
+                    onSelect={localTerminals.setSelectedId}
+                    onNew={() => void openTerminalTab()}
+                    onClose={localTerminals.closeTerminal}
+                    onExit={localTerminals.markExited}
+                    active={activeTab === 'terminal'}
+                  />
+                </div>
+              )}
+
+              {activeTab === 'todo' && (
+                <div className={paneClass('todo')}>
+                  <TodoListView
+                    todoList={todoList}
+                    onRefresh={refreshTodoList}
+                    loading={todoLoading}
+                  />
+                </div>
+              )}
+
+              {activeTab === 'cost' && (
+                <div className={paneClass('cost')}>
+                  <TokenAnalyticsView messages={messages} modelId={activeModelId || ''} />
+                </div>
+              )}
+
+              {activeTab === 'systemPrompt' && (
+                <div className={paneClass('systemPrompt')}>
+                  <SystemPromptView systemPrompt={activeSystemPrompt} />
+                </div>
+              )}
+            </div>
+
+            {/* 入力フォーム - どのタブでも下に固定 */}
+            <div className="shrink-0">
+              <InputFormContainer
+                ref={inputFormRef}
+                loading={loading}
+                projectPath={projectPath}
+                sendMsgKey={sendMsgKey}
+                onSubmit={onSubmit}
+                onOpenToolSettings={handleOpenToolSettingModal}
+                onSelectDirectory={selectDirectory}
+                onOpenIgnoreModal={handleOpenIgnoreFileModal}
+                onClearChat={handleClearChat}
+                onExportChat={handleExportChat}
+                isExporting={isExporting}
+                onExportWord={handleExportWord}
+                isExportingWord={isExportingWord}
+                onExportPdf={handleExportPdf}
+                isExportingPdf={isExportingPdf}
+                onStopGeneration={stopGeneration}
+                hasMessages={messages.length > 0}
+                memoryToggle={
+                  isHelpSession
+                    ? undefined
+                    : {
+                        checked: useMemory,
+                        enabledCount: enabledMemoryCount,
+                        disabled: !currentSessionId,
+                        onChange: handleUseMemoryChange
+                      }
+                }
+                attachments={{
+                  files: attachments.files,
+                  directory: attachments.directory,
+                  totalSize: attachments.totalSize,
+                  isBusy: attachments.isBusy,
+                  onAdd: attachments.addFromPicker,
+                  onRemove: attachments.remove,
+                  onOpenFolder: attachments.openFolder,
+                  onRefresh: attachments.refresh,
+                  onAddFiles: attachments.addFiles
+                }}
+                sandbox={{
+                  status: sandboxStatus,
+                  isBusy: isSandboxBusy,
+                  onStop: handleStopSandbox,
+                  onStart: handleStartSandbox,
+                  onRemove: handleRemoveSandbox,
+                  onOpenFolder: handleOpenSandboxFolder,
+                  onOpenPanel: () => selectTab('sandbox')
+                }}
+                filesPanel={
+                  projectPath
+                    ? {
+                        isOpen: activeTab === 'files',
+                        onToggle: toggleFilesTab
+                      }
+                    : undefined
+                }
+                terminal={{
+                  isActive: activeTab === 'terminal',
+                  disabled: !currentSessionId,
+                  onOpen: () => void openTerminalTab()
+                }}
+              />
             </div>
           </div>
-
-          {/* 右パネルのトグルバー - プロジェクトフォルダかサンドボックスがあるときだけ出す */}
-          {showRightPanel && (
-            // pb-52 matches the message area's reservation for the fixed input box, so the
-            // strip stays centred against the panel rather than the whole window.
-            <div className="flex items-center pb-52">
-              <Tooltip
-                content={t(isRightPanelOpen ? 'filesPanel.hide' : 'filesPanel.openPanel')}
-                placement="left"
-                animation="duration-500"
-              >
-                {/* Closed: the only way into Files / Sandbox, so it is an accent tab rather than
-                    a grey sliver. Open: neutral, it then just closes the panel. */}
-                <button
-                  type="button"
-                  onClick={() => setIsRightPanelOpen(!isRightPanelOpen)}
-                  aria-label={t(isRightPanelOpen ? 'filesPanel.hide' : 'filesPanel.openPanel')}
-                  className={`relative flex items-center justify-center rounded-container m-2 cursor-pointer transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                    isRightPanelOpen
-                      ? 'w-4 h-16 bg-raised text-accent hover:text-accent-strong'
-                      : 'w-5 h-20 bg-accent text-accent-fg hover:bg-accent-strong shadow-raised'
-                  }`}
-                >
-                  {/* Attention halo: three pings, restarted by the key; none with reduced motion. */}
-                  {!isRightPanelOpen && panelAttention.pulseKey > 0 && (
-                    <span
-                      key={panelAttention.pulseKey}
-                      aria-hidden
-                      className="pointer-events-none absolute inset-0 rounded-container bg-accent opacity-0 motion-safe:animate-attention-ping"
-                    />
-                  )}
-                  <FiChevronRight
-                    className={`relative w-4 h-4 transition-transform duration-200 ${
-                      isRightPanelOpen ? '' : 'rotate-180'
-                    }`}
-                  />
-                  {!isRightPanelOpen && panelAttention.badge && (
-                    <span
-                      className="absolute -top-1 -right-1 size-2.5 rounded-full bg-touched ring-2 ring-canvas"
-                      title={t('filesPanel.newActivity')}
-                    />
-                  )}
-                </button>
-              </Tooltip>
-            </div>
-          )}
-
-          {/* 右パネル（Files / Sandbox） */}
-          {showRightPanel && (
-            <RightPanel
-              isOpen={isRightPanelOpen}
-              tab={rightPanelTab}
-              onTabChange={setRightPanelTab}
-              onClose={() => setIsRightPanelOpen(false)}
-              projectPath={projectPath ?? ''}
-              sessionId={currentSessionId}
-              filesOpenRequest={filesOpenRequest}
-              sandbox={{
-                status: sandboxStatus,
-                isBusy: isSandboxBusy,
-                onStart: handleStartSandbox,
-                onStop: handleStopSandbox,
-                onRemove: handleRemoveSandbox,
-                onOpenFolder: handleOpenSandboxFolder
-              }}
-            />
-          )}
         </div>
       </FilesPanelContext.Provider>
     </HelpSessionProvider>

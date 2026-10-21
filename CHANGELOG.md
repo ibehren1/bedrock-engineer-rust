@@ -7,6 +7,57 @@ dated section here for anything user-visible.
 See the [README](./README.md#whats-different-in-this-fork) for a feature-by-feature
 overview of the fork with screenshots.
 
+### 2026-10-21
+
+- **The Files source view is readable in every appearance.** Syntax-highlighted source (code
+  files, and the **Source** view of Markdown and HTML) now sits on a dark background in all themes.
+  Before, the pale highlight colours were drawn straight onto light backgrounds and were hard or
+  impossible to read in the Light, Newspaper and Dim appearances.
+- **Chat tabs replace the side panel.** The chat now has tabs across the top: **Chat**, **Files**,
+  **Sandbox**, **Todo**, **Cost** and **System prompt**. Each one uses the full width of the chat
+  instead of sliding in from the right. The todo list, the token and cost charts and the system
+  prompt used to be pop-ups and are now tabs too. A tab only appears when it has something to show,
+  the message box stays at the bottom on every tab, and sending a message switches back to Chat. The
+  Todo tab shows how many items are done and the Cost tab shows the running cost. New files and a new
+  sandbox are marked on their tabs until you look, and each chat remembers the tab you left it on.
+- **The chat history collapses to a rail.** Instead of sliding away completely, the history on the
+  left collapses to a narrow strip with a New chat button and your recent chats as initials. Click
+  one to switch to it, or expand the full list again.
+- **Memory items have a toggle button.** The Use Memory Items checkbox is now a brain button (the
+  Memory page's icon) next to the attach and export buttons. It is highlighted, with the number of
+  items, while memory is on, and its tooltip says whether memory is on for the chat. It is still on
+  for every new chat.
+- The buttons above the message box (stop, files, export, new chat, memory, Plan and Act) now use
+  the same plain tooltip as the attachments and sandbox buttons instead of a dark pop-up bubble.
+- **Terminal tab.** A terminal button next to the memory button opens a shell on your own computer
+  (your usual shell, started in the project folder) in a new **Terminal** tab. Each chat can have
+  several, shown as sub-tabs with **+** to add one and **×** to close one. Shells keep running while
+  you switch tabs or chats and end when you close them, delete the chat or quit the app. The agent
+  has no access to them.
+- **Prompt icons in terminals.** The app now ships the Nerd Fonts symbol font, so the icons that
+  shell prompts like Starship and Powerlevel10k draw (git branch, language and cloud icons) show up
+  in the Terminal and Sandbox terminals instead of empty boxes. Letters still use your code font.
+- **Mermaid diagrams render completely.** Diagrams with line breaks in their labels (`<br/>`) lost
+  every node after the first such label, leaving only the arrows and the subgraph boxes. The same
+  diagrams also went missing from PNG downloads and from Markdown, Word and PDF exports. All of
+  these now come out whole.
+- The **Source** view of Mermaid, HTML and draw.io blocks in chat now sits on a dark background in
+  every appearance, like the Files source view, so the highlighted code is readable.
+- **Wide Mermaid flowcharts fit the chat.** A flowchart that comes out much wider than tall (a
+  long left-to-right chain, say) is now drawn top-to-bottom when that fits the chat column
+  better, so it can be read without scrolling or squinting. An **As written** button on the diagram
+  switches back to the direction in the source, and PNG downloads and exports use the same layout.
+  Flowcharts are also drawn with less space between boxes. Other diagram types are unchanged.
+- **Copying source leaves out the line numbers.** Selecting and copying from the Source view of
+  Mermaid, HTML and draw.io blocks, or from a file in the Files tab, now copies only the code. The
+  Mermaid Source view also has a **Copy** button.
+- **Automatic updates.** The app now checks for new versions at launch and every few hours,
+  downloads them in the background, and offers to restart into the new version (or installs it the
+  next time you quit). Every download is checked against the app's update signing key first. On
+  macOS, updates installed this way don't need the Terminal signing steps from the first install.
+  **Settings → General → Updates** shows your version, turns automatic checks off, and checks on
+  demand. This starts working with the first release published after this one.
+
 ### 2026-10-20
 
 - **Memory.** Tell the assistant to "add a rule" or "remember" something and it saves the item to a

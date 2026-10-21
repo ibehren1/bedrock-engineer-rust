@@ -19,7 +19,7 @@ type SandboxPanelProps = {
   onStop: () => void
   onRemove: (deleteData: boolean) => void
   onOpenFolder: () => void
-  /** Inside the chat's right panel, which draws the frame and sets the width. */
+  /** Inside the chat page's Sandbox tab, which sets the size. */
   embedded?: boolean
 }
 

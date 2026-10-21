@@ -14,6 +14,8 @@ import useSetting from './hooks/useSetting'
 import { ChatHistoryProvider } from './contexts/ChatHistoryContext'
 import { AgentDirectoryProvider } from './contexts/AgentDirectoryContext'
 import { MemoryProvider } from './contexts/MemoryContext'
+import { AppUpdateProvider } from './contexts/AppUpdateContext'
+import { UpdateBanner } from './components/UpdateBanner'
 import { StepType, TourProvider } from '@reactour/tour'
 import { useTranslation } from 'react-i18next'
 import { ToastService } from './services/ToastService'
@@ -113,6 +115,7 @@ const Layout: React.FC = () => {
         <div className="flex-1 bg-canvas overflow-x-auto">
           <Outlet />
         </div>
+        <UpdateBanner />
       </div>
     </div>
   )
@@ -189,10 +192,12 @@ function App(): JSX.Element {
           <ChatHistoryProvider>
             <AgentDirectoryProvider>
               <MemoryProvider>
-                <div>
-                  <Toaster {...ToastService.getToasterConfig()} />
-                  <RouterProvider router={router} />
-                </div>
+                <AppUpdateProvider>
+                  <div>
+                    <Toaster {...ToastService.getToasterConfig()} />
+                    <RouterProvider router={router} />
+                  </div>
+                </AppUpdateProvider>
               </MemoryProvider>
             </AgentDirectoryProvider>
           </ChatHistoryProvider>

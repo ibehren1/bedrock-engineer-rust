@@ -119,6 +119,8 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(commands::app_update::UpdateState::default())
         .manage(Mutex::new(store))
         .manage(webview_proxy::WebviewProxyState::new(webview_proxy))
         .manage(history)
@@ -268,6 +270,8 @@ fn main() {
                 if let Some(remembered) = app.try_state::<window_state::Remembered>() {
                     remembered.persist();
                 }
+                // Windows: an update downloaded but deferred with "Later" installs now.
+                commands::app_update::install_on_exit(app);
                 if let Some(backend) = app.try_state::<backend::Backend>() {
                     backend.shutdown();
                 }

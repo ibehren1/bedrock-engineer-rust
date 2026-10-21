@@ -47,3 +47,12 @@ const SystemPromptModal = React.memo(
 )
 
 SystemPromptModal.displayName = 'SystemPromptModal'
+
+/** The chat page's System prompt tab. */
+export const SystemPromptView: React.FC<{ systemPrompt: string }> = ({ systemPrompt }) => (
+  <div className="h-full overflow-y-auto">
+    <div className="max-w-5xl mx-auto p-4 text-ink">
+      <MD>{systemPrompt}</MD>
+    </div>
+  </div>
+)

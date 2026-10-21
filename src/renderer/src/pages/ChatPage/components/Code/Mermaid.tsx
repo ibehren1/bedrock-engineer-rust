@@ -1,30 +1,33 @@
-import mermaid from 'mermaid'
 import React from 'react'
 import { useEffect, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { IoIosClose } from 'react-icons/io'
 import { VscZoomIn, VscZoomOut, VscScreenFull } from 'react-icons/vsc'
 import { subscribeToAppearance } from '@renderer/lib/mermaidTheme'
+import { parseSvg } from '@renderer/lib/svgMarkup'
+import { renderMermaid } from '@renderer/lib/mermaidRender'
 
 type Props = {
   code: string
   handler?: any
   onRenderComplete?: () => void
+  /** Re-orient a lopsided flowchart to fit the column (default on; see mermaidLayout). */
+  fit?: boolean
+  /** Told after each render whether the diagram was re-oriented. */
+  onReoriented?: (reoriented: boolean) => void
 }
 
 export const MermaidCore: React.FC<Props> = (props) => {
-  const { code, onRenderComplete } = props
+  const { code, onRenderComplete, fit = true, onReoriented } = props
   const [svgContent, setSvgContent] = useState<string>('')
 
   const render = useCallback(async () => {
     if (code) {
       try {
-        // 一意な ID を指定する必要あり
-        const { svg } = await mermaid.render(`m${crypto.randomUUID()}`, code)
-        // SVG文字列をパースしてDOMオブジェクトに変換
-        const parser = new DOMParser()
-        const doc = parser.parseFromString(svg, 'image/svg+xml')
-        const svgElement = doc.querySelector('svg')
+        const { svg, reoriented } = await renderMermaid(code, fit)
+        onReoriented?.(reoriented)
+        // SVG文字列をパースしてDOMオブジェクトに変換（HTML として。XML だと <br> で切れる）
+        const svgElement = parseSvg(svg)
 
         if (svgElement) {
           // SVG要素に必要な属性を設定
@@ -40,7 +43,7 @@ export const MermaidCore: React.FC<Props> = (props) => {
         // エラー時はコールバックを呼び出さない
       }
     }
-  }, [code, onRenderComplete])
+  }, [code, onRenderComplete, fit, onReoriented])
 
   useEffect(() => {
     render()
@@ -65,10 +68,14 @@ export const MermaidCore: React.FC<Props> = (props) => {
 
 export const Mermaid = ({
   chart,
-  onRenderComplete
+  onRenderComplete,
+  fit = true,
+  onReoriented
 }: {
   chart: string
   onRenderComplete?: () => void
+  fit?: boolean
+  onReoriented?: (reoriented: boolean) => void
 }) => {
   const [zoom, setZoom] = useState(false)
   const [fullscreenZoomLevel, setFullscreenZoomLevel] = useState(1)
@@ -107,7 +114,13 @@ export const Mermaid = ({
 
   return (
     <>
-      <MermaidCore handler={() => setZoom(true)} code={chart} onRenderComplete={onRenderComplete} />
+      <MermaidCore
+        handler={() => setZoom(true)}
+        code={chart}
+        onRenderComplete={onRenderComplete}
+        fit={fit}
+        onReoriented={onReoriented}
+      />
 
       {zoom &&
         createPortal(
@@ -176,7 +189,7 @@ export const Mermaid = ({
                 }}
                 className="transition-transform duration-200 flex items-center justify-center"
               >
-                <MermaidCore code={chart} />
+                <MermaidCore code={chart} fit={fit} />
               </div>
             </div>
           </div>,

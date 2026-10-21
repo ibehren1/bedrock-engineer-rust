@@ -1,6 +1,5 @@
 import React from 'react'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { tomorrow } from 'react-syntax-highlighter/dist/cjs/styles/prism'
+import { SourceView } from '../../../Code/SourceView'
 
 /** Highlighting gets slow on big files; past this they show as plain text. */
 const HIGHLIGHT_LIMIT = 300_000
@@ -17,16 +16,13 @@ export const TextViewer: React.FC<{ content: string; language: string }> = ({
     )
   }
   return (
-    <SyntaxHighlighter
+    <SourceView
+      code={content}
       language={language}
-      style={tomorrow}
-      showLineNumbers
       wrapLongLines
-      className="!m-0 !bg-transparent"
-      customStyle={{ background: 'transparent', padding: '0.75rem', fontSize: '0.6875rem' }}
-    >
-      {content}
-    </SyntaxHighlighter>
+      fontSize="0.6875rem"
+      className="min-h-full"
+    />
   )
 }
 

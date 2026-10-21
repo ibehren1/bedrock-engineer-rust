@@ -1,17 +1,20 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { Tooltip } from 'flowbite-react'
+import { LuBrain } from 'react-icons/lu'
 
 export type MemoryToggleProps = {
   checked: boolean
-  /** Enabled memory items, the ones the checkbox adds to the prompt. */
+  /** Enabled memory items, the ones the toggle adds to the prompt. */
   enabledCount: number
   /** No chat session yet, so there is nowhere to save the setting. */
   disabled?: boolean
   onChange: (checked: boolean) => void
 }
 
-/** The "Use Memory Items" checkbox next to Tools in the chat input area. */
+/**
+ * The per-chat "Use Memory Items" toggle, a brain button (the Memory page's icon) next to the
+ * attach and export buttons. Highlighted while on; on by default.
+ */
 export const MemoryToggle: React.FC<MemoryToggleProps> = ({
   checked,
   enabledCount,
@@ -19,29 +22,30 @@ export const MemoryToggle: React.FC<MemoryToggleProps> = ({
   onChange
 }) => {
   const { t } = useTranslation()
+  const tooltip = disabled
+    ? t('memoryItems.noSession')
+    : checked
+      ? t('memoryItems.toggleOnTooltip', { count: enabledCount })
+      : t('memoryItems.toggleOffTooltip', { count: enabledCount })
+
   return (
-    <Tooltip
-      content={disabled ? t('memoryItems.noSession') : t('memoryItems.useMemoryItemsTooltip')}
-      placement="top"
-      animation="duration-500"
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      disabled={disabled}
+      aria-pressed={checked}
+      title={tooltip}
+      aria-label={t('memoryItems.useMemoryItems')}
+      className={`relative p-2 rounded-full transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
+        checked ? 'bg-surface text-accent' : 'text-ink-muted hover:text-ink hover:bg-surface'
+      }`}
     >
-      <label
-        className={`flex items-center gap-1.5 text-xs text-ink ${
-          disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-        }`}
-      >
-        <input
-          type="checkbox"
-          checked={checked}
-          disabled={disabled}
-          onChange={(e) => onChange(e.target.checked)}
-          className="h-4 w-4 rounded-control border-strong text-accent focus:ring-accent"
-        />
-        <span>{t('memoryItems.useMemoryItems')}</span>
-        <span className="rounded-full bg-accent-tint text-accent px-1.5 text-micro">
+      <LuBrain />
+      {checked && enabledCount > 0 && (
+        <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-accent text-accent-fg text-[10px] leading-4 text-center">
           {enabledCount}
         </span>
-      </label>
-    </Tooltip>
+      )}
+    </button>
   )
 }

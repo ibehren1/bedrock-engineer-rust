@@ -15,9 +15,15 @@ import { useSessionResources } from './useSessionResources'
 interface ChatHistoryProps {
   onSessionSelect: (sessionId: string) => void
   currentSessionId?: string
+  /** A control at the right of the heading (the sidebar's collapse button). */
+  headerAction?: React.ReactNode
 }
 
-export const ChatHistory: React.FC<ChatHistoryProps> = ({ onSessionSelect, currentSessionId }) => {
+export const ChatHistory: React.FC<ChatHistoryProps> = ({
+  onSessionSelect,
+  currentSessionId,
+  headerAction
+}) => {
   const [editingSessionId, setEditingSessionId] = useState<string>()
   const [editTitle, setEditTitle] = useState('')
   const [menuOpenSessionId, setMenuOpenSessionId] = useState<string>()
@@ -241,7 +247,12 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({ onSessionSelect, curre
   }
 
   if (sessions.length === 0) {
-    return <div className="p-2.5 text-center text-ink-muted">{t('No chat history')}</div>
+    return (
+      <div className="p-3">
+        {headerAction && <div className="flex justify-end">{headerAction}</div>}
+        <div className="p-2.5 text-center text-ink-muted">{t('No chat history')}</div>
+      </div>
+    )
   }
 
   const menuButtonClasses =
@@ -300,6 +311,7 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({ onSessionSelect, curre
               </div>
             </div>
           )}
+          {headerAction && <span onClick={(e) => e.stopPropagation()}>{headerAction}</span>}
         </div>
       </h2>
 

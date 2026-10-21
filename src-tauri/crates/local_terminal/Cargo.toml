@@ -1,0 +1,20 @@
+[package]
+name = "local_terminal"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+serde.workspace = true
+thiserror.workspace = true
+dirs.workspace = true
+portable-pty = "=0.9.0"
+uuid = { version = "=1.28.0", features = ["v4"] }
+log = "=0.4.34"
+
+[target.'cfg(unix)'.dependencies]
+libc = "=0.2.191"
+
+[dev-dependencies]
+serde_json.workspace = true

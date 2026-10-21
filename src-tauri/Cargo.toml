@@ -15,6 +15,7 @@ members = [
     "crates/background",
     "crates/strands",
     "crates/workspace_files",
+    "crates/local_terminal",
 ]
 
 [workspace.package]

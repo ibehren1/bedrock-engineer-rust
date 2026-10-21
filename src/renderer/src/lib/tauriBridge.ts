@@ -282,7 +282,7 @@ function installStoreFlushResponder() {
 
 /** Commands that read settings from the store on the Rust side: wait for queued writes first. */
 const SETTINGS_DEPENDENT_COMMAND =
-  /^(tools_execute$|converse$|converse_stream$|bedrock_|background_agent_)/
+  /^(tools_execute$|converse$|converse_stream$|bedrock_|background_agent_|local_terminal_open$)/
 
 // ---------------------------------------------------------------------------------------------
 // window.logger — forwards to `logger_log` (Electron: ipcRenderer.send('logger:log'))
@@ -747,6 +747,8 @@ function createApi(): Window['api'] {
   const DS = 'api.dockerSandbox'
   const T = 'api.dockerSandbox.terminal'
   const CA = 'api.chatAttachments'
+  const LT = 'api.localTerminal'
+  const AU = 'api.appUpdate'
   const CAM = 'api.camera'
   const TD = 'api.todo'
   const MCP = 'api.mcp'
@@ -1017,6 +1019,34 @@ function createApi(): Window['api'] {
           withBacklogBytes(call(`${T}.backlog`, 'docker_sandbox_terminal_backlog', { terminalId })),
         close: cmd(`${T}.close`, 'docker_sandbox_terminal_close', (terminalId) => ({ terminalId }))
       }
+    },
+    appUpdate: {
+      currentVersion: cmd(`${AU}.currentVersion`, 'app_update_current_version'),
+      check: cmd(`${AU}.check`, 'app_update_check'),
+      download: cmd(`${AU}.download`, 'app_update_download'),
+      restart: cmd(`${AU}.restart`, 'app_update_restart')
+    },
+    localTerminal: {
+      open: cmd(`${LT}.open`, 'local_terminal_open', (sessionId, cols, rows) => ({
+        sessionId,
+        cols,
+        rows
+      })),
+      attach: (terminalId: string) =>
+        withBacklogBytes(call(`${LT}.attach`, 'local_terminal_attach', { terminalId })),
+      input: cmd(`${LT}.input`, 'local_terminal_input', (terminalId, data) => ({
+        terminalId,
+        data
+      })),
+      resize: cmd(`${LT}.resize`, 'local_terminal_resize', (terminalId, cols, rows) => ({
+        terminalId,
+        cols,
+        rows
+      })),
+      close: cmd(`${LT}.close`, 'local_terminal_close', (terminalId) => ({ terminalId })),
+      list: cmd(`${LT}.list`, 'local_terminal_list', (sessionId) => ({ sessionId })),
+      backlog: (terminalId: string) =>
+        withBacklogBytes(call(`${LT}.backlog`, 'local_terminal_backlog', { terminalId }))
     },
     chatAttachments: {
       list: cmd(`${CA}.list`, 'chat_attachments_list', (sessionId) => ({ sessionId })),

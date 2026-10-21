@@ -10,6 +10,10 @@ const HANDLER_SOURCE: &str = "src/commands/mod.rs";
 /// Generated permission set granting every app command (used by `capabilities/default.json`).
 const ALL_COMMANDS_SET: &str = "permissions/app-commands.toml";
 
+/// Generated permission set granting the main-window-only commands (used by
+/// `capabilities/main-window.json`).
+const MAIN_WINDOW_COMMANDS_SET: &str = "permissions/main-window-commands.toml";
+
 #[path = "src/command_list.rs"]
 mod command_list;
 
@@ -39,7 +43,8 @@ fn main() {
     stage_resources();
 
     // App command ACL: every command in `commands::handler()` gets `allow-<command>` /
-    // `deny-<command>` permissions, and `app-commands` bundles all the `allow-*` ones. With an app
+    // `deny-<command>` permissions, `app-commands` bundles the `allow-*` ones except the
+    // main-window-only commands, which `main-window-commands` bundles. With an app
     // manifest, Tauri checks every app command against the capabilities, so a window only reaches
     // the commands its capability grants (camera previews: two; PDF export windows: none).
     println!("cargo:rerun-if-changed={HANDLER_SOURCE}");
@@ -47,6 +52,10 @@ fn main() {
     let commands =
         command_list::handler_commands(&source).unwrap_or_else(|e| panic!("{HANDLER_SOURCE}: {e}"));
     write_if_changed(ALL_COMMANDS_SET, &command_list::all_commands_set(&commands));
+    write_if_changed(
+        MAIN_WINDOW_COMMANDS_SET,
+        &command_list::main_window_commands_set(&commands),
+    );
     let commands: &'static [&'static str] = Vec::leak(
         commands
             .into_iter()

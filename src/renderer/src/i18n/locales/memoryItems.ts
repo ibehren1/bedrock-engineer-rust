@@ -37,8 +37,8 @@ export const memoryItems = {
       loading: 'Loading memory items…',
       error: 'Memory items could not be saved: {{error}}',
       useMemoryItems: 'Use Memory Items',
-      useMemoryItemsTooltip:
-        "Add the enabled memory items to this chat's system prompt. The setting is saved per chat.",
+      toggleOnTooltip: 'Memory items: on ({{count}} added to this chat)',
+      toggleOffTooltip: 'Memory items: off for this chat',
       noSession: 'Available once the chat has started',
       chip: {
         saved: 'Memory saved',
@@ -88,8 +88,8 @@ export const memoryItems = {
       loading: 'メモリ項目を読み込み中…',
       error: 'メモリ項目を保存できませんでした: {{error}}',
       useMemoryItems: 'メモリ項目を使用',
-      useMemoryItemsTooltip:
-        '有効なメモリ項目をこのチャットのシステムプロンプトに追加します。設定はチャットごとに保存されます。',
+      toggleOnTooltip: 'メモリ項目: オン（このチャットに {{count}} 件を追加）',
+      toggleOffTooltip: 'メモリ項目: このチャットではオフ',
       noSession: 'チャットの開始後に利用できます',
       chip: {
         saved: 'メモリを保存しました',

@@ -72,6 +72,25 @@ Installers for every build are attached to this fork's releases:
 5. macOS asks for **Screen Recording** and **Camera** permission the first time an agent uses the
    screen or camera capture tools.
 
+### Updates
+
+After the first install, the app keeps itself up to date. It checks the GitHub releases at launch
+and every few hours, downloads a new version in the background, and offers **Restart now** /
+**Later**; Later installs it the next time you quit. Each download is checked against the app's
+update signing key before it is installed. **Settings → General → Updates** shows the version you
+are running, turns automatic checks off and on, and checks on demand.
+
+On macOS, an update the app installs itself needs none of the Terminal steps above: it never
+carries the browser's download flag. Two things to know:
+
+- macOS 15 and later may ask you to let **Bedrock Engineer** manage apps the first time it updates
+  itself (**System Settings → Privacy & Security → App Management**). If an update fails with a
+  permission error, turn it on there and check again.
+- Because the app is signed ad hoc, macOS treats each version as a new app and asks for **Screen
+  Recording** and **Camera** permission again after an update.
+
+The Linux `.deb` doesn't update itself; the AppImage does.
+
 ### Windows
 
 Run the setup program. It isn't code-signed, so SmartScreen may show "Windows protected your PC":
@@ -230,8 +249,18 @@ are in the [MCP Server Configuration Guide](./docs/mcp-server/MCP_SERVER_CONFIGU
 
 - Each turn is labeled with your configured **user name** and avatar, and with the **model icon** of
   the model that produced the answer (hover it for the model name).
-- The **running conversation cost** is shown at the top right, next to the token analytics and TODO
-  icons.
+- **Tabs across the top of the chat** switch between the conversation and everything around it:
+  **Chat**, **Files**, **Sandbox**, **Todo**, **Cost** and **System prompt**. Files appears when a
+  project folder is set, Sandbox when the chat has a Docker sandbox, Todo once the agent has made a
+  todo list (its label counts the finished items), and Cost once the chat has messages (its label
+  shows the running cost; the tab has the token and cost charts). The message box stays at the
+  bottom on every tab, and sending a message switches back to Chat. Each chat remembers the tab you
+  left it on.
+- **A terminal on your own computer.** The terminal button above the message box opens your usual
+  shell, started in the project folder, on a **Terminal** tab. A chat can have several shells as
+  sub-tabs (**+** adds one, **×** closes it). They keep running while you switch tabs or chats and
+  end when you close them, delete the chat or quit. The agent cannot reach them: there is no tool
+  for them.
 - **Export the conversation** as Markdown, Word (`.docx`) or PDF from the buttons above the input
   box. All three exclude tool use/results, label turns as `Assistant – <model ID>` / `User – <name>`,
   and embed the avatars. Word and PDF render Mermaid and DrawIO diagrams as images; the Markdown
@@ -245,7 +274,8 @@ are in the [MCP Server Configuration Guide](./docs/mcp-server/MCP_SERVER_CONFIGU
   leaving the Chat page no longer cancels an agent mid-turn — it keeps calling tools and the reply is
   waiting when you return. Chats still working are marked "Still responding" in the history list, and
   stop only ever stops the chat on screen. Reloading the window still cancels everything.
-- The **chat history panel starts open** when you go to Chat.
+- The **chat history** is docked on the left and starts open when you go to Chat. Collapse it to a
+  narrow rail with a New chat button and the recent chats as initials.
 - Each chat in the history carries a **paperclip** when it has attached files and a **whale** when it
   has a Docker sandbox, both in the row's own text colour, so you can see which conversations have
   something on disk behind them without opening each one.
@@ -269,20 +299,18 @@ Rules and facts you want every chat to know live in one shared memory list.
   note with **View** (opens the Memory page) and **Undo**.
 - The **Memory** page in the sidebar lists every item. You can add items, edit their text, mark each
   one as a **rule** or a **memory**, switch single items off without deleting them, and delete them.
-- The **Use Memory Items** checkbox above the message box adds every switched-on item to the
-  system prompt, which you can see in the SYSTEM_PROMPT view. It starts checked for each new chat,
-  and unchecking it only affects that chat.
+- The **brain button** next to the attach and export buttons above the message box adds every
+  switched-on item to the system prompt, which you can see on the System prompt tab. It is
+  highlighted (with a count of the items) while on, starts on for each new chat, and turning it off
+  only affects that chat.
 
-### Files panel
+### Files tab
 
-A panel on the right of the chat shows the project folder, so the agent's output is one click away.
+The chat's **Files** tab shows the project folder, so the agent's output is one click away.
 
-- Open it with the **Files** button above the message box or the strip at the right edge. While the
-  panel is closed the strip is drawn in the accent colour; it pulses briefly when it first appears in
-  a chat, when the chat gets a sandbox and when the agent touches new files, and a fuchsia dot on it
-  stays until you open the panel (no animation when the system asks for reduced motion). Drag the
-  panel's left edge to resize it. When the chat has a Docker sandbox, the sandbox is a second tab in
-  the same panel.
+- Open it from the tab strip or with the **Files** button above the message box. When the agent
+  creates or changes files, the tab shows how many with a fuchsia count that pulses briefly and
+  stays until you look (no animation when the system asks for reduced motion).
 - Click a file to preview it: text and code with syntax highlighting, Markdown (rendered or as
   source), HTML, images, PDF (page by page, with zoom) and Word documents. Text files can be edited
   and saved; if the file changed on disk in the meantime, you are asked before anything is
@@ -296,7 +324,7 @@ A panel on the right of the chat shows the project folder, so the agent's output
   carry a fuchsia dot in the full tree as well, and the folders holding them open automatically
   (a folder you collapse stays collapsed).
 - The tree refreshes as files change, and file paths in the agent's replies are links that open the
-  file in the panel.
+  file on the Files tab.
 
 ### A Docker sandbox per chat
 
@@ -312,8 +340,8 @@ cannot reach your machine, the command allowlist doesn't have to hold it back in
   dialog with the exact command before anything runs — allow it once, or for the rest of that chat.
 - The Docker whale next to the export buttons appears whenever the current chat has a container, and
   can stop, start or remove it, open its folder in Finder, Explorer or your Linux file manager, and
-  open the sandbox panel.
-- **A sandbox panel** slides in from the right of the chat, on a tab next to the chat history's. It
+  switch to the Sandbox tab.
+- **A Sandbox tab** appears in the chat's tab strip, with a fuchsia dot until you first look. It
   shows what the container actually is — image, how long it has been up, CPU, memory, network and disk
   against their limits — lists each service with its published ports as links that open in your
   browser, and keeps an **Activity** log of every command the agent ran there: when, how long it took,
@@ -322,7 +350,7 @@ cannot reach your machine, the command allowlist doesn't have to hold it back in
 - **A Compose tab** for stacks: a diagram of the services with their images and states, the published
   ports that reach them from your browser, the folders mounted into them, and the compose file itself
   underneath. Click the diagram to open it full window.
-- **An interactive terminal** in that panel gives you a real shell inside the container, with colours,
+- **An interactive terminal** on that tab gives you a real shell inside the container, with colours,
   full-screen programs like `vim` and `htop`, resizing and Ctrl-C — and a tab per container when the
   sandbox is a compose stack. It is the fastest way to see what the agent left behind or to fix
   something by hand. Because it is a genuine root shell with your project mounted at `/workspace`,

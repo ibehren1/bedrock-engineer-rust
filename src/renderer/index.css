@@ -10,6 +10,21 @@
 @import '@fontsource-variable/geist/wght.css';
 @import '@fontsource-variable/geist-mono/wght.css';
 
+/* Nerd Font icons for the terminals: shell prompts (Starship, Powerlevel10k) draw their icons
+   from these private-use codepoints, which no code font has. Used only as the last fallback in
+   the terminals' font list, and limited to the icon ranges so it can never replace a letter.
+   The Mono variant keeps each icon to one column, and size-adjust shrinks it a little further so
+   even the widest icons stay inside their cell instead of running into the next character.
+   Vendored unmodified with its licenses, see assets/fonts/symbols-nerd-font/NOTICE. */
+@font-face {
+  font-family: 'Symbols Nerd Font Mono';
+  src: url('./src/assets/fonts/symbols-nerd-font/SymbolsNerdFontMono-Regular.ttf')
+    format('truetype');
+  font-display: block;
+  size-adjust: 75%;
+  unicode-range: U+23FB-23FE, U+2665, U+26A1, U+2B58, U+E000-F8FF, U+F0000-FFFFD;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -328,6 +343,24 @@
      vanished. Near-white reads on a grey track and on the amber accent alike.
      Override per theme only if a future appearance needs it. */
   --knob: #ffffff;
+
+  /* Behind syntax-highlighted source. Deliberately NOT a surface token: the
+     highlighter's palette (Prism `tomorrow`) is light-on-dark and fixed, so on
+     a light surface its pale tokens disappeared. This is the palette's own
+     background, kept dark in every appearance. */
+  --code-surface: #2d2d2d;
+  --code-ink: #cccccc;
+}
+
+/* Line numbers for SourceView, drawn from each line's data-line. Generated content is never
+   selected, so copied source comes without them. */
+.source-lines [data-line]::before {
+  content: attr(data-line);
+  display: inline-block;
+  min-width: 2.25em;
+  padding-right: 1em;
+  text-align: right;
+  color: #6f6f6f;
 }
 
 /* ----------------------------------------------------------------------------

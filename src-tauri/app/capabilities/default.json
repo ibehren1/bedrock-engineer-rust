@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Main window, task history window and pop-out file viewer windows: the full app UI, so every app command.",
+  "description": "Main window, task history window and pop-out file viewer windows: the full app UI, so every app command except the main-window-only ones (main-window.json).",
   "windows": ["main", "task-history", "file-viewer-*"],
   "permissions": ["core:default", "app-commands"]
 }

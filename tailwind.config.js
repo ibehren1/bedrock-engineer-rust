@@ -130,7 +130,7 @@ module.exports = {
       // repaints.
       animation: {
         'todo-flash': 'todoFlash 0.5s ease-in-out 2',
-        // The right-panel opener's attention halo: three pings, then still. Use with
+        // A chat tab's attention halo: three pings, then still. Use with
         // motion-safe: so reduced motion gets no animation at all.
         'attention-ping': 'attentionPing 1.2s cubic-bezier(0, 0, 0.2, 1) 3'
       },

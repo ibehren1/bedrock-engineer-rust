@@ -24,6 +24,7 @@ import { planActMode } from './planActMode'
 import { help } from './help'
 import { memoryItems } from './memoryItems'
 import { filesPanel } from './filesPanel'
+import { appUpdate } from './appUpdate'
 
 const HomePage = {
   'set your aws credential':
@@ -527,6 +528,14 @@ const CodeBlock = {
   Source: 'Source',
   Preview: 'Preview',
   'Toggle View': 'Toggle View',
+  'Copy source': 'Copy source',
+  'Source copied': 'Source copied',
+  'As written': 'As written',
+  'Fit to width': 'Fit to width',
+  'Diagram turned to fit the chat; show it in the direction it was written':
+    'Diagram turned to fit the chat; show it in the direction it was written',
+  'Turn the diagram so it fits the chat with less scrolling':
+    'Turn the diagram so it fits the chat with less scrolling',
   'Camera Capture': 'Camera Capture',
   'Camera Device': 'Camera Device'
 }
@@ -958,6 +967,7 @@ const en = {
   ...help.en,
   ...memoryItems.en,
   ...filesPanel.en,
+  ...appUpdate.en,
   ...TodoModal,
   backgroundAgent: BackgroundAgent,
   ignoreSettings: IgnoreSettings,

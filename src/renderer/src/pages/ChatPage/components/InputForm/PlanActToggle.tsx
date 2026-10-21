@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Tooltip } from 'flowbite-react'
 import { useSettings } from '@renderer/contexts/SettingsContext'
 
 type PlanActToggleProps = {
@@ -33,28 +32,26 @@ export const PlanActToggle: React.FC<PlanActToggleProps> = ({ className = '' }) 
 
   return (
     <div className={`flex rounded-full border border-accent-soft overflow-hidden ${className}`}>
-      <Tooltip content={t(planModeTooltipKey)} placement="bottom" animation="duration-500">
-        <button
-          className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-            planMode ? planModeStyle : unselectedStyle
-          }`}
-          onClick={() => setPlanMode(true)}
-          aria-pressed={planMode}
-        >
-          Plan
-        </button>
-      </Tooltip>
-      <Tooltip content={t(actModeTooltipKey)} placement="bottom" animation="duration-500">
-        <button
-          className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-            !planMode ? actModeStyle : unselectedStyle
-          }`}
-          onClick={() => setPlanMode(false)}
-          aria-pressed={!planMode}
-        >
-          Act
-        </button>
-      </Tooltip>
+      <button
+        title={t(planModeTooltipKey)}
+        className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+          planMode ? planModeStyle : unselectedStyle
+        }`}
+        onClick={() => setPlanMode(true)}
+        aria-pressed={planMode}
+      >
+        Plan
+      </button>
+      <button
+        title={t(actModeTooltipKey)}
+        className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+          !planMode ? actModeStyle : unselectedStyle
+        }`}
+        onClick={() => setPlanMode(false)}
+        aria-pressed={!planMode}
+      >
+        Act
+      </button>
     </div>
   )
 }

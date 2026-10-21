@@ -93,5 +93,16 @@
       "hardenedRuntime": true,
       "entitlements": "./entitlements.mac.plist"
     }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJFNjcwMDhCOEYxQjg2NTUKUldSVmhodVBpd0JudnYzMHRCT20vQzAybGY0QTZvclNDa01RWkVDV2dadGZxY2FyTUZHY0FxNmcK",
+      "endpoints": [
+        "https://github.com/ibehren1/bedrock-engineer-rust/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

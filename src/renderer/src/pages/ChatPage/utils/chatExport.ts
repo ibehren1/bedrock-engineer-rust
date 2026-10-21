@@ -1,9 +1,10 @@
-import mermaid from 'mermaid'
 // mermaid はシングルトン。配色の初期化はこのモジュールの読み込み時に走るので、
 // エクスポート経路が Mermaid コンポーネントを経由しなくても図の色が揃う。
 import '@renderer/lib/mermaidTheme'
 import { IdentifiableMessage } from '@/types/chat/message'
 import { extractDrawioXml, isDrawioXml } from '@renderer/lib/drawio/xmlParser'
+import { parseSvg, toSvgXml } from '@renderer/lib/svgMarkup'
+import { renderMermaid } from '@renderer/lib/mermaidRender'
 
 /**
  * A rendered image to be written alongside the exported markdown file.
@@ -289,10 +290,10 @@ async function processText(
   return out
 }
 
-/** Render mermaid source to a high-resolution PNG data URL. */
+/** Render mermaid source to a high-resolution PNG data URL, fitted the way the chat shows it. */
 async function rasterizeMermaid(code: string): Promise<string | null> {
   try {
-    const { svg } = await mermaid.render(`export-${crypto.randomUUID()}`, code)
+    const { svg } = await renderMermaid(code)
     return await svgToPngDataUrl(svg)
   } catch (error) {
     console.error('Failed to rasterize mermaid diagram for export:', error)
@@ -337,7 +338,7 @@ export function svgToPngDataUrl(svg: string, scale = 3): Promise<string | null> 
     let height = 600
 
     try {
-      const svgElement = new DOMParser().parseFromString(svg, 'image/svg+xml').querySelector('svg')
+      const svgElement = parseSvg(svg)
       if (svgElement) {
         const svgWidth = svgElement.getAttribute('width')
         const svgHeight = svgElement.getAttribute('height')
@@ -375,7 +376,8 @@ export function svgToPngDataUrl(svg: string, scale = 3): Promise<string | null> 
       resolve(canvas.toDataURL('image/png'))
     }
     img.onerror = () => resolve(null)
-    img.src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`
+    // Loaded as an image, so it has to be well-formed XML (Mermaid's `<br>` is not).
+    img.src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(toSvgXml(svg))))}`
   })
 }
 

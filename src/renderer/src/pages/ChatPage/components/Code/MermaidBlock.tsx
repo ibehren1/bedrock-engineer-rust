@@ -1,18 +1,21 @@
-import React, { useState } from 'react'
+import React, { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
+  VscArrowSwap,
   VscCode,
+  VscCopy,
   VscEye,
   VscZoomIn,
   VscZoomOut,
   VscScreenFull,
   VscCloudDownload
 } from 'react-icons/vsc'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { tomorrow } from 'react-syntax-highlighter/dist/cjs/styles/prism'
+import { SourceView } from './SourceView'
 import { Mermaid } from './Mermaid'
 import { ResizableContainer } from './ResizableContainer'
-import mermaid from 'mermaid'
+import toast from 'react-hot-toast'
+import { parseSvg, toSvgXml } from '@renderer/lib/svgMarkup'
+import { renderMermaid } from '@renderer/lib/mermaidRender'
 
 type MermaidBlockProps = {
   code: string
@@ -23,6 +26,24 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = ({ code, className = ''
   const { t } = useTranslation()
   const [isPreviewMode, setIsPreviewMode] = useState(true)
   const [zoomLevel, setZoomLevel] = useState(1)
+  // Lopsided flowcharts are turned to fit the column; this switches back to the written direction.
+  const [fit, setFit] = useState(true)
+  const [reoriented, setReoriented] = useState(false)
+  // Set once a fitted render actually turned the diagram, so the switch only shows when it matters.
+  const [canFit, setCanFit] = useState(false)
+  const onReoriented = useCallback((value: boolean) => {
+    setReoriented(value)
+    if (value) setCanFit(true)
+  }, [])
+
+  const copySource = async () => {
+    try {
+      await navigator.clipboard.writeText(code)
+      toast.success(t('Source copied'))
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error))
+    }
+  }
 
   const toggleMode = () => {
     setIsPreviewMode(!isPreviewMode)
@@ -42,13 +63,11 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = ({ code, className = ''
 
   const downloadAsPNG = async () => {
     try {
-      // MermaidからSVGを生成
-      const { svg } = await mermaid.render(`download-${Date.now()}`, code)
+      // MermaidからSVGを生成（画面と同じ向きで）
+      const { svg } = await renderMermaid(code, fit)
 
-      // SVGのサイズを正確に取得
-      const parser = new DOMParser()
-      const svgDoc = parser.parseFromString(svg, 'image/svg+xml')
-      const svgElement = svgDoc.querySelector('svg')
+      // SVGのサイズを正確に取得（HTML として解析。XML だと <br> で切れる）
+      const svgElement = parseSvg(svg)
 
       let width = 800
       let height = 600
@@ -122,8 +141,8 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = ({ code, className = ''
         console.error('Failed to load SVG image for PNG conversion')
       }
 
-      // SVGをData URLに直接変換（Blob URLではなく）
-      const svgDataUrl = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`
+      // SVGをData URLに直接変換（Blob URLではなく）。画像として読むので整形式の XML にする。
+      const svgDataUrl = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(toSvgXml(svg))))}`
       img.src = svgDataUrl
     } catch (error) {
       console.error('Failed to download PNG:', error)
@@ -175,6 +194,30 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = ({ code, className = ''
               </button>
             </>
           )}
+          {isPreviewMode && canFit && (
+            <button
+              onClick={() => setFit(!fit)}
+              className="flex items-center gap-1 px-2 py-1 rounded-control text-xs text-ink hover:bg-sunken"
+              title={
+                fit && reoriented
+                  ? t('Diagram turned to fit the chat; show it in the direction it was written')
+                  : t('Turn the diagram so it fits the chat with less scrolling')
+              }
+            >
+              <VscArrowSwap size={12} />
+              <span>{fit ? t('As written') : t('Fit to width')}</span>
+            </button>
+          )}
+          {!isPreviewMode && (
+            <button
+              onClick={() => void copySource()}
+              className="p-1 rounded-control text-ink hover:bg-sunken"
+              title={t('Copy source')}
+              aria-label={t('Copy source')}
+            >
+              <VscCopy size={14} />
+            </button>
+          )}
           <div className="w-px h-4 bg-sunken" />
           <button
             onClick={toggleMode}
@@ -215,27 +258,16 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = ({ code, className = ''
             }}
             className="transition-transform duration-200"
           >
-            <Mermaid chart={code} />
+            <Mermaid chart={code} fit={fit} onReoriented={onReoriented} />
           </div>
         </div>
 
         {/* Source mode - always rendered but hidden when in preview mode */}
-        <div className={`h-full bg-surface-2 overflow-auto ${isPreviewMode ? 'hidden' : 'block'}`}>
-          <SyntaxHighlighter
-            language="mermaid"
-            style={tomorrow}
-            showLineNumbers
-            wrapLines
-            className="!m-0 !bg-transparent h-full"
-            customStyle={{
-              background: 'transparent',
-              padding: '1rem',
-              height: '100%'
-            }}
-          >
-            {code}
-          </SyntaxHighlighter>
-        </div>
+        <SourceView
+          code={code}
+          language="mermaid"
+          className={`h-full overflow-auto ${isPreviewMode ? 'hidden' : 'block'}`}
+        />
       </ResizableContainer>
     </div>
   )

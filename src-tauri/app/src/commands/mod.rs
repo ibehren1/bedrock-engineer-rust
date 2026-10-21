@@ -5,6 +5,7 @@
 
 pub mod agent_files;
 pub mod agents;
+pub mod app_update;
 pub mod attachments;
 pub mod background;
 pub mod bedrock;
@@ -13,6 +14,7 @@ pub mod chat_history;
 pub mod docker;
 pub mod file;
 pub mod help;
+pub mod local_terminal;
 pub mod logger;
 pub mod mcp;
 pub mod memory;
@@ -247,6 +249,18 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         docker::docker_sandbox_terminal_resize,
         docker::docker_sandbox_terminal_backlog,
         docker::docker_sandbox_terminal_close,
+        // window.api.localTerminal (main window only: capabilities/main-window.json)
+        local_terminal::local_terminal_open,
+        local_terminal::local_terminal_attach,
+        local_terminal::local_terminal_input,
+        local_terminal::local_terminal_resize,
+        local_terminal::local_terminal_close,
+        local_terminal::local_terminal_list,
+        local_terminal::local_terminal_backlog,
+        app_update::app_update_current_version,
+        app_update::app_update_check,
+        app_update::app_update_download,
+        app_update::app_update_restart,
     ]
 }
 

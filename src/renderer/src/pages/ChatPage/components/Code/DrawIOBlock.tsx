@@ -8,8 +8,7 @@ import {
   VscScreenFull,
   VscCloudDownload
 } from 'react-icons/vsc'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { tomorrow } from 'react-syntax-highlighter/dist/cjs/styles/prism'
+import { SourceView } from './SourceView'
 import { DrawIoEmbed, DrawIoEmbedRef } from 'react-drawio'
 import { ResizableContainer } from './ResizableContainer'
 
@@ -179,25 +178,11 @@ export const DrawIOBlock: React.FC<DrawIOBlockProps> = ({ xml, className = '' })
         </div>
 
         {/* Source mode - always rendered but hidden when in preview mode */}
-        <div
-          className={`max-w-full h-full overflow-y-scroll bg-surface-2 ${isPreviewMode ? 'hidden' : 'block'}`}
-        >
-          <SyntaxHighlighter
-            language="xml"
-            style={tomorrow}
-            showLineNumbers
-            wrapLines={false}
-            className="!m-0 !bg-transparent h-full"
-            customStyle={{
-              background: 'transparent',
-              padding: '1rem',
-              height: '100%',
-              width: '100%'
-            }}
-          >
-            {xml}
-          </SyntaxHighlighter>
-        </div>
+        <SourceView
+          code={xml}
+          language="xml"
+          className={`max-w-full h-full overflow-auto ${isPreviewMode ? 'hidden' : 'block'}`}
+        />
       </ResizableContainer>
     </div>
   )

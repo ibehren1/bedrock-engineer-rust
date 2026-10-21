@@ -3,12 +3,22 @@ export const filesPanel = {
     filesPanel: {
       tabFiles: 'Files',
       tabSandbox: 'Sandbox',
+      tabChat: 'Chat',
+      tabTodo: 'Todo',
+      tabCost: 'Cost',
+      tabSystemPrompt: 'System prompt',
+      tabTerminal: 'Terminal',
+      terminalButton: 'Open a terminal on this computer',
+      terminalButtonNew: 'Open another terminal',
+      terminalNew: 'New terminal',
+      terminalClose: 'Close terminal',
+      terminalExited: 'Shell exited with code {{code}}',
+      terminalOpenFailed: 'Could not open a terminal: {{error}}',
+      terminalNoSession: 'Available once the chat has started',
+      costTooltip: 'Conversation cost and token usage',
+      todoProgress: '{{done}} of {{total}} done',
       title: 'Files',
       toolbarButton: 'Files',
-      show: 'Show the side panel',
-      hide: 'Hide the side panel',
-      close: 'Close panel',
-      resize: 'Drag to resize',
       refresh: 'Refresh',
       showInFinder: 'Show in Finder',
       showInExplorer: 'Show in Explorer',
@@ -69,26 +79,36 @@ export const filesPanel = {
       popOut: 'Pop out',
       popOutTooltip: 'Open this file in a separate window',
       popOutFailed: 'Could not open the file window: {{error}}',
-      openPanel: 'Open Files / Sandbox panel',
-      newActivity: 'New files or sandbox activity',
+      newFiles: 'Files the agent created or changed in this chat',
+      sandboxActivity: 'This chat has a sandbox',
       viewerNoPath: 'No file to show.',
       viewerDeleted: 'This file no longer exists. It was deleted, moved or renamed.',
       viewerDeletedEditing:
         'This file no longer exists on disk. Save to create it again, or close the window to discard your edits.',
       viewerProjectChanged:
-        'The project folder changed. Open the file again from the Files panel to view it here.'
+        'The project folder changed. Open the file again from the Files tab to view it here.'
     }
   },
   ja: {
     filesPanel: {
       tabFiles: 'ファイル',
       tabSandbox: 'サンドボックス',
+      tabChat: 'チャット',
+      tabTodo: 'TODO',
+      tabCost: 'コスト',
+      tabSystemPrompt: 'システムプロンプト',
+      tabTerminal: 'ターミナル',
+      terminalButton: 'このコンピューターでターミナルを開く',
+      terminalButtonNew: 'ターミナルをもう一つ開く',
+      terminalNew: '新しいターミナル',
+      terminalClose: 'ターミナルを閉じる',
+      terminalExited: 'シェルはコード {{code}} で終了しました',
+      terminalOpenFailed: 'ターミナルを開けませんでした: {{error}}',
+      terminalNoSession: 'チャットの開始後に利用できます',
+      costTooltip: '会話のコストとトークン使用量',
+      todoProgress: '{{total}} 件中 {{done}} 件完了',
       title: 'ファイル',
       toolbarButton: 'ファイル',
-      show: 'サイドパネルを表示',
-      hide: 'サイドパネルを隠す',
-      close: 'パネルを閉じる',
-      resize: 'ドラッグして幅を変更',
       refresh: '再読み込み',
       showInFinder: 'Finder で表示',
       showInExplorer: 'エクスプローラーで表示',
@@ -149,14 +169,14 @@ export const filesPanel = {
       popOut: '別ウィンドウ',
       popOutTooltip: 'このファイルを別ウィンドウで開く',
       popOutFailed: 'ファイルのウィンドウを開けませんでした: {{error}}',
-      openPanel: 'ファイル / サンドボックスパネルを開く',
-      newActivity: '新しいファイルまたはサンドボックスの更新があります',
+      newFiles: 'このチャットでエージェントが作成または変更したファイル',
+      sandboxActivity: 'このチャットにはサンドボックスがあります',
       viewerNoPath: '表示するファイルがありません。',
       viewerDeleted: 'このファイルは存在しません。削除、移動、または名前が変更されました。',
       viewerDeletedEditing:
         'このファイルはディスク上に存在しません。保存すると作成し直します。編集内容を破棄するにはウィンドウを閉じてください。',
       viewerProjectChanged:
-        'プロジェクトフォルダが変更されました。ここで表示するには、ファイルパネルからもう一度開いてください。'
+        'プロジェクトフォルダが変更されました。ここで表示するには、ファイルタブからもう一度開いてください。'
     }
   }
 }

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { isDarkAppearance } from '@renderer/lib/appearance'
 import { IdentifiableMessage } from '@/types/chat/message'
@@ -16,7 +16,6 @@ import {
   LineElement,
   Title
 } from 'chart.js'
-import { Modal } from 'flowbite-react'
 import { PricingCalculator } from '@common/models/pricing'
 
 // Chart.jsコンポーネントを登録
@@ -31,9 +30,7 @@ ChartJS.register(
   Title
 )
 
-interface TokenAnalyticsModalProps {
-  isOpen: boolean
-  onClose: () => void
+interface TokenAnalyticsViewProps {
   messages: IdentifiableMessage[]
   modelId: string
 }
@@ -665,13 +662,8 @@ const lineChartOptions: ChartOptions<'line'> = {
   }
 }
 
-// モーダルコンポーネント
-export const TokenAnalyticsModal: React.FC<TokenAnalyticsModalProps> = ({
-  isOpen,
-  onClose,
-  messages,
-  modelId
-}) => {
+// The chat's Cost tab: token usage and cost for the whole conversation.
+export const TokenAnalyticsView: React.FC<TokenAnalyticsViewProps> = ({ messages, modelId }) => {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<'summary' | 'timeSeries'>('summary')
 
@@ -704,12 +696,10 @@ export const TokenAnalyticsModal: React.FC<TokenAnalyticsModalProps> = ({
   }
 
   return (
-    <Modal show={isOpen} onClose={onClose} size="6xl" dismissible className="bg-canvas">
-      <div className="border-[0.5px] border-surface rounded-container shadow-xl">
-        <Modal.Header className="border-b border-subtle bg-canvas rounded-t-container">
-          <h2 className="text-title text-ink">{t('Token Usage Analytics')}</h2>
-        </Modal.Header>
-        <Modal.Body className="max-h-[80vh] overflow-y-auto bg-canvas rounded-b-container">
+    <div className="h-full overflow-y-auto">
+      <div className="max-w-6xl mx-auto p-4">
+        <h2 className="text-title text-ink mb-3">{t('Token Usage Analytics')}</h2>
+        <div>
           {/* セッション全体の統計 */}
           <div className="mb-3 p-2.5 bg-raised rounded-container border border-transparent border-subtle shadow-sm">
             <h3 className="text-heading font-semibold mb-2 text-ink">{t('Session Summary')}</h3>
@@ -988,28 +978,8 @@ export const TokenAnalyticsModal: React.FC<TokenAnalyticsModalProps> = ({
               )}
             </p>
           </div>
-        </Modal.Body>
+        </div>
       </div>
-    </Modal>
+    </div>
   )
-}
-
-// モーダル表示のカスタムフック
-export const useTokenAnalyticsModal = () => {
-  const [show, setShow] = useState(false)
-
-  const handleOpen = useCallback(() => {
-    setShow(true)
-  }, [])
-
-  const handleClose = useCallback(() => {
-    setShow(false)
-  }, [])
-
-  return {
-    show,
-    handleOpen,
-    handleClose,
-    TokenAnalyticsModal
-  }
 }

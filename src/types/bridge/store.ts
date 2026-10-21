@@ -123,6 +123,9 @@ export type StoreScheme = {
   /** 通知機能の有効/無効設定 */
   notification?: boolean
 
+  /** Check for, and download, app updates automatically. Unset means on. */
+  autoUpdate?: boolean
+
   /** サイドバーで非表示にするナビゲーション項目のhref一覧 */
   sidebarHiddenItems?: string[]
 

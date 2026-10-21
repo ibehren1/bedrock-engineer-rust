@@ -4,6 +4,7 @@ import {
   LanguageSection,
   NotificationSection,
   SidebarSection,
+  UpdatesSection,
   UserAvatarSection
 } from '../sections'
 
@@ -14,5 +15,6 @@ export const GeneralTab: React.FC = () => (
     <UserAvatarSection />
     <SidebarSection />
     <NotificationSection />
+    <UpdatesSection />
   </div>
 )

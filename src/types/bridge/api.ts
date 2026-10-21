@@ -187,6 +187,28 @@ export type API = {
       close: (terminalId: string) => Promise<any>
     }
   }
+  /** In-app updates from the GitHub releases (main window only). */
+  appUpdate: {
+    /** The running version. */
+    currentVersion: () => Promise<string>
+    /** Whether a newer release exists; downloads nothing. */
+    check: () => Promise<AppUpdateCheck>
+    /** Download (and verify) the update from the last check; resolves to its version. */
+    download: () => Promise<string>
+    /** Restart into the downloaded version. */
+    restart: () => Promise<void>
+  }
+  /** Interactive shells on the user's own machine (the chat page's Terminal tab). */
+  localTerminal: {
+    open: (sessionId: string, cols: number, rows: number) => Promise<LocalTerminalOpened>
+    /** Can be called again on the same shell; `exited` covers an exit before subscribing. */
+    attach: (terminalId: string) => Promise<LocalTerminalBacklog>
+    input: (terminalId: string, data: string) => Promise<void>
+    resize: (terminalId: string, cols: number, rows: number) => Promise<void>
+    close: (terminalId: string) => Promise<void>
+    list: (sessionId: string) => Promise<LocalTerminalInfo[]>
+    backlog: (terminalId: string) => Promise<LocalTerminalBacklog>
+  }
   chatAttachments: {
     list: (sessionId: string) => Promise<any>
     withFiles: (sessionIds: string[]) => Promise<any>
@@ -275,4 +297,40 @@ export type API = {
       params: IPCChannelDefinitions['sub-agent:invoke']['params']
     ) => Promise<IPCChannelDefinitions['sub-agent:invoke']['result']>
   }
+}
+
+export type LocalTerminalOpened = {
+  terminalId: string
+  /** Pub/sub channel carrying the shell's output (`local-terminal:<id>`). */
+  channel: string
+  cols: number
+  rows: number
+  /** Display name of the shell, e.g. "zsh". */
+  shell: string
+  /** Absolute folder the shell started in. */
+  cwd: string
+}
+
+export type LocalTerminalInfo = {
+  terminalId: string
+  channel: string
+  shell: string
+  cwd: string
+  exited: boolean
+  exitCode: number | null
+  createdAt: number
+}
+
+export type LocalTerminalBacklog = {
+  backlog: Uint8Array
+  exited: boolean
+  exitCode: number | null
+}
+
+export type AppUpdateCheck = {
+  currentVersion: string
+  available: boolean
+  version: string | null
+  /** The release notes (the newest CHANGELOG section). */
+  notes: string | null
 }

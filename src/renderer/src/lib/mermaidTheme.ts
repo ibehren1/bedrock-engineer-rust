@@ -195,6 +195,10 @@ export const initMermaid = (): void => {
     // the SVG is injected into the app's own document, so 'loose' would let a diagram run code.
     securityLevel: 'antiscript',
     htmlLabels: true,
+    // Tighter than mermaid's defaults (50 / 50 / 15) so diagrams take less room in the chat
+    // column; together with re-orienting lopsided flowcharts (mermaidLayout) this keeps most
+    // of them readable without scrolling.
+    flowchart: { nodeSpacing: 30, rankSpacing: 35, padding: 8 },
     theme: 'base',
     themeVariables: buildThemeVariables()
   })

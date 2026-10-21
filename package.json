@@ -1,7 +1,7 @@
 {
   "name": "bedrock-engineer",
   "productName": "Bedrock Engineer",
-  "version": "2026.1020.1",
+  "version": "2026.1021.8",
   "browserslist": [
     "chrome >= 105",
     "safari >= 15"
@@ -15,7 +15,7 @@
     "format": "prettier --write .",
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts",
     "lint:fix": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
-    "test": "jest --config jest.config.js",
+    "test": "jest --config jest.config.js && node --test scripts/release/",
     "test:watch": "jest --watchAll  --config jest.config.js",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
@@ -58,6 +58,7 @@
     "@tauri-apps/api": "2.12.4",
     "@tshepomgaga/aws-sfn-graph": "0.0.6",
     "@xterm/addon-fit": "^0.10.0",
+    "@xterm/addon-webgl": "^0.18.0",
     "@xterm/xterm": "^5.5.0",
     "buffer": "^6.0.3",
     "chart.js": "^4.5.1",
