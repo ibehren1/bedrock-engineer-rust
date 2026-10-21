@@ -1,7 +1,7 @@
 {
   "name": "bedrock-engineer",
   "productName": "Bedrock Engineer",
-  "version": "2026.1021.8",
+  "version": "2026.1021.9",
   "browserslist": [
     "chrome >= 105",
     "safari >= 15"
@@ -15,7 +15,7 @@
     "format": "prettier --write .",
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts",
     "lint:fix": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
-    "test": "jest --config jest.config.js && node --test scripts/release/",
+    "test": "jest --config jest.config.js && node --test \"scripts/release/*.test.mjs\"",
     "test:watch": "jest --watchAll  --config jest.config.js",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",

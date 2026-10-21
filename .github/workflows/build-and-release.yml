@@ -324,7 +324,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Keep binaries only on the release we just published. Older releases keep
-      # their tag and notes but shed their (large) downloadable assets.
+      # their tag and notes but shed their (large) downloadable assets. Only once the new
+      # release really has installers: after a failed build it is notes-only, and pruning then
+      # would leave nothing to download anywhere.
       - name: Prune assets from older releases
         if: steps.check-tag.outputs.skip != 'true'
         env:
@@ -332,6 +334,12 @@ jobs:
           CURRENT_TAG: v${{ env.VERSION }}
         run: |
           set -euo pipefail
+
+          if ! find ./artifacts -type f \( -name '*.dmg' -o -name '*.exe' -o -name '*.AppImage' \
+               -o -name '*.deb' \) 2>/dev/null | grep -q .; then
+            echo "This release has no installers; keeping older releases' assets."
+            exit 0
+          fi
 
           # All release tags except the one we just published.
           tags=$(gh release list --limit 1000 --json tagName --jq '.[].tagName' \
