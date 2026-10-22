@@ -3,7 +3,7 @@ export const memoryItems = {
     memoryItems: {
       title: 'Memory',
       description:
-        'Items saved here are added to every chat\'s context when "Use Memory Items" is checked.',
+        "Items saved here are added to every chat's system prompt while the brain button above the message box is on.",
       hint: 'In a chat, say "remember…", "add a rule…" or "forget…" and the assistant updates this list.',
       addPlaceholder: 'Add a memory or rule…',
       add: 'Add',
@@ -15,6 +15,11 @@ export const memoryItems = {
       kindOption: {
         rule: 'Rule',
         memory: 'Memory'
+      },
+      kindDescription: {
+        rule: 'An instruction the assistant always follows, unless you tell it otherwise in that chat. For example: "Use pnpm instead of npm".',
+        memory:
+          'A fact the assistant keeps in mind and uses when it is relevant. It is background, not an instruction. For example: "The main repo is at ~/work/app".'
       },
       toggleKind: 'Click to switch between rule and memory',
       source: {
@@ -54,7 +59,7 @@ export const memoryItems = {
     memoryItems: {
       title: 'メモリ',
       description:
-        '「メモリ項目を使用」がオンのとき、ここに保存した項目がすべてのチャットのコンテキストに追加されます。',
+        'メッセージ入力欄の上にある脳のボタンがオンのとき、ここに保存した項目がすべてのチャットのシステムプロンプトに追加されます。',
       hint: 'チャットで「覚えておいて」「ルールを追加して」「忘れて」と伝えると、アシスタントがこの一覧を更新します。',
       addPlaceholder: 'メモリまたはルールを追加…',
       add: '追加',
@@ -66,6 +71,11 @@ export const memoryItems = {
       kindOption: {
         rule: 'ルール',
         memory: 'メモリ'
+      },
+      kindDescription: {
+        rule: 'アシスタントが常に従う指示です。そのチャットで別の指示をした場合を除きます。例:「npm ではなく pnpm を使う」',
+        memory:
+          'アシスタントが念頭に置き、関係があるときに使う事実です。指示ではなく背景情報として扱われます。例:「メインのリポジトリは ~/work/app にある」'
       },
       toggleKind: 'クリックでルールとメモリを切り替え',
       source: {

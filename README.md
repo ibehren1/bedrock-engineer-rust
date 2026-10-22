@@ -297,8 +297,13 @@ Rules and facts you want every chat to know live in one shared memory list.
 - Say "add a rule: always use TypeScript", "remember that prod is eu-west-1" or "forget the pnpm
   rule" and the agent saves, changes or removes the item with its memory tools. The reply shows a
   note with **View** (opens the Memory page) and **Undo**.
-- The **Memory** page in the sidebar lists every item. You can add items, edit their text, mark each
-  one as a **rule** or a **memory**, switch single items off without deleting them, and delete them.
+- Each item is a **rule** or a **memory**. A rule is an instruction the agent always follows unless
+  you tell it otherwise in that chat ("use pnpm instead of npm"). A memory is a fact it keeps in mind
+  and uses when relevant, as background rather than an instruction ("the main repo is at
+  ~/work/app"). The two go into the system prompt as separate sections, worded that way.
+- The **Memory** page in the sidebar explains the two kinds and lists every item. You can add items,
+  edit their text, switch an item between rule and memory, switch single items off without deleting
+  them, and delete them.
 - The **brain button** next to the attach and export buttons above the message box adds every
   switched-on item to the system prompt, which you can see on the System prompt tab. It is
   highlighted (with a count of the items) while on, starts on for each new chat, and turning it off

@@ -90,8 +90,8 @@ const ADD_SPEC_DESCRIPTION: &str = r#"Save an item to the user's global memory l
 
 Use this when the user asks you to remember something, to add a rule, or sets a standing preference ("always ...", "never ...", "from now on ...", "remember that ...").
 
-- kind "rule": an instruction on how you should behave (e.g. "Answer in Japanese", "Use pnpm instead of npm").
-- kind "memory": a fact to keep in mind (e.g. "The user's name is Ada", "The main repo is at ~/work/app").
+- kind "rule": an instruction you must always follow unless the user overrides it in a chat (e.g. "Answer in Japanese", "Use pnpm instead of npm").
+- kind "memory": a fact to keep in mind and use when relevant, not an instruction (e.g. "The user's name is Ada", "The main repo is at ~/work/app").
 
 Write the content as one short, self-contained statement. Do not add an item that duplicates or overlaps an existing one; use updateMemory to change an existing item instead. Do not save things the user did not ask to keep, or one-off details of the current task."#;
 

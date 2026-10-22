@@ -7,6 +7,14 @@ dated section here for anything user-visible.
 See the [README](./README.md#whats-different-in-this-fork) for a feature-by-feature
 overview of the fork with screenshots.
 
+### 2026-10-22
+
+- **Rules and memories now mean different things.** Rules are instructions the assistant always
+  follows unless you tell it otherwise in that chat. Memories are facts it keeps in mind and uses
+  when they are relevant, without treating them as instructions. Before, both were given to the
+  model with the same "follow these" wording, so the choice of kind made little difference. The
+  Memory page now explains the two kinds, with an example of each.
+
 ### 2026-10-21
 
 - **The Files source view is readable in every appearance.** Syntax-highlighted source (code

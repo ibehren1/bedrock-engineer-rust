@@ -1,4 +1,10 @@
-import { buildMemoryPrompt, withMemoryPrompt } from './memoryPrompt'
+import {
+  buildMemoryPrompt,
+  MEMORY_FACTS_INTRO,
+  MEMORY_PROMPT_HEADER,
+  MEMORY_RULES_INTRO,
+  withMemoryPrompt
+} from './memoryPrompt'
 import type { MemoryItem } from '../../types/bridge/memory'
 
 const item = (over: Partial<MemoryItem>): MemoryItem => ({
@@ -11,9 +17,6 @@ const item = (over: Partial<MemoryItem>): MemoryItem => ({
   updatedAt: 1,
   ...over
 })
-
-const HEADER =
-  'The user asked you to remember the following. Follow these unless the user overrides them in this chat. Use updateMemory/removeMemory with the id to change or forget an item.'
 
 describe('buildMemoryPrompt', () => {
   it('returns an empty string when nothing is enabled', () => {
@@ -32,12 +35,14 @@ describe('buildMemoryPrompt', () => {
     expect(prompt).toBe(
       [
         '<memory>',
-        HEADER,
+        MEMORY_PROMPT_HEADER,
         '<rules>',
+        MEMORY_RULES_INTRO,
         '- [a] Use TypeScript',
         '- [c] Prefer pnpm',
         '</rules>',
         '<facts>',
+        MEMORY_FACTS_INTRO,
         '- [b] Prod region is eu-west-1',
         '</facts>',
         '</memory>'
@@ -49,6 +54,7 @@ describe('buildMemoryPrompt', () => {
     const prompt = buildMemoryPrompt([item({ id: 'a', kind: 'rule', content: 'Rule' })])
     expect(prompt).toContain('<rules>')
     expect(prompt).not.toContain('<facts>')
+    expect(prompt).not.toContain(MEMORY_FACTS_INTRO)
   })
 
   it('indents continuation lines of multi-line items', () => {

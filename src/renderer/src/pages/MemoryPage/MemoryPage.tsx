@@ -10,8 +10,9 @@ import { MemoryItemRow } from './components/MemoryItemRow'
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
 /**
- * Memory: the global list of rules and facts. Chats with "Use Memory Items" checked get the
- * enabled ones in their system prompt; the model edits the list with its memory tools.
+ * Memory: the global list of rules and facts. Chats with the memory toggle on get the enabled
+ * ones in their system prompt (rules as binding instructions, facts as background); the model
+ * edits the list with its memory tools.
  */
 export const MemoryPage: React.FC = () => {
   const { t } = useTranslation()
@@ -72,6 +73,16 @@ export const MemoryPage: React.FC = () => {
           {t('memoryItems.description')}{' '}
           <span className="text-ink-muted">{t('memoryItems.hint')}</span>
         </p>
+        <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 items-baseline text-sm">
+          {(['rule', 'memory'] as const).map((k) => (
+            <React.Fragment key={k}>
+              <dt className="text-micro rounded-control px-1.5 py-0.5 bg-surface-2 text-ink-muted border border-subtle justify-self-start">
+                {t(`memoryItems.kind.${k}`)}
+              </dt>
+              <dd className="text-ink-muted">{t(`memoryItems.kindDescription.${k}`)}</dd>
+            </React.Fragment>
+          ))}
+        </dl>
       </header>
 
       <form
