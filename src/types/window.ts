@@ -24,6 +24,8 @@ declare global {
        * store writes are flushed before an allowed close. Resolves to the unlisten function.
        */
       onCloseRequested: (shouldClose: () => boolean | Promise<boolean>) => Promise<() => void>
+      /** The app menu's Settings… item (main window only). Returns the unlisten function. */
+      onOpenSettings: (callback: () => void) => () => void
     }
     ipc: IpcClient
     logger: {

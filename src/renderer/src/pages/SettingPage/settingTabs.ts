@@ -1,8 +1,8 @@
 import { IconType } from 'react-icons'
 import { FaAws } from 'react-icons/fa'
-import { FiCpu, FiFolder, FiMessageSquare, FiSliders } from 'react-icons/fi'
+import { FiCpu, FiDownloadCloud, FiFolder, FiMessageSquare, FiSliders } from 'react-icons/fi'
 
-export type SettingTabId = 'general' | 'aws' | 'models' | 'chat' | 'workspace'
+export type SettingTabId = 'general' | 'aws' | 'models' | 'chat' | 'workspace' | 'updates'
 
 export interface SettingTab {
   id: SettingTabId
@@ -21,7 +21,8 @@ export const SETTING_TABS: SettingTab[] = [
   { id: 'aws', labelKey: 'settingTabs.aws', icon: FaAws, iconClassName: 'w-6 h-5' },
   { id: 'models', labelKey: 'settingTabs.models', icon: FiCpu },
   { id: 'chat', labelKey: 'settingTabs.chat', icon: FiMessageSquare },
-  { id: 'workspace', labelKey: 'settingTabs.workspace', icon: FiFolder }
+  { id: 'workspace', labelKey: 'settingTabs.workspace', icon: FiFolder },
+  { id: 'updates', labelKey: 'settingTabs.updates', icon: FiDownloadCloud }
 ]
 
 export const DEFAULT_SETTING_TAB: SettingTabId = 'general'

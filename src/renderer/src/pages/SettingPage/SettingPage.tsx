@@ -2,7 +2,7 @@ import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { SettingsSidebar } from './components/SettingsSidebar'
-import { AwsTab, ChatTab, GeneralTab, ModelsTab, WorkspaceTab } from './components/tabs'
+import { AwsTab, ChatTab, GeneralTab, ModelsTab, UpdatesTab, WorkspaceTab } from './components/tabs'
 import { resolveSettingTab, SettingTabId } from './settingTabs'
 
 const TAB_PANELS: Record<SettingTabId, React.FC> = {
@@ -10,7 +10,8 @@ const TAB_PANELS: Record<SettingTabId, React.FC> = {
   aws: AwsTab,
   models: ModelsTab,
   chat: ChatTab,
-  workspace: WorkspaceTab
+  workspace: WorkspaceTab,
+  updates: UpdatesTab
 }
 
 export const SettingPage: React.FC = () => {

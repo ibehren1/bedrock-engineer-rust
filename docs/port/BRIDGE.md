@@ -35,7 +35,9 @@ the renderer needs to change.
 5. **Events.** Main → renderer pushes keep their Electron channel as the Tauri event name:
    `background-agent:task-notification`, `background-agent:task-execution-start`,
    `background-agent:task-skipped`, `context-menu-command`. New pushes without an Electron
-   ancestor: `memory-changed` (payload `MemoryItem[]`, the whole list). Pub/sub messages for
+   ancestor: `memory-changed` (payload `MemoryItem[]`, the whole list) and `open-settings` (no
+   payload; the macOS app menu's Settings… item, sent to the `main` window only, which
+   `appWindow.onOpenSettings` turns into a visit to the Settings page). Pub/sub messages for
    channel `c` are emitted as the event `pubsubEventName(c)` = `pubsub:` + `c` with every
    character outside `[A-Za-z0-9-/:_]` replaced by `_`; the payload is the published `data`.
 6. **Binary data** can't go through JSON as `Uint8Array`, so it is sent as `number[]`

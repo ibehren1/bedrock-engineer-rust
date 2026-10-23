@@ -15,12 +15,15 @@ use tauri::menu::{
     Menu, MenuBuilder, MenuEvent, MenuItem, MenuItemBuilder, Submenu, SubmenuBuilder,
     HELP_SUBMENU_ID, WINDOW_SUBMENU_ID,
 };
-use tauri::{AppHandle, Manager, Runtime, WebviewWindow, Window, WindowEvent};
+use tauri::{AppHandle, Emitter, Manager, Runtime, WebviewWindow, Window, WindowEvent};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 use tauri_plugin_opener::OpenerExt;
 
 /// Help > GitHub Repository.
 pub const REPOSITORY_URL: &str = "https://github.com/ibehren1/bedrock-engineer-rust";
+
+/// Pushed to the main window by Settings… (the renderer opens its Settings page).
+pub const OPEN_SETTINGS_EVENT: &str = "open-settings";
 
 /// Zoom In / Zoom Out step (Electron: `getZoomFactor() ± 0.1`).
 const ZOOM_STEP: f64 = 0.1;
@@ -37,6 +40,8 @@ const ZOOM_DEFAULT: f64 = 1.0;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MenuAction {
     About,
+    /// macOS app menu > Settings…: show the main window's Settings page.
+    OpenSettings,
     OpenRepository,
     Reload,
     ForceReload,
@@ -64,6 +69,7 @@ pub enum MenuAction {
 /// Every action and its menu id.
 const ACTIONS: &[(MenuAction, &str)] = &[
     (MenuAction::About, "app-menu:about"),
+    (MenuAction::OpenSettings, "app-menu:open-settings"),
     (MenuAction::OpenRepository, "app-menu:open-repository"),
     (MenuAction::Reload, "app-menu:reload"),
     (MenuAction::ForceReload, "app-menu:force-reload"),
@@ -119,6 +125,7 @@ impl MenuAction {
     /// supplied these implicitly.
     pub fn accelerator(self) -> Option<&'static str> {
         match self {
+            Self::OpenSettings => Some("Cmd+,"),
             Self::Reload => Some("CmdOrCtrl+R"),
             Self::ForceReload => Some("CmdOrCtrl+Shift+R"),
             Self::ToggleDevtools if cfg!(target_os = "macos") => Some("Alt+Cmd+I"),
@@ -213,6 +220,21 @@ fn show_about<R: Runtime>(app: &AppHandle<R>) {
         .kind(MessageDialogKind::Info)
         .buttons(MessageDialogButtons::Ok)
         .show(|_| {});
+}
+
+/// Bring the main window forward and have it show its Settings page.
+fn open_settings<R: Runtime>(app: &AppHandle<R>) {
+    let Some(main) = app.get_webview_window("main") else {
+        return;
+    };
+    if main.is_minimized().unwrap_or(false) {
+        let _ = main.unminimize();
+    }
+    let _ = main.show();
+    let _ = main.set_focus();
+    if let Err(e) = app.emit_to("main", OPEN_SETTINGS_EVENT, ()) {
+        tracing::warn!(error = %e, "Failed to open Settings");
+    }
 }
 
 fn item<R: Runtime>(
@@ -324,6 +346,8 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         &SubmenuBuilder::new(app, &name)
             .item(&item(app, MenuAction::About, &about_label)?)
             .separator()
+            .item(&item(app, MenuAction::OpenSettings, "Settings…")?)
+            .separator()
             .services()
             .separator()
             .hide()
@@ -380,6 +404,7 @@ pub fn run_action<R: Runtime>(
 ) {
     match action {
         MenuAction::About => return show_about(app),
+        MenuAction::OpenSettings => return open_settings(app),
         MenuAction::OpenRepository => {
             if let Err(e) = app.opener().open_url(REPOSITORY_URL, None::<&str>) {
                 tracing::error!(url = REPOSITORY_URL, error = %e, "Failed to open external URL");
@@ -433,7 +458,7 @@ pub fn run_action<R: Runtime>(
         | MenuAction::PasteAndMatchStyle
         | MenuAction::Delete
         | MenuAction::SelectAll => edit_command(&window, action),
-        MenuAction::About | MenuAction::OpenRepository => Ok(()),
+        MenuAction::About | MenuAction::OpenSettings | MenuAction::OpenRepository => Ok(()),
     };
     if let Err(e) = result {
         tracing::warn!(?action, window = window.label(), error = %e, "Menu action failed");
@@ -622,6 +647,7 @@ mod tests {
         assert_eq!(MenuAction::ZoomOut.accelerator(), Some("CmdOrCtrl+-"));
         assert_eq!(MenuAction::ResetZoom.accelerator(), Some("CmdOrCtrl+0"));
         assert_eq!(MenuAction::Reload.accelerator(), Some("CmdOrCtrl+R"));
+        assert_eq!(MenuAction::OpenSettings.accelerator(), Some("Cmd+,"));
         assert_eq!(MenuAction::Copy.accelerator(), None);
         assert_eq!(MenuAction::Undo.accelerator(), None);
     }

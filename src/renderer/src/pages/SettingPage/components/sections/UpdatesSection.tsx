@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { SettingSection } from '../SettingSection'
+import MD from '@renderer/components/Markdown/MD'
 import { useAppUpdate } from '@renderer/contexts/AppUpdateContext'
 
 export const UpdatesSection = () => {
@@ -24,6 +25,9 @@ export const UpdatesSection = () => {
   })()
 
   const busy = status.state === 'checking' || status.state === 'downloading'
+  // The new version's release notes, while it downloads or waits for a restart.
+  const pending =
+    (status.state === 'downloading' || status.state === 'ready') && status.notes ? status : null
 
   return (
     <SettingSection title={t('appUpdate.title')} description={t('appUpdate.description')}>
@@ -70,6 +74,16 @@ export const UpdatesSection = () => {
             </span>
           )}
         </div>
+        {pending && (
+          <article className="rounded-control border border-subtle bg-surface px-4 py-3">
+            <h3 className="m-0 mb-2 text-sm font-semibold text-ink">
+              {t('appUpdate.pendingNotesTitle', { version: pending.version })}
+            </h3>
+            <div className="text-sm text-ink">
+              <MD>{pending.notes}</MD>
+            </div>
+          </article>
+        )}
       </div>
     </SettingSection>
   )

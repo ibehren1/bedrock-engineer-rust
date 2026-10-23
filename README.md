@@ -75,10 +75,11 @@ Installers for every build are attached to this fork's releases:
 ### Updates
 
 After the first install, the app keeps itself up to date. It checks the GitHub releases at launch
-and every few hours, downloads a new version in the background, and offers **Restart now** /
+and every hour, downloads a new version in the background, and offers **Restart now** /
 **Later**; Later installs it the next time you quit. Each download is checked against the app's
-update signing key before it is installed. **Settings → General → Updates** shows the version you
-are running, turns automatic checks off and on, and checks on demand.
+update signing key before it is installed. **Settings → Updates** shows the version you are
+running, turns automatic checks off and on, checks on demand, and lists the changes in the version
+you are running (and in a newly downloaded one, before you restart into it).
 
 On macOS, an update the app installs itself needs none of the Terminal steps above: it never
 carries the browser's download flag. Two things to know:

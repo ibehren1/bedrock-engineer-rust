@@ -14,6 +14,13 @@ overview of the fork with screenshots.
   when they are relevant, without treating them as instructions. Before, both were given to the
   model with the same "follow these" wording, so the choice of kind made little difference. The
   Memory page now explains the two kinds, with an example of each.
+- **Updates are checked every hour** instead of every few hours, so a new release reaches you
+  sooner.
+- **Updates have their own Settings tab.** The update controls moved from General to a new
+  **Updates** tab, which also lists what changed in the version you are running, with earlier
+  changes a click away. When a new version has been downloaded, its release notes appear there too.
+- **Settings… in the macOS app menu.** The Bedrock Engineer menu now has a **Settings…** item
+  (⌘,) that brings the app window forward and opens its Settings page.
 
 ### 2026-10-21
 

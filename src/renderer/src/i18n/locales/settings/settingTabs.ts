@@ -5,7 +5,8 @@ export const settingTabsLabels = {
       aws: 'AWS',
       models: 'Models',
       chat: 'Chat',
-      workspace: 'Workspace'
+      workspace: 'Workspace',
+      updates: 'Updates'
     }
   },
   ja: {
@@ -14,7 +15,8 @@ export const settingTabsLabels = {
       aws: 'AWS',
       models: 'モデル',
       chat: 'チャット',
-      workspace: 'ワークスペース'
+      workspace: 'ワークスペース',
+      updates: 'アップデート'
     }
   }
 }

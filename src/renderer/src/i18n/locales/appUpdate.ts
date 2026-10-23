@@ -14,7 +14,13 @@ export const appUpdate = {
       failed: 'Update failed: {{error}}',
       bannerReady: 'Bedrock Engineer {{version}} is ready.',
       restartNow: 'Restart now',
-      later: 'Later'
+      later: 'Later',
+      pendingNotesTitle: 'What’s new in {{version}}',
+      changelogTitle: 'Changes in version {{version}}',
+      changelogTitleNoVersion: 'Changes in this version',
+      changelogDescription: 'The latest changes included in the version you are running.',
+      showEarlier: 'Show earlier changes',
+      hideEarlier: 'Hide earlier changes'
     }
   },
   ja: {
@@ -32,7 +38,13 @@ export const appUpdate = {
       failed: 'アップデートに失敗しました: {{error}}',
       bannerReady: 'Bedrock Engineer {{version}} の準備ができました。',
       restartNow: '今すぐ再起動',
-      later: '後で'
+      later: '後で',
+      pendingNotesTitle: '{{version}} の新機能',
+      changelogTitle: 'バージョン {{version}} の変更点',
+      changelogTitleNoVersion: 'このバージョンの変更点',
+      changelogDescription: '実行中のバージョンに含まれる最新の変更点です。',
+      showEarlier: '以前の変更を表示',
+      hideEarlier: '以前の変更を隠す'
     }
   }
 }

@@ -1,8 +1,15 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { FiGithub, FiHelpCircle } from 'react-icons/fi'
 import { Flowbite, Tooltip } from 'flowbite-react'
 import { flowbiteTheme } from './flowbiteTheme'
-import { createHashRouter, Link, Outlet, RouterProvider, useLocation } from 'react-router-dom'
+import {
+  createHashRouter,
+  Link,
+  Outlet,
+  RouterProvider,
+  useLocation,
+  useNavigate
+} from 'react-router-dom'
 import CmdK from './command-palette'
 import { routes, subRoutes } from './routes'
 import { isRouteActive, isStandaloneWindowRoute } from './lib/routeMatching'
@@ -53,10 +60,14 @@ const ListItem: React.FC<{
 const Layout: React.FC = () => {
   const location = useLocation()
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const { sidebarHiddenItems } = useSetting()
   // Keep <html data-theme> in sync with the appearance setting (and OS changes
   // when 'system' is selected).
   useTheme()
+
+  // App menu > Settings… (Rust only sends it to the main window).
+  useEffect(() => window.appWindow.onOpenSettings(() => navigate('/setting')), [navigate])
 
   // タスク履歴ウィンドウ・ファイルビューアウィンドウかどうかを判定
   const isStandaloneWindow = isStandaloneWindowRoute(location.pathname)

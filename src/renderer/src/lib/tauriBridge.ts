@@ -1265,7 +1265,11 @@ export function installTauriBridge(): Promise<void> {
     // renderer uses `window.ipc` today, so leave wry's object alone and expose ours only when the
     // name is free.
     if (!('ipc' in w)) w.ipc = createIpc()
-    w.appWindow = { isFocused: isWindowFocused, onCloseRequested: onWindowCloseRequested }
+    w.appWindow = {
+      isFocused: isWindowFocused,
+      onCloseRequested: onWindowCloseRequested,
+      onOpenSettings: (callback: () => void) => on('open-settings', () => callback())
+    }
     // Only the main window answers cameraCapture frame requests (the task history window loads
     // the bridge too).
     if (getCurrentWindow().label === 'main') installCameraCaptureResponder()

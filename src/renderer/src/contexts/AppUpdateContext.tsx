@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import { getCurrentWindow } from '@tauri-apps/api/window'
 
 /**
- * In-app updates (see `commands/app_update.rs`): check at launch and every few hours, download
+ * In-app updates (see `commands/app_update.rs`): check at launch and every hour, download
  * in the background, then offer a restart. Only the main window drives this; the commands are
  * granted to it alone, and other windows get a provider that never checks.
  */
@@ -11,8 +11,8 @@ export type AppUpdateStatus =
   | { state: 'idle' }
   | { state: 'checking' }
   | { state: 'upToDate' }
-  | { state: 'downloading'; version: string }
-  | { state: 'ready'; version: string }
+  | { state: 'downloading'; version: string; notes?: string }
+  | { state: 'ready'; version: string; notes?: string }
   | { state: 'error'; message: string }
 
 type AppUpdateContextValue = {
@@ -30,7 +30,7 @@ type AppUpdateContextValue = {
 
 /** First check, once the app has settled after launch. */
 const FIRST_CHECK_MS = 10_000
-const CHECK_EVERY_MS = 6 * 60 * 60 * 1000
+const CHECK_EVERY_MS = 60 * 60 * 1000
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
@@ -63,9 +63,10 @@ export const AppUpdateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setStatus({ state: 'upToDate' })
         return
       }
-      setStatus({ state: 'downloading', version: result.version })
+      const notes = result.notes ?? undefined
+      setStatus({ state: 'downloading', version: result.version, notes })
       const version = await window.api.appUpdate.download()
-      setStatus({ state: 'ready', version })
+      setStatus({ state: 'ready', version, notes })
     } catch (e) {
       setStatus({ state: 'error', message: errorText(e) })
     } finally {
