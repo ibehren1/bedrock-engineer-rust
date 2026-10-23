@@ -13,10 +13,15 @@ type SourceViewProps = {
 
 // Each line carries its number as data, drawn by `.source-lines` (index.css) as a ::before.
 // Generated content is never part of a selection, so copying the source never picks up the
-// numbers, which `showLineNumbers` puts in the text itself.
+// numbers. `showLineNumbers` is still on because the library only passes real numbers to
+// `lineProps` with it (otherwise `false`); the inline number spans it adds are hidden, and the
+// `display: flex` it gives wrapped lines is overridden so long lines still wrap as text.
 // (The typings only allow HTMLProps, which has no data-* attributes; React passes them through.)
 const lineProps = (lineNumber: number) =>
-  ({ 'data-line': lineNumber }) as unknown as React.HTMLProps<HTMLElement>
+  ({
+    'data-line': lineNumber,
+    style: { display: 'inline' }
+  }) as unknown as React.HTMLProps<HTMLElement>
 
 /**
  * Syntax-highlighted source with line numbers, as shown by the code blocks' Source views and
@@ -35,6 +40,8 @@ export const SourceView: React.FC<SourceViewProps> = ({
       language={language}
       style={tomorrow}
       wrapLines
+      showLineNumbers
+      lineNumberStyle={{ display: 'none' }}
       wrapLongLines={wrapLongLines}
       lineProps={lineProps}
       className="!m-0 !bg-transparent"

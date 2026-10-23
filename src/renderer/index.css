@@ -353,9 +353,12 @@
 }
 
 /* Line numbers for SourceView, drawn from each line's data-line. Generated content is never
-   selected, so copied source comes without them. */
+   selected, so copied source comes without them; user-select keeps the selection highlight off
+   them too. */
 .source-lines [data-line]::before {
   content: attr(data-line);
+  -webkit-user-select: none;
+  user-select: none;
   display: inline-block;
   min-width: 2.25em;
   padding-right: 1em;
