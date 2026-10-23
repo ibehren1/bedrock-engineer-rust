@@ -7,6 +7,16 @@ dated section here for anything user-visible.
 See the [README](./README.md#whats-different-in-this-fork) for a feature-by-feature
 overview of the fork with screenshots.
 
+### 2026-10-23
+
+- **The Files panel's file list can be resized.** Drag the divider between the file list and the
+  preview to widen it and read long file names, or narrow it to give the preview more room. The
+  arrow keys move the divider when it has focus, a double-click puts it back to the default width,
+  and the width you choose is remembered.
+- **Select all in a file preview.** After clicking in a previewed file in the Files panel (or its
+  pop-out window), ⌘A (Ctrl+A on Windows and Linux) selects just that file's content, ready to
+  copy. Before, it selected everything in the window.
+
 ### 2026-10-22
 
 - **Rules and memories now mean different things.** Rules are instructions the assistant always

@@ -50,6 +50,23 @@ const errorMessage = (e: unknown): string => (e instanceof Error ? e.message : S
 const toolbarButton =
   'inline-flex items-center gap-1 px-2 py-0.5 rounded-control text-xs text-ink-muted border border-transparent hover:bg-raised hover:text-ink whitespace-nowrap'
 
+/**
+ * Cmd/Ctrl-A while the preview has focus selects the file's content only, not the whole window.
+ * Text fields keep their own select-all.
+ */
+const selectAllInPreview = (e: React.KeyboardEvent<HTMLDivElement>) => {
+  if (e.key.toLowerCase() !== 'a' || !(e.metaKey || e.ctrlKey) || e.shiftKey || e.altKey) return
+  const target = e.target as HTMLElement
+  if (target.closest('input, textarea, [contenteditable=""], [contenteditable="true"]')) return
+  e.preventDefault()
+  const selection = window.getSelection()
+  if (!selection) return
+  const range = document.createRange()
+  range.selectNodeContents(e.currentTarget)
+  selection.removeAllRanges()
+  selection.addRange(range)
+}
+
 export const FilePreview: React.FC<FilePreviewProps> = ({
   root,
   path,
@@ -370,7 +387,11 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
         </div>
       )}
 
-      <div className={`flex-1 min-h-0 ${kind === 'pdf' || editing ? '' : 'overflow-auto'}`}>
+      <div
+        tabIndex={-1}
+        onKeyDown={selectAllInPreview}
+        className={`flex-1 min-h-0 outline-none ${kind === 'pdf' || editing ? '' : 'overflow-auto'}`}
+      >
         <Suspense
           fallback={<div className="p-4 text-sm text-ink-faint">{t('filesPanel.loading')}</div>}
         >

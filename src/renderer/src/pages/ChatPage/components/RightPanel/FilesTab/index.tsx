@@ -42,6 +42,67 @@ type Scope = 'project' | 'chat'
 
 const errorMessage = (e: unknown): string => (e instanceof Error ? e.message : String(e))
 
+const TREE_WIDTH_KEY = 'filesPanel.treeWidth'
+const TREE_WIDTH_DEFAULT = 224
+const TREE_WIDTH_MIN = 140
+/** Room the preview keeps when the tree is widened. */
+const PREVIEW_MIN = 200
+
+const clampTreeWidth = (width: number, containerWidth?: number): number => {
+  const max = containerWidth ? Math.max(TREE_WIDTH_MIN, containerWidth - PREVIEW_MIN) : Infinity
+  return Math.round(Math.min(Math.max(width, TREE_WIDTH_MIN), max))
+}
+
+const storedTreeWidth = (): number => {
+  const n = Number(localStorage.getItem(TREE_WIDTH_KEY))
+  return Number.isFinite(n) && n > 0 ? clampTreeWidth(n) : TREE_WIDTH_DEFAULT
+}
+
+/** Width of the file list, changed by dragging the divider (or arrow keys on it) and remembered. */
+function useTreeWidth() {
+  const [width, setWidth] = useState(storedTreeWidth)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const apply = useCallback((next: number) => {
+    const w = clampTreeWidth(next, containerRef.current?.clientWidth)
+    setWidth(w)
+    localStorage.setItem(TREE_WIDTH_KEY, String(w))
+  }, [])
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return
+    e.preventDefault()
+    const startX = e.clientX
+    const startWidth = width
+    const handle = e.currentTarget
+    handle.setPointerCapture(e.pointerId)
+    const prevCursor = document.body.style.cursor
+    document.body.style.cursor = 'col-resize'
+    const move = (ev: PointerEvent) => apply(startWidth + ev.clientX - startX)
+    const up = () => {
+      document.body.style.cursor = prevCursor
+      handle.removeEventListener('pointermove', move)
+      handle.removeEventListener('pointerup', up)
+      handle.removeEventListener('pointercancel', up)
+    }
+    handle.addEventListener('pointermove', move)
+    handle.addEventListener('pointerup', up)
+    handle.addEventListener('pointercancel', up)
+  }
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const step = e.shiftKey ? 64 : 16
+    if (e.key === 'ArrowLeft') apply(width - step)
+    else if (e.key === 'ArrowRight') apply(width + step)
+    else return
+    e.preventDefault()
+  }
+
+  const reset = () => apply(TREE_WIDTH_DEFAULT)
+
+  return { width, containerRef, onPointerDown, onKeyDown, reset }
+}
+
 /** "Show in Finder" / "Show in Explorer" / "Show in folder", by OS. */
 export function useRevealLabel(): string {
   const { t } = useTranslation()
@@ -61,6 +122,7 @@ export const FilesTab: React.FC<FilesTabProps> = ({
 }) => {
   const { t } = useTranslation()
   const revealLabel = useRevealLabel()
+  const treeWidth = useTreeWidth()
   const [root, setRoot] = useState(projectPath)
   const [dirs, setDirs] = useState<LoadedDirs>(new Map())
   const [dirErrors, setDirErrors] = useState<Map<string, string>>(new Map())
@@ -484,8 +546,8 @@ export const FilesTab: React.FC<FilesTabProps> = ({
         </button>
       </div>
 
-      <div className="flex-1 flex min-h-0">
-        <div className="w-56 shrink-0 border-r border-subtle flex flex-col min-h-0">
+      <div ref={treeWidth.containerRef} className="flex-1 flex min-h-0">
+        <div className="shrink-0 flex flex-col min-h-0 min-w-0" style={{ width: treeWidth.width }}>
           <div className="flex gap-1 px-1.5 pt-1.5">
             {scopeButton('project', t('filesPanel.scopeProject'))}
             {scopeButton('chat', t('filesPanel.scopeChat'))}
@@ -499,6 +561,23 @@ export const FilesTab: React.FC<FilesTabProps> = ({
           <div className="flex-1 min-h-0 overflow-auto px-1 pb-2">
             {scope === 'project' ? renderProject() : renderChat()}
           </div>
+        </div>
+
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-valuenow={treeWidth.width}
+          aria-label={t('filesPanel.resizeTree')}
+          title={t('filesPanel.resizeTree')}
+          tabIndex={0}
+          onPointerDown={treeWidth.onPointerDown}
+          onKeyDown={treeWidth.onKeyDown}
+          onDoubleClick={treeWidth.reset}
+          className="group relative w-px shrink-0 bg-[var(--border)] cursor-col-resize focus:outline-none"
+        >
+          {/* Wider invisible grab area; the line highlights on hover / focus. */}
+          <div className="absolute inset-y-0 -left-1 -right-1 z-10" />
+          <div className="absolute inset-y-0 -left-px -right-px group-hover:bg-accent group-focus-visible:bg-accent" />
         </div>
 
         <div className="flex-1 min-w-0 flex flex-col">
