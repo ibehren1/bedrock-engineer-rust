@@ -1196,9 +1196,13 @@ The Docker sandbox removes the trade-off. It gives the chat its own Linux comput
 
 ### 10.2 How it works
 
-Turn on the **Docker Sandbox** tool for an agent. Then, the first time that agent runs a command in a
-chat, the app creates a container for that chat based on `ubuntu:26.04`, and from then on commands
-go there by default.
+Turn on the **Docker Sandbox** tool for an agent. Then, the first time that agent runs a command in
+a chat, the app creates a container for that chat on the operating system chosen in **Settings →
+Sandbox**, and from then on commands go there by default. The choices are Debian 13 (the default),
+Ubuntu 26.04, Amazon Linux 2023 and 2027, AlmaLinux 9, Rocky Linux 9 and Red Hat UBI 9 (real RHEL,
+limited to Red Hat's freely available packages). Changing it affects new sandboxes; a chat that
+already has one keeps its OS until you remove the sandbox. The agent can also ask for a different OS
+when it creates a sandbox.
 
 ```mermaid
 flowchart LR
@@ -1207,10 +1211,10 @@ flowchart LR
     D["docker-sandboxes/&lt;chat&gt;/"]
     H["Everything else on<br/>your machine"]
   end
-  subgraph C["The chat's container (ubuntu:26.04)"]
+  subgraph C["The chat's container (Debian 13 by default)"]
     WS["/workspace<br/>(your project, read+write)"]
     DATA["/data<br/>(saved on your machine)"]
-    PKG["Anything the agent<br/>installs — apt, pip, npm"]
+    PKG["Anything the agent<br/>installs — apt/dnf, pip, npm"]
   end
   P <--> WS
   D <--> DATA

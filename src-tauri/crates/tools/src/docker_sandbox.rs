@@ -12,25 +12,25 @@ use crate::error::{Result, ToolError};
 use crate::types::{ToolCategory, ToolOutput, ToolSpec};
 use crate::util::js::truthy;
 use async_trait::async_trait;
-use docker::{CreateSandboxOptions, SandboxManager, SandboxRemoveOptions};
+use docker::{CreateSandboxOptions, SandboxManager, SandboxRemoveOptions, SANDBOX_OS_CATALOG};
 use serde_json::{json, Map, Value};
 use std::sync::Arc;
 
 const NAME: &str = "dockerSandbox";
-const DESCRIPTION: &str = "Manage this chat's isolated Docker sandbox — a long-lived container built on ubuntu:26.04 where you can install anything without touching the user's machine.
+const DESCRIPTION: &str = "Manage this chat's isolated Docker sandbox — a long-lived container on the operating system the user chose in settings (Debian 13 unless they changed it) where you can install anything without touching the user's machine.
 
 The sandbox is created automatically the first time you run executeCommand, so you usually do not need the \"create\" operation. Use \"create\" only to define a multi-service stack, publish ports, or rebuild from scratch.
 
 Key facts:
 - The user's project directory ({{projectPath}}) is mounted read-write at /workspace, so files move freely in and out.
-- The image is bare Ubuntu: run \"apt-get update\" before installing anything. DEBIAN_FRONTEND=noninteractive is already set.
-- The container has network access, so apt/pip/npm work.
+- The image is a bare OS. Check /etc/os-release if you need to know which: Ubuntu and Debian use apt-get (run \"apt-get update\" first; DEBIAN_FRONTEND=noninteractive is already set), Amazon Linux, AlmaLinux, Rocky Linux and Red Hat UBI use dnf. UBI only has Red Hat's freely available package subset.
+- The container has network access, so package managers, pip and npm work.
 - Nothing is preinstalled — not even curl or git.
 - Data written to /data persists on the host under the sandbox folder.
 - To make a port reachable from the user's browser, declare it with \"create\" before starting the server.
 
 Operations:
-- create: create or rebuild the sandbox. Optionally pass \"services\" (structured) or \"composeYaml\" (raw compose). Named volumes are converted to mapped folders; host mounts outside the project directory, \"privileged\", \"cap_add\", and host networking are rejected.
+- create: create or rebuild the sandbox. Optionally pass \"os\" to use a different OS than the user's setting, and \"services\" (structured) or \"composeYaml\" (raw compose). Named volumes are converted to mapped folders; host mounts outside the project directory, \"privileged\", \"cap_add\", and host networking are rejected.
 - status: report whether the sandbox exists, whether it is running, and its services and published ports.
 - start / stop: bring the sandbox up or halt it without discarding installed packages.
 - remove: tear the sandbox down. Pass deleteData: true to also delete its data folder.
@@ -159,6 +159,7 @@ impl DockerSandboxTool {
                         .map(str::to_string),
                     env: input.get("env").and_then(Value::as_object).cloned(),
                     recreate: input.get("recreate").and_then(Value::as_bool),
+                    os: input.get("os").and_then(Value::as_str).map(str::to_string),
                 };
                 let created = self.ops.create(session_id, options).await?;
                 let metadata = &created["metadata"];
@@ -182,10 +183,18 @@ impl DockerSandboxTool {
                     "warnings".into(),
                     created.get("warnings").cloned().unwrap_or(Value::Null),
                 );
-                out.insert(
-                    "note".into(),
-                    json!("The image is bare Ubuntu. Run \"apt-get update\" before installing packages."),
-                );
+                // The OS is recognized from the first service's image; a custom image gets a
+                // generic hint.
+                let os = metadata
+                    .pointer("/services/0/image")
+                    .and_then(Value::as_str)
+                    .and_then(|image| SANDBOX_OS_CATALOG.iter().find(|os| os.image == image));
+                out.insert("os".into(), json!(os.map(|os| os.id)));
+                let note = match os {
+                    Some(os) => format!("The image is bare {}. {}", os.label, os.family.package_hint()),
+                    None => "The image is not one of the built-in OS images. Check /etc/os-release before installing packages.".to_string(),
+                };
+                out.insert("note".into(), json!(note));
                 Ok(Value::Object(out))
             }
             "status" => self.ops.status(session_id).await,
@@ -238,9 +247,21 @@ impl Tool for DockerSandboxTool {
                         "enum": OPERATIONS,
                         "description": "The sandbox operation to perform"
                     },
+                    "os": {
+                        "type": "string",
+                        "enum": SANDBOX_OS_CATALOG.iter().map(|os| os.id).collect::<Vec<_>>(),
+                        "description": format!(
+                            "Operating system for services that name no image, used with create. Omit to use the user's setting. {}.",
+                            SANDBOX_OS_CATALOG
+                                .iter()
+                                .map(|os| format!("{} = {}", os.id, os.label))
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        )
+                    },
                     "services": {
                         "type": "array",
-                        "description": "Structured service definitions, used with create. Omit for a single bare ubuntu:26.04 service.",
+                        "description": "Structured service definitions, used with create. Omit for a single bare service on the chosen OS.",
                         "items": {
                             "type": "object",
                             "properties": {
@@ -250,7 +271,7 @@ impl Tool for DockerSandboxTool {
                                 },
                                 "image": {
                                     "type": "string",
-                                    "description": "Container image. Defaults to ubuntu:26.04."
+                                    "description": "Container image. Defaults to the chosen OS's image."
                                 },
                                 "command": {
                                     "type": "string",
@@ -344,6 +365,9 @@ impl Tool for DockerSandboxTool {
             if input.get("services").is_some_and(|v| !v.is_array()) {
                 errors.push("services must be an array".to_string());
             }
+            if input.get("os").is_some_and(|v| !v.is_string()) {
+                errors.push("os must be a string".to_string());
+            }
             if truthy(input.get("composeYaml")) && truthy(input.get("services")) {
                 errors.push("Pass either services or composeYaml, not both".to_string());
             }
@@ -422,11 +446,19 @@ mod tests {
     #[async_trait]
     impl SandboxOps for FakeOps {
         async fn create(&self, s: &str, o: CreateSandboxOptions) -> OpResult<Value> {
+            // Like the manager: the requested OS's image, else the default.
+            let image =
+                o.os.as_deref()
+                    .map(|id| match docker::find_sandbox_os(id) {
+                        Some(os) => os.image.to_string(),
+                        None => id.to_string(),
+                    })
+                    .unwrap_or_else(|| docker::DEFAULT_SANDBOX_IMAGE.to_string());
             self.record("create", s, serde_json::to_value(o).unwrap())?;
             Ok(json!({
                 "metadata": {"sessionId": s, "projectName": "bedrock-sandbox-x", "directory": "/p/.sandbox/x",
                              "composeFile": "/p/.sandbox/x/compose.yaml", "projectPath": "/p",
-                             "services": [{"name": "main", "image": "ubuntu:26.04", "ports": []}],
+                             "services": [{"name": "main", "image": image, "ports": []}],
                              "composeless": false, "createdAt": "t", "updatedAt": "t"},
                 "warnings": ["w1"]
             }))
@@ -524,9 +556,9 @@ mod tests {
                 "result": {
                     "created": true, "projectName": "bedrock-sandbox-x", "directory": "/p/.sandbox/x",
                     "workspaceMount": "/workspace",
-                    "services": [{"name": "main", "image": "ubuntu:26.04", "ports": []}],
-                    "composeless": false, "warnings": ["w1"],
-                    "note": "The image is bare Ubuntu. Run \"apt-get update\" before installing packages."
+                    "services": [{"name": "main", "image": "debian:13-slim", "ports": []}],
+                    "composeless": false, "warnings": ["w1"], "os": "debian13",
+                    "note": "The image is bare Debian 13. Run \"apt-get update\" before installing packages with \"apt-get install -y\"."
                 }
             })
         );
@@ -555,6 +587,52 @@ mod tests {
         );
         assert_eq!(calls[1].1, "bg");
         assert_eq!(calls[2].2, json!({"service": "web", "tail": 50}));
+    }
+
+    #[test]
+    fn create_schema_lists_every_os() {
+        let t = DockerSandboxTool::new(Arc::new(FakeOps::default()));
+        let spec = t.spec().unwrap();
+        let schema = spec.input_schema.pointer("/properties/os").unwrap();
+        let ids: Vec<&str> = SANDBOX_OS_CATALOG.iter().map(|os| os.id).collect();
+        assert_eq!(schema["enum"], json!(ids));
+    }
+
+    #[tokio::test]
+    async fn create_passes_the_os_and_hints_its_package_manager() {
+        let ops = Arc::new(FakeOps::default());
+        let t = DockerSandboxTool::new(ops.clone());
+        let v = run_tool(
+            &t,
+            json!({"type": NAME, "operation": "create", "os": "amazonlinux2023"}),
+            &ctx(Some("session_1")),
+        )
+        .await
+        .unwrap()
+        .into_value();
+        assert_eq!(
+            ops.calls.lock().unwrap()[0].2,
+            json!({"os": "amazonlinux2023"})
+        );
+        assert_eq!(v["result"]["os"], "amazonlinux2023");
+        assert_eq!(
+            v["result"]["note"],
+            "The image is bare Amazon Linux 2023. Install packages with \"dnf install -y\" (no separate update step)."
+        );
+
+        let v = run_tool(
+            &t,
+            json!({"type": NAME, "operation": "create", "os": "custom:1"}),
+            &ctx(Some("session_1")),
+        )
+        .await
+        .unwrap()
+        .into_value();
+        assert_eq!(v["result"]["os"], Value::Null);
+        assert!(v["result"]["note"]
+            .as_str()
+            .unwrap()
+            .contains("/etc/os-release"));
     }
 
     #[tokio::test]

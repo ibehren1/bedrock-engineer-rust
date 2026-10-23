@@ -12,8 +12,8 @@ use docker::events::TerminalMessage;
 use docker::naming::{to_folder_name, to_project_name};
 use docker::{
     CreateSandboxOptions, RecordingSink, SandboxEvent, SandboxExecOptions, SandboxManager,
-    SandboxPortMapping, SandboxRemoveOptions, SandboxRunState, SandboxServiceSpec, Settings,
-    TokioRunner, DEFAULT_SANDBOX_IMAGE, WORKSPACE_MOUNT,
+    SandboxOsFamily, SandboxPortMapping, SandboxRemoveOptions, SandboxRunState, SandboxServiceSpec,
+    Settings, TokioRunner, DEFAULT_SANDBOX_IMAGE, SANDBOX_OS_CATALOG, WORKSPACE_MOUNT,
 };
 use serde_json::{json, Value};
 
@@ -755,4 +755,44 @@ async fn multi_service_compose_stacks() {
 
     terminals.close_session_terminals(&id);
     env.cleanup(&[&id]).await;
+}
+
+// Every OS in the catalog starts, runs commands, and has the package manager the agent is
+// told to use.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires Docker"]
+async fn every_catalog_os_runs_with_its_package_manager() {
+    let Some(env) = env().await else { return };
+    let m = &env.manager;
+    for os in SANDBOX_OS_CATALOG {
+        let id = session(os.id);
+        let created = m
+            .create_sandbox(
+                &id,
+                CreateSandboxOptions {
+                    os: Some(os.id.into()),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(created.metadata.services[0].image, os.image);
+
+        let check = match os.family {
+            SandboxOsFamily::Debian => "apt-get --version",
+            SandboxOsFamily::Rhel => "dnf --version",
+        };
+        let result = m
+            .exec_command(&id, &format!("cat /etc/os-release && {check}"), opts(240.0))
+            .await
+            .unwrap();
+        assert_eq!(result.exit_code, 0, "{}: {}", os.id, result.stderr);
+        assert!(
+            result.stdout.contains("ID="),
+            "{}: {}",
+            os.id,
+            result.stdout
+        );
+        env.cleanup(&[&id]).await;
+    }
 }

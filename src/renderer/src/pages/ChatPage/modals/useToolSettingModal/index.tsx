@@ -725,7 +725,9 @@ const ToolSettingModal = memo(({ isOpen, onClose }: ToolSettingModalProps) => {
                         />
                       )}
                       {selectedTool === 'codeInterpreter' && <CodeInterpreterSettingForm />}
-                      {selectedTool === 'dockerSandbox' && <DockerSandboxSettingForm />}
+                      {selectedTool === 'dockerSandbox' && (
+                        <DockerSandboxSettingForm onOpenSettings={onClose} />
+                      )}
                       {selectedTool === 'screenCapture' && <ScreenCaptureSettingForm />}
                       {selectedTool === 'cameraCapture' && <CameraCaptureSettingForm />}
                     </div>

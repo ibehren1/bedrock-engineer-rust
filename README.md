@@ -334,11 +334,16 @@ The chat's **Files** tab shows the project folder, so the agent's output is one 
 
 ### A Docker sandbox per chat
 
-Turning on the **Docker Sandbox** tool gives each chat its own long-lived container based on
-`ubuntu:26.04`, and makes it the default place the agent runs commands. The agent can `apt-get
-install` whatever it needs and make a mess without any of it reaching your machine — and because it
+Turning on the **Docker Sandbox** tool gives each chat its own long-lived container, and makes it the
+default place the agent runs commands. The agent can install whatever it needs (`apt-get` or `dnf`) and make a mess without any of it reaching your machine — and because it
 cannot reach your machine, the command allowlist doesn't have to hold it back inside the container.
 
+- Pick the container's operating system in **Settings → Sandbox**, next to the memory, CPU and
+  command timeout limits: Debian 13 (the default — the quickest to download and install packages
+  on), Ubuntu 26.04, Amazon Linux 2023 or 2027, AlmaLinux 9, Rocky Linux 9 or Red Hat UBI 9. UBI is
+  real RHEL but only has Red Hat's freely available package subset. The agent can also ask for a
+  different OS for one chat's sandbox. Firecracker microVMs aren't offered: they need KVM, which
+  Docker on macOS and Windows doesn't provide.
 - Your project directory is mounted read-write at `/workspace`, so files move in and out freely, and
   the agent can publish ports if you want to open what it built in a browser. Long-running processes
   can be started in the background and their output read back later.

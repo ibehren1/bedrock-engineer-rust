@@ -203,7 +203,7 @@ export const chatPage = {
         },
         settings: {
           intro:
-            'Gives each chat its own Docker container based on ubuntu:26.04. Commands run inside it by default, so the agent can install anything without touching your machine.',
+            'Gives each chat its own Docker container on the operating system you choose (Ubuntu, Debian, Amazon Linux or a RHEL-family image). Commands run inside it by default, so the agent can install anything without touching your machine.',
           timeoutHint:
             'How long to wait for a command before returning control to the model. The process keeps running past this; long builds are not killed.',
           limitsHint:
@@ -440,7 +440,7 @@ export const chatPage = {
         },
         settings: {
           intro:
-            'チャットごとに ubuntu:26.04 ベースの Docker コンテナを用意します。コマンドは既定でその中で実行されるため、ホストに触れずに任意のパッケージをインストールできます。',
+            'チャットごとに、選択した OS（Ubuntu、Debian、Amazon Linux、RHEL 系イメージ）の Docker コンテナを用意します。コマンドは既定でその中で実行されるため、ホストに触れずに任意のパッケージをインストールできます。',
           timeoutHint:
             'モデルに制御を返すまでの待機時間です。プロセス自体はこの時間を超えても動き続けるため、長いビルドが強制終了されることはありません。',
           limitsHint:

@@ -15,8 +15,8 @@ use serde_json::Value;
 use crate::activity::ActivityLog;
 use crate::availability::{assert_sandbox_usable, check_docker_availability};
 use crate::compose_writer::{
-    assert_ports_available, build_compose, service_environment, write_sandbox_files,
-    DEFAULT_SERVICE_ENV,
+    assert_ports_available, build_compose, resolve_sandbox_os, service_environment,
+    write_sandbox_files, DEFAULT_SERVICE_ENV,
 };
 use crate::engine::{cpu_percent_between, rates_between, ContainerSample, DockerEngine};
 use crate::events::{EventSink, SandboxEvent, StateEvent};
@@ -30,8 +30,7 @@ use crate::terminal::{EngineTransport, TerminalManager, TerminalTarget};
 use crate::types::{
     ContainerRow, CreateSandboxOptions, DockerAvailability, DockerSandboxConfig,
     SandboxExecOptions, SandboxExecResult, SandboxMetadata, SandboxRemoveOptions, SandboxRunState,
-    SandboxServiceSummary, SandboxStatus, DEFAULT_SANDBOX_IMAGE, SANDBOX_ROOT_DIRNAME,
-    WORKSPACE_MOUNT,
+    SandboxServiceSummary, SandboxStatus, SANDBOX_ROOT_DIRNAME, WORKSPACE_MOUNT,
 };
 use crate::util::{now_iso, resolve_one};
 use crate::{Error, Result};
@@ -616,6 +615,7 @@ impl SandboxManager {
         }
 
         let built = build_compose(&options, &sandbox_dir, Path::new(&project), &config)?;
+        let default_image = resolve_sandbox_os(&options, &config)?.image;
         assert_ports_available(&built.services)?;
 
         let written = write_sandbox_files(&sandbox_dir, &project_name, &project, &built)?;
@@ -633,7 +633,7 @@ impl SandboxManager {
                 .map(|s| SandboxServiceSummary {
                     name: s.name.clone(),
                     image: if s.image.is_empty() {
-                        DEFAULT_SANDBOX_IMAGE.to_string()
+                        default_image.to_string()
                     } else {
                         s.image.clone()
                     },
@@ -1154,6 +1154,7 @@ mod tests {
     use super::*;
     use crate::events::RecordingSink;
     use crate::runner::{FakeRunner, RunResult};
+    use crate::types::DEFAULT_SANDBOX_IMAGE;
 
     struct Fixture {
         _project: tempfile::TempDir,
@@ -1333,7 +1334,7 @@ mod tests {
                 "1".into(),
                 "-e".into(),
                 "DEBIAN_FRONTEND=noninteractive".into(),
-                "ubuntu:26.04".into(),
+                DEFAULT_SANDBOX_IMAGE.into(),
                 "sleep".into(),
                 "infinity".into()
             ]

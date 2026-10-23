@@ -16,7 +16,8 @@ import {
   agentToolsSettings,
   promptCacheSettings,
   tokenAnalyticsSettings,
-  lightModelSettings
+  lightModelSettings,
+  sandboxSettings
 } from './settings'
 import { thinkingMode } from './thinkingMode'
 import { agentDirectory } from './agentDirectory'
@@ -967,6 +968,7 @@ const ja = {
   ...appearanceSettings.ja,
   ...awsSettings.ja,
   ...settingTabsLabels.ja,
+  ...sandboxSettings.ja,
   ...notificationSettings.ja,
   ...userAvatarSettings.ja,
   ...userNameSettings.ja,

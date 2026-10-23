@@ -1,5 +1,26 @@
-/** Resource limits for the per-chat Docker sandbox (settings key `dockerSandboxTool`). */
+/**
+ * Operating systems the sandbox can be built on. Mirrors `SANDBOX_OS_CATALOG` in
+ * `src-tauri/crates/docker/src/types.rs`, which owns the images.
+ */
+export const SANDBOX_OS_OPTIONS = [
+  { value: 'ubuntu', label: 'Ubuntu 26.04' },
+  { value: 'debian13', label: 'Debian 13' },
+  { value: 'amazonlinux2023', label: 'Amazon Linux 2023' },
+  { value: 'amazonlinux2027', label: 'Amazon Linux 2027' },
+  { value: 'almalinux9', label: 'AlmaLinux 9' },
+  { value: 'rocky9', label: 'Rocky Linux 9' },
+  { value: 'ubi9', label: 'Red Hat UBI 9' }
+] as const
+
+export type SandboxOsId = (typeof SANDBOX_OS_OPTIONS)[number]['value']
+
+/** OS used when the settings name none; matches `DEFAULT_SANDBOX_OS_ID` in Rust. */
+export const DEFAULT_SANDBOX_OS: SandboxOsId = 'debian13'
+
+/** OS and resource limits for the per-chat Docker sandbox (settings key `dockerSandboxTool`). */
 export interface DockerSandboxConfig {
+  /** OS new sandboxes are built on. Unset means `DEFAULT_SANDBOX_OS`. */
+  os?: SandboxOsId
   memoryLimit: string
   cpuLimit: number
   /** Per-command timeout in seconds. */

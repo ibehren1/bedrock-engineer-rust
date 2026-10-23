@@ -2,7 +2,15 @@ import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { SettingsSidebar } from './components/SettingsSidebar'
-import { AwsTab, ChatTab, GeneralTab, ModelsTab, UpdatesTab, WorkspaceTab } from './components/tabs'
+import {
+  AwsTab,
+  ChatTab,
+  GeneralTab,
+  ModelsTab,
+  SandboxTab,
+  UpdatesTab,
+  WorkspaceTab
+} from './components/tabs'
 import { resolveSettingTab, SettingTabId } from './settingTabs'
 
 const TAB_PANELS: Record<SettingTabId, React.FC> = {
@@ -11,6 +19,7 @@ const TAB_PANELS: Record<SettingTabId, React.FC> = {
   models: ModelsTab,
   chat: ChatTab,
   workspace: WorkspaceTab,
+  sandbox: SandboxTab,
   updates: UpdatesTab
 }
 

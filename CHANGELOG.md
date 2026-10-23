@@ -16,6 +16,15 @@ overview of the fork with screenshots.
 - **Select all in a file preview.** After clicking in a previewed file in the Files panel (or its
   pop-out window), ⌘A (Ctrl+A on Windows and Linux) selects just that file's content, ready to
   copy. Before, it selected everything in the window.
+- **Choose the Docker sandbox's operating system.** A new Operating system menu offers Debian 13,
+  Ubuntu 26.04, Amazon Linux 2023, Amazon Linux 2027, AlmaLinux 9, Rocky Linux 9 or Red Hat UBI 9
+  (real RHEL, limited to Red Hat's freely available packages). The agent can also ask for a
+  different one when it creates a sandbox. **Debian 13 is now the default**, replacing Ubuntu: in
+  testing it was the quickest to download and to install common tools on. Chats that already have a
+  sandbox keep their current OS until the sandbox is removed.
+- **Sandbox settings have their own tab.** Settings now has a Sandbox tab with Docker's status, the
+  default container image and the container limits (memory, CPU and command timeout). The Docker
+  Sandbox tool's panel shows a summary of these with a button that opens the tab.
 
 ### 2026-10-22
 

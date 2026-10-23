@@ -9,8 +9,9 @@ use serde_json::{Map as JsonMap, Value as JsonValue};
 use yaml_serde::{Mapping, Value};
 
 use crate::types::{
-    CreateSandboxOptions, DockerSandboxConfig, SandboxPortMapping, SandboxServiceSpec,
-    SandboxServiceSummary, DEFAULT_SANDBOX_IMAGE, DEFAULT_SERVICE_NAME, WORKSPACE_MOUNT,
+    find_sandbox_os, CreateSandboxOptions, DockerSandboxConfig, SandboxOs, SandboxPortMapping,
+    SandboxServiceSpec, SandboxServiceSummary, DEFAULT_SERVICE_NAME, SANDBOX_OS_CATALOG,
+    WORKSPACE_MOUNT,
 };
 use crate::util::{is_inside, relative, resolve, resolve_one};
 use crate::{Error, Result};
@@ -326,6 +327,7 @@ fn key_name(value: &Value) -> String {
 fn build_generated_compose(
     services: &[SandboxServiceSpec],
     config: &DockerSandboxConfig,
+    default_image: &str,
 ) -> Result<BuiltCompose> {
     let mut service_map = Mapping::new();
     let mut summary = Vec::new();
@@ -334,7 +336,7 @@ fn build_generated_compose(
         let image = spec
             .image
             .clone()
-            .unwrap_or_else(|| DEFAULT_SANDBOX_IMAGE.to_string());
+            .unwrap_or_else(|| default_image.to_string());
         let ports = spec.ports.clone().unwrap_or_default();
 
         let mut volumes = vec![
@@ -352,7 +354,7 @@ fn build_generated_compose(
 
         let mut service = Mapping::new();
         service.insert(key("image"), str_value(escape_interpolation(&image)));
-        // Keeps a bare ubuntu container alive so we can exec into it repeatedly.
+        // Keeps a bare container alive so we can exec into it repeatedly.
         service.insert(
             key("command"),
             str_value(escape_interpolation(
@@ -401,6 +403,7 @@ fn build_from_agent_yaml(
     sandbox_dir: &Path,
     project_path: &Path,
     config: &DockerSandboxConfig,
+    default_image: &str,
 ) -> Result<BuiltCompose> {
     let parsed: Value = yaml_serde::from_str(compose_yaml)
         .map_err(|error| Error::msg(format!("composeYaml is not valid YAML: {error}")))?;
@@ -508,7 +511,7 @@ fn build_from_agent_yaml(
         }
 
         if !truthy(service.get("image")) && !truthy(service.get("build")) {
-            service.insert(key("image"), str_value(DEFAULT_SANDBOX_IMAGE));
+            service.insert(key("image"), str_value(default_image));
         }
         if truthy(service.get("build")) {
             return Err(Error::msg(format!(
@@ -654,8 +657,26 @@ fn build_from_agent_yaml(
     })
 }
 
+/// The OS for services that name no image: the agent's `os` if given, else the user's setting.
+/// An `os` the catalog doesn't list is an error, so the agent learns the valid ids.
+pub fn resolve_sandbox_os(
+    options: &CreateSandboxOptions,
+    config: &DockerSandboxConfig,
+) -> Result<&'static SandboxOs> {
+    match options.os.as_deref().filter(|os| !os.is_empty()) {
+        Some(id) => find_sandbox_os(id).ok_or_else(|| {
+            let ids: Vec<&str> = SANDBOX_OS_CATALOG.iter().map(|os| os.id).collect();
+            Error::msg(format!(
+                "Unknown os \"{id}\". Valid values: {}.",
+                ids.join(", ")
+            ))
+        }),
+        None => Ok(config.sandbox_os()),
+    }
+}
+
 /// Produce the compose document for a sandbox, from agent-supplied YAML or the structured
-/// service list, falling back to a single bare ubuntu service.
+/// service list, falling back to a single bare service on the chosen OS.
 pub fn build_compose(
     options: &CreateSandboxOptions,
     sandbox_dir: &Path,
@@ -686,8 +707,9 @@ fn build_services(
     project_path: &Path,
     config: &DockerSandboxConfig,
 ) -> Result<BuiltCompose> {
+    let default_image = resolve_sandbox_os(options, config)?.image;
     if let Some(yaml) = options.compose_yaml.as_deref().filter(|y| !y.is_empty()) {
-        return build_from_agent_yaml(yaml, sandbox_dir, project_path, config);
+        return build_from_agent_yaml(yaml, sandbox_dir, project_path, config, default_image);
     }
 
     let services: Vec<SandboxServiceSpec> = match &options.services {
@@ -725,11 +747,11 @@ fn build_services(
         }
     }
 
-    build_generated_compose(&services, config)
+    build_generated_compose(&services, config, default_image)
 }
 
 /// Environment every service gets unless it (or the agent's `env`) sets the name itself.
-/// A bare ubuntu image prompts on apt without this, which blocks non-interactive runs.
+/// Debian and Ubuntu images prompt on apt without this, which blocks non-interactive runs.
 pub const DEFAULT_SERVICE_ENV: [(&str, &str); 1] = [("DEBIAN_FRONTEND", "noninteractive")];
 
 /// The name and value rules for variables passed to a container (agent `env`, and the
@@ -977,7 +999,7 @@ pub fn write_sandbox_files(
 mod tests {
     //! Port of `composeWriter.test.ts`.
     use super::*;
-    use crate::types::DataVolumeSpec;
+    use crate::types::{DataVolumeSpec, DEFAULT_SANDBOX_IMAGE};
     use serde_json::json;
 
     const PROJECT_PATH: &str = "/tmp/example-project";
@@ -1027,7 +1049,7 @@ mod tests {
 
     // describe('buildCompose - generated default')
     #[test]
-    fn produces_a_single_bare_ubuntu_service_that_stays_alive() {
+    fn produces_a_single_bare_default_os_service_that_stays_alive() {
         let built = build(CreateSandboxOptions::default()).unwrap();
         let main = service(&built, "main");
         assert_eq!(
@@ -1075,6 +1097,7 @@ mod tests {
                 cpu_limit: 1.5,
                 timeout: 60.0,
                 terminal_acknowledged: None,
+                os: None,
             },
         )
         .unwrap();
@@ -1125,6 +1148,81 @@ mod tests {
             ..Default::default()
         }));
         assert!(duplicate.contains("Duplicate service name"), "{duplicate}");
+    }
+
+    fn main_image(built: &BuiltCompose) -> String {
+        service(built, "main")
+            .get("image")
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .to_string()
+    }
+
+    #[test]
+    fn each_configured_os_sets_the_default_image() {
+        for os in SANDBOX_OS_CATALOG {
+            let config = DockerSandboxConfig {
+                os: Some(os.id.into()),
+                ..Default::default()
+            };
+            let built = build_compose(
+                &CreateSandboxOptions::default(),
+                &sandbox_dir(),
+                Path::new(PROJECT_PATH),
+                &config,
+            )
+            .unwrap();
+            assert_eq!(main_image(&built), os.image);
+            assert_eq!(built.services[0].image, os.image);
+        }
+    }
+
+    #[test]
+    fn agent_os_overrides_the_setting_and_an_explicit_image_overrides_both() {
+        let config = DockerSandboxConfig {
+            os: Some("debian13".into()),
+            ..Default::default()
+        };
+        let build_with = |options: CreateSandboxOptions| {
+            build_compose(&options, &sandbox_dir(), Path::new(PROJECT_PATH), &config)
+        };
+
+        let built = build_with(CreateSandboxOptions {
+            os: Some("rocky9".into()),
+            ..Default::default()
+        })
+        .unwrap();
+        assert_eq!(main_image(&built), "rockylinux/rockylinux:9");
+
+        let built = build_with(CreateSandboxOptions {
+            os: Some("rocky9".into()),
+            services: Some(vec![SandboxServiceSpec {
+                image: Some("node:22".into()),
+                ..SandboxServiceSpec::named("main")
+            }]),
+            ..Default::default()
+        })
+        .unwrap();
+        assert_eq!(main_image(&built), "node:22");
+
+        let built = build_with(CreateSandboxOptions {
+            os: Some("almalinux9".into()),
+            compose_yaml: Some("services:\n  main:\n    command: sleep infinity\n".into()),
+            ..Default::default()
+        })
+        .unwrap();
+        assert_eq!(main_image(&built), "almalinux:9");
+    }
+
+    #[test]
+    fn unknown_agent_os_is_rejected_with_the_valid_ids() {
+        let message = err(build(CreateSandboxOptions {
+            os: Some("plan9".into()),
+            ..Default::default()
+        }));
+        assert!(message.contains("Unknown os \"plan9\""), "{message}");
+        assert!(message.contains("amazonlinux2023"), "{message}");
     }
 
     // describe('buildCompose - agent-authored YAML')

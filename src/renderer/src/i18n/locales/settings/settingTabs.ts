@@ -6,6 +6,7 @@ export const settingTabsLabels = {
       models: 'Models',
       chat: 'Chat',
       workspace: 'Workspace',
+      sandbox: 'Sandbox',
       updates: 'Updates'
     }
   },
@@ -16,6 +17,7 @@ export const settingTabsLabels = {
       models: 'モデル',
       chat: 'チャット',
       workspace: 'ワークスペース',
+      sandbox: 'サンドボックス',
       updates: 'アップデート'
     }
   }
