@@ -56,6 +56,19 @@ mod tests {
         assert!(path.is_file(), "missing {}", path.display());
     }
 
+    /// The guide is exempt from the per-file attachment cap but not from the total budget;
+    /// past it, Help would silently lose the end of the guide.
+    #[test]
+    fn the_guide_fits_the_attachment_text_budget() {
+        let guide = std::fs::read_to_string(repository_user_guide_path()).unwrap();
+        let utf16 = guide.encode_utf16().count();
+        assert!(
+            utf16 < attachments::MAX_TEXT_CHARS_TOTAL,
+            "USER_GUIDE.md is {utf16} UTF-16 units, over the {} attachment budget",
+            attachments::MAX_TEXT_CHARS_TOTAL
+        );
+    }
+
     #[test]
     fn the_bundle_ships_the_guide_where_release_builds_read_it() {
         let conf: serde_json::Value =

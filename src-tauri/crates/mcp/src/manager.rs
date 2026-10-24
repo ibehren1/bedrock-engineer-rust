@@ -12,8 +12,15 @@ use common::agent::{ConnectionType, McpServerConfig};
 use serde::Serialize;
 use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
+use std::sync::{Arc, OnceLock};
 use std::time::Instant;
 use tokio::sync::Mutex;
+
+/// Servers hosted inside the app ([`ConnectionType::Builtin`]).
+pub trait BuiltinServers: Send + Sync {
+    /// Start serving `server` and return the client end of an in-memory connection to it.
+    fn connect(&self, server: &McpServerConfig) -> Result<tokio::io::DuplexStream>;
+}
 
 const CATEGORY: &str = "mcp";
 
@@ -44,6 +51,9 @@ pub fn generate_config_hash(servers: &[McpServerConfig]) -> String {
                 if let Some(url) = server.url.as_deref().filter(|u| !u.is_empty()) {
                     obj.insert("url".into(), json!(url));
                 }
+            }
+            if connection_type == ConnectionType::Builtin {
+                obj.insert("agentId".into(), json!(server.agent_id));
             }
             if let Some(env) = server.env.as_ref().filter(|e| !e.is_empty()) {
                 obj.insert("env".into(), json!(env));
@@ -136,6 +146,7 @@ fn connection_type_label(server: &McpServerConfig) -> &'static str {
     match server.connection_type {
         Some(ConnectionType::Command) => "command",
         Some(ConnectionType::Url) => "url",
+        Some(ConnectionType::Builtin) => "builtin",
         None => "undefined",
     }
 }
@@ -170,6 +181,10 @@ fn is_url_server(s: &McpServerConfig) -> bool {
         && s.url.as_deref().is_some_and(|u| !u.is_empty())
 }
 
+fn is_builtin_server(s: &McpServerConfig) -> bool {
+    infer_connection_type(s) == ConnectionType::Builtin
+}
+
 /// The `{ mcpServers }` object the TS validates before connecting.
 fn config_data(servers: &[McpServerConfig]) -> Value {
     let mut map = Map::new();
@@ -190,8 +205,17 @@ fn config_data(servers: &[McpServerConfig]) -> Value {
 }
 
 /// Connects to an MCP server according to its config.
-async fn connect(server: &McpServerConfig, http: &reqwest::Client) -> Result<McpClient> {
+async fn connect(
+    server: &McpServerConfig,
+    http: &reqwest::Client,
+    builtin: Option<&Arc<dyn BuiltinServers>>,
+) -> Result<McpClient> {
     match infer_connection_type(server) {
+        ConnectionType::Builtin => {
+            let builtin = builtin
+                .ok_or_else(|| Error::Mcp("Built-in MCP servers are not available".into()))?;
+            McpClient::from_stream(builtin.connect(server)?).await
+        }
         ConnectionType::Command => {
             let command = server.command.as_deref().unwrap_or_default();
             let args = server.args.clone().unwrap_or_default();
@@ -212,6 +236,7 @@ async fn connect(server: &McpServerConfig, http: &reqwest::Client) -> Result<Mcp
 pub struct McpManager {
     state: Mutex<State>,
     http: reqwest::Client,
+    builtin: OnceLock<Arc<dyn BuiltinServers>>,
 }
 
 impl Default for McpManager {
@@ -226,6 +251,14 @@ impl McpManager {
         Self {
             state: Mutex::new(State::default()),
             http,
+            builtin: OnceLock::new(),
+        }
+    }
+
+    /// Install the provider of [`ConnectionType::Builtin`] servers (once, at startup).
+    pub fn set_builtin(&self, builtin: Arc<dyn BuiltinServers>) {
+        if self.builtin.set(builtin).is_err() {
+            tracing::warn!(category = CATEGORY, "Built-in MCP servers already set");
         }
     }
 
@@ -264,10 +297,12 @@ impl McpManager {
             .iter()
             .filter(|s| is_command_server(s))
             .chain(servers.iter().filter(|s| is_url_server(s)))
+            .chain(servers.iter().filter(|s| is_builtin_server(s)))
             .collect();
+        let builtin = self.builtin.get();
         let connections = futures_util::future::join_all(targets.iter().map(|server| async {
             tracing::info!(category = CATEGORY, server = %server.name, "Connecting to MCP server");
-            match connect(server, &self.http).await {
+            match connect(server, &self.http, builtin).await {
                 Ok(client) => {
                     tracing::info!(category = CATEGORY, server = %server.name, "Successfully connected to MCP server");
                     Some((server.name.clone(), client))
@@ -387,7 +422,7 @@ impl McpManager {
 
     /// `testMcpServerConnection`: connect, list tools, disconnect.
     pub async fn test_connection(&self, server: &McpServerConfig) -> McpTestResult {
-        test_mcp_server_connection(server, &self.http).await
+        test_server_connection(server, &self.http, self.builtin.get()).await
     }
 
     /// `testAllMcpServerConnections`: sequentially, keyed by server name.
@@ -430,10 +465,18 @@ impl McpManager {
     }
 }
 
-/// `testMcpServerConnection` without a manager.
+/// `testMcpServerConnection` without a manager (no built-in servers).
 pub async fn test_mcp_server_connection(
     server: &McpServerConfig,
     http: &reqwest::Client,
+) -> McpTestResult {
+    test_server_connection(server, http, None).await
+}
+
+async fn test_server_connection(
+    server: &McpServerConfig,
+    http: &reqwest::Client,
+    builtin: Option<&Arc<dyn BuiltinServers>>,
 ) -> McpTestResult {
     let start = Instant::now();
     let invalid = |message: String, details: &str| McpTestResult {
@@ -470,6 +513,7 @@ pub async fn test_mcp_server_connection(
             };
             McpClient::from_url(url, server.headers.as_ref(), http.clone()).await
         }
+        ConnectionType::Builtin => connect(server, http, builtin).await,
     };
 
     match client {

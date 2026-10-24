@@ -46,6 +46,11 @@ pub struct Backend {
     /// Shells on the user's machine for the chat page's Terminal tab. Deliberately not in
     /// `ToolDeps` / `ContextServices`: no tool can reach them.
     pub local_terminals: local_terminal::LocalTerminalManager,
+    /// Agents' local knowledgebases (`<userData>/knowledgebases`), also served to agents as the
+    /// built-in `local-knowledgebase` MCP server.
+    pub knowledge: Arc<knowledge::service::KnowledgeService>,
+    /// The on-device embedding model (download, status, inference).
+    pub local_model: Arc<knowledge::local::LocalModel>,
 }
 
 /// `store.all()`; `{}` if the lock is poisoned.
@@ -171,6 +176,23 @@ impl agents::McpToolSpecProvider for McpSpecs {
     }
 }
 
+/// Store, proxy and events for the knowledgebase service.
+struct KnowledgeHost(AppHandle);
+
+impl knowledge::service::KnowledgeHost for KnowledgeHost {
+    fn settings(&self) -> knowledge::types::KnowledgeSettings {
+        knowledge::types::KnowledgeSettings::from_store(&store_snapshot(&self.0))
+    }
+    fn http_client(&self) -> reqwest::Client {
+        settings::http_client(&store_snapshot(&self.0))
+    }
+    fn emit(&self, event: &str, payload: Value) {
+        if let Err(e) = self.0.emit(event, payload) {
+            tracing::warn!(event, error = %e, "Failed to emit event");
+        }
+    }
+}
+
 /// PDF / DOCX text for attachment context (the `pdf-*` / `docx-*` extractors in `tools`).
 pub struct DocumentExtractor;
 
@@ -218,6 +240,30 @@ impl Backend {
         });
         // URL servers use the proxy configured at startup.
         let mcp = Arc::new(McpManager::new(settings::http_client(&snapshot())));
+
+        let runtime = tauri::async_runtime::handle().inner().clone();
+        let sdk: Arc<dyn SdkConfigSource> = Arc::new(DefaultSdkConfig);
+        let kb_root = user_data.join("knowledgebases");
+        let local_model = Arc::new(knowledge::local::LocalModel::new(
+            kb_root.join(knowledge::service::MODELS_DIR),
+        ));
+        let knowledge = knowledge::service::KnowledgeService::new(
+            kb_root,
+            Arc::new(KnowledgeHost(app.clone())),
+            Arc::new(knowledge::embed::DefaultEmbedders {
+                sdk: sdk.clone(),
+                aws: Arc::new({
+                    let snapshot = snapshot.clone();
+                    move || settings::aws_settings(&snapshot())
+                }),
+                local: local_model.clone(),
+            }),
+            runtime.clone(),
+        );
+        mcp.set_builtin(Arc::new(knowledge::mcp_server::KnowledgeMcp {
+            svc: knowledge.clone(),
+            runtime: runtime.clone(),
+        }));
         let mut tool_deps = ToolDeps::new(
             todo.clone(),
             memory.clone(),
@@ -272,13 +318,13 @@ impl Backend {
             config: Arc::new(AppConfig(app.clone())),
             events,
             notifier: Arc::new(TauriNotifier(app.clone())),
-            runtime: tauri::async_runtime::handle().inner().clone(),
+            runtime,
         }));
 
         Ok(Backend {
             converse,
             streams: Default::default(),
-            sdk: Arc::new(DefaultSdkConfig),
+            sdk,
             translate: TranslateService::new(),
             todo,
             memory,
@@ -292,6 +338,8 @@ impl Backend {
             local_terminals: local_terminal::LocalTerminalManager::new(Arc::new(
                 LocalTerminalEvents(app.clone()),
             )),
+            knowledge,
+            local_model,
         })
     }
 
@@ -301,6 +349,7 @@ impl Backend {
     pub fn shutdown(&self) {
         // Local shells: SIGHUP, then SIGKILL whatever is left after a short grace.
         self.local_terminals.close_all();
+        self.knowledge.cancel_all();
         self.sandbox.terminals().close_all_terminals();
         let sandbox = self.sandbox.clone();
         let mcp = self.mcp.clone();

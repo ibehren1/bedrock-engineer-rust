@@ -103,6 +103,10 @@ system: |2-
     - After editing the files, must run a static structure analysis using **npm run lint:fix** and **npm run typecheck**.
     - If you are instructed to create test code, create it and run it.
     - After editing the UI source, don't forget to take care of i18n.
+    - Every change a user can see (feature, UI change, model, pricing, bug fix) adds a bullet to today's
+    `### YYYY-MM-DD` section at the top of `CHANGELOG.md`, in plain prose for the person installing the build. Its
+    newest section is published as the release notes. Update `README.md` too when the change makes it wrong.
+    - `CLAUDE.md` describes the code layout in more detail; read it before larger changes.
 
     ## Directory Structure and Roles
 
@@ -111,13 +115,27 @@ system: |2-
     - Common type definitions centralized in `/types` (the `window.*` API the renderer calls is typed in `/types/window.ts` and `/types/bridge`)
     
     ### 2. Rust Backend (`/src-tauri`)
-    - **Role**: Tauri v2 app and Cargo workspace: AWS SDK integration, agent tools, MCP clients, Docker sandbox, background agents, settings and chat history storage
-    - `/app`: The Tauri binary; `/app/src/commands` holds the commands the renderer invokes
-    - `/crates`: Library crates (`bedrock`, `tools`, `agents`, `background`, `docker`, `mcp`, `store`, `history`, `models`, `attachments`, `strands`, `common`)
+    - **Role**: Tauri v2 app and Cargo workspace: AWS SDK integration, agent tools, MCP clients, Docker sandbox, background agents, local knowledge bases, settings and chat history storage
+    - `/app`: The Tauri binary; `/app/src/commands` holds the commands the renderer invokes, all registered in `commands/mod.rs`; `/app/capabilities` limits which window may call what (`app/src/command_list.rs` lists the main-window-only command prefixes)
+    - `/crates`: Library crates
+      - `store`: settings file (`config.json`), defaults and migrations
+      - `models`: model catalog and pricing (`data/models.json`, generated from `src/common/models/models.ts`)
+      - `bedrock`: AWS clients, Converse / ConverseStream, image, video, agents, flows, guardrails
+      - `tools`: the `Tool` trait, `ToolRegistry` and the built-in tools
+      - `agents`: agent lookup, system prompts, the Rust-side agent loop and sub-agent delegation
+      - `background`: background agents (cron scheduler, sessions, history, notifications, pub/sub)
+      - `docker`: the per-chat Docker sandbox and Code Interpreter containers
+      - `mcp`: MCP clients (stdio, SSE, streamable HTTP), tool adapter, registry search
+      - `knowledge`: local knowledge bases (extraction, crawler, embeddings, SQLite + sqlite-vec + FTS5, the built-in `local-knowledgebase` MCP server)
+      - `workspace_files`: the Files panel's access to the project folder
+      - `local_terminal`: shells on the user's machine for the chat's Terminal tab
+      - `attachments`, `history`, `strands`, `common`: chat attachments, chat history, Strands export, shared agent types and helpers
     - After editing Rust code, run `cargo test --workspace` and `cargo clippy --workspace --all-targets` in `/src-tauri`
     
     ### 3. Bridge (`/src/renderer/src/lib/tauriBridge.ts`)
-    - **Role**: Installs `window.api`, `window.store`, `window.file`, `window.chatHistory` and friends before the app loads, mapping each method to a Tauri command (contract in `docs/port/BRIDGE.md`)
+    - **Role**: Installs `window.api`, `window.store`, `window.file`, `window.chatHistory`, `window.memory`, `window.workspaceFiles` and friends before the app loads, mapping each method to a Tauri command (snake_case name, one named-object argument, `Result<T, String>`; contract and command table in `docs/port/BRIDGE.md`)
+    - Rust pushes to the renderer with Tauri events (`store-changed`, `knowledge:*`, `background-agent:*`, `pubsub:*`, ...); chat streaming uses a Tauri `Channel` per request
+    - The renderer runs the chat tool-use loop and executes tools through the `tools_execute` command
     
     ### 4. Renderer (`/src/renderer/src`)
     - **Role**: User interface and application logic
@@ -128,9 +146,13 @@ system: |2-
     - `/i18n`: Translation files for multilingual support
     - `/lib`: Utility functions
     - `/pages`: Page components
-      - `/ChatPage`: Agent chat screen
-      - `/SettingPage`: App settings screen
-      - `/WebsiteGeneratorPage`: Website generation functionality
+      - `/ChatPage`: Agent chat screen (with its Files, Sandbox, Terminal, Todo, Cost and System prompt tabs)
+      - `/MyAgentsPage`: Agent list and editor (including the Knowledge Base tab)
+      - `/MemoryPage`: Shared rules and memories
+      - `/SettingPage`: App settings screen (General, AWS, Models, Chat, Workspace, Sandbox, Knowledge Base, Updates tabs)
+      - `/WebsiteGeneratorPage`, `/DiagramGeneratorPage`, `/StepFunctionsGeneratorPage`: Generators
+      - `/AgentDirectoryPage`, `/BackgroundAgentPage`: Agent directory and scheduled agents
+      - `/FileViewerPage`: Pop-out file preview windows
     - `/prompts`: Prompt templates for AI models
     - `/services`: Business logic services (notifications, etc.)
 
@@ -168,6 +190,7 @@ system: |2-
     - **Local State**: Managed with useState within components
     - **Shared State**: Managed with React Context
       - `SettingsContext`: Application settings
+      - `ChatHistoryContext`, `MemoryContext`, `FilesPanelContext`, `AppUpdateContext`, `AgentDirectoryContext`
       - `WebsiteGeneratorContext`: Web generation functionality state
     - **State Normalization**: Normalize complex data structures
       - Separate management of chat sessions and messages
@@ -183,7 +206,7 @@ system: |2-
       - Constants/Settings: CONSTANT_CASE.ts or camelCase.ts
 
     ### 6. Testing Strategy
-    - **Unit Tests**: Utility functions, custom hooks
+    - **Unit Tests**: Utility functions, custom hooks (Jest `*.test.ts`, `npm test`); Rust `#[cfg(test)]` modules and `tests/` (`cargo test --workspace`); `make test` runs both
     - **Integration Tests**: Major services and API integrations
     - **UI Tests**: Key user flows
 
@@ -198,7 +221,7 @@ system: |2-
     - **Backpressure Countermeasures**: Request frequency limitations and appropriate buffering
 
     ### 9. Security Considerations
-    - **IPC Communication Safety**: Strict typing and validation of IPC communication
+    - **IPC Communication Safety**: Strict typing and validation of Tauri commands; new commands must be allowed by the right capability
     - **Secure Credential Management**: Proper storage of AWS credentials
     - **Input Validation and Sanitization**: Appropriate handling of user input and AI-generated content
 

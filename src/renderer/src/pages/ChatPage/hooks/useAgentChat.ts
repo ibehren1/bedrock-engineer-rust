@@ -1,3 +1,4 @@
+import { hasLocalKnowledgeBases, KNOWLEDGE_BASE_TOOL_NAMES } from '@/common/agents/knowledgeTools'
 import type {
   ConversationRole,
   ContentBlock,
@@ -222,8 +223,12 @@ export const useAgentChat = (
 
         // MCPツールの場合は、MCPサーバーが設定されていることを確認
         if (isMcpTool(toolName)) {
+          // The built-in knowledgebase server is attached from localKnowledgeBases, not
+          // mcpServers.
+          const isKnowledgeBaseTool =
+            KNOWLEDGE_BASE_TOOL_NAMES.includes(toolName) && hasLocalKnowledgeBases(currentAgent)
           // MCPサーバーが設定されていない場合は除外
-          if (!hasMcpServers) {
+          if (!hasMcpServers && !isKnowledgeBaseTool) {
             console.warn(
               `MCP tool "${toolName}" is enabled but no MCP servers are configured. Tool will be disabled.`
             )

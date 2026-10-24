@@ -4,7 +4,7 @@ import { FiSettings, FiServer, FiTool } from 'react-icons/fi'
 import { formEventUtils } from '../utils/formEventUtils'
 
 // タブ識別子の型定義
-type AgentFormTabId = 'basic' | 'mcp-servers' | 'tools'
+type AgentFormTabId = 'basic' | 'mcp-servers' | 'knowledge-base' | 'tools'
 
 /**
  * タブナビゲーションコンポーネント

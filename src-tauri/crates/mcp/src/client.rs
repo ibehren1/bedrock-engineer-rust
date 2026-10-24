@@ -194,6 +194,11 @@ impl McpClient {
         })
     }
 
+    /// Connect over an in-memory stream to a server hosted in the app.
+    pub async fn from_stream(stream: tokio::io::DuplexStream) -> Result<Self> {
+        Self::initialize(stream).await
+    }
+
     /// `MCPClient.fromUrl`: Streamable HTTP, falling back to legacy SSE.
     pub async fn from_url(
         url: &str,

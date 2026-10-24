@@ -12,7 +12,7 @@ serde_json.workspace = true
 thiserror.workspace = true
 rmcp = { version = "=3.6.0", default-features = false, features = ["client", "transport-child-process", "transport-streamable-http-client-reqwest", "reqwest"] }
 reqwest = { version = "=0.13.5", features = ["json", "stream"] }
-tokio = { version = "=1.54.0", features = ["process", "sync", "rt", "macros", "time"] }
+tokio = { version = "=1.54.0", features = ["process", "sync", "rt", "macros", "time", "io-util"] }
 futures-util = "=0.3.34"
 sse-stream = "=0.2.6"
 tracing = "=0.1.44"

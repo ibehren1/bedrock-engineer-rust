@@ -6,6 +6,7 @@ import useSetting from '@renderer/hooks/useSetting'
 import { motion } from 'framer-motion'
 import { useTour } from '@reactour/tour'
 import { useState, useEffect } from 'react'
+import { modKeyLabel } from '@renderer/lib/platform'
 
 const HomePage = () => {
   const { t } = useTranslation()
@@ -77,7 +78,7 @@ const HomePage = () => {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 1.5, duration: 1.0 }}
         >
-          {t('Start by the menu on the left or')} <Kbd className="bg-raised">⌘</Kbd> +{' '}
+          {t('Start by the menu on the left or')} <Kbd className="bg-raised">{modKeyLabel()}</Kbd> +{' '}
           <Kbd className="bg-raised">K</Kbd>.
         </motion.span>
       </div>

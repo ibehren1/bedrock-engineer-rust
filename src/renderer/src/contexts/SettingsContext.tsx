@@ -37,6 +37,8 @@ import {
   DockerSandboxConfig
 } from '@/types/sandbox'
 import { SystemPromptBuilder } from '@/common/agents/toolRuleGenerator'
+import { buildKnowledgeBasePrompt } from '@/common/agents/knowledgePrompt'
+import { knowledgeBaseTools } from '@/common/agents/knowledgeTools'
 import { getImageGenerationModelsForRegion } from '@/common/models/models'
 import { toastService } from '@renderer/services/ToastService'
 
@@ -1592,6 +1594,15 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           : undefined
       })) as ToolState[]
 
+      // The built-in knowledgebase server's tools, for an agent with local knowledgebases
+      // (always on, like MCP tools; skipped if the agent's cached MCP tools already have them).
+      const cachedMcpNames = new Set(agentMcpTools.map((t) => t.toolSpec?.name))
+      for (const tool of knowledgeBaseTools(agent)) {
+        if (!cachedMcpNames.has(tool.toolSpec?.name)) {
+          agentMcpTools.push({ ...tool, enabled: true } as ToolState)
+        }
+      }
+
       // 標準ツールのみを処理（MCP ツールは別途管理）
       // エージェント固有のツール設定がある場合
       if (agent && agent.tools && agent.tools.length > 0) {
@@ -1696,7 +1707,14 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           planMode ? 'PLAN MODE' : 'ACT MODE'
         )
 
-        const fullPrompt = replacePlaceholders(currentAgent.system + '\n\n' + systemPromptContext, {
+        // Rust-side runs append the same block (`build_system_prompt` in crates/agents).
+        const knowledgeBlock = buildKnowledgeBasePrompt(currentAgent)
+        const basePrompt =
+          currentAgent.system +
+          '\n\n' +
+          systemPromptContext +
+          (knowledgeBlock ? `\n\n${knowledgeBlock}` : '')
+        const fullPrompt = replacePlaceholders(basePrompt, {
           projectPath,
           allowedCommands: allAgents.find((a) => a.id === selectedAgentId)?.allowedCommands || [],
           allowedWindows: allAgents.find((a) => a.id === selectedAgentId)?.allowedWindows || [],

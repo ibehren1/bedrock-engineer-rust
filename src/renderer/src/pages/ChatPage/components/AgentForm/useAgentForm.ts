@@ -20,7 +20,7 @@ import { usePromptGeneration } from './usePromptGeneration'
  * エージェントフォームの状態管理と主要機能を担当するカスタムフック
  */
 // タブ識別子の型定義
-type AgentFormTabId = 'basic' | 'mcp-servers' | 'tools'
+type AgentFormTabId = 'basic' | 'mcp-servers' | 'knowledge-base' | 'tools'
 
 export const useAgentForm = (initialAgent?: CustomAgent, onSave?: (agent: CustomAgent) => void) => {
   // 基本フォームデータの状態
@@ -37,6 +37,7 @@ export const useAgentForm = (initialAgent?: CustomAgent, onSave?: (agent: Custom
     tools: initialAgent?.tools || ([] as ToolName[]),
     category: initialAgent?.category || 'all',
     additionalInstruction: initialAgent?.additionalInstruction || '',
+    localKnowledgeBases: initialAgent?.localKnowledgeBases,
     environmentContextSettings: {
       projectRule: initialAgent?.environmentContextSettings?.projectRule ?? true,
       visualExpressionRules: initialAgent?.environmentContextSettings?.visualExpressionRules ?? true
@@ -80,22 +81,16 @@ export const useAgentForm = (initialAgent?: CustomAgent, onSave?: (agent: Custom
   )
 
   // Prompt generation functionality integration
-  const {
-    generateSystemPrompt,
-    generateVoiceChatPrompt,
-    generateScenarios,
-    isGeneratingSystem,
-    isGeneratingVoiceChat,
-    isGeneratingScenarios
-  } = usePromptGeneration(
-    formData.name,
-    formData.description,
-    formData.system,
-    handleSystemPromptUpdate,
-    handleScenariosUpdate,
-    formData.additionalInstruction,
-    agentTools
-  )
+  const { generateSystemPrompt, generateScenarios, isGeneratingSystem, isGeneratingScenarios } =
+    usePromptGeneration(
+      formData.name,
+      formData.description,
+      formData.system,
+      handleSystemPromptUpdate,
+      handleScenariosUpdate,
+      formData.additionalInstruction,
+      agentTools
+    )
 
   // 複数フィールドを一度に更新する関数
   const updateMultipleFields = useCallback(
@@ -393,10 +388,8 @@ export const useAgentForm = (initialAgent?: CustomAgent, onSave?: (agent: Custom
 
     // プロンプト生成関連
     generateSystemPrompt,
-    generateVoiceChatPrompt,
     generateScenarios,
     isGeneratingSystem,
-    isGeneratingVoiceChat,
     isGeneratingScenarios,
 
     // 状態更新関数

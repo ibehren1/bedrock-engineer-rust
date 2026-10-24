@@ -31,6 +31,7 @@ background = { path = "../crates/background" }
 strands = { path = "../crates/strands" }
 workspace_files = { path = "../crates/workspace_files" }
 local_terminal = { path = "../crates/local_terminal" }
+knowledge = { path = "../crates/knowledge" }
 tokio = { version = "=1.54.0", features = ["rt", "sync", "macros", "time", "process"] }
 reqwest = "=0.13.5"
 async-trait = "=0.1.92"

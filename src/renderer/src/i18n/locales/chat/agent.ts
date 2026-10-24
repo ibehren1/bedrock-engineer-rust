@@ -88,14 +88,14 @@ export const agent = {
     noProjectPath: '(Project path is not set)',
     myAgents: {
       title: 'My Agents',
-      description: 'Create, edit and maintain the agents you use in chat and voice chat.',
+      description: 'Create, edit and maintain the agents you use in chat.',
       editAgents: 'Edit agents',
       hideDefault: 'Hide',
       unhide: 'Unhide ({{count}})',
       unhideHint: 'Hidden agents',
       unhideAll: 'Unhide all',
       dragToReorder: 'Drag to rearrange',
-      activeInChat: 'Currently selected in chat and voice chat',
+      activeInChat: 'Currently selected in chat',
       defaultNotEditable:
         'Built-in agents cannot be edited — they are refreshed on every launch. Duplicate this one to customize it.',
       sharedNotEditable:
@@ -182,9 +182,7 @@ export const agent = {
     agentImported: 'Imported "{{name}}". You can edit it like any of your own agents.',
     failedToImportAgent: 'Failed to import the agent file',
     autoAddedEnvironmentContext: 'Auto-Added Environment Context',
-    userInput: 'User Input',
-    generateVoiceChatPrompt: 'Voice Chat',
-    generateVoiceChatPromptTooltip: 'Generate system prompt optimized for voice chat'
+    userInput: 'User Input'
   },
   ja: {
     name: '名前',
@@ -270,14 +268,14 @@ export const agent = {
     noProjectPath: '（プロジェクトパスが設定されていません）',
     myAgents: {
       title: 'マイエージェント',
-      description: 'チャットや音声チャットで使うエージェントを作成・編集・管理します。',
+      description: 'チャットで使うエージェントを作成・編集・管理します。',
       editAgents: 'エージェントを編集',
       hideDefault: '非表示にする',
       unhide: '再表示 ({{count}})',
       unhideHint: '非表示のエージェント',
       unhideAll: 'すべて再表示',
       dragToReorder: 'ドラッグして並べ替え',
-      activeInChat: 'チャットと音声チャットで選択中',
+      activeInChat: 'チャットで選択中',
       defaultNotEditable:
         '組み込みエージェントは編集できません（起動時に元の内容へ戻ります）。複製してからカスタマイズしてください。',
       sharedNotEditable:
@@ -367,8 +365,6 @@ export const agent = {
       '「{{name}}」をインポートしました。ご自身のエージェントと同じように編集できます。',
     failedToImportAgent: 'エージェントファイルをインポートできませんでした',
     autoAddedEnvironmentContext: '自動追加された環境コンテキスト',
-    userInput: 'ユーザー入力',
-    generateVoiceChatPrompt: 'ボイスチャット',
-    generateVoiceChatPromptTooltip: 'ボイスチャット用に最適化されたシステムプロンプトを生成'
+    userInput: 'ユーザー入力'
   }
 }

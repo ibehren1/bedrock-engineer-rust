@@ -14,6 +14,7 @@ pub mod chat_history;
 pub mod docker;
 pub mod file;
 pub mod help;
+pub mod knowledge;
 pub mod local_terminal;
 pub mod logger;
 pub mod mcp;
@@ -261,6 +262,30 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         app_update::app_update_check,
         app_update::app_update_download,
         app_update::app_update_restart,
+        // window.api.knowledge (main window only: capabilities/main-window.json)
+        knowledge::knowledge_list,
+        knowledge::knowledge_create,
+        knowledge::knowledge_update,
+        knowledge::knowledge_delete,
+        knowledge::knowledge_delete_agent,
+        knowledge::knowledge_copy_agent,
+        knowledge::knowledge_rebuild,
+        knowledge::knowledge_list_sources,
+        knowledge::knowledge_pick_files,
+        knowledge::knowledge_add_url,
+        knowledge::knowledge_update_source_options,
+        knowledge::knowledge_resync_source,
+        knowledge::knowledge_remove_source,
+        knowledge::knowledge_jobs,
+        knowledge::knowledge_cancel_job,
+        knowledge::knowledge_search,
+        knowledge::knowledge_stats,
+        knowledge::knowledge_optimize,
+        knowledge::knowledge_storage_overview,
+        knowledge::knowledge_purge_orphans,
+        knowledge::knowledge_local_model_status,
+        knowledge::knowledge_download_local_model,
+        knowledge::knowledge_delete_local_model,
     ]
 }
 

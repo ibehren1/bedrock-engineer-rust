@@ -4,7 +4,7 @@ Model Context Protocol (MCP) client integration allows Bedrock Engineer to conne
 
 ## Configuration Formats
 
-MCP servers can be configured using the Claude Desktop-compatible `claude_desktop_config.json` format. Configuration can be done from the "MCP Servers" section in the agent edit modal.
+MCP servers can be configured using the Claude Desktop-compatible `claude_desktop_config.json` format. Configuration is done on the "MCP Servers" tab of the agent editor (My Agents page). Servers are configured per agent.
 
 MCP servers can be configured in two formats:
 
@@ -30,11 +30,20 @@ MCP servers can be configured in two formats:
 {
   "mcpServers": {
     "server-name": {
-      "url": "https://example.com/mcp-endpoint"
+      "url": "https://example.com/mcp-endpoint",
+      "headers": {
+        "Authorization": "Bearer <token>"
+      }
     }
   }
 }
 ```
+
+`headers` is optional. The app connects with the Streamable HTTP transport and falls back to the
+older SSE transport if that fails.
+
+On macOS and Linux, command servers started with `npx`, `uvx` and similar see your login shell's
+`PATH`, even when the app is opened from the Dock or a desktop launcher.
 
 ## Configuration Examples
 
@@ -66,6 +75,18 @@ MCP servers can be configured in two formats:
 - **DeepWiki**: Knowledge base search tool
 - **git**: Git operation tools
 - **postgres**: PostgreSQL database operation tools
+
+## Built-in Server for Local Knowledge Bases
+
+An agent that has local knowledge bases (agent editor → **Knowledge Base** tab) automatically gets
+one more server, `local-knowledgebase`. It runs inside the app, so there is nothing to install or
+configure, and it is not part of the agent's `mcpServers` JSON: it is added when the agent runs and
+removed when its last knowledge base is deleted. Its tools are `searchKnowledgeBase`,
+`listKnowledgeBases` and `listKnowledgeBaseSources`.
+
+The "MCP Servers" tab shows it read-only, marked **Built-in**, above the agent's own servers, with
+a **Test connection** button; the **Tools** tab lists its tools with the other MCP tools. Manage
+the knowledge bases themselves on the Knowledge Base tab and in **Settings → Knowledge Base**.
 
 ## Finding Servers
 

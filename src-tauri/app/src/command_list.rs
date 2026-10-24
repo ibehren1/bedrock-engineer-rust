@@ -49,8 +49,10 @@ pub fn allow_permission(command: &str) -> String {
 /// Command-name prefixes only the main window may call (`capabilities/main-window.json`), so
 /// they are left out of `app-commands`: the local terminal runs a real shell on the user's
 /// machine, and only the chat page in the main window opens one; app updates download and
-/// install a new version of the app, which only the main window's Settings and banner drive.
-pub const MAIN_WINDOW_ONLY_PREFIXES: &[&str] = &["local_terminal_", "app_update_"];
+/// install a new version of the app, which only the main window's Settings and banner drive;
+/// knowledgebase commands read files from any path the caller names (agent editor and
+/// Settings only).
+pub const MAIN_WINDOW_ONLY_PREFIXES: &[&str] = &["local_terminal_", "app_update_", "knowledge_"];
 
 pub fn is_main_window_only(command: &str) -> bool {
     MAIN_WINDOW_ONLY_PREFIXES

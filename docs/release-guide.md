@@ -5,6 +5,10 @@ Releases are cut automatically: every push to `main` (including PR merges) runs
 tagged `v<version>` whose body is the newest dated section of `CHANGELOG.md`. There is no release
 branch and no manual version bump.
 
+Installers are only packaged when the repository is public (the GitHub mirror). In a private
+repository the workflow runs a single Linux lane with the same lint, typecheck and tests, and
+builds no installers.
+
 ## Versioning
 
 The version is **`YYYY.MMDD.N`**, derived from git history by `scripts/compute-version.sh`:
@@ -67,6 +71,20 @@ make test               # cargo test --workspace + npm test
 make notices            # regenerate notices/rust.md and notices/frontend.md
 ```
 
+## In-app updates
+
+The app checks `https://github.com/ibehren1/bedrock-engineer-rust/releases/latest/download/latest.json`
+(`plugins.updater` in `src-tauri/app/tauri.conf.json`) and only installs bundles signed with the
+key whose public half is the `pubkey` there. When the `TAURI_SIGNING_PRIVATE_KEY` (and
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD`) repository secrets are set, the build turns on
+`createUpdaterArtifacts` and produces the signed updater bundles (macOS `.app.tar.gz`, plus
+`.sig` files for it, the NSIS `.exe` and the AppImage); the release job then writes `latest.json`
+with `scripts/release/latest-json.mjs` (tested by `npm test`) and attaches it. That step fails if a
+platform is missing its bundle or signature, so a release never advertises an update it can't
+deliver. Without the secret, releases carry installers only and installed apps see no update.
+Local builds need no key: `createUpdaterArtifacts` is left unset (off) in `tauri.conf.json`. The `.deb` has no
+updater bundle.
+
 ## Code signing
 
 - **macOS:** builds are ad-hoc signed (`-`) and not notarized by default. Set the standard Tauri CLI environment variables to sign and notarize with a real identity:
@@ -74,6 +92,7 @@ make notices            # regenerate notices/rust.md and notices/frontend.md
   and `APPLE_ID` + `APPLE_PASSWORD` + `APPLE_TEAM_ID` for notarization. In CI these come from
   repository secrets of the same names; unset secrets are skipped. Hardened-runtime entitlements
   are in `src-tauri/app/entitlements.mac.plist`.
+- **Updates:** separate from code signing; see In-app updates above.
 - **Windows:** unsigned. Tauri supports `bundle.windows.certificateThumbprint`
   or `bundle.windows.signCommand` if signing is added later.
 

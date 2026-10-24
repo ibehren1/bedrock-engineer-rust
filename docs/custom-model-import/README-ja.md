@@ -103,6 +103,14 @@ aws s3 sync DeepSeek-R1-Distill-Llama-8B s3://import-model-data-xxxxxxxx/DeepSee
 }
 ```
 
+続いて、Rust バックエンド側のモデル一覧を再生成し、アプリをビルドし直します（カスタムモデルはアプリに
+組み込まれるため、配布されているリリースには含まれません）：
+
+```bash
+node scripts/port/gen-models-json.mjs   # src-tauri/crates/models/data/models.json を再生成
+npm run dev                             # またはビルド（README の「Build from source」を参照）
+```
+
 ### 2. 設定のポイント
 
 - **baseId**: カスタムモデルの完全な ARN を指定

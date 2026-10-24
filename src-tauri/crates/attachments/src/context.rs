@@ -132,7 +132,14 @@ pub fn build_attachment_context(
 
         match read_extracted_text(file, extractor) {
             Ok(text) => {
-                let budget = MAX_TEXT_CHARS_PER_FILE.min(MAX_TEXT_CHARS_TOTAL - total_text_chars);
+                // The Help chat's user guide is the whole point of that chat (and Help has no
+                // tools to read the rest), so only the total budget limits it.
+                let per_file = if file.name == common::help::USER_GUIDE_ATTACHMENT_NAME {
+                    MAX_TEXT_CHARS_TOTAL
+                } else {
+                    MAX_TEXT_CHARS_PER_FILE
+                };
+                let budget = per_file.min(MAX_TEXT_CHARS_TOTAL - total_text_chars);
                 let (included, included_len) = utf16_prefix(&text, budget);
                 total_text_chars += included_len;
 
@@ -320,6 +327,24 @@ mod tests {
         assert!(text_of(&result).contains("[truncated:"));
         assert!(text_of(&result).contains("first 120,000 of 120,500 characters"));
         assert_eq!(result.total_text_chars, MAX_TEXT_CHARS_PER_FILE);
+    }
+
+    #[test]
+    fn the_help_guide_is_not_held_to_the_per_file_cap() {
+        let fx = Fixture::new();
+        let guide = "g".repeat(MAX_TEXT_CHARS_PER_FILE + 80_000);
+        fx.add(
+            SESSION_ID,
+            &[(common::help::USER_GUIDE_ATTACHMENT_NAME, guide.as_bytes())],
+        );
+        let result = build(&fx, &MockExtractor::default());
+
+        assert!(
+            result.truncated_files.is_empty(),
+            "{:?}",
+            result.truncated_files
+        );
+        assert_eq!(result.total_text_chars, MAX_TEXT_CHARS_PER_FILE + 80_000);
     }
 
     #[test]

@@ -3,6 +3,7 @@ import CommandPalette, { filterItems, getItemIndex } from 'react-cmdk'
 import { useCallback, useEffect, useState } from 'react'
 import { routes } from './routes'
 import { useNavigate } from 'react-router-dom'
+import { isModKey } from './lib/platform'
 
 const CmdK = () => {
   const [page] = useState<'root' | 'projects'>('root')
@@ -13,7 +14,8 @@ const CmdK = () => {
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (e.metaKey && e.key === 'k') {
+      // ⌘ on macOS, Ctrl on Windows and Linux.
+      if (isModKey(e) && !e.shiftKey && !e.altKey && e.key === 'k') {
         e.preventDefault()
         e.stopPropagation()
 
@@ -22,14 +24,16 @@ const CmdK = () => {
         })
       }
 
-      if (e.metaKey) {
+      if (isModKey(e) && !e.shiftKey && !e.altKey) {
         try {
           if (e.key === ',') {
+            e.preventDefault()
             navigate('/setting')
           }
 
           const id = Number(e.key)
-          if (id > 0 && id <= routes.length) {
+          if (id > 0 && id <= Math.min(9, routes.length)) {
+            e.preventDefault()
             navigate(routes[id - 1].href)
           }
         } catch (e) {

@@ -103,6 +103,14 @@ Add the custom model definition to the `src/common/models/models.ts` file.
 }
 ```
 
+Then regenerate the Rust backend's copy of the model list and rebuild the app (custom models
+are compiled in, so a downloaded release won't include yours):
+
+```bash
+node scripts/port/gen-models-json.mjs   # rewrites src-tauri/crates/models/data/models.json
+npm run dev                             # or a build: see "Build from source" in the README
+```
+
 ### 2. Configuration Points
 
 - **baseId**: Specify the complete ARN of the custom model

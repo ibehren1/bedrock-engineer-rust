@@ -315,14 +315,25 @@ export const FlowConfigSchema = z.object({
 export const McpServerConfigSchema = z.object({
   name: z.string(),
   description: z.string(),
-  connectionType: z.enum(['command', 'url']).optional(),
+  // 'builtin': a server inside the app (the local knowledgebase server), never stored on agents
+  connectionType: z.enum(['command', 'url', 'builtin']).optional(),
   // Command format fields
   command: z.string().optional(),
   args: z.array(z.string()).optional(),
   env: z.record(z.string()).optional(),
   // URL format fields
   url: z.string().optional(),
-  headers: z.record(z.string()).optional()
+  headers: z.record(z.string()).optional(),
+  // Built-in server fields
+  agentId: z.string().optional()
+})
+
+// LocalKnowledgeBaseRef schema: an agent's local knowledgebase (the files on disk are the
+// source of truth; this list gives the agent the knowledgebase MCP server and prompt hint)
+export const LocalKnowledgeBaseRefSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional()
 })
 
 // TavilySearchConfig schema
@@ -376,6 +387,7 @@ export const CustomAgentSchema = BaseAgentSchema.extend({
   knowledgeBases: z.array(KnowledgeBaseSchema).optional(),
   flows: z.array(FlowConfigSchema).optional(),
   mcpServers: z.array(McpServerConfigSchema).optional(),
+  localKnowledgeBases: z.array(LocalKnowledgeBaseRefSchema).optional(),
   mcpTools: z.array(z.any()).optional(), // ToolState is complex, use any for type compatibility
   tavilySearchConfig: TavilySearchConfigSchema.optional(),
   additionalInstruction: z.string().optional(),
@@ -388,6 +400,7 @@ export type EnvironmentContextSettingsSchemaType = z.infer<typeof EnvironmentCon
 export type KnowledgeBaseSchemaType = z.infer<typeof KnowledgeBaseSchema>
 export type FlowConfigSchemaType = z.infer<typeof FlowConfigSchema>
 export type McpServerConfigSchemaType = z.infer<typeof McpServerConfigSchema>
+export type LocalKnowledgeBaseRefSchemaType = z.infer<typeof LocalKnowledgeBaseRefSchema>
 export type TavilySearchConfigSchemaType = z.infer<typeof TavilySearchConfigSchema>
 export type CommandConfigSchemaType = z.infer<typeof CommandConfigSchema>
 export type WindowConfigSchemaType = z.infer<typeof WindowConfigSchema>

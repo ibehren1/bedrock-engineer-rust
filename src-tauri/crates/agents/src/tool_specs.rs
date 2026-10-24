@@ -155,13 +155,10 @@ pub async fn generate_tool_specs(
         }
     }
 
-    if let (Some(servers), Some(mcp)) = (
-        agent
-            .get("mcpServers")
-            .filter(|s| s.as_array().is_some_and(|a| !a.is_empty())),
-        mcp,
-    ) {
-        match mcp.tool_specs(servers).await {
+    // Plus the built-in knowledgebase server when the agent has local knowledgebases.
+    let servers = common::agent::effective_mcp_servers_json(agent);
+    if let (Some(mcp), true) = (mcp, servers.as_array().is_some_and(|a| !a.is_empty())) {
+        match mcp.tool_specs(&servers).await {
             Ok(mcp_specs) => {
                 for spec in mcp_specs {
                     if let Some(s) = spec.get("toolSpec").filter(|s| !s.is_null()) {

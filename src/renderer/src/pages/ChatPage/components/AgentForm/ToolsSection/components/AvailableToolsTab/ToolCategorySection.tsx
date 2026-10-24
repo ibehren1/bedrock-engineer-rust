@@ -2,6 +2,10 @@ import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { isMcpTool, getOriginalMcpToolName } from '@/types/tools'
 import { ToolItem } from './ToolItem'
+import {
+  KNOWLEDGE_BASE_TOOL_NAMES,
+  LOCAL_KNOWLEDGE_BASE_SERVER
+} from '@/common/agents/knowledgeTools'
 import { ToolCategorySectionProps } from '../../types'
 
 /**
@@ -20,12 +24,17 @@ export const ToolCategorySection: React.FC<ToolCategorySectionProps> = ({
   const getServerInfoForTool = (toolName: string): string => {
     if (!isMcpTool(toolName) || !mcpServers || mcpServers.length === 0) return ''
 
-    const serverName = getOriginalMcpToolName(toolName)?.split('.')[0]
-    const server = mcpServers.find((s) => s.name === serverName)
+    // Tool names don't carry their server: the knowledgebase tools are known by name, and a
+    // single server is unambiguous.
+    const server = KNOWLEDGE_BASE_TOOL_NAMES.includes(getOriginalMcpToolName(toolName))
+      ? mcpServers.find((s) => s.name === LOCAL_KNOWLEDGE_BASE_SERVER)
+      : mcpServers.filter((s) => s.name !== LOCAL_KNOWLEDGE_BASE_SERVER).length === 1
+        ? mcpServers.find((s) => s.name !== LOCAL_KNOWLEDGE_BASE_SERVER)
+        : undefined
 
     return server
       ? `${t('From')}: ${server.name} (${server.description || 'MCP Server'})`
-      : `${t('From')}: ${serverName || 'Unknown server'}`
+      : `${t('From')}: MCP Server`
   }
 
   return (

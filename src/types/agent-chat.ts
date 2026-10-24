@@ -18,6 +18,7 @@ import type {
   InputTypeSchemaType,
   FlowConfigSchemaType,
   McpServerConfigSchemaType,
+  LocalKnowledgeBaseRefSchemaType,
   TavilySearchConfigSchemaType,
   EnvironmentContextSettingsSchemaType
 } from './agent-chat.schema'
@@ -34,6 +35,7 @@ export type KnowledgeBase = KnowledgeBaseSchemaType
 export type InputType = InputTypeSchemaType
 export type FlowConfig = FlowConfigSchemaType
 export type McpServerConfig = McpServerConfigSchemaType
+export type LocalKnowledgeBaseRef = LocalKnowledgeBaseRefSchemaType
 export type TavilySearchConfig = TavilySearchConfigSchemaType
 export type EnvironmentContextSettings = EnvironmentContextSettingsSchemaType
 

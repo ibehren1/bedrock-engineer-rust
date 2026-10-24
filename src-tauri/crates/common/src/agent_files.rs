@@ -32,6 +32,8 @@ pub const INSTANCE_ONLY_AGENT_FIELDS: &[&str] = &[
     "organizationId",
     "sharedFilePath",
     "mcpTools",
+    // Local knowledgebases live on this computer only.
+    "localKnowledgeBases",
 ];
 
 /// File format for saved agents (`options.format`, default YAML).
@@ -399,6 +401,7 @@ fn save_shared_agent_inner(
     shared.insert("isShared".into(), Value::Bool(true));
     shared.remove("mcpTools");
     shared.remove("sharedFilePath");
+    shared.remove("localKnowledgeBases");
 
     let file_path = agents_dir.join(&file_name);
     let content = serialize_agent(&Value::Object(shared), format)?;
@@ -705,6 +708,7 @@ pub fn organization_agent_upload(
     );
     shared.remove("mcpTools");
     shared.remove("sharedFilePath");
+    shared.remove("localKnowledgeBases");
     Ok(OrganizationUpload {
         s3_key,
         body: serialize_agent(&Value::Object(shared), format)?,
@@ -789,12 +793,14 @@ mod tests {
         let project = Project::new();
         let mut a = agent();
         a["sharedFilePath"] = json!("/somewhere/else/writer.yaml");
+        a["localKnowledgeBases"] = json!([{ "id": "kb", "name": "Docs" }]);
 
         let result = save_shared_agent(Some(project.path()), &a, AgentFileFormat::Yaml);
 
         assert!(result.success);
         let written = parse_yaml(&fs::read_to_string(result.file_path.unwrap()).unwrap()).unwrap();
         assert!(written.get("sharedFilePath").is_none());
+        assert!(written.get("localKnowledgeBases").is_none());
         assert_eq!(written["isShared"], json!(true));
     }
 

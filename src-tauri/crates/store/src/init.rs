@@ -137,6 +137,31 @@ pub fn init(data: &mut Map<String, Value>, env: &Env) {
         json!({ "memoryLimit": "2g", "cpuLimit": 2.0, "timeout": 300 }),
     );
 
+    // Local knowledgebases (the `knowledge` crate's `KnowledgeSettings` defaults).
+    missing(
+        data,
+        "knowledgebase",
+        json!({
+            "embedding": {
+                "provider": "bedrock",
+                "bedrockModelId": "amazon.titan-embed-text-v2:0",
+                "dimensions": 1024,
+                "localModel": "multilingual-e5-small"
+            },
+            "chunkSize": 400,
+            "chunkOverlap": 60,
+            "topK": 6,
+            "hybridWeight": 0.6,
+            "crawler": {
+                "maxDepth": 2,
+                "maxPages": 50,
+                "delayMs": 500,
+                "respectRobots": true,
+                "useSitemap": true
+            }
+        }),
+    );
+
     // `selectedVoiceId` is deliberately not initialized: Nova Sonic voice chat is
     // dropped. An existing value is left untouched.
 
@@ -223,6 +248,7 @@ mod tests {
                 "planMode",
                 "codeInterpreterTool",
                 "dockerSandboxTool",
+                "knowledgebase",
                 "userEmoji",
                 "userName",
                 "sidebarHiddenItems",
@@ -244,6 +270,11 @@ mod tests {
             json!({ "type": "enabled", "budget_tokens": 4096 })
         );
         assert_eq!(m["dockerSandboxTool"]["memoryLimit"], json!("2g"));
+        assert_eq!(
+            m["knowledgebase"]["embedding"]["provider"],
+            json!("bedrock")
+        );
+        assert_eq!(m["knowledgebase"]["crawler"]["maxPages"], json!(50));
         assert_eq!(m["guardrailSettings"]["guardrailVersion"], json!("DRAFT"));
         assert_eq!(m["lightProcessingModel"], Value::Null);
         assert!(!m.contains_key("selectedVoiceId"));

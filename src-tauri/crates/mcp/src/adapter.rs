@@ -105,11 +105,7 @@ pub fn resolve_servers(
                     "Agent not found: {selected}. Please check your agent configuration."
                 ));
             };
-            let servers = agent
-                .get("mcpServers")
-                .cloned()
-                .and_then(|v| serde_json::from_value::<Vec<McpServerConfig>>(v).ok())
-                .unwrap_or_default();
+            let servers = common::agent::effective_mcp_servers(agent);
             let name = agent
                 .get("name")
                 .and_then(Value::as_str)

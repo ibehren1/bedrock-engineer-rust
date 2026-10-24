@@ -140,49 +140,6 @@ ${SOFTWARE_AGENT_SYSTEM_PROMPT}
 `
 
 /**
- * 音声チャット用システムプロンプト生成用のプロンプトテンプレート
- */
-const getVoiceChatPromptTemplate = (
-  tools: ToolState[],
-  additionalInstruction?: string
-) => `You are an AI assistant that helps create a custom AI agent configuration optimized for voice-based conversations.
-Based on the following agent name and description, generate a system prompt that would be appropriate for this agent in speech-to-speech interactions.
-
-Please generate:
-A detailed system prompt that defines the agent's capabilities, personality, and behavior specifically optimized for spoken conversations
-
-Rules:
-<Rules>
-- The system prompt should be optimized for voice-based interactions (Nova Sonic)
-- Start with the baseline: "You are a friend. You and the user will engage in a spoken dialog exchanging the transcripts of a natural real-time conversation."
-- Include natural speech elements like "Well," "You know," "Actually," "I mean," or "By the way" at appropriate moments
-- Express emotions verbally through phrases like "Haha," "Wow," "Hmm," "Oh!" or "That's amazing!" when appropriate
-- Incorporate natural speech pauses using ellipses (...) when thinking or transitioning between topics
-- Use phrases like "The key thing to remember is," "What's really important here is" for emphasis instead of bold/italics
-- When sharing multiple points, use "first," "second," and "finally" to help the listener track information
-- End complex explanations with "So in summary..." to reinforce key takeaways
-- Before sharing multiple ideas, give previews like "I'm thinking of three reasons why..."
-- After completing topics, use phrases like "That covers what I wanted to share about..." to signal transitions
-- Keep responses conversational and natural for spoken delivery
-- Please specify how these tools should be used in a conversational manner
-- Please output in the language entered for the Agent Name and Description.
-</Rules>
-
-Available Tools:
-<Tools>
-${JSON.stringify(tools)}
-</Tools>
-
-${
-  additionalInstruction
-    ? `
-Additional Instruction:
-${additionalInstruction}`
-    : ''
-}
-`
-
-/**
  * シナリオ生成用のプロンプトテンプレート
  */
 const getScenarioPromptTemplate =
@@ -218,7 +175,6 @@ export function usePromptGeneration(
   const { t } = useTranslation()
   const { currentLLM: llm, selectedAgentId, getAgentTools } = useSetting()
   const [isGeneratingSystem, setIsGeneratingSystem] = useState(false)
-  const [isGeneratingVoiceChat, setIsGeneratingVoiceChat] = useState(false)
   const [isGeneratingScenarios, setIsGeneratingScenarios] = useState(false)
 
   // Hold the latest references of callback functions to avoid unnecessary re-renders
@@ -241,22 +197,12 @@ export function usePromptGeneration(
   // カスタムツールが提供されていればそれを使用、なければ既存のエージェントツールを使用
   const agentTools = customTools || getAgentTools(selectedAgentId)
   const systemPromptTemplate = getPromptTemplate(agentTools, additionalInstruction)
-  const voiceChatPromptTemplate = getVoiceChatPromptTemplate(agentTools, additionalInstruction)
 
   const {
     messages: systemMessages,
     loading: loadingSystem,
     handleSubmit: submitSystemPrompt
   } = useAgentChat(llm?.modelId || '', systemPromptTemplate, undefined, undefined, {
-    enableHistory: false
-  })
-
-  // 音声チャット用システムプロンプト生成
-  const {
-    messages: voiceChatMessages,
-    loading: loadingVoiceChat,
-    handleSubmit: submitVoiceChatPrompt
-  } = useAgentChat(llm?.modelId || '', voiceChatPromptTemplate, undefined, undefined, {
     enableHistory: false
   })
 
@@ -284,19 +230,6 @@ export function usePromptGeneration(
     setIsGeneratingSystem(false)
   }, [name, description, submitSystemPrompt, t])
 
-  // 音声チャット用システムプロンプト生成
-  const generateVoiceChatPrompt = useCallback(async () => {
-    if (!name || !description) {
-      toast.error(t('pleaseEnterNameAndDescription'))
-      return
-    }
-
-    setIsGeneratingVoiceChat(true)
-    const input = `Agent Name: ${name}\nDescription: ${description}`
-    await submitVoiceChatPrompt(input)
-    setIsGeneratingVoiceChat(false)
-  }, [name, description, submitVoiceChatPrompt, t])
-
   // シナリオ生成
   const generateScenarios = useCallback(async () => {
     if (!name || !description || !system) {
@@ -323,19 +256,6 @@ export function usePromptGeneration(
       }
     }
   }, [systemMessages])
-
-  // Process voice chat system prompt generation results
-  useEffect(() => {
-    if (voiceChatMessages.length > 1) {
-      const lastMessage = voiceChatMessages[voiceChatMessages.length - 1]
-      if (lastMessage.content) {
-        const textContent = lastMessage.content.find((v) => v.text)
-        if (textContent && textContent.text) {
-          onSystemPromptGeneratedRef.current(textContent.text)
-        }
-      }
-    }
-  }, [voiceChatMessages])
 
   // Process scenario generation results
   useEffect(() => {
@@ -370,10 +290,8 @@ export function usePromptGeneration(
 
   return {
     generateSystemPrompt,
-    generateVoiceChatPrompt,
     generateScenarios,
     isGeneratingSystem: isGeneratingSystem || loadingSystem,
-    isGeneratingVoiceChat: isGeneratingVoiceChat || loadingVoiceChat,
     isGeneratingScenarios: isGeneratingScenarios || loadingScenarios
   }
 }

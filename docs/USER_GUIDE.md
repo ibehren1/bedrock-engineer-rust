@@ -51,6 +51,8 @@ section that answers it. See [Section 23](#23-getting-help-inside-the-app).
 21. [Glossary](#21-glossary)
 22. [Troubleshooting](#22-troubleshooting)
 23. [Getting help inside the app](#23-getting-help-inside-the-app)
+24. [Local knowledge bases: letting an agent search your documents](#24-local-knowledge-bases-letting-an-agent-search-your-documents)
+25. [Memory: rules and facts every chat knows](#25-memory-rules-and-facts-every-chat-knows)
 
 ---
 
@@ -92,21 +94,33 @@ Five steps to a working first conversation.
 Download the installer from the
 [releases page](https://github.com/ibehren1/bedrock-engineer-rust/releases/latest) and run it.
 
-On a Mac, you will probably see a warning that the app was blocked, because it is not distributed
-through the Mac App Store. That is expected. Go to **System Settings → Privacy & Security**, scroll
-down, find the blocked app, and click **Open Anyway**.
+On a Mac, there are two one-time steps in the Terminal app before you open the app for the first
+time, because the app is self-signed rather than signed by Apple:
 
-After installing on a Mac, and again after every update, run this one command in the Terminal app
-before opening the app:
+1. **Let Terminal manage apps.** On macOS 15 and later, open **System Settings → Privacy & Security →
+   App Management**, turn on **Terminal**, then quit and reopen Terminal. Without this, the next step
+   fails with "Operation not permitted" and the app can hang on launch with no window and no error.
+2. **Sign the app on your Mac**, and clear the download flag your browser put on it:
 
-```bash
-sudo codesign --force --deep --sign - "/Applications/Bedrock Engineer.app"
-```
+   ```bash
+   sudo codesign --force --deep --sign - "/Applications/Bedrock Engineer.app"
+   sudo xattr -dr com.apple.quarantine "/Applications/Bedrock Engineer.app"
+   ```
 
-The app is self-signed rather than signed by Apple, so each copy has to be signed on the Mac it runs
-on. Without it, permission pop-ups (screen recording, camera) may appear twice or behave strangely.
+   Each copy has to be signed on the Mac it runs on. Without it the app may not open at all, and
+   permission pop-ups (screen recording, camera) may appear twice or behave strangely.
+
+Then open the app. If macOS says the app was blocked, go to **System Settings → Privacy & Security**,
+scroll down, find the blocked app, and click **Open Anyway**.
+
+Run the two commands again only if you install a new version by hand from a downloaded file. Updates
+the app installs itself ([Section 5.8](#58-updates-tab)) do not need them.
 
 On Windows, if SmartScreen says "Windows protected your PC", click **More info**, then **Run anyway**.
+
+On Linux, make the AppImage executable (`chmod +x bedrock-engineer-rust-*.AppImage`) and run it, or
+install the `.deb` with `sudo apt install ./<file>.deb`. Both need a recent distribution (glibc 2.39 or
+later), such as Ubuntu 24.04, Debian 13 or Fedora 40.
 
 ### Step 2 — Give the app your AWS keys
 
@@ -146,22 +160,25 @@ Try: _"List the files in my project folder and tell me what this project seems t
 
 ### 3.1 The sidebar
 
-Every screen in the app is reachable from the icon strip down the left edge.
+Every screen in the app is reachable from the icon strip down the left edge. The icons have no text
+labels; hover over one to see its name and its keyboard shortcut.
 
-| Icon           | Page                         | What it is for                                                                    |
-| -------------- | ---------------------------- | --------------------------------------------------------------------------------- |
-| House          | **Home**                     | The starting screen.                                                              |
-| Speech bubbles | **Chat**                     | The main workspace. Talk to an agent, which uses tools to get things done.        |
-| Robot          | **My Agents**                | Create, edit, arrange and hide your agents.                                       |
-| Book           | **Agent Directory**          | Browse ready-made agents other people have shared, and add them to your own list. |
-| Pulse          | **Background Agent**         | Set an agent to run automatically on a schedule.                                  |
-| Feather        | **Website Generator**        | Describe a web page and watch it get built, with a live preview.                  |
-| Merging arrows | **Step Functions Generator** | Build an AWS Step Functions workflow from a description.                          |
-| Layout         | **Diagram Generator**        | Turn a description into an AWS architecture diagram.                              |
-| Gear           | **Settings**                 | Everything configurable.                                                          |
+| Icon           | Page                         | What it is for                                                                                     |
+| -------------- | ---------------------------- | -------------------------------------------------------------------------------------------------- |
+| House          | **Home**                     | The starting screen.                                                                               |
+| Speech bubbles | **Chat**                     | The main workspace. Talk to an agent, which uses tools to get things done.                         |
+| Robot          | **My Agents**                | Create, edit, arrange and hide your agents.                                                        |
+| Brain          | **Memory**                   | Rules and facts every chat can use. See [Section 25](#25-memory-rules-and-facts-every-chat-knows). |
+| Book           | **Agent Directory**          | Browse ready-made agents other people have shared, and add them to your own list.                  |
+| Pulse          | **Background Agent**         | Set an agent to run automatically on a schedule.                                                   |
+| Feather        | **Website Generator**        | Describe a web page and watch it get built, with a live preview.                                   |
+| Merging arrows | **Step Functions Generator** | Build an AWS Step Functions workflow from a description.                                           |
+| Layout         | **Diagram Generator**        | Turn a description into an AWS architecture diagram.                                               |
+| Gear           | **Settings**                 | Everything configurable.                                                                           |
 
 You can hide any icon you never use: **Settings → General → Sidebar Settings**. Hiding an icon does
-not disable the feature; the page still exists at its address.
+not disable the feature; the page still exists at its address, and its keyboard shortcut still works.
+Settings itself cannot be hidden.
 
 Two more buttons sit at the **bottom** of the strip, below the gap. These are not pages, and they
 cannot be hidden:
@@ -173,15 +190,25 @@ cannot be hidden:
 
 ### 3.2 Keyboard shortcuts
 
-| Shortcut                          | What it does                                                                         |
-| --------------------------------- | ------------------------------------------------------------------------------------ |
-| `Cmd`/`Ctrl` + `K`                | Open the command palette — a search box for jumping to any page.                     |
-| `Cmd`/`Ctrl` + `,`                | Open Settings.                                                                       |
-| `Cmd`/`Ctrl` + `1` … `9`          | Jump straight to the 1st through 9th page in the sidebar.                            |
-| `Cmd`/`Ctrl` + `Shift` + `A`      | On the Chat page, switch between **Plan** and **Act** mode.                          |
-| `Cmd`/`Ctrl` + `+` / `-` / `0`    | Make everything bigger, smaller, or back to normal size.                             |
-| `Cmd`/`Ctrl` + `R`                | Reload the window, if it ever looks stuck. Your settings and chats are kept.         |
-| `Enter` or `Cmd`/`Ctrl` + `Enter` | Send your message. Which one sends is your choice — see [Section 5.4](#54-chat-tab). |
+| Shortcut                          | What it does                                                                                                                       |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `Cmd`/`Ctrl` + `K`                | Open the command palette — a search box for jumping to any page.                                                                   |
+| `Cmd`/`Ctrl` + `,`                | Open Settings. Also in the macOS app menu as **Bedrock Engineer → Settings…**, which brings the window forward first.              |
+| `Cmd`/`Ctrl` + `1` … `9`          | Jump straight to the 1st through 9th page in the sidebar list in [3.1](#31-the-sidebar) (Home is 1, Diagram Generator is 9).       |
+| `Cmd`/`Ctrl` + `Shift` + `A`      | On the Chat page, switch between **Plan** and **Act** mode.                                                                        |
+| `Enter` or `Cmd`/`Ctrl` + `Enter` | Send your message. Which one sends is your choice — see [Section 5.4](#54-chat-tab).                                               |
+| `@`                               | In the message box, pick another agent to hand part of the job to. See [Section 12](#12-handing-work-to-another-agent-with-).      |
+| `Cmd`/`Ctrl` + `A`                | In a file preview on the Files tab (after clicking in it), select just that file's content.                                        |
+| `Cmd`/`Ctrl` + `S`                | Save the file you are editing on the Files tab.                                                                                    |
+| `Cmd`/`Ctrl` + `+` / `-` / `0`    | Make everything bigger, smaller, or back to normal size.                                                                           |
+| `Cmd`/`Ctrl` + `R`                | Reload the window, if it ever looks stuck. Your settings and chats are kept, but a reply that is still being written is cancelled. |
+| `Cmd` + `W` (macOS)               | Close the window, which quits the app.                                                                                             |
+
+`Cmd` is for macOS and `Ctrl` for Windows and Linux; hovering over a sidebar icon shows its shortcut
+with the right key.
+
+The **View** menu also has Force Reload, Toggle Developer Tools and Full Screen. Right-clicking in the
+window offers Copy and Paste.
 
 ---
 
@@ -227,7 +254,10 @@ to use `us-east-1`, do this while `us-east-1` is the selected region.
 4. Click **Modify model access** (or **Enable specific models** on a fresh account).
 5. Tick the models you want. At a minimum, tick the Anthropic **Claude** models — those are the ones
    this app is built around. Ticking Amazon **Nova Reel** (used by the video tool) and the
-   **Stability AI** image models (used by the image tool) is worth it too.
+   **Stability AI** image models (used by the image tool) is worth it too. If you plan to give agents
+   [local knowledge bases](#24-local-knowledge-bases-letting-an-agent-search-your-documents) with
+   Bedrock embeddings, tick **Titan Text Embeddings V2** (the default) or the **Cohere Embed** model
+   you intend to use.
 6. Some model families — Anthropic's in particular — ask for a short **use case description**. A
    sentence or two about what you intend to do with it is enough ("internal engineering
    productivity assistant for my own use").
@@ -256,7 +286,15 @@ two.
 | **Recommended Policy (Complete)** | You want everything to work: chat, images, video, translation, knowledge bases, Bedrock Agents and Flows, guardrails, inference profiles, and reading and writing S3 objects. |
 | **Basic Policy (LLM Only)**       | You only want to chat. It permits invoking models and listing them, and nothing else.                                                                                         |
 
-Copy the JSON from that dialog, then in the AWS console:
+Both policies allow `bedrock:InvokeModel` on every model, which also covers the embedding models used
+by [local knowledge bases](#24-local-knowledge-bases-letting-an-agent-search-your-documents) (Titan
+Text Embeddings V2 and Cohere Embed). If your administrator writes a narrower policy that lists
+specific models, it has to include the embedding model too, or adding documents to a knowledge base
+fails with an access error. (The "knowledge bases" in the Recommended policy's row above are Amazon
+Bedrock Knowledge Bases in AWS, a different feature; local knowledge bases need no extra
+permission beyond `InvokeModel`, and none at all if they use the on-device model.)
+
+Copy the JSON from that dialog (**Copy**), then in the AWS console:
 
 1. Go to **IAM → Policies → Create policy**, switch the editor to **JSON**, paste it in, and give it
    a name such as `BedrockEngineerAccess`.
@@ -464,7 +502,7 @@ Fill in:
 
 - **AWS Access Key ID** — looks like `AKIA...`
 - **AWS Secret Access Key** — the longer random string
-- **AWS Session Token** — only if your keys are temporary (see above). Leave it blank otherwise.
+- **AWS Session Token (optional)** — only if your keys are temporary (see above). Leave it blank otherwise.
 - **AWS Region** — the region you enabled models in, such as `us-east-1`.
 
 The app stores these on your own machine in its settings file. Nothing is sent anywhere except to
@@ -472,13 +510,14 @@ AWS.
 
 **Option B — use an AWS profile (better if you have one)**
 
-Turn on **Use AWS Profile** and type the profile name — `default`, or `bedrock` if you followed the
-naming above. The app then reads `~/.aws/credentials` every time it makes a request, so your secret
+Turn on **Use AWS Profile** and type the name into **AWS Profile Name** — `default`, or `bedrock` if
+you followed the naming above. The app then reads `~/.aws/credentials` every time it makes a request, so your secret
 never gets copied into the app's own storage, and rotating or refreshing the key in that file takes
 effect without touching the app.
 
 Set the **AWS Region** in the app either way. The app uses the region you pick here, not the one in
-your profile's config file.
+your profile's config file. The region list puts the regions that offer Bedrock first, under
+**Bedrock Supported Regions**, and everything else under **Other Regions**.
 
 ### 4.8 Check that it works
 
@@ -531,7 +570,7 @@ will not appear.
 
 Click **View required IAM policies** in the AWS settings tab. The app shows you the exact permission
 policy to hand to whoever administers your AWS account. In short, it needs permission to call Bedrock
-for text, images and video, plus a few read-only permissions to list what is available.
+for text, images, video and embeddings, plus a few read-only permissions to list what is available.
 [Section 4.3](#43-step-2--give-your-identity-permission-to-call-bedrock) walks through attaching it.
 
 ### 4.11 If your office uses a proxy
@@ -549,72 +588,149 @@ supported.
 
 ![settings-sidebar](../assets/settings-sidebar.png)
 
-Settings are split into five tabs listed down the left. Each tab has its own web-style address, so a
-link can point at one directly (for example `#/setting/aws`).
+Settings are split into eight tabs listed down the left: **General**, **AWS**, **Models**, **Chat**,
+**Workspace**, **Sandbox**, **Knowledge Base** and **Updates**. Each tab has its own web-style
+address, so a link can point at one directly (for example `#/setting/aws`). Open Settings with the
+gear at the bottom of the sidebar's page list, or `Cmd` + `,` on a Mac.
+
+Settings save as you change them; there is no Save button.
+
+Some settings are not on these tabs, because they belong to one tool or one agent: the image models,
+the screen and camera capture options and similar per-tool choices are in the **Tools** button below
+the message box ([Section 6.10](#610-the-folder-tools-and-ignore-buttons)), and the ignore patterns
+are in its **.ignore** button.
 
 ### 5.1 General tab
 
 | Setting                         | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Language**                    | Switches the app's own text between English and Japanese. It does not change what language the AI replies in — for that, just ask the agent, or say so in its system prompt.                                                                                                                                                                                                                                                                                                                          |
+| **Language**                    | Switches the app's own text between English and Japanese (日本語). It does not change what language the AI replies in — for that, just ask the agent, or say so in its system prompt.                                                                                                                                                                                                                                                                                                                 |
 | **Appearance → Theme**          | **Light**, **Newspaper**, **Dim**, **Charcoal**, **Dark**, or **System** (follow your operating system) — listed from lightest to darkest. Dim is the default: dark, but softer than full black. **Newspaper** is flat black-on-white like a printed page or an e-ink reader — square corners, no shadows, and colour used only for success and error. **Charcoal** is a warm grey with an amber accent; because amber is the accent there, warnings use a different colour and always carry an icon. |
 | **Appearance → Interface font** | The typeface used for labels, menus and body text: **Inter** (default), **Geist**, or your **system font**. All are bundled with the app, so any choice works offline and looks the same on macOS, Windows and Linux.                                                                                                                                                                                                                                                                                 |
 | **Appearance → Code font**      | The typeface used for code, JSON, file paths and identifiers: **JetBrains Mono** (default), **Geist Mono**, or your **system font**. This is deliberately separate from the interface font — JetBrains Mono makes `1`, `l` and `I`, and `0` and `O`, much easier to tell apart, which matters when you're reading a tool-use ID or an ARN. Your font choices apply to every appearance.                                                                                                               |
-| **User Avatar / Name**          | Pick an emoji and a display name for yourself. These appear on your messages in chat and in exported documents.                                                                                                                                                                                                                                                                                                                                                                                       |
-| **Sidebar Settings**            | Show or hide each navigation icon.                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| **Notification Settings**       | Turn on desktop notifications so you get a pop-up when a long answer finishes or a scheduled background task completes. Useful if you switch to other work while the agent runs.                                                                                                                                                                                                                                                                                                                      |
+| **User Avatar / User Name**     | Pick an emoji and a display name for yourself. These appear on your messages in chat and in exported documents. **Reset to default** goes back to the plain user icon.                                                                                                                                                                                                                                                                                                                                |
+| **Sidebar Settings**            | Show or hide each navigation icon. Settings is always shown.                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| **Notification Settings**       | **Enable desktop notifications** (on by default) gives you a pop-up when a long answer finishes or a scheduled background task completes. Useful if you switch to other work while the agent runs.                                                                                                                                                                                                                                                                                                    |
+
+Update controls used to be on this tab; they now have their own [Updates tab](#58-updates-tab).
 
 ### 5.2 AWS tab
 
-Covered in full in [Section 4](#4-setting-up-access-to-amazon-bedrock): credentials, region, IAM policy help
-and proxy.
+Covered in full in [Section 4](#4-setting-up-access-to-amazon-bedrock): credentials or a profile,
+region, the **View required IAM policies** dialog, and **Proxy Settings**.
 
 ### 5.3 Models tab
 
-| Setting                                           | What it does                                                                                                                                                                                                                                                  |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **LLM (Large Language Model)**                    | Your default model for new conversations. You can still change it per conversation from the Chat page.                                                                                                                                                        |
-| **Visible Models**                                | An allowlist. Add models here to trim the dropdown down to only the ones you want to see. Leave it empty to see everything your region offers.                                                                                                                |
-| **Enable Region Failover on ThrottlingException** | If AWS is busy and rejects your request ("throttling"), automatically retry in another region you list under **Failover Regions**. Turn this on if you get "too many requests" errors.                                                                        |
-| **Enable Application Inference Profiles**         | For cost tracking. Lets you route requests through a tagged profile so your AWS bill can be split by project or team. See [the inference profile guide](./inference-profile/INFERENCE_PROFILE.md).                                                            |
-| **Inference Parameters**                          | Fine controls over how the model writes. See below.                                                                                                                                                                                                           |
-| **Light Processing Model**                        | A smaller, cheaper model used for small background jobs like naming your chats and suggesting follow-up questions. Set it to something cheap; it does not affect the quality of your actual answers. Choose **Use Main Conversation Model** to turn this off. |
-| **Guardrails**                                    | Connect an Amazon Bedrock Guardrail to filter content. See below.                                                                                                                                                                                             |
+| Setting                                           | What it does                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **LLM (Large Language Model)**                    | Your default model for new conversations. You can still change it per conversation from the Chat page.                                                                                                                                                                                                                                 |
+| **Visible Models**                                | An allowlist. Add models here (**Add a visible model**) to trim the chat's model dropdown down to only the ones you want to see. Leave it empty to see everything your region offers. The model you are using always stays visible.                                                                                                    |
+| **Enable Application Inference Profiles**         | On by default. For cost tracking: lets you route requests through a tagged profile so your AWS bill can be split by project or team. See [the inference profile guide](./inference-profile/INFERENCE_PROFILE.md).                                                                                                                      |
+| **Enable Region Failover on ThrottlingException** | Off by default. If AWS is busy and rejects your request ("throttling"), automatically retry in another region you list under **Failover Regions**. Turn this on if you get "too many requests" errors. Turning it off clears the list.                                                                                                 |
+| **Inference Parameters**                          | Fine controls over how the model writes, and the default thinking budget. See below.                                                                                                                                                                                                                                                   |
+| **Light Processing Model**                        | A model used for small background jobs like naming your chats and suggesting follow-up questions, and for the [Help chat](#23-getting-help-inside-the-app). The default, **Use Main Conversation Model**, uses your main model; pick a cheap Haiku or Nova model to save money. It does not affect the quality of your actual answers. |
+| **Amazon Bedrock Guardrails**                     | Connect an Amazon Bedrock Guardrail to filter content. See below.                                                                                                                                                                                                                                                                      |
 
 **Inference parameters, in plain terms:**
 
-- **Max Tokens** — the longest reply the model is allowed to produce. A "token" is roughly ¾ of a
-  word. Raise it if answers get cut off mid-sentence; lower it to keep replies short and cheap. Each
-  model has its own ceiling — 128,000 tokens on Claude Opus 5, 64,000 on Haiku 4.5, 5,120 on the
-  first-generation Nova models — and requests are capped at whichever is lower, this setting or the
-  ceiling of the model you are using. So you can leave it high without a smaller model refusing the
-  request; that model simply uses as much of it as it can.
-- **Temperature** — how much randomness. `0` is focused and repetitive; higher values are more
-  creative and more unpredictable. For code and factual work, keep it low.
-- **topP** — another randomness dial that limits the model to its most likely word choices. Most
-  people should leave this alone and adjust only Temperature.
+- **Max Tokens** (default 4,096) — the longest reply the model is allowed to produce. A "token" is
+  roughly ¾ of a word. Raise it if answers get cut off mid-sentence; lower it to keep replies short
+  and cheap. Each model has its own ceiling — 128,000 tokens on Claude Opus 5, 64,000 on Haiku 4.5,
+  5,120 on the first-generation Nova models — and requests are capped at whichever is lower, this
+  setting or the ceiling of the model you are using. So you can leave it high without a smaller model
+  refusing the request; that model simply uses as much of it as it can.
+- **Temperature** (default 0.5) — how much randomness. `0` is focused and repetitive; higher values
+  are more creative and more unpredictable. For code and factual work, keep it low.
+- **topP** (default 0.9) — another randomness dial that limits the model to its most likely word
+  choices. Most people should leave this alone and adjust only Temperature.
+- **Thinking Mode / Thinking Budget** — the default for the **Thinking** control on the Chat page
+  ([Section 6.2](#62-the-three-main-controls)).
+
+Some newer models (Claude Opus 4.7 and later, Sonnet 5 and later, Haiku 5.5, and a few others) no
+longer accept Temperature and topP, so for those the app leaves both out and the model's own defaults
+apply.
 
 **Guardrails** are an AWS feature that blocks or masks content you do not want — profanity, personal
-information, particular topics. You create the guardrail in the AWS console, then enter its
-**Guardrail Identifier** and **Version** here. **Trace** logs why something was blocked, which is
-useful while you are tuning it.
+information, particular topics. You create the guardrail in the AWS console, then turn on **Enable
+Guardrails** and enter its **Guardrail Identifier** and **Guardrail Version** (default `DRAFT`).
+**Trace** logs why something was blocked, which is useful while you are tuning it.
 
 ### 5.4 Chat tab
 
-| Setting                           | What it does                                                                                                                                                                                                                                                                                    |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Context Length**                | How many past messages get sent along with each new one. Higher means the agent remembers more of the conversation, but every message costs money to send, so long context costs more. The default of 10 is fine for most work; raise it if the agent keeps forgetting things you said earlier. |
-| **Request Timeout (minutes)**     | How long to wait before giving up on a reply. Raise it if you ask for long, tool-heavy jobs that legitimately take a while.                                                                                                                                                                     |
-| **Enable Prompt Cache**           | Lets AWS remember the unchanging front part of your conversation so it does not have to be re-processed every turn. This makes replies faster and cheaper. Leave it on.                                                                                                                         |
-| **Tavily Search API Key**         | Required for the web search tool. Get a free key from [tavily.com](https://tavily.com/). Without it, `tavilySearch` will not work.                                                                                                                                                              |
-| **Advanced → Enter key behavior** | Choose whether `Enter` sends your message (and `Shift+Enter` makes a new line), or the other way round. Pick whichever matches the other apps you use.                                                                                                                                          |
+| Setting                                    | What it does                                                                                                                                                                                                                                                                                                    |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Tavily Search API Key**                  | Required for the web search tool. Get a free key from [tavily.com](https://tavily.com/). Without it, `tavilySearch` is left out of the agent's tools.                                                                                                                                                           |
+| **Context Length**                         | How many past messages get sent along with each new one. Higher means the agent remembers more of the conversation, but every message costs money to send, so long context costs more. The default is 60; lower it if long chats get expensive, raise it if the agent keeps forgetting things you said earlier. |
+| **Request Timeout (minutes)**              | How long to wait before giving up on a reply (default 15). Raise it if you ask for long, tool-heavy jobs that legitimately take a while.                                                                                                                                                                        |
+| **Enable Prompt Cache**                    | Lets AWS remember the unchanging front part of your conversation so it does not have to be re-processed every turn. This makes replies faster and cheaper. On by default; leave it on.                                                                                                                          |
+| **Advanced Setting → Enter key behaviour** | "When writing a message, press [Enter] to" **Send the message** (the default; `Shift+Enter` makes a new line), or **Start a new line** (then `Cmd`/`Ctrl` + `Enter` sends). Pick whichever matches the other apps you use.                                                                                      |
 
 ### 5.5 Workspace tab
 
-| Setting               | What it does                                                                                                                                                                                            |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Project Directory** | The folder the agent works in. All file tools are anchored here, and attachments and Docker sandboxes are stored inside it. Choose a real project folder, or a scratch folder if you are experimenting. |
-| **Config Directory**  | Where the app keeps its own settings and chat history. Shown so you can find it; see [Section 19](#19-where-the-app-keeps-your-files).                                                                  |
+| Setting              | What it does                                                                                                                                                                                                                                                                                |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Project Setting**  | The project directory: the folder the agent works in. Click the path or **Select Project Directory** to choose it. All file tools are anchored here, and attachments and Docker sandboxes are stored inside it. Choose a real project folder, or a scratch folder if you are experimenting. |
+| **Config Directory** | Where the app keeps its own settings and chat history. Shown, read-only, so you can find it; see [Section 19](#19-where-the-app-keeps-your-files).                                                                                                                                          |
+
+You can also switch the project folder for the current chat from the folder button below the message
+box ([Section 6.10](#610-the-folder-tools-and-ignore-buttons)).
+
+### 5.6 Sandbox tab
+
+Settings for the [Docker sandbox](#10-the-docker-sandbox), the private Linux container a chat can work
+in.
+
+| Setting                                        | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Docker → Environment**                       | Whether Docker and Docker Compose are installed and running on this computer, with **Re-check** and when it was last checked. Compose is optional; without it, sandboxes are single containers.                                                                                                                                                                                                                                                                                                                                                       |
+| **Default container image → Operating system** | The Linux distribution new sandboxes are built on: **Debian 13** (the default — the quickest to download and to install packages on), **Ubuntu 26.04**, **Amazon Linux 2023**, **Amazon Linux 2027**, **AlmaLinux 9**, **Rocky Linux 9** or **Red Hat UBI 9** (real RHEL, limited to Red Hat's freely available packages). Debian and Ubuntu install software with `apt-get`, the others with `dnf`. A chat that already has a sandbox keeps its OS until the sandbox is removed, and the agent can still ask for a different OS when it creates one. |
+| **Container limits → Memory limit**            | 256 MB to 8 GB. Default 2 GB.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| **Container limits → CPU limit**               | 0.5 to 4 CPUs. Default 2.0 CPUs.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| **Container limits → Command timeout**         | 60 seconds to 30 minutes. Default 5 minutes. How long the agent waits for a command before getting control back. The command itself keeps running past this, so a long build is not killed.                                                                                                                                                                                                                                                                                                                                                           |
+
+The limits apply to every service in every sandbox. Existing sandboxes pick up new limits when they are
+recreated. The **Docker Sandbox** entry in the chat's **Tools** button shows a one-line summary of these
+settings with an **Open sandbox settings** button that brings you here.
+
+### 5.7 Knowledge Base tab
+
+Settings for [local knowledge bases](#24-local-knowledge-bases-letting-an-agent-search-your-documents),
+the documents and websites an agent can search. The tab has four sections:
+
+- **Overview** — every knowledge base on this computer, with totals, health, **Optimize all** and a way
+  to delete knowledge bases whose agent no longer exists.
+- **Embedding model** — which model turns text into searchable form for new knowledge bases: Amazon
+  Titan Text Embeddings V2 or Cohere Embed through Bedrock, or the on-device multilingual-e5-small,
+  with its download button.
+- **Chunking and retrieval** — passage size, results per search, and the balance between meaning and
+  keyword matches.
+- **Website crawler** — defaults for new website sources.
+
+Each section is explained in [Section 24.6](#246-the-knowledge-base-settings-tab).
+
+### 5.8 Updates tab
+
+The app keeps itself up to date from this fork's GitHub releases.
+
+| Item                                | What it does                                                                                                              |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **Version**                         | The version you are running.                                                                                              |
+| **Check for updates automatically** | On by default. The app checks shortly after it starts and then every hour, and downloads a new version in the background. |
+| **Check for updates**               | Checks right now. Once a new version has downloaded, the button becomes **Restart now**.                                  |
+| **What's new in …**                 | Appears while a new version is downloading or ready, with its release notes, so you can read them before restarting.      |
+| **Changes in version …**            | What changed in the version you are running. **Show earlier changes** lists the versions before it.                       |
+
+When an update is ready, a banner says so with **Restart now** and **Later**. Later hides the banner,
+and the new version is used the next time you quit and reopen the app. Every download is checked
+against the app's update signing key before it is installed.
+
+On a Mac, an update the app installs itself needs none of the Terminal steps from
+[Step 1](#step-1--install-the-app). macOS 15 and later may ask you to let **Bedrock Engineer** manage
+apps the first time it updates itself (**System Settings → Privacy & Security → App Management**); if an
+update fails with a permission error, turn it on there and check again. Because the app is
+self-signed, macOS also asks for Screen Recording and Camera permission again after each update.
+
+The Linux `.deb` package does not update itself; the AppImage does.
 
 ---
 
@@ -627,23 +743,26 @@ This is where most work happens.
 ### 6.1 The layout
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│ [history]     Chat title              [TODO] [$cost] [tokens]│  top bar
-├───────────┬──────────────────────────────────────────────────┤
-│           │                                                  │
-│  Chat     │   Your messages and the agent's replies           │
-│  history  │   (tool calls shown inline, collapsible)          │
-│  list     │                                                  │
-│  📎 🐳    │                                                  │
-│           │                                                  │
-├───────────┴──────────────────────────────────────────────────┤
-│ [MD] [Word] [PDF] [paperclip] [whale]        [stop] [new]    │  toolbar
-├──────────────────────────────────────────────────────────────┤
-│ Type your message here…                                      │  input box
-│                                                              │
-│ [Agent ▾] [Model ▾] [Thinking ▾] [Plan/Act] [tools] [folder] │  controls
-└──────────────────────────────────────────────────────────────┘
+┌───────────┬────────────────────────────────────────────────────────────────┐
+│  Chat     │ [Chat] [Files] [Sandbox] [Terminal] [Todo] [Cost] [System prompt]│  chat tabs
+│  history  ├────────────────────────────────────────────────────────────────┤
+│  list     │                                                                │
+│           │   Your messages and the agent's replies                        │
+│  📎 🐳    │   (tool calls shown inline, collapsible)                       │
+│           │                                                                │
+│           ├────────────────────────────────────────────────────────────────┤
+│           │ [Tools] [folder] [.ignore]   [brain] [terminal] [paperclip]    │  toolbar
+│           │                [stop] [whale] [Files] [MD] [Word] [PDF] [new]  │
+│           ├────────────────────────────────────────────────────────────────┤
+│           │ Type message or attach files…                                  │  input box
+│           │ [Agent ▾] [Model ▾] [Thinking ▾] [Interleave]   [Plan|Act] [➤] │  controls
+└───────────┴────────────────────────────────────────────────────────────────┘
 ```
+
+The chat history is on the left ([6.9](#69-chat-history)). The tabs across the top switch what the
+main area shows ([6.6](#66-the-chat-tabs)); the message box stays at the bottom on every tab. The
+buttons above the message box only appear when they have something to do — for example, the export
+buttons appear once the chat has messages, and the whale only when the chat has a Docker sandbox.
 
 Each row in the chat history carries a **paperclip** when that chat has attached files and a **whale**
 when it has a Docker sandbox, so you can tell which conversations have something on disk behind them
@@ -661,29 +780,37 @@ of tools. The dropdown also has an **Edit agents** entry that jumps to the My Ag
 you can see what you are spending before you spend it.
 
 **Thinking** — how much the model is allowed to reason privately before it answers. More thinking
-gives better answers on hard problems, but costs more and takes longer.
+gives better answers on hard problems, but costs more and takes longer. It appears only for models
+that can think.
 
 | Thinking setting | When to use it                                                                                                                                                                        |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **None**         | Simple questions, quick lookups, chatting.                                                                                                                                            |
-| **Adaptive**     | Let the model decide how hard to think. A good default on newer models.                                                                                                               |
+| **Adaptive**     | Let the model decide how hard to think. Offered instead of the budgets below on newer models that support it.                                                                         |
 | **Quick** (1K)   | A little planning.                                                                                                                                                                    |
 | **Normal** (4K)  | Everyday multi-step work.                                                                                                                                                             |
 | **Deep** (16K)   | Hard debugging, tricky analysis, long plans.                                                                                                                                          |
 | **Deeper** (32K) | The hardest problems. On models that use effort levels instead of a thinking budget (Grok 4.7, Grok 4.6, GPT-6.1, GPT-6, GPT-5.6), this asks for the highest effort the model offers. |
 
-Some models always think and cannot be turned down; the control will tell you when that is the case.
+Models that think adaptively offer just **None** and **Adaptive**; the others offer None and the four
+budgets. Some models always think and cannot be turned down; the control will tell you when that is
+the case.
 
-There is also an **Interleave** toggle. When on, you see the model's reasoning woven into its answer
-as it works, instead of only the final result. Handy for understanding _why_ it did something.
+On some Claude models, while thinking is on, there is also an **Interleave** toggle. When on, you see
+the model's reasoning woven into its answer as it works, instead of only the final result. Handy for
+understanding _why_ it did something.
 
 ### 6.3 Plan mode and Act mode
 
-The **Plan / Act** toggle next to the input box (or `Cmd`/`Ctrl` + `Shift` + `A`) controls whether
-the agent is allowed to change anything.
+The **Plan / Act** toggle in the bottom-right of the input box (or `Cmd`/`Ctrl` + `Shift` + `A`)
+controls whether the agent is allowed to change anything.
 
-- **Plan mode** — only read-only tools work. The agent can look at your files, search the web and
-  think out loud, but it cannot write, move or delete anything, and it cannot run commands.
+- **Plan mode** — only read-only tools work: `readFiles`, `listFiles`, `tavilySearch`,
+  `fetchWebsite`, `recognizeImage`, `retrieve`, `invokeBedrockAgent`, `think`, and the memory tools
+  (memory items are app settings, not project files). The agent can look at your files, search the web
+  and think out loud, but it cannot write, move or delete anything, and it cannot run commands. MCP
+  tools, including the [knowledge base tools](#910-local-knowledge-base-tools), are also off in Plan
+  mode.
 - **Act mode** — every tool the agent has is available.
 
 Use Plan mode when you want advice, a review, or a proposal before anything happens. Switch to Act
@@ -692,7 +819,9 @@ mode when you are happy with the plan.
 ### 6.4 Sending a message
 
 Type in the box and press `Enter` (or `Cmd`/`Ctrl`+`Enter`, depending on your
-[Advanced setting](#54-chat-tab)).
+[Advanced setting](#54-chat-tab)). You can paste or drop files into the box too
+([Section 7](#7-attachments-giving-the-agent-your-files)). Sending a message always switches back to
+the **Chat** tab.
 
 While the agent works you will see tool calls appear in the conversation — a line for each tool it
 used, which you can expand to see exactly what it did and what came back. This is the single most
@@ -700,6 +829,10 @@ useful thing to read when an answer surprises you.
 
 The **stop** button is red while a reply is being generated. It stops only the conversation you are
 looking at.
+
+When the agent saves, changes or removes a [memory item](#25-memory-rules-and-facts-every-chat-knows),
+the reply shows a small note — **Memory saved**, **Memory updated** or **Memory removed** — with
+**View** (opens the Memory page) and, for saved and removed items, **Undo**.
 
 ### 6.5 Answers keep running when you look away
 
@@ -710,23 +843,34 @@ Chats still working show **"Still responding"** in the history list on the left.
 
 The one thing that does cancel everything is reloading or closing the window.
 
-### 6.6 The top-bar buttons
+### 6.6 The chat tabs
 
-- **TODO list** — for long jobs, the agent can keep a checklist of what it plans to do and tick items
-  off. This button shows that list. If the agent is not using a checklist, the list is empty.
-- **Conversation cost** — a running total in dollars for this conversation.
-- **Token analytics** — a detailed breakdown: how many tokens went in, came out, were served from
-  cache, and what each turn cost. Open this if a conversation feels expensive and you want to know
-  why.
+The row of tabs across the top of the chat shows the conversation and everything around it. Each tab
+uses the full width of the chat. A tab only appears when it has something to show, and each chat
+remembers the tab you left it on until the app restarts (new chats open on **Chat**).
+
+| Tab               | Appears                                     | What it shows                                                                                                                                                                                                                                                                                                                                                  |
+| ----------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Chat**          | Always                                      | The conversation.                                                                                                                                                                                                                                                                                                                                              |
+| **Files**         | When a project folder is set                | Your project folder, with previews and editing. A fuchsia count shows how many files the agent created or changed in this chat; it pulses briefly and stays until you look. See [6.11](#611-the-files-tab).                                                                                                                                                    |
+| **Sandbox**       | When the chat has a Docker sandbox          | The container's state, services, terminal and activity log. Marked with a fuchsia dot until you first look. See [10.8](#108-the-sandbox-tab).                                                                                                                                                                                                                  |
+| **Terminal**      | When you have opened a terminal in the chat | Shells on your own computer. See [6.12](#612-the-terminal-tab).                                                                                                                                                                                                                                                                                                |
+| **Todo**          | Once the agent has made a todo list         | The agent's checklist for a long job. The tab shows how many items are done, for example `3/7`. If you want the agent to keep one, give it the `todo` tool ([9.6](#96-thinking-tools)).                                                                                                                                                                        |
+| **Cost**          | Once the chat has messages                  | The tab label is the running cost in dollars. Inside: **Token Usage Analytics** — total tokens, total cost, model and message count, then a **Summary** (token and cost breakdown, including how much the prompt cache saved) and a **Time Series Analysis** (tokens and cost per turn). Open this if a conversation feels expensive and you want to know why. |
+| **System prompt** | Always                                      | The full system prompt the model actually receives, with placeholders filled in and everything the app adds: tool rules, [memory items](#25-memory-rules-and-facts-every-chat-knows) when the brain button is on, and the [list of local knowledge bases](#244-how-the-agent-uses-a-knowledge-base). Use this when an agent behaves unexpectedly.              |
+
+The token and cost figures are estimates from published prices; your AWS bill is the final word.
 
 ### 6.7 Exporting a conversation
 
-Three buttons above the input box export the current conversation:
+Three buttons above the input box export the current conversation. They appear once the chat has
+messages. A chat that still has its placeholder title gets a generated one first, which is used as
+the file name.
 
 | Format               | Best for                                 | Notes                                                                                                                                                                                                 |
 | -------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Markdown** (`.md`) | Keeping notes, putting in a repo, GitHub | Mermaid diagrams stay as editable `mermaid` code blocks, so GitHub, VS Code and Obsidian draw them for you. Draw.io diagrams and pasted images are written into an `images/` folder next to the file. |
-| **Word** (`.docx`)   | Sharing with colleagues, editing further | Every diagram is rendered as a picture, in the same greyscale used on screen.                                                                                                                         |
+| **Word** (`.docx`)   | Sharing with colleagues, editing further | Every diagram is rendered as a picture, in the same greyscale used on screen. Images that are not PNG, JPEG, GIF, WebP or BMP are left out.                                                           |
 | **PDF**              | Sending something that will not change   | Every diagram is rendered as a picture.                                                                                                                                                               |
 
 All three exports leave out tool calls and tool results, so you get the readable conversation rather
@@ -741,23 +885,132 @@ selected, either as **Markdown** (plain text with `**bold**` style markers) or a
 
 ### 6.9 Chat history
 
-The panel on the left lists your past conversations, newest first, and opens automatically when you
-go to the Chat page. Click one to reopen it — everything is still there.
+The panel on the left lists your past conversations, newest first, and is open whenever you go to
+the Chat page. Click one to reopen it — everything is still there. Each row shows the date and the
+number of messages.
 
-You can select several at once and delete them together. Deleting a chat also deletes that chat's
-[attachments folder](#7-attachments-giving-the-agent-your-files) and its
-[Docker sandbox container](#10-the-docker-sandbox).
+**Hide chat history** collapses the panel to a narrow strip instead of hiding it completely. The strip
+has **Show chat history**, a green **New chat** button, and your most recent chats as one- or
+two-letter initials — hover to see a title, click to switch to it.
+
+Clicking the **Chat History** heading opens a menu with **Generate All Titles**, **Select** and
+**Delete All**. **Select** lets you tick several chats (or **Select all**) and delete them together.
+Deleting a chat also deletes that chat's
+[attachments folder](#7-attachments-giving-the-agent-your-files), its
+[Docker sandbox container](#10-the-docker-sandbox) and any [terminals](#612-the-terminal-tab) open in
+it.
 
 Chat titles are generated for you from the first thing you say, using the
 [Light Processing Model](#53-models-tab). A title is always short plain text — a handful of words, no
-formatting — and is trimmed to fit the sidebar. In the history panel, a chat's ⋮ menu offers **Edit
-title** to type your own and **Generate title** to ask for a new one; **Generate All Titles** at the top
-of the panel redoes every chat in the list.
+formatting — and is trimmed to fit the sidebar. Each chat's **⋯** menu offers **Edit title** to type
+your own (Enter saves, Esc cancels), **Generate title** to ask for a new one, and **Delete**.
+**Generate All Titles** redoes every chat that still has a placeholder "Chat…" title.
 
-### 6.10 The folder button
+### 6.10 The folder, Tools and .ignore buttons
 
-Next to the tool settings there is a folder button showing your current project directory. Click it
-to switch project folders for this conversation without going into Settings.
+Three buttons sit on the left above the message box:
+
+- **Tools** (wrench) — the tools of the current agent, with a switch for each, and the settings of
+  tools that have them: the Tavily key for web search, the models used to recognize and generate
+  images, video settings, the code interpreter, the Docker sandbox summary, and which windows and
+  cameras the capture tools may use.
+- **The folder path** — your current project directory. Click it to switch project folders without
+  going into Settings.
+- **.ignore** (only when a project folder is set) — **File Exclusion Settings**: the files and folders
+  the file tools skip, with **Global Settings** and **Project-specific Settings** tabs. See
+  [Section 9.2](#92-file-system-tools).
+
+The other buttons above the message box, left to right:
+
+| Button                    | What it does                                                                                                                                                                 |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Brain**                 | Memory items on or off for this chat. Highlighted, with the number of items, while on. On for every new chat. See [Section 25](#25-memory-rules-and-facts-every-chat-knows). |
+| **Terminal**              | Opens a shell on your own computer in a **Terminal** tab ([6.12](#612-the-terminal-tab)). Available once the chat has started.                                               |
+| **Paperclip**             | Attachments: the count of attached files, and a menu to add, remove or reveal them ([Section 7](#7-attachments-giving-the-agent-your-files)).                                |
+| **Stop**                  | Stops the reply being written in this chat.                                                                                                                                  |
+| **Whale**                 | Only when the chat has a Docker sandbox: show the Sandbox tab, open its folder, stop, start or remove it ([10.4](#104-managing-sandboxes)).                                  |
+| **Files** (folder)        | Opens or closes the Files tab.                                                                                                                                               |
+| **Markdown / Word / PDF** | Export the chat ([6.7](#67-exporting-a-conversation)).                                                                                                                       |
+| **New chat**              | Starts a new conversation, after asking you to confirm.                                                                                                                      |
+
+### 6.11 The Files tab
+
+The **Files** tab shows your project folder, so the agent's output is one click away instead of
+somewhere in Finder or Explorer. Open it from the tab strip or the **Files** button above the message
+box.
+
+**The file list**
+
+- **Project** shows the whole folder as a tree. **This chat** narrows it to the files the agent
+  created or changed in the current chat, grouped by folder.
+- Files the agent created or changed in this chat carry a **fuchsia dot** in the full tree too, and the
+  folders that hold them open on their own. A folder you collapse stays collapsed.
+- **Filter files…** narrows the list by name. The list updates by itself as files change.
+- The header has **Refresh** and **Show in Finder** (**Show in Explorer** on Windows, **Show in folder**
+  on Linux) for the whole project folder.
+- **Resizing.** Drag the divider between the file list and the preview to make the list wider (to read
+  long names) or narrower (to give the preview more room). With the divider focused, the arrow keys
+  move it (hold `Shift` for bigger steps); a double-click puts it back to the default width. The width
+  you choose is remembered.
+
+**The preview**
+
+Click a file to preview it:
+
+- Text and code, with syntax highlighting and line numbers. Copying from it copies only the code, not
+  the line numbers.
+- Markdown and HTML open rendered; **Source** switches to the highlighted source and **Rendered** back.
+- Images (PNG, JPEG, GIF, WebP, SVG, BMP, ICO, AVIF).
+- PDF, page by page, with page buttons and zoom.
+- Word documents (`.docx`).
+- Files that cannot be previewed (archives, media, older Office formats, spreadsheets and the like) say
+  so, with an **Open in default app** button.
+
+After clicking in a preview, `Cmd` + `A` (`Ctrl` + `A` on Windows and Linux) selects just that file's
+content, ready to copy, rather than everything in the window.
+
+The preview's buttons:
+
+- **Edit** — edit a text file in place. `Cmd`/`Ctrl` + `S` or **Save** saves it; an amber dot marks
+  unsaved changes. If the file changed on disk meanwhile, you are told and can **Reload**, or on saving
+  choose **Overwrite** or **Keep mine**. Leaving with unsaved edits asks first.
+- **Pop out** — open the file in a window of its own, for reading or editing next to the chat. Each
+  file gets one window, and popping out the same file again brings its window to the front. The
+  window updates when the file changes on disk, says so if the file is deleted, and asks before closing
+  if there are unsaved edits. Select-all works there too.
+- **Open** — open the file in its default app.
+- **Reveal** — show the file in its folder in Finder or Explorer.
+- **Copy path**.
+
+File paths in the agent's replies are links: click one to open that file on the Files tab.
+
+### 6.12 The Terminal tab
+
+The **Terminal** button above the message box opens a shell on **your own computer** — your usual
+shell, started in the project folder (or your home folder if none is set) — in a **Terminal** tab.
+
+- A chat can have several shells, shown as sub-tabs. **+** adds one and **×** closes one.
+- Shells keep running while you switch tabs or chats, and end when you close them, delete the chat, or
+  quit the app. A shell that exits stays listed, crossed out, with its exit code.
+- Prompt icons drawn by tools like Starship and Powerlevel10k display correctly; the app ships the
+  symbol font they need.
+
+**The agent has no access to these shells.** There is no tool for them; they are only for you. For a
+shell inside the chat's Docker container instead, use the Sandbox tab's terminal
+([10.9](#109-the-interactive-terminal)).
+
+### 6.13 Diagrams and web pages in replies
+
+When a reply contains a Mermaid diagram, a draw.io diagram or a piece of HTML, the app draws it in
+the chat:
+
+- **Preview** and **Source** switch between the drawing and its highlighted source. Copying from the
+  Source view copies only the code, and Mermaid's Source view has a copy button.
+- Mermaid and draw.io diagrams have **Download as PNG** and zoom buttons.
+- A Mermaid flowchart that comes out much wider than tall is turned to run top-to-bottom when that fits
+  the chat column better. **As written** switches back to the direction in the source; PNG downloads
+  and exports use whichever layout you see.
+- HTML is shown in a locked-down preview that cannot reach the rest of the app.
 
 ---
 
@@ -772,7 +1025,8 @@ Three ways, all equivalent:
 
 - **Drag and drop** a file onto the chat.
 - **Paste** a file or an image from your clipboard.
-- Click the **paperclip** button (next to the export buttons) and choose **Add files**.
+- Click the **paperclip** button above the message box and choose **Add files…**. The paperclip is
+  there even before the first message, so you can attach first and then ask.
 
 The moment you do, the file is copied into your project folder at:
 
@@ -788,9 +1042,9 @@ including when a title is generated for you.
 The paperclip button always shows a badge with how many files this chat has. Its menu lists each
 file with its size, and lets you:
 
-- **Delete** a single file on the spot
-- **Add** more files through a file picker
-- **Open the folder** in Finder, File Explorer, or your Linux file manager
+- **Remove** a single file on the spot (the trash icon that appears when you hover over it)
+- **Add files…** through a file picker
+- **Open attachments folder** in Finder, File Explorer, or your Linux file manager
 
 Chats that have files also show a small paperclip next to their title in the chat history, so you can
 spot them without opening each one.
@@ -816,7 +1070,12 @@ What the agent receives depends on the file type:
 | Images (PNG, JPEG, …)                  | The actual image, so a vision-capable model can look at it           |
 | Everything else, spreadsheets included | The file name and path, so the agent can open it with its file tools |
 
-Very long files are trimmed, with a note telling the agent to read the rest itself using `readFiles`.
+Very long files are trimmed — each file to its first 120,000 characters, and all attachments together
+to 480,000 per message — with a note telling the agent to read the rest itself using `readFiles`.
+
+Attachments are for files you want the agent to see in this one chat. For a library of documents an
+agent should be able to search in every chat, use a
+[local knowledge base](#24-local-knowledge-bases-letting-an-agent-search-your-documents) instead.
 
 Because contents are assembled fresh for each message rather than stored in the conversation, they do
 not bloat your saved chat history or your Markdown, Word and PDF exports.
@@ -853,12 +1112,8 @@ same Claude model.
 
 Open **My Agents** from the sidebar. This is home base for agents.
 
-- **Create** a new agent, **edit** an existing one, **duplicate** one as a starting point, or
-  **remove** one.
-- **Move agents in and out as files.** **Import Agent**, at the top next to Add New Agent, reads an
-  agent file someone sent you. **Download YAML**, in each agent's **⋮** menu, writes an agent out to
-  a file. See [8.5](#85-sharing-an-agent) and [8.6](#86-importing-an-agent).
-- **Card view or table view** — toggle with the button at the top. Table view is easier for sorting
+- **Create** a new agent with **Add New Agent**, or **Search agents...** to find one.
+- **Card view or table view** — toggle with the buttons at the top. Table view is easier for sorting
   and scanning when you have a lot of agents.
 
 ![my-agents-table](../assets/my-agents-table.png)
@@ -866,17 +1121,34 @@ Open **My Agents** from the sidebar. This is home base for agents.
 - **Rearrange by dragging.** The order you set is saved and reused everywhere agents are listed —
   the Agent dropdown in chat and `@` mentions. Dragging is switched off while a table column sort is
   active, because two orderings at once makes no sense.
-- **Hide agents you do not use.** The app ships with several built-in agents. You cannot delete those
-  outright, because they get restored at every launch, but **Hide** takes them out of every list and
+- **Hide agents you do not use.** The app ships with several built-in agents. You cannot delete or
+  edit those, because they get restored at every launch, but **Hide** takes them out of every list and
   the setting sticks across restarts. The **Unhide** dropdown lists everything you have hidden, so
-  you can bring back one agent, or all of them.
-- Agents **you** created are deleted for real, and the button says **Delete** rather than **Hide**.
+  you can bring back one agent, or all of them (**Unhide all**). To change a built-in agent,
+  **Duplicate** it and edit the copy.
+
+Each agent's **⋮** menu has, depending on the kind of agent:
+
+| Item                      | What it does                                                                                                                                     |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Edit**                  | Opens the agent editor ([8.3](#83-the-agent-editor)). For agents you made.                                                                       |
+| **Duplicate**             | Makes your own editable copy, including copies of its [local knowledge bases](#24-local-knowledge-bases-letting-an-agent-search-your-documents). |
+| **Download YAML**         | Saves the agent to a file you choose ([8.5](#85-sharing-an-agent)).                                                                              |
+| **Convert to Strands**    | Exports the agent as a starter project for the Strands Agents framework, so it can run as your own Python program outside this app.              |
+| **Save as File**          | Shares the agent with everyone who opens your project folder ([8.5](#85-sharing-an-agent)).                                                      |
+| **Share to Organization** | Uploads the agent to your organization's shared agent collection ([13.1](#131-sharing-inside-your-organization)).                                |
+| **Delete Shared File**    | On an agent that came from a project file: removes that file ([8.5](#85-sharing-an-agent)).                                                      |
+| **Delete** / **Hide**     | Agents **you** created are deleted for real, together with their local knowledge bases. Built-in agents can only be hidden.                      |
+
+**Import Agent**, at the top next to Add New Agent, reads an agent file someone sent you. See
+[8.6](#86-importing-an-agent).
 
 ### 8.3 The agent editor
 
 ![agent-editor](../assets/agent-editor.png)
 
-Clicking an agent opens its editor, which has three tabs.
+Clicking **Edit** (or **Add New Agent**) opens the editor, which has four tabs down the side: **Basic
+Settings**, **MCP Servers**, **Knowledge Base** and **Tools**.
 
 #### Tab 1 — Basic Settings
 
@@ -885,7 +1157,8 @@ ten full icon collections you can browse or search: Tabler, Lucide, Phosphor, Ma
 Bootstrap, Font Awesome (including brand logos), Simple Icons and Game Icons — roughly 38,000 icons
 in total. Choose **All libraries** to search all of them at once. Long result lists are capped, so if
 you do not see what you want, search a more specific word. Collections load the first time you open
-one, so this does not slow the app's startup.
+one, so this does not slow the app's startup. You can also pick an **Icon Color**, or **Auto Select**
+one.
 
 **Description.** A sentence about what this agent is for. This is shown in lists, and is also used
 when suggesting MCP servers.
@@ -893,21 +1166,52 @@ when suggesting MCP servers.
 **System Prompt.** The most important field. See [Section 8.4](#84-writing-a-good-system-prompt).
 
 **Scenarios.** Example prompts shown as clickable starters when you open a new chat with this agent.
-Good scenarios make an agent much easier for someone else to pick up.
+They can be generated for you from the system prompt. Good scenarios make an agent much easier for
+someone else to pick up.
 
 **Tags.** Labels for finding this agent later.
 
-**Knowledge Bases.** If you have an Amazon Bedrock Knowledge Base — a searchable collection of your
-own documents — list its ID here. The `retrieve` tool can then search it.
+#### Tab 2 — MCP Servers
 
-**Bedrock Agents.** IDs of Amazon Bedrock Agents you want this agent to be able to call, via
-`invokeBedrockAgent`.
+Connect external tool servers. See [Section 11](#11-mcp-servers-adding-tools-from-outside-the-app).
 
-**Flows.** Amazon Bedrock Flows this agent may run, via `invokeFlow`.
+When the agent has local knowledge bases, a read-only **local-knowledgebase** card marked **Built-in**
+sits above your own servers. It is added automatically, lists the knowledge base tools with their
+descriptions, and has a **Test connection** button that should report "Connected: 3 tools available".
+You cannot edit or remove it here; it goes away when the agent has no knowledge bases left.
 
-**Allowed Commands.** A safety list for the `executeCommand` tool. Only commands matching a pattern
-here can be run on your computer. `*` is a wildcard, so `npm *` allows every `npm` command and
-nothing else. If this list is empty, the agent cannot run anything on your machine at all.
+#### Tab 3 — Knowledge Base
+
+The agent's own searchable library of documents and websites, stored on your computer. Create a
+knowledge base, add files or a website to it, and the agent gets a tool to search it. This tab is
+explained step by step in [Section 24.3](#243-the-knowledge-base-tab-in-the-agent-editor).
+
+#### Tab 4 — Tools
+
+![select-tools](../assets/select-tools.png)
+
+The Tools tab has two parts.
+
+**Available Tools** — tick the tools this agent may use, grouped into categories: File System, Web &
+Search, AI Services, System, Thinking, Memory, Agent Delegation, and MCP. A **Preset Category** menu
+fills in a starting set ([9.11](#911-default-tool-sets)). MCP tools — those of your MCP servers and the
+built-in knowledge base tools — are listed in the MCP category and are always on while the server is
+configured; they cannot be switched off one by one. Every tool is documented in
+[Section 9](#9-the-complete-tool-reference).
+
+**Tool Detail Settings** — settings for the enabled tools that need them:
+
+- **Knowledge Base Settings** (for `retrieve`) — the IDs of **Amazon Bedrock Knowledge Bases** in your
+  AWS account that the agent may search. These are a different thing from the local knowledge bases
+  on Tab 3.
+- **Command Settings** (for `executeCommand`) — the **Allowed Commands** list.
+- **Bedrock Agent Settings** (for `invokeBedrockAgent`) — Amazon Bedrock Agents (agent ID and alias ID)
+  this agent may call.
+- **Flow Settings** (for `invokeFlow`) — Amazon Bedrock Flows this agent may run.
+
+**Allowed Commands** are a safety list for the `executeCommand` tool. Only commands matching a pattern
+here can be run on your computer. `*` is a wildcard, so `npm *` allows every `npm` command and nothing
+else. If this list is empty, the agent cannot run anything on your machine at all.
 
 > **Safety note:** every pattern you add here is a command the AI can run on your computer without
 > asking you first. Add specific patterns (`git status`, `npm test`) rather than broad ones. Never
@@ -915,20 +1219,11 @@ nothing else. If this list is empty, the agent cannot run anything on your machi
 > use the [Docker sandbox](#10-the-docker-sandbox) instead — that keeps it away from your machine
 > entirely.
 
-#### Tab 2 — MCP Servers
+The rule of thumb for tools: **give an agent the fewest tools it needs.** Fewer tools means less to
+go wrong, lower cost per message (the tool list is sent with every request), and a model that stays
+focused.
 
-Connect external tool servers. See [Section 11](#11-mcp-servers-adding-tools-from-outside-the-app).
-
-#### Tab 3 — Tools
-
-![select-tools](../assets/select-tools.png)
-
-Tick the tools this agent may use, grouped into categories: File System, Web & Search, AI Services,
-System, Thinking, Agent Delegation, and MCP. Every tool is documented in
-[Section 9](#9-the-complete-tool-reference).
-
-The rule of thumb: **give an agent the fewest tools it needs.** Fewer tools means less to go wrong,
-lower cost per message (the tool list is sent with every request), and a model that stays focused.
+If you cancel a new agent before saving it, any knowledge bases you created for it are deleted.
 
 ### 8.4 Writing a good system prompt
 
@@ -945,23 +1240,28 @@ covers:
 
 **Placeholders.** You can drop these into the prompt and the app fills them in automatically:
 
-| Placeholder           | Replaced with                     |
-| --------------------- | --------------------------------- |
-| `{{projectPath}}`     | Your current project folder       |
-| `{{date}}`            | Today's date                      |
-| `{{allowedCommands}}` | The commands this agent may run   |
-| `{{knowledgeBases}}`  | The knowledge bases it can search |
-| `{{bedrockAgents}}`   | The Bedrock agents it can call    |
-| `{{flows}}`           | The flows it can run              |
-| `{{allowedWindows}}`  | Windows it may screenshot         |
-| `{{allowedCameras}}`  | Cameras it may use                |
+| Placeholder           | Replaced with                                                    |
+| --------------------- | ---------------------------------------------------------------- |
+| `{{projectPath}}`     | Your current project folder                                      |
+| `{{date}}`            | Today's date                                                     |
+| `{{allowedCommands}}` | The commands this agent may run                                  |
+| `{{knowledgeBases}}`  | The Amazon Bedrock Knowledge Bases it can search with `retrieve` |
+| `{{bedrockAgents}}`   | The Bedrock agents it can call                                   |
+| `{{flows}}`           | The flows it can run                                             |
+| `{{allowedWindows}}`  | Windows it may screenshot                                        |
+| `{{allowedCameras}}`  | Cameras it may use                                               |
+
+You do not need a placeholder for [local knowledge bases](#24-local-knowledge-bases-letting-an-agent-search-your-documents):
+the app adds their names and descriptions to the prompt by itself.
 
 **Helpers in the editor:**
 
 - **Generate system prompt** — describe what you want in a sentence and let the model draft the
   prompt for you. A great starting point that you then edit.
-- **Show preview** — see the prompt with all placeholders filled in and all automatic additions
+- **Show Preview** — see the prompt with all placeholders filled in and all automatic additions
   included, exactly as the model will receive it. Use this when an agent behaves unexpectedly.
+- **Environment Context Settings** — two toggles for instructions the app can add to the prompt.
+  The project path and the date are always included.
 - **Project Rule** — a toggle that adds instructions telling the agent to load project-specific
   rules from a `.bedrock-engineer/rules` folder in your project. Turn it on when a project has its
   own coding standards or conventions you want followed automatically.
@@ -980,7 +1280,13 @@ Open the **⋮** menu on any agent on the My Agents page. Two ways to send an ag
   filled in. The file is deliberately plain: it holds the agent's configuration but not its internal
   id or any record of where your copy came from, so it can be given to anyone.
 
-A shared agent loaded from a project file is edited by editing that file. If you want to change it
+Neither way includes the agent's
+[local knowledge bases](#24-local-knowledge-bases-letting-an-agent-search-your-documents). They stay on
+your computer; the person you share with has to build their own. **Share to Organization** leaves them
+out too.
+
+A shared agent loaded from a project file is edited by editing that file, and cannot have local
+knowledge bases of its own. If you want to change it
 just for yourself, **duplicate** it first, or use **Import Agent** on the copy you downloaded.
 
 **Un-sharing.** On an agent that came from a project file, the **⋮** menu also has **Delete Shared
@@ -1004,6 +1310,7 @@ not the read-only kind you get from a project's shared folder. Details worth kno
   you which of the three is absent. Nothing half-built lands in your list.
 - MCP servers listed in the file come across as configuration. The tools each server provides are
   discovered when the agent runs, so they are not stored in the file.
+- An imported agent starts with no local knowledge bases; agent files never contain them.
 
 To hand an agent to someone else, **Download YAML** and send them the file.
 
@@ -1022,10 +1329,12 @@ flowchart TD
   Q -->|"look at or change<br/>files on my computer"| FS["<b>File System</b><br/>readFiles, writeToFile,<br/>listFiles, applyDiffEdit,<br/>createFolder, moveFile, copyFile"]
   Q -->|"find things out<br/>from the internet"| W["<b>Web &amp; Search</b><br/>tavilySearch, fetchWebsite"]
   Q -->|"make a picture,<br/>video, or read an image"| AI["<b>AI Services</b><br/>generateImage, generateVideo,<br/>recognizeImage"]
-  Q -->|"search my company's<br/>own documents"| KB["<b>AI Services</b><br/>retrieve"]
+  Q -->|"search documents and<br/>websites I gave it"| LKB["<b>Local knowledge base</b><br/>searchKnowledgeBase"]
+  Q -->|"search an Amazon Bedrock<br/>Knowledge Base"| KB["<b>AI Services</b><br/>retrieve"]
   Q -->|"run a program,<br/>script, or command"| SYS["<b>System</b><br/>executeCommand, codeInterpreter,<br/>dockerSandbox"]
   Q -->|"see my screen<br/>or camera"| CAP["<b>System</b><br/>screenCapture, cameraCapture"]
   Q -->|"stop and reason,<br/>or track a long job"| TH["<b>Thinking</b><br/>think, todo"]
+  Q -->|"remember a rule<br/>or a fact"| MEM["<b>Memory</b><br/>addMemory, updateMemory,<br/>removeMemory"]
   Q -->|"hand a step to a<br/>different agent"| DEL["<b>Agent Delegation</b><br/>invokeAgent"]
   Q -->|"use a tool this app<br/>does not have"| MCP["<b>MCP</b><br/>any MCP server"]
 ```
@@ -1071,16 +1380,20 @@ whichever site you name.
 
 These call Amazon Bedrock services and cost money per use, separate from the conversation itself.
 
-| Tool                 | What it does                                                                                                                                                                                                                                                                                                                         | Notes                                                                                                                                             |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `generateImage`      | Makes an image from a text description. Defaults to Stability SD 3.5 Large, and also supports Stability Stable Image Core and Stable Image Ultra. Choose the aspect ratio; output as PNG, JPEG or WebP. Supports a **negative prompt** (things to leave out) and a **seed** (the same seed and prompt gives the same picture again). | Only offered in `us-west-2`, the region where Bedrock offers these image models.                                                                  |
-| `recognizeImage`     | Looks at an image file and describes it: objects, text in the picture, the scene, a caption.                                                                                                                                                                                                                                         | Good for pulling text out of screenshots, describing images for accessibility, or tagging a folder of photos.                                     |
-| `generateVideo`      | Makes a video with Amazon Nova Reel, from text or from a starting image. Modes: `TEXT_VIDEO` (6 seconds), `MULTI_SHOT_AUTOMATED` (12–120 seconds), `MULTI_SHOT_MANUAL`.                                                                                                                                                              | Video takes minutes, so this returns a job reference immediately rather than waiting. Requires an S3 bucket configured.                           |
-| `checkVideoStatus`   | Checks whether a video job has finished.                                                                                                                                                                                                                                                                                             | Use the job reference from `generateVideo`.                                                                                                       |
-| `downloadVideo`      | Downloads a finished video from S3 to your project folder.                                                                                                                                                                                                                                                                           | Only works once `checkVideoStatus` reports "Completed".                                                                                           |
-| `retrieve`           | Searches an Amazon Bedrock Knowledge Base — a collection of your own documents that AWS has indexed.                                                                                                                                                                                                                                 | Needs a knowledge base ID listed on the agent. This is how you get an agent to answer from _your_ documents rather than from general knowledge.   |
-| `invokeBedrockAgent` | Calls an Amazon Bedrock Agent you built in the AWS console, and returns its answer. Keeps a session ID so a conversation can continue across calls.                                                                                                                                                                                  | Needs the agent ID and alias ID on the agent config.                                                                                              |
-| `invokeFlow`         | Runs an Amazon Bedrock Flow — a data-processing pipeline you designed in AWS. Accepts text, numbers, true/false, objects and lists as input.                                                                                                                                                                                         | Needs the flow configured on the agent. Useful for multi-step processing you have already built elsewhere and do not want to rebuild in a prompt. |
+| Tool                 | What it does                                                                                                                                                                                                                                                                                                                         | Notes                                                                                                                                                                                                                   |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `generateImage`      | Makes an image from a text description. Defaults to Stability SD 3.5 Large, and also supports Stability Stable Image Core and Stable Image Ultra. Choose the aspect ratio; output as PNG, JPEG or WebP. Supports a **negative prompt** (things to leave out) and a **seed** (the same seed and prompt gives the same picture again). | Only offered in `us-west-2`, the region where Bedrock offers these image models.                                                                                                                                        |
+| `recognizeImage`     | Looks at an image file and describes it: objects, text in the picture, the scene, a caption.                                                                                                                                                                                                                                         | Good for pulling text out of screenshots, describing images for accessibility, or tagging a folder of photos.                                                                                                           |
+| `generateVideo`      | Makes a video with Amazon Nova Reel, from text or from a starting image. Modes: `TEXT_VIDEO` (6 seconds), `MULTI_SHOT_AUTOMATED` (12–120 seconds), `MULTI_SHOT_MANUAL`.                                                                                                                                                              | Video takes minutes, so this returns a job reference immediately rather than waiting. Requires an S3 bucket configured.                                                                                                 |
+| `checkVideoStatus`   | Checks whether a video job has finished.                                                                                                                                                                                                                                                                                             | Use the job reference from `generateVideo`.                                                                                                                                                                             |
+| `downloadVideo`      | Downloads a finished video from S3 to your project folder.                                                                                                                                                                                                                                                                           | Only works once `checkVideoStatus` reports "Completed".                                                                                                                                                                 |
+| `retrieve`           | Searches an Amazon Bedrock Knowledge Base — a collection of your own documents that AWS has indexed in your account.                                                                                                                                                                                                                 | Needs a knowledge base ID under **Tool Detail Settings** on the agent. For documents kept on your own computer, use a [local knowledge base](#24-local-knowledge-bases-letting-an-agent-search-your-documents) instead. |
+| `invokeBedrockAgent` | Calls an Amazon Bedrock Agent you built in the AWS console, and returns its answer. Keeps a session ID so a conversation can continue across calls.                                                                                                                                                                                  | Needs the agent ID and alias ID on the agent config.                                                                                                                                                                    |
+| `invokeFlow`         | Runs an Amazon Bedrock Flow — a data-processing pipeline you designed in AWS. Accepts text, numbers, true/false, objects and lists as input.                                                                                                                                                                                         | Needs the flow configured on the agent. Useful for multi-step processing you have already built elsewhere and do not want to rebuild in a prompt.                                                                       |
+
+The image models used by `generateImage` (**Image Generation Model**) and `recognizeImage`
+(**Recognition Model**), and the S3 bucket for video, are chosen in the **Tools** button below the
+message box ([Section 6.10](#610-the-folder-tools-and-ignore-buttons)).
 
 ### 9.5 System tools
 
@@ -1122,7 +1435,7 @@ internet or your files except the ones you hand it.
 
 #### `dockerSandbox`
 
-Gives the chat its own long-lived Linux container to work in. It also brings the sandbox panel, which
+Gives the chat its own long-lived Linux container to work in. It also brings the Sandbox tab, which
 shows the container's state, services and published ports, logs every command the agent runs there, and
 carries an interactive shell you can use yourself. Full explanation in
 [Section 10](#10-the-docker-sandbox).
@@ -1147,15 +1460,28 @@ Quality settings low/medium/high, formats JPG or PNG.
 
 ### 9.6 Thinking tools
 
-| Tool                                      | What it does                                                                                                                                    | When it helps                                                                                                                                                         |
-| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `think`                                   | Gives the model a scratchpad to reason in the middle of a task, without changing any data or fetching anything.                                 | Multi-step problems, decisions with trade-offs, checking its own work against rules it was given. It costs a little and often saves a lot by preventing a wrong turn. |
-| `todo` (with `todoInit` and `todoUpdate`) | Lets the agent write down a checklist for a long job and tick items off as it goes. You can watch the list from the TODO button in the top bar. | Jobs with many steps, where you want to see progress and be sure nothing was skipped.                                                                                 |
+| Tool                                      | What it does                                                                                                                           | When it helps                                                                                                                                                         |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `think`                                   | Gives the model a scratchpad to reason in the middle of a task, without changing any data or fetching anything.                        | Multi-step problems, decisions with trade-offs, checking its own work against rules it was given. It costs a little and often saves a lot by preventing a wrong turn. |
+| `todo` (with `todoInit` and `todoUpdate`) | Lets the agent write down a checklist for a long job and tick items off as it goes. You can watch the list on the chat's **Todo** tab. | Jobs with many steps, where you want to see progress and be sure nothing was skipped.                                                                                 |
 
 These are different from the **Thinking** dropdown. The dropdown controls private reasoning before
 the model starts answering; the `think` tool is something it can reach for partway through.
 
-### 9.7 Agent Delegation
+### 9.7 Memory tools
+
+| Tool           | What it does                                                                                         |
+| -------------- | ---------------------------------------------------------------------------------------------------- |
+| `addMemory`    | Saves a new item to the shared memory list, as a **rule** (an instruction) or a **memory** (a fact). |
+| `updateMemory` | Changes an item's text or kind, or switches it on or off.                                            |
+| `removeMemory` | Deletes an item.                                                                                     |
+
+These are what make "remember…", "add a rule…" and "forget…" work in a chat. They change app settings,
+not your files, so they also work in Plan mode. Each use shows a note in the reply with **View** and,
+where it makes sense, **Undo**. Full explanation in
+[Section 25](#25-memory-rules-and-facts-every-chat-knows).
+
+### 9.8 Agent Delegation
 
 | Tool          | What it does                                                                                                                                                                                        |
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1163,24 +1489,53 @@ the model starts answering; the `think` tool is something it can reach for partw
 
 Full explanation in [Section 12](#12-handing-work-to-another-agent-with-).
 
-### 9.8 MCP tools
+### 9.9 MCP tools
 
-Any tool provided by an MCP server you have connected shows up in this category, named after the
-server's own tool names. See [Section 11](#11-mcp-servers-adding-tools-from-outside-the-app).
+Any tool provided by an MCP server you have connected shows up in the MCP category, named after the
+server's own tool names. MCP tools are always on while their server is configured on the agent, and
+are off in Plan mode. See [Section 11](#11-mcp-servers-adding-tools-from-outside-the-app).
 
-### 9.9 Default tool sets
+### 9.10 Local knowledge base tools
 
-When you create an agent you can start from a preset rather than ticking boxes one at a time:
+An agent with at least one
+[local knowledge base](#24-local-knowledge-bases-letting-an-agent-search-your-documents) gets these
+three tools automatically, from a built-in MCP server called **local-knowledgebase**. There is nothing
+to tick: they appear in the MCP category of the Tools tab as soon as the agent has a knowledge base,
+and go away when it has none.
 
-| Preset       | Tools it turns on                                                                                      |
-| ------------ | ------------------------------------------------------------------------------------------------------ |
-| **General**  | `readFiles`, `listFiles`, `tavilySearch`, `fetchWebsite`, `think`                                      |
-| **Coding**   | The file tools including `applyDiffEdit`, plus `tavilySearch`, `executeCommand`, `invokeFlow`, `think` |
-| **Design**   | `readFiles`, `listFiles`, `fetchWebsite`, `tavilySearch`, `generateImage`, `think`                     |
-| **Data**     | `readFiles`, `listFiles`, `tavilySearch`, `fetchWebsite`, `retrieve`, `executeCommand`, `think`        |
-| **Business** | `readFiles`, `listFiles`, `tavilySearch`, `fetchWebsite`, `retrieve`, `think`                          |
-| **All**      | Everything in the list above, combined                                                                 |
-| **Custom**   | Nothing — you choose                                                                                   |
+| Tool                       | What it does                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `searchKnowledgeBase`      | Searches the agent's knowledge bases and returns the most relevant passages, ranked by both meaning and keyword matches, each with its title, section heading, the knowledge base it came from and its source (file path or page URL). It takes a question or key terms, and optionally one knowledge base (by name) and how many passages to return (1–20; the default comes from **Settings → Knowledge Base → Results per search**). |
+| `listKnowledgeBases`       | Lists the agent's knowledge bases with their descriptions and sizes.                                                                                                                                                                                                                                                                                                                                                                    |
+| `listKnowledgeBaseSources` | Lists the files and websites in the agent's knowledge bases, or in one of them.                                                                                                                                                                                                                                                                                                                                                         |
+
+**How to tell they are being used.** Each search shows up in the chat as a `searchKnowledgeBase` tool
+call. Expand it to see the query the agent used and the passages it got back. The agent is asked to
+cite the file or URL of the passages it uses, so a well-grounded answer names its sources. The
+**System prompt** tab shows a `<local_knowledge_bases>` block listing each knowledge base by name and
+description, with the instruction to search them before answering questions they may cover.
+
+The same tools are available to the agent when it runs as a background task or as a sub-agent
+through `@` or `invokeAgent`. They are not available in Plan mode, because MCP tools are off there.
+
+### 9.11 Default tool sets
+
+When you create an agent you can start from a preset (**Preset Category** on the Tools tab) rather
+than ticking boxes one at a time. Every preset except Custom also turns on the three memory tools.
+
+| Preset                      | Tools it turns on                                                                                                                          |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **General Purpose**         | `readFiles`, `listFiles`, `tavilySearch`, `fetchWebsite`, `think`                                                                          |
+| **Software Development**    | All seven file tools, plus `tavilySearch`, `executeCommand`, `invokeFlow`, `think`                                                         |
+| **Design & Creative**       | `readFiles`, `listFiles`, `fetchWebsite`, `tavilySearch`, `generateImage`, `think`                                                         |
+| **Data Analysis**           | `readFiles`, `listFiles`, `tavilySearch`, `fetchWebsite`, `retrieve`, `executeCommand`, `think`                                            |
+| **Business & Productivity** | `readFiles`, `listFiles`, `tavilySearch`, `fetchWebsite`, `retrieve`, `think`                                                              |
+| **All**                     | The file tools, `tavilySearch`, `fetchWebsite`, `retrieve`, `generateImage`, `invokeBedrockAgent`, `executeCommand`, `invokeFlow`, `think` |
+| **Custom Configuration**    | Nothing — you choose                                                                                                                       |
+
+**All** is not literally every tool: video, `recognizeImage`, `codeInterpreter`, `dockerSandbox`, the
+capture tools, `todo` and `invokeAgent` are left for you to add. `generateImage` is only turned on by a
+preset when your region is `us-west-2`, where the image models are.
 
 ---
 
@@ -1198,7 +1553,8 @@ The Docker sandbox removes the trade-off. It gives the chat its own Linux comput
 
 Turn on the **Docker Sandbox** tool for an agent. Then, the first time that agent runs a command in
 a chat, the app creates a container for that chat on the operating system chosen in **Settings →
-Sandbox**, and from then on commands go there by default. The choices are Debian 13 (the default),
+Sandbox**
+([Section 5.6](#56-sandbox-tab)), and from then on commands go there by default. The choices are Debian 13 (the default),
 Ubuntu 26.04, Amazon Linux 2023 and 2027, AlmaLinux 9, Rocky Linux 9 and Red Hat UBI 9 (real RHEL,
 limited to Red Hat's freely available packages). Changing it affects new sandboxes; a chat that
 already has one keeps its OS until you remove the sandbox. The agent can also ask for a different OS
@@ -1237,11 +1593,13 @@ allow that pattern for the rest of the chat.
 
 ### 10.4 Managing sandboxes
 
-A **whale icon** appears in the chat toolbar whenever the current chat has a container. Its menu can:
+A **whale icon** appears above the message box whenever the current chat has a container. Its menu
+shows the sandbox's state and can:
 
-- **Open the sandbox panel** (see [10.8](#108-the-sandbox-panel))
-- **Stop**, **start** or **remove** the container
-- **Open the sandbox folder** in Finder, File Explorer, or your Linux file manager
+- **Show the Sandbox tab** (see [10.8](#108-the-sandbox-tab))
+- **Open sandbox folder** in Finder, File Explorer, or your Linux file manager
+- **Stop containers** or **Start containers**
+- **Remove sandbox (keep data)**, or **Remove sandbox and delete data**
 
 Chats that have a sandbox also show a small whale next to their title in the chat history.
 
@@ -1269,25 +1627,29 @@ otherwise.
 ### 10.7 Requirements and limits
 
 - **Docker must be installed and running.** If it is missing, the agent tells you how to install it
-  for your platform.
+  for your platform. **Settings → Sandbox** shows whether the app can see Docker.
+- **Each container is limited** to the memory and CPU set in **Settings → Sandbox** (2 GB and 2 CPUs
+  by default), and the agent waits up to the command timeout (5 minutes by default) for each command
+  before moving on. New limits apply when a sandbox is recreated.
 - **Docker Compose** is used when available, and is required for stacks with more than one service.
 - **The terminal needs Docker to be local.** Docker Desktop, OrbStack, Colima, Rancher Desktop and
   rootless installs all work. If your Docker context points at a remote daemon, the Terminal tab is
-  disabled and explains why; everything else in the panel still works.
+  disabled and explains why; everything else on the Sandbox tab still works.
 
-### 10.8 The sandbox panel
+### 10.8 The Sandbox tab
 
-The panel slides in from the right-hand edge of the chat. Open it from the whale menu, or with the
-narrow tab on the right — the mirror image of the chat history's tab on the left. It only appears for
-chats that actually have a container, and it starts closed.
+The **Sandbox** tab appears in the chat's tab strip ([6.6](#66-the-chat-tabs)) for chats that have a
+container, marked with a fuchsia dot until you first look. Open it from the tab strip or from the
+whale menu's **Show the Sandbox tab**. Its header shows the project and a state: **running**, **partly
+running**, **stopped** or **missing**.
 
-Three tabs:
+It has up to four tabs of its own:
 
-**Overview** — what the container is and what it is doing: its name and image, how long it has been
-up, and CPU, memory, network and disk against the limits from
-[Settings → Tools → Docker Sandbox](#the-docker-sandbox-tool). Each service is listed with its state,
-and each published port is a button that opens `localhost:<port>` in your browser. The usual actions
-— open folder, start, stop, restart, remove — are at the bottom.
+**Overview** — what the container is and what it is doing: its name and image, when it started, the
+workspace and folder, and CPU, memory, network and disk against the limits from
+[Settings → Sandbox](#56-sandbox-tab). Each service is listed with its state, and each published port
+is a button that opens `localhost:<port>` in your browser. The usual actions — open folder, start,
+stop, restart, remove (keeping or deleting the data) — are at the bottom.
 
 CPU is shown the way `docker stats` shows it: 100% means one core fully used, so a container working
 across two cores reads 200%. It says _measuring…_ for the first few seconds after you open the tab,
@@ -1298,7 +1660,7 @@ exist, what image each runs, whether it is up, which published ports reach it fr
 (solid arrows) and which folders are mounted into it (dashed). Services in one stack can reach each
 other by service name, which the diagram notes, because that is the detail people most often miss.
 Click the diagram to open it full window, with zoom controls and Esc to close — worth it for a stack
-of several services, since the panel itself is only so wide. Below the diagram is the compose file
+of several services. Below the diagram is the compose file
 itself, exactly as written to disk, with buttons to copy it or open its folder.
 
 **Terminal** — a real shell in the container. See [10.9](#109-the-interactive-terminal).
@@ -1324,8 +1686,8 @@ entries are retained. Removing the sandbox removes the log with it.
 
 The **Terminal** tab gives you a shell inside the chat's container — the same container the agent has
 been working in. A stack with more than one service gets a row of tabs, one per container, each with
-its own shell and its own scrollback; a dot shows which are running. It is a proper terminal: colours, `vim` and `htop`, tab completion, command history,
-Ctrl-C, and it resizes with the panel.
+its own shell and its own scrollback; a dot shows which are running. It is a proper terminal: colours, `vim` and `htop`,
+tab completion, command history, Ctrl-C, and it resizes with the window.
 
 This is the quickest way to see what the agent actually left behind, or to fix something yourself
 without describing it to the model first.
@@ -1338,16 +1700,15 @@ without describing it to the model first.
   machine from the model; this shell is you, in a container, on purpose.
 - The shell runs as **root**, so files it creates may end up owned by root on Linux.
 
-The app asks you to acknowledge that once, before the first time you open a terminal, and then
-remembers it.
+The app asks you to acknowledge that once (**I understand — open the terminal**), before the first
+time you open a terminal, and then remembers it.
 
 **The model cannot use this.** There is no tool for it, so agents, sub-agents and background tasks
-have no way to open a shell or type into yours. It is reachable only from this panel.
+have no way to open a shell or type into yours. It is reachable only from this tab.
 
-A shell you open keeps running while you look at other tabs, collapse the panel, or switch chats — so
-a dev server you started by hand does not die when you look away. Switching between service tabs is
-free for the same reason: the shell lives outside the panel, and its recent output is replayed when
-you come back. It ends when the sandbox is stopped
+A shell you open keeps running while you look at other tabs or switch chats — so a dev server you
+started by hand does not die when you look away. Switching between service tabs is free for the same
+reason: the shell lives outside the tab, and its recent output is replayed when you come back. It ends when the sandbox is stopped
 or removed, when the chat is deleted, or when you quit the app.
 
 ---
@@ -1381,6 +1742,11 @@ of connection are supported: a **command** the app starts on your computer (call
 For the exact configuration format, see the
 [MCP Server Configuration Guide](./mcp-server/MCP_SERVER_CONFIGURATION.md).
 
+One MCP server is built into the app: **local-knowledgebase**, which an agent gets automatically when
+it has [local knowledge bases](#24-local-knowledge-bases-letting-an-agent-search-your-documents). It
+runs inside the app, needs no configuration, and appears on the MCP Servers tab as a read-only card
+marked **Built-in**.
+
 ### 11.2 Finding servers
 
 ![mcp-market](../assets/mcp-market.png)
@@ -1410,8 +1776,12 @@ The MCP Servers tab has a connection test. Run it after adding a server. If it f
 causes are a missing environment variable (an API key the server needs), a package that could not be
 downloaded, or a URL that requires authentication.
 
-Once a server connects, switch to the **Tools** tab and its tools will be listed there for you to
-enable.
+Once a server connects, switch to the **Tools** tab and its tools are listed in the MCP category.
+MCP tools are always enabled while the server is configured; to stop an agent using a server's tools,
+remove the server.
+
+The built-in **local-knowledgebase** card has its own **Test connection** button, which should report
+three tools.
 
 ---
 
@@ -1477,18 +1847,22 @@ report pulled together from several sources.
 
 ### 14.1 Creating a task
 
-| Field                       | What to put in it                                                                                                                                                             |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Task Name**               | Something you will recognize in the list.                                                                                                                                     |
-| **Agent**                   | Which agent runs.                                                                                                                                                             |
-| **Model**                   | Which model it uses. Scheduled tasks are a good place to use a cheaper model.                                                                                                 |
-| **Max Tokens**              | The longest reply allowed.                                                                                                                                                    |
-| **Project Directory**       | Which folder it works in.                                                                                                                                                     |
-| **Wake Word**               | The message sent to the agent when the task runs. This is the actual instruction — for example _"Summarize commits from the last 24 hours and write it to daily-summary.md"_. |
-| **Schedule**                | When to run, as a cron expression. Presets are provided.                                                                                                                      |
-| **Continue Session**        | Whether each run continues the same conversation or starts fresh.                                                                                                             |
-| **Continue Session Prompt** | The message used on continuing runs, if different from the wake word.                                                                                                         |
-| **Enable Task**             | Turn the schedule on or off without deleting the task.                                                                                                                        |
+Open **Background Agent** in the sidebar and click **Create Task**.
+
+| Field                           | What to put in it                                                                                                                                                             |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Task Name**                   | Something you will recognize in the list.                                                                                                                                     |
+| **Schedule**                    | When to run, as a cron expression. Presets are provided.                                                                                                                      |
+| **Agent**                       | Which agent runs. It uses that agent's tools, including its MCP servers and local knowledge bases.                                                                            |
+| **Project Directory**           | Optional. Which folder it works in.                                                                                                                                           |
+| **Model**                       | Which model it uses. Scheduled tasks are a good place to use a cheaper model.                                                                                                 |
+| **Max Output Tokens**           | The longest reply allowed.                                                                                                                                                    |
+| **Wake Word (Prompt)**          | The message sent to the agent when the task runs. This is the actual instruction — for example _"Summarize commits from the last 24 hours and write it to daily-summary.md"_. |
+| **Continue Session**            | Whether each run continues the same conversation or starts fresh.                                                                                                             |
+| **Session Continuation Prompt** | Shown when Continue Session is on: the message used on continuing runs. Leave it empty to reuse the wake word.                                                                |
+| **Enable task immediately**     | Start the schedule as soon as the task is saved. You can enable or disable it later without deleting it.                                                                      |
+
+Name, schedule, agent, model and wake word are required.
 
 ### 14.2 Cron expressions, briefly
 
@@ -1503,16 +1877,26 @@ A cron expression is five values: `minute hour day month day-of-week`. `*` means
 | `*/5 * * * *` | Every 5 minutes                   |
 | `0 9 1 * *`   | The 1st of every month at 9:00 am |
 
-The app provides these as presets, so you rarely need to write one by hand.
+The app provides presets — every minute, every 5 minutes, every hour, daily at 9 AM, weekdays at
+9 AM, weekly on Monday at 9 AM, monthly on the 1st at 9 AM — so you rarely need to write one by hand.
 
 ### 14.3 Watching and running tasks
 
-- **Run now** executes a task immediately, without waiting for the schedule. Use this to test.
-- **Execution history** shows every past run, what it did, and how long it took. Open it from the
-  task, and close it when you are done.
-- **Notifications** (if enabled in Settings → General) tell you when a scheduled run finishes or
-  fails.
-- Inside a task's history you can also send a follow-up instruction into that session.
+Each task in the **Scheduled Tasks** list shows its wake word, last and next run, and the last error if
+there was one. Its buttons:
+
+- **Test Execution** runs the task immediately, without waiting for the schedule. Use this to test.
+- **Enable task** / **Disable task**, **Edit Task** and **Delete Task**.
+- **Execution History** opens a separate window with every past run, what it did, and how long it
+  took. You can filter it by outcome (all, success only, failure only) and by date, and **Continue
+  Conversation** sends a follow-up instruction into that session.
+- **Show system prompt** shows exactly what the agent is told when the task runs.
+
+**Notifications** (if **Enable desktop notifications** is on in Settings → General) tell you when a
+scheduled run finishes or fails — but only while the app window is not in front, since otherwise you
+can see it already. Clicking the notification opens that task's history.
+
+Scheduled tasks only run while the app is open.
 
 ### 14.4 Continue Session, explained
 
@@ -1583,17 +1967,17 @@ Useful when you know what the steps are but not the exact JSON syntax for expres
 
 ### 18.1 The short answer
 
-| If you want…                                             | Use                                                     |
-| -------------------------------------------------------- | ------------------------------------------------------- |
-| A good all-round default                                 | **Claude Sonnet 5.5**                                   |
-| The strongest reasoning for hard problems                | **Claude Opus 5.5** or **Claude Fable 5.1**             |
-| Speed and low cost for simple work                       | **Claude Haiku 4.5** or **Amazon Nova Lite**            |
-| The cheapest option for background tasks and chat titles | **Amazon Nova Micro** or **Nova Lite**                  |
-| A very large context window for huge documents           | **Claude Fable 5.1** (1M tokens) or **Grok 4.7** (500K) |
-| OpenAI's most capable model, cost no object              | **GPT-6 Astra** (1.05M tokens, $11/$55 per 1M)          |
-| Near-Astra quality at a mid-tier OpenAI price            | **GPT-6.1 Sol** (1M tokens, $2.20/$11 per 1M)           |
-| A mid-priced OpenAI model for everyday work              | **GPT-6 Sol** ($2/$10 per 1M)                           |
-| The cheapest OpenAI model for high-volume work           | **GPT-6 Luna** ($0.10/$0.50 per 1M)                     |
+| If you want…                                             | Use                                                          |
+| -------------------------------------------------------- | ------------------------------------------------------------ |
+| A good all-round default                                 | **Claude Sonnet 5.5**                                        |
+| The strongest reasoning for hard problems                | **Claude Opus 5.5** or **Claude Fable 5.1**                  |
+| Speed and low cost for simple work                       | **Claude Haiku 5.5** or **Amazon Nova Lite**                 |
+| The cheapest option for background tasks and chat titles | **Amazon Nova Micro**, **Nova Lite** or **Claude Haiku 5.5** |
+| A very large context window for huge documents           | **Claude Fable 5.1** (1M tokens) or **Grok 4.7** (500K)      |
+| OpenAI's most capable model, cost no object              | **GPT-6 Astra** (1.05M tokens, $11/$55 per 1M)               |
+| Near-Astra quality at a mid-tier OpenAI price            | **GPT-6.1 Sol** (1M tokens, $2.20/$11 per 1M)                |
+| A mid-priced OpenAI model for everyday work              | **GPT-6 Sol** ($2/$10 per 1M)                                |
+| The cheapest OpenAI model for high-volume work           | **GPT-6 Luna** ($0.10/$0.50 per 1M)                          |
 
 The model dropdown shows the price per million tokens in and out for each model, so you can compare
 before you commit.
@@ -1644,12 +2028,17 @@ it off. Some models handle caching automatically and ignore the setting entirely
 Four things actually move the needle:
 
 1. **Set Context Length sensibly.** Every past message is re-sent and re-charged each turn.
-2. **Set a cheap Light Processing Model.** Chat titles and suggestions do not need your best model.
+2. **Set a cheap Light Processing Model.** By default it is your main model. Chat titles, suggestions
+   and the Help chat do not need your best model.
 3. **Give agents fewer tools.** The tool list is sent with every request.
 4. **Turn thinking down for simple work.** Reasoning tokens are billed.
 
-Watch the **conversation cost** and **token analytics** buttons in the chat top bar to see where your
-money is going.
+Watch the chat's **Cost** tab ([6.6](#66-the-chat-tabs)) to see where your money is going. Its label
+is the running cost of the conversation.
+
+Knowledge bases built with Bedrock embeddings also cost a little each time you add or re-sync a source,
+and each search embeds the question. The on-device model costs nothing to run. See
+[Section 24.8](#248-costs-permissions-and-privacy).
 
 ---
 
@@ -1665,9 +2054,15 @@ On a Mac:
   chat-sessions/           ← your conversations
   chat-sessions-meta.json  ← the index of conversations
   window-state.json        ← the window's size and position, so it reopens where you left it
+  memory.json              ← your memory items (rules and facts)
+  knowledgebases/
+    <agent id>/<kb id>.db  ← one file per local knowledge base
+    .models/               ← the on-device embedding model, once downloaded
 ```
 
-The exact path for your machine is shown in **Settings → Workspace → Config Directory**.
+On Windows the folder is `%APPDATA%\Bedrock Engineer\`, and on Linux `~/.config/Bedrock Engineer/`.
+The exact path for your machine is shown in **Settings → Workspace → Config Directory**, and the
+knowledge base folder and its total size at the top of **Settings → Knowledge Base**.
 
 Note the folder is named after the app's display name (`Bedrock Engineer`), not
 `bedrock-engineer`. If someone gives you a support instruction referring to a `bedrock-engineer`
@@ -1678,7 +2073,7 @@ folder name; the app moves that folder here the first time it starts.
 
 ```
 <your project folder>/
-  attachments/<chat>-<id>/       ← files you attached to a chat
+  attachments/<chat>-<id>/       ← files you attached to a chat (and the Help chat's copy of this guide)
   docker-sandboxes/<chat>-<id>/  ← compose file and mapped data for a chat's container
   .bedrock-engineer/
     agents/                      ← agents shared with this project
@@ -1698,14 +2093,18 @@ Their location is alongside the config directory.
 
 Worth being clear about:
 
-| What                                                 | Goes where                                                       |
-| ---------------------------------------------------- | ---------------------------------------------------------------- |
-| Your messages, and the file contents the agent reads | Amazon Bedrock, in your AWS account and chosen region            |
-| Web search terms                                     | Tavily                                                           |
-| A URL you ask it to fetch                            | That website                                                     |
-| Image, video and knowledge base requests             | Amazon Bedrock / your AWS account                                |
-| Anything an MCP server does                          | Wherever that MCP server sends it — check before you install one |
-| Everything else                                      | Nowhere. The app has no telemetry and no server of its own.      |
+| What                                                              | Goes where                                                                                                                                                                                                    |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Your messages, and the file contents the agent reads              | Amazon Bedrock, in your AWS account and chosen region                                                                                                                                                         |
+| Web search terms                                                  | Tavily                                                                                                                                                                                                        |
+| A URL you ask it to fetch                                         | That website                                                                                                                                                                                                  |
+| Image, video and Bedrock Knowledge Base requests                  | Amazon Bedrock / your AWS account                                                                                                                                                                             |
+| Local knowledge base text, when it uses a Bedrock embedding model | Amazon Bedrock, to be turned into vectors: every passage when you add or re-sync a source, and the question for each search. Nothing is stored there. With the on-device model, nothing leaves your computer. |
+| Website sources you add to a knowledge base                       | The app's crawler fetches pages from that site                                                                                                                                                                |
+| The on-device embedding model, if you download it                 | Downloaded once from Hugging Face                                                                                                                                                                             |
+| Update checks and downloads                                       | GitHub, to see whether a newer release of this fork exists and to download it                                                                                                                                 |
+| Anything an MCP server does                                       | Wherever that MCP server sends it — check before you install one                                                                                                                                              |
+| Everything else                                                   | Nowhere. The app has no telemetry and no server of its own. Memory items, chat history and knowledge bases stay on your computer.                                                                             |
 
 Your files are not uploaded wholesale. Only the parts an agent actually reads get sent, as part of
 the conversation.
@@ -1742,7 +2141,10 @@ the conversation.
   [Section 6.4](#64-sending-a-message)
 - _…keep an answer running while I do something else?_ → It already does,
   [Section 6.5](#65-answers-keep-running-when-you-look-away)
-- _…see what this conversation is costing me?_ → [Section 6.6](#66-the-top-bar-buttons)
+- _…see what this conversation is costing me?_ → the Cost tab, [Section 6.6](#66-the-chat-tabs)
+- _…see the exact system prompt the model gets?_ → the System prompt tab, [Section 6.6](#66-the-chat-tabs)
+- _…open a terminal on my own computer?_ → [Section 6.12](#612-the-terminal-tab)
+- _…collapse the chat history?_ → [Section 6.9](#69-chat-history)
 - _…save a conversation as a document?_ → [Section 6.7](#67-exporting-a-conversation)
 - _…copy just one paragraph out of a reply?_ → [Section 6.8](#68-copying-part-of-a-message)
 - _…delete a lot of old chats at once?_ → [Section 6.9](#69-chat-history)
@@ -1755,6 +2157,10 @@ the conversation.
   [Section 7.3](#73-how-the-agent-sees-them)
 - _…stop the agent reading my `node_modules` folder?_ → Ignore patterns,
   [Section 9.2](#92-file-system-tools)
+- _…see and open the files the agent made?_ → the Files tab, [Section 6.11](#611-the-files-tab)
+- _…edit a file without leaving the app?_ → [Section 6.11](#611-the-files-tab)
+- _…open a file in its own window?_ → Pop out, [Section 6.11](#611-the-files-tab)
+- _…make the file list wider?_ → drag the divider, [Section 6.11](#611-the-files-tab)
 - _…find where my chat history is stored?_ → [Section 19.1](#191-app-settings-and-chat-history)
 
 **Agents**
@@ -1771,20 +2177,28 @@ the conversation.
 - _…reorder my agents?_ → Drag them, [Section 8.2](#82-the-my-agents-page)
 - _…use someone else's agent?_ → [Section 13](#13-agent-directory)
 - _…have one agent ask another for help?_ → [Section 12](#12-handing-work-to-another-agent-with-)
+- _…let an agent search my own documents or a website?_ → a local knowledge base,
+  [Section 24](#24-local-knowledge-bases-letting-an-agent-search-your-documents)
+- _…check whether the agent actually searched its knowledge base?_ →
+  [Section 24.4](#244-how-the-agent-uses-a-knowledge-base)
+- _…make the assistant remember something in every chat?_ →
+  [Section 25](#25-memory-rules-and-facts-every-chat-knows)
 
 **Tools**
 
 - _…let the agent search the web?_ → `tavilySearch` plus a Tavily key,
   [Section 9.3](#93-web--search-tools)
 - _…let the agent run commands safely?_ → [Section 10](#10-the-docker-sandbox)
-- _…see what the agent is doing inside its container?_ → the sandbox panel,
-  [Section 10.8](#108-the-sandbox-panel)
+- _…see what the agent is doing inside its container?_ → the Sandbox tab,
+  [Section 10.8](#108-the-sandbox-tab)
 - _…get a shell inside the container myself?_ → [Section 10.9](#109-the-interactive-terminal)
 - _…let the agent run commands on my actual machine?_ → Allowed Commands,
   [Section 8.3](#83-the-agent-editor) — and read the safety note
+- _…choose the sandbox's operating system or limits?_ → [Section 5.6](#56-sandbox-tab)
 - _…let the agent analyze a spreadsheet?_ → `codeInterpreter`, [Section 9.5](#95-system-tools)
-- _…let the agent search my company's documents?_ → `retrieve` plus a knowledge base,
-  [Section 9.4](#94-ai-services-tools)
+- _…let the agent search my company's documents?_ → a local knowledge base
+  ([Section 24](#24-local-knowledge-bases-letting-an-agent-search-your-documents)), or `retrieve`
+  with an Amazon Bedrock Knowledge Base ([Section 9.4](#94-ai-services-tools))
 - _…make an image?_ → `generateImage`, [Section 9.4](#94-ai-services-tools)
 - _…make a video?_ → `generateVideo`, [Section 9.4](#94-ai-services-tools)
 - _…show the agent my screen?_ → `screenCapture`, [Section 9.5](#95-system-tools)
@@ -1803,6 +2217,11 @@ the conversation.
 - _…build a web page?_ → [Section 15](#15-website-generator)
 - _…draw an AWS architecture diagram?_ → [Section 16](#16-diagram-generator)
 - _…build a Step Functions workflow?_ → [Section 17](#17-step-functions-generator)
+
+**Updates**
+
+- _…update the app?_ → it updates itself, [Section 5.8](#58-updates-tab)
+- _…see what changed in this version?_ → [Section 5.8](#58-updates-tab)
 
 **Cost and models**
 
@@ -1855,6 +2274,9 @@ the recent conversation. Larger context means more memory and more cost.
 
 **Context window** — the maximum amount of text a model can consider at once, measured in tokens.
 
+**Crawler** — the part of the app that visits a website page by page, following links, to add it to a
+knowledge base.
+
 **Cron expression** — five values describing a repeating schedule. See
 [Section 14.2](#142-cron-expressions-briefly).
 
@@ -1867,8 +2289,18 @@ the recent conversation. Larger context means more memory and more cost.
 **Inference profile** — a Bedrock routing option that decides which regions can serve your request,
 and can also carry tags for cost tracking.
 
-**Knowledge base** — a collection of your own documents that AWS has indexed so an AI can search it.
-Reached with the `retrieve` tool.
+**Embedding** — turning a passage of text into a list of numbers (a vector) that captures its meaning,
+so passages about the same thing can be found even when they use different words. Local knowledge
+bases use an embedding model for this. See [Section 24.2](#242-how-it-works).
+
+**Knowledge base** — a searchable collection of documents. This app has two kinds. A **local knowledge
+base** is built and stored on your computer from files and websites you add, and searched with
+`searchKnowledgeBase` ([Section 24](#24-local-knowledge-bases-letting-an-agent-search-your-documents)).
+An **Amazon Bedrock Knowledge Base** is one AWS has indexed in your account, searched with `retrieve`
+([Section 9.4](#94-ai-services-tools)).
+
+**Memory item** — a rule or a fact saved for every chat. See
+[Section 25](#25-memory-rules-and-facts-every-chat-knows).
 
 **MCP (Model Context Protocol)** — an open standard for programs that supply tools to an AI. See
 [Section 11](#11-mcp-servers-adding-tools-from-outside-the-app).
@@ -1878,6 +2310,9 @@ Reached with the `retrieve` tool.
 **Model access** — the per-region switch in the Bedrock console that decides which models your AWS
 account may call at all. Separate from IAM permissions, and both have to be in place. See
 [Section 4.2](#42-step-1--turn-on-the-models-you-want-in-the-bedrock-console).
+
+**Passage** — a short piece of a document (a few hundred words) that a knowledge base stores and
+returns as a search result.
 
 **Prompt cache** — remembering the unchanging part of a conversation so it does not have to be
 re-processed every turn. Faster and cheaper.
@@ -1963,11 +2398,13 @@ answer in smaller pieces.
 
 ### The agent keeps forgetting what I told it earlier
 
-Raise **Context Length** in **Settings → Chat**. Be aware this makes each message more expensive.
+Raise **Context Length** in **Settings → Chat** (the default is 60 messages). Be aware this makes each
+message more expensive. For things it should know in every chat, save them as
+[memory items](#25-memory-rules-and-facts-every-chat-knows) instead.
 
 ### The agent forgot a rule I gave it in the system prompt
 
-Use **Show preview** in the agent editor's system prompt section to see exactly what the model
+Use **Show Preview** in the agent editor's system prompt section to see exactly what the model
 receives, placeholders and all. Very long system prompts also get less reliable — if yours is pages
 long, tighten it.
 
@@ -1991,12 +2428,25 @@ Docker socket. Two cases:
 - **"This Docker context points at a remote daemon."** Your Docker context is a `tcp://` or `ssh://`
   address. The terminal cannot attach to that, and neither can the rest of the sandbox in any useful
   way — a remote daemon cannot mount your project folder either. Switch contexts with
-  `docker context use default` (or whichever local context you have) and reopen the panel.
+  `docker context use default` (or whichever local context you have) and reopen the Sandbox tab.
 - **"No Docker socket at …"** or **"Permission denied …"** — Docker is not running, or your user
   cannot open its socket. Start Docker, and on Linux add yourself to the `docker` group
   (`sudo usermod -aG docker $USER`, then log out and back in).
 
-Everything else in the panel — state, services, ports and the activity log — keeps working either way.
+Everything else on the Sandbox tab — state, services, ports and the activity log — keeps working either way.
+
+### The agent does not use its knowledge base, or knowledge base errors
+
+See [Section 24.9](#249-knowledge-base-troubleshooting) for the common causes: Plan mode, a model not
+enabled in your region, an access error, the on-device model not downloaded, and websites that cannot
+be crawled.
+
+### An update fails or never arrives
+
+Check **Settings → Updates**: **Check for updates automatically** must be on, or press **Check for
+updates**. On macOS 15 and later, a permission error means the app needs **App Management** permission
+in **System Settings → Privacy & Security**. The Linux `.deb` package does not update itself; install
+the new `.deb` by hand or use the AppImage. See [Section 5.8](#58-updates-tab).
 
 ### Web search does not work
 
@@ -2028,7 +2478,7 @@ Restart the app. Pages shown inside the app only read the proxy setting at start
 
 ### The app is using a lot of money
 
-Open **token analytics** in the chat top bar to see where. Then work through
+Open the chat's **Cost** tab to see where. Then work through
 [Section 18.5](#185-managing-cost) — Context Length and the Light Processing Model are usually the
 two biggest wins.
 
@@ -2120,3 +2570,436 @@ only knows what is in this guide, so it cannot answer general questions about Am
 the models beyond what Sections 4 and 19 cover, and it cannot look at your AWS account or run the
 verification commands for you. For anything wider, ask a normal agent with the web search tool
 enabled, or read the AWS documentation.
+
+---
+
+## 24. Local knowledge bases: letting an agent search your documents
+
+### 24.1 What a local knowledge base is
+
+A **local knowledge base** is a searchable library you give one agent: documents from your computer
+and pages from websites. The agent gets a search tool for it, so it can answer from _your_ material —
+a product manual, a policy folder, a documentation site — and say which file or page each answer came
+from, instead of answering from general knowledge.
+
+"Local" means the knowledge base is built and stored on your computer by the app itself. You do not
+need to set anything up in AWS. (Amazon Bedrock Knowledge Bases, which live in your AWS account and
+are searched with the `retrieve` tool, are a separate feature; see [Section 9.4](#94-ai-services-tools).)
+
+Each agent has its own knowledge bases, and an agent can have several — say one for the product docs
+and one for the support handbook. Knowledge bases are set up on the **Knowledge Base** tab of the agent
+editor ([24.3](#243-the-knowledge-base-tab-in-the-agent-editor)), and the app-wide choices are on
+**Settings → Knowledge Base** ([24.6](#246-the-knowledge-base-settings-tab)).
+
+Use attachments ([Section 7](#7-attachments-giving-the-agent-your-files)) for a file you want the agent
+to read in one chat. Use a knowledge base for a body of material the agent should be able to look
+things up in, in every chat, without reading all of it each time.
+
+### 24.2 How it works
+
+```mermaid
+flowchart LR
+  F["Files and<br/>web pages"] -->|"text extracted,<br/>split into passages"| P["Passages"]
+  P -->|"embedding model"| V["Passages + vectors<br/>in one file<br/>on your computer"]
+  Q["The agent's<br/>question"] -->|"embedding model"| S{"Search by meaning<br/>and by keywords"}
+  V --> S
+  S -->|"best passages,<br/>with their sources"| A["The agent"]
+```
+
+1. **Adding a source.** When you add files or a website, the app reads the text out of each document
+   and splits it into **passages** of a few hundred words (the chunk size in Settings), overlapping a
+   little so nothing is cut in half.
+2. **Embedding.** Each passage is turned into a **vector** — a list of numbers that captures what it
+   means — by an **embedding model**. That is either a model on Amazon Bedrock (Amazon Titan Text
+   Embeddings V2 or Cohere Embed) or a small model that runs on your own computer
+   (multilingual-e5-small). See [24.6](#246-the-knowledge-base-settings-tab).
+3. **Searching.** When the agent searches, its question is embedded the same way, and the app looks for
+   passages close in meaning. It also runs a keyword search, so exact names, codes and error messages
+   are found even when the meaning-based search misses them, and combines the two rankings. The balance
+   between them is a setting.
+
+Each knowledge base is a single file on your computer:
+`<app data folder>/knowledgebases/<agent id>/<knowledge base id>.db`, where the app data folder is the
+one shown in **Settings → Workspace → Config Directory**. The on-device embedding model, once
+downloaded, is kept in `knowledgebases/.models/`.
+
+Files you add are **read where they are, not copied**. The knowledge base stores the passages it took
+from them; the original files are never changed. If you move or delete a file, the knowledge base
+keeps what it already has until you re-sync that source, which then reports the file as missing.
+
+What happens to knowledge bases when you change the agent:
+
+- **Duplicate** an agent and its knowledge bases are copied to the new agent.
+- **Delete** an agent and its knowledge bases are deleted with it. So does cancelling a new agent before
+  you first save it.
+- **Download YAML**, **Save as File**, **Share to Organization** and **Import Agent** never include
+  knowledge bases. They stay on your computer, so whoever you share an agent with has to add their own.
+- Agents shared through a project file, and built-in agents, cannot have local knowledge bases.
+  Duplicate the agent and add them to your copy.
+
+### 24.3 The Knowledge Base tab in the agent editor
+
+Open **My Agents**, edit an agent, and choose **Knowledge Base** in the editor's side tabs (between MCP
+Servers and Tools). The tab works for a new agent too, before you save it.
+
+**Creating a knowledge base**
+
+1. Click **New knowledge base**.
+2. Enter a **Name** (for example "Product docs") and a **Description** of what it contains. The
+   description matters: the agent sees it and uses it to decide when to search this knowledge base.
+3. Click **Create**. The form shows which embedding model it will use — the one chosen in Settings at
+   that moment. A knowledge base keeps that model for good, unless you rebuild it.
+
+Each knowledge base is a card. Its header shows the name, a health badge, the description and the
+embedding model; collapsed, it also shows the number of passages and its size. The pencil button
+**renames** it (name and description), and the red trash button **deletes** it after asking. Deleting
+removes only the knowledge base's indexed content from your computer; the original files and websites
+are not touched.
+
+**Adding files**
+
+**Add files** opens a file picker. You can pick many files at once. Supported:
+
+- Text, Markdown and code files — plain text, logs, CSV/TSV, Markdown, reStructuredText, AsciiDoc,
+  JSON, YAML, TOML, XML and config files, and source code in most common languages
+- PDF
+- Word (`.docx`)
+- HTML pages saved as files
+- Excel and other spreadsheets (`.xlsx`, `.xlsm`, `.xlsb`, `.xls`, `.ods`) — one section per sheet
+- PowerPoint (`.pptx`) — one section per slide
+
+Older `.doc` and `.ppt` files, folders, and files over 100 MB are not supported. A PDF that is only
+scanned images, with no text in it, adds nothing searchable. Adding a file that is already in the
+knowledge base is skipped.
+
+**Adding a website**
+
+Type the start address into the website box (for example `https://docs.example.com/guide/`), adjust
+the options if you want, and click **Add website**:
+
+| Option                   | What it does                                                                                                           |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| **Link depth**           | How many links away from the start page the crawler goes (0–10). 0 is just the start page. Default from Settings: 2.   |
+| **Max pages**            | The most pages it will add from this site (1–1,000). Default from Settings: 50.                                        |
+| **Stay under this path** | On by default. Only follow links below the start address's folder — so starting at `/guide/` keeps it out of `/blog/`. |
+
+How the crawler behaves is in [24.5](#245-how-the-website-crawler-behaves).
+
+**Watching progress**
+
+Sources are processed in the background, so you can keep working. While a job runs, the card shows a
+progress bar with what it is doing — **Crawling 12/50**, **Reading…**, **Embedding 80/240**,
+**Saving…** — and a **Stop** button. When a job finishes, a short message says what happened: for a
+website, how many pages were read, updated, removed or skipped; for a file, **Indexed** or
+**Unchanged**.
+
+**The sources list**
+
+Every file and website appears under **Sources** with its status (**Queued**, **Processing**,
+**Ready**, **Error** or **Stopped**), how many documents and passages it produced, and when it was last
+synced. A website also shows its link depth and page limit. Errors are shown in red under the source.
+Each source has buttons to:
+
+- **Re-sync** — read it again and pick up changes. Documents that have not changed are skipped, so
+  re-syncing a large source is quick and, with Bedrock embeddings, cheap. On a website, pages that have
+  disappeared are removed from the knowledge base.
+- **Crawl settings** (websites only) — change the link depth, page limit and stay-under-path option.
+  **Save and re-sync** applies them straight away; **Save** applies them at the next re-sync.
+- **Remove** — take the source and its passages out of the knowledge base, after asking.
+
+If you quit the app while a source is being processed, it shows **Interrupted. Re-sync to continue.**
+the next time.
+
+**Trying a search**
+
+Once a knowledge base has passages, **Try a search** lets you type a question ("Ask something the
+documents answer") and see exactly what the agent would get back: each passage with its title, section,
+source and score. Use it to check that a document went in properly and that your question finds it.
+These test searches do not count towards the agent's search statistics.
+
+**The statistics tiles**
+
+| Tile                        | What it shows                                                                                                                                                                                                   |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Passages**                | How many passages it holds, from how many documents, files and websites.                                                                                                                                        |
+| **Storage**                 | The size of the file on disk, with a meter of how much of it is free space that **Optimize** would give back (or **Compact** if there is none to speak of). The meter turns to a warning colour at 20% or more. |
+| **Agent searches, 30 days** | How many times the agent searched it over the last 30 days, with a small per-day chart (hover over a day for its count), and when it was last used — or "Not used by the agent yet".                            |
+| **Typical search time**     | The median time to embed the question and search, over the last 30 days, and the time 95% of searches came in under.                                                                                            |
+
+A knowledge base the agent never searches is worth a look: the description may not tell the agent what
+it is for, or the agent may not have been asked anything it covers.
+
+**The health badge and the Maintenance panel**
+
+The badge next to the name sums up the knowledge base's health: **Healthy**, **Suggestion**, **Needs
+attention** or **Problem**. The **Maintenance** panel below the tiles says when the knowledge base was
+last optimized and how long its last update took, lists anything that needs attention, and has the
+**Optimize** button. Both are explained in [24.7](#247-health-checks-and-maintenance).
+
+**Rebuilding with a different embedding model**
+
+If you change the embedding model in Settings, existing knowledge bases keep the model they were built
+with — searches have to use the same model the passages were embedded with. The card then says "Built
+with … ; Settings now use …" and offers **Rebuild**, which re-embeds every passage with the new model.
+The passages themselves are kept as they are (a new chunk size is not applied), so a rebuild does not
+need the original files. It can take a while and, with a Bedrock model, costs embedding tokens.
+
+### 24.4 How the agent uses a knowledge base
+
+As soon as an agent has a knowledge base, it gets the built-in **local-knowledgebase** MCP server and
+its three tools — `searchKnowledgeBase`, `listKnowledgeBases` and `listKnowledgeBaseSources`
+([Section 9.10](#910-local-knowledge-base-tools)). You do not have to tick anything. You can see them:
+
+- on the agent editor's **MCP Servers** tab, as a read-only **Built-in** card with **Test connection**;
+- on its **Tools** tab, in the MCP category with the agent's other MCP tools.
+
+The app also adds a `<local_knowledge_bases>` block to the agent's system prompt, listing each
+knowledge base by name and description and telling the agent to search them before answering
+questions they may cover, and to cite the file path or URL of the passages it uses. Open the chat's
+**System prompt** tab to see it.
+
+To check that the agent really used its knowledge base, look in the conversation for a
+`searchKnowledgeBase` tool call and expand it: you see the query the agent searched for and the
+passages it got back. If the answer does not match those passages, the agent answered from somewhere
+else.
+
+Tips for good results:
+
+- **Write a clear description** for each knowledge base. It is how the agent knows when to search it.
+- **Say so in the system prompt** if the agent should always check its knowledge base first, or only
+  answer from it.
+- **Ask in the words the documents use.** The search understands meaning, but exact product names and
+  error codes help it.
+- The knowledge base tools work in background tasks and when the agent is called by another agent, but
+  not in **Plan mode**, where MCP tools are off.
+
+### 24.5 How the website crawler behaves
+
+The app has its own crawler, so adding a website needs nothing else installed. It is built to be polite
+to the sites it visits:
+
+- It starts at the address you give and **stays on that site** (the same address and port), and, with
+  **Stay under this path**, under that folder. Links to other sites are ignored, and a page that
+  redirects off the site is skipped.
+- It follows links **breadth first** up to the link depth, and stops at the page limit.
+- It **honours robots.txt**. If the site's robots.txt does not allow the start page, the crawl stops
+  with "robots.txt does not allow crawling this URL". This can be turned off in Settings, for sites you
+  run yourself.
+- It **reads sitemap.xml** (or the sitemaps robots.txt names) to find pages that links alone would miss.
+- It **waits between requests** — 500 ms by default, or longer if the site's robots.txt asks for a
+  crawl delay (up to 10 seconds).
+- It **skips pages that ask not to be indexed** (a `noindex` robots tag), and does not follow the links
+  of pages marked `nofollow`.
+- It reads HTML pages, PDFs, and plain text and Markdown files. It skips images, video, archives,
+  scripts, style sheets and the like, and pages over 5 MB. From an HTML page it keeps the main content,
+  leaving out menus and footers where it can tell them apart.
+- It identifies itself as `BedrockEngineerKnowledgeBase`, and goes through your proxy if one is set.
+
+The crawler does not log in and does not run a page's scripts, so pages behind a sign-in, and pages
+whose content only appears after JavaScript runs, come out empty or nearly so. If the start page itself
+cannot be fetched, the whole crawl fails.
+
+Websites change, so **re-sync** them now and then. A website not synced for 30 days is flagged in the
+health checks.
+
+### 24.6 The Knowledge Base settings tab
+
+**Settings → Knowledge Base** has four sections.
+
+**Overview**
+
+The top line says how much space knowledge bases take and where they are stored. Then:
+
+- **Tiles** with the totals: how many knowledge bases, for how many agents; passages and documents;
+  storage, with how much could be reclaimed; and agent searches over 30 days, with a typical search
+  time and a per-day chart.
+- A **table** with one row per knowledge base: its name, agent (or "Agent deleted") and embedding
+  model; passages and sources; storage; agent searches over 30 days; search time (median and 95%);
+  when it was last used; and its health (hover for the issues). Each row has an **Optimize** and a
+  **Delete** button.
+- **Refresh**, **Optimize all** (optimizes them one after another) and, when there are any, **Delete
+  orphaned knowledge bases** — knowledge bases left behind by an agent that no longer exists. A line
+  above the table says how many knowledge bases need attention.
+
+**Embedding model**
+
+The model that turns text into vectors. New knowledge bases use the model chosen here; existing ones
+keep the model they were built with until you rebuild them
+([24.3](#243-the-knowledge-base-tab-in-the-agent-editor)).
+
+| Provider                     | Model                                             | Notes                                                                                                                                        |
+| ---------------------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Amazon Bedrock** (default) | **Amazon Titan Text Embeddings V2** (the default) | Good all-round choice. **Dimensions** 1024 (default), 512 or 256 — smaller is a smaller file, slightly less precise.                         |
+|                              | **Cohere Embed Multilingual v3**                  | For documents in many languages.                                                                                                             |
+|                              | **Cohere Embed English v3**                       | For English documents.                                                                                                                       |
+|                              | **Cohere Embed v4**                               | Cohere's newest. Dimensions 1536 (default), 1024, 512 or 256.                                                                                |
+| **On this computer**         | **multilingual-e5-small**                         | Runs on your computer's processor, works offline, about 100 languages, and costs nothing per use. Needs a one-time download of about 465 MB. |
+
+A Bedrock model has to be enabled in the Bedrock console for your region
+([Section 4.2](#42-step-1--turn-on-the-models-you-want-in-the-bedrock-console)), and Bedrock bills per
+embedded token. It uses the AWS credentials and region from the AWS tab.
+
+The **Local model: multilingual-e5-small** block is always shown, whichever provider you pick, so you
+can download the model ahead of time. **Download model** fetches it from Hugging Face (through your
+proxy, if set), checks every file, and shows the progress; **Cancel** stops it. Its status reads
+**Downloaded**, **Not downloaded** or **Downloading …%**. **Delete model** frees the space again, but
+knowledge bases built with it cannot be searched until you download it again. The on-device model works
+on Apple Silicon and Intel Macs, Windows and Linux.
+
+**Chunking and retrieval**
+
+| Setting                         | Default | What it does                                                                                                                                                                              |
+| ------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Chunk size (tokens)**         | 400     | How long each passage is (50–2,000; a token is roughly ¾ of a word). Smaller passages give more precise hits; larger ones give the agent more context per hit. New knowledge bases only.  |
+| **Chunk overlap (tokens)**      | 60      | How much consecutive passages share, so a sentence on a boundary is not lost. Up to half the chunk size. New knowledge bases only.                                                        |
+| **Results per search**          | 6       | How many passages a search returns when the agent does not ask for a number (1–50). Applies to every search.                                                                              |
+| **Semantic vs. keyword weight** | 0.60    | 1.0 ranks by meaning only, 0.0 by keyword matches only; values in between combine both. Lower it if exact terms (part numbers, function names) are being missed. Applies to every search. |
+
+**Website crawler**
+
+Defaults for new website sources ([24.5](#245-how-the-website-crawler-behaves)):
+
+| Setting                           | Default | Notes                                                                                    |
+| --------------------------------- | ------- | ---------------------------------------------------------------------------------------- |
+| **Link depth**                    | 2       | 0–10. Saved with each website when you add it.                                           |
+| **Max pages**                     | 50      | 1–1,000. Saved with each website when you add it.                                        |
+| **Delay between requests (ms)**   | 500     | Applies to every crawl and re-sync.                                                      |
+| **Respect robots.txt**            | On      | Applies to every crawl and re-sync. Only turn it off for sites you are allowed to crawl. |
+| **Use sitemap.xml to find pages** | On      | Applies to every crawl and re-sync.                                                      |
+
+### 24.7 Health checks and maintenance
+
+The app checks each knowledge base and shows the result as its health badge, in the Maintenance panel
+and in the Settings overview:
+
+| Check                          | Badge               | What it means and what to do                                                                                                                                       |
+| ------------------------------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Sources failed to sync         | **Problem**         | One or more sources ended in an error. Read the error on the source, then **Re-sync** or **Remove** it.                                                            |
+| Local model missing            | **Problem**         | The knowledge base was built with the on-device model, which is not downloaded (or was deleted). Searches fail until you download it in Settings → Knowledge Base. |
+| Websites not synced in 30 days | **Needs attention** | The site may have changed since. **Re-sync** it.                                                                                                                   |
+| Different embedding model      | **Suggestion**      | Settings now name a different model than the one it was built with. It still works; **Rebuild** if you want to switch.                                             |
+| Free space in the file         | **Suggestion**      | At least 1 MB, and 20% or more of the file, is free space left by removed or updated passages. **Optimize** gives it back.                                         |
+
+**Optimize** (on the card, per row in Settings, or **Optimize all**) tidies the keyword index, checks the
+file for errors, and compacts the file to give free space back. It reports the size before and after,
+or that the integrity check failed — in which case remove and re-add the sources, or delete and
+recreate the knowledge base. It waits for any job already running on that knowledge base.
+
+You rarely need to press it: after any update that leaves a lot of free space (at least 4 MB and a
+quarter of the file), the app optimizes the knowledge base by itself.
+
+### 24.8 Costs, permissions and privacy
+
+**With a Bedrock embedding model:**
+
+- **Cost.** Bedrock charges per token embedded. Adding or re-syncing a source embeds every new or
+  changed passage (unchanged documents are skipped); each search embeds the question, which is tiny.
+  Embedding is much cheaper than chatting, but a large website or document collection adds up, and a
+  **Rebuild** embeds everything again. The app does not show embedding costs on the Cost tab.
+- **Permissions.** Your AWS identity needs `bedrock:InvokeModel` on the embedding model. Both policies
+  under **Settings → AWS → View required IAM policies** already allow `InvokeModel` on all models, so
+  nothing extra is needed if you use one of them
+  ([Section 4.3](#43-step-2--give-your-identity-permission-to-call-bedrock)). A hand-written policy that
+  lists specific models must include the embedding model.
+- **Model access.** The embedding model must be enabled in the Bedrock console in your region, like any
+  other model.
+- **What is sent.** The text of each passage when it is embedded, and the agent's search question.
+  Bedrock returns the vectors; the app stores nothing in AWS.
+
+**With the on-device model**, embedding happens on your computer: no AWS cost, no permissions, and it
+works offline. Only the one-time model download goes over the internet.
+
+Either way, the knowledge base itself — passages, vectors and search history — stays on your computer.
+The passages the agent finds are sent to the chat model as part of the conversation, like anything
+else the agent reads.
+
+### 24.9 Knowledge base troubleshooting
+
+**"No access to the embedding model … Enable it in the Bedrock console for this region"** — an
+`AccessDenied` error from Bedrock. Either the embedding model is not enabled in your region
+([4.2](#42-step-1--turn-on-the-models-you-want-in-the-bedrock-console)), or your IAM policy does not
+allow `bedrock:InvokeModel` on it ([4.3](#43-step-2--give-your-identity-permission-to-call-bedrock)).
+Or switch to the on-device model.
+
+**"The embedding model is not available … It may not be offered in this region"** — the model you chose
+is not offered in your AWS region. Pick another embedding model, switch regions, or use the on-device
+model. Changing the model only affects new knowledge bases; **Rebuild** existing ones.
+
+**"AWS authentication failed. Please check your credentials."** — the same credential problems as for
+chat; see [Section 22](#22-troubleshooting).
+
+**"The local embedding model is not downloaded yet"** — download it in **Settings → Knowledge Base**,
+or switch the provider to Amazon Bedrock. A knowledge base built with the on-device model needs it for
+every search, so its health badge shows **Problem** until it is back.
+
+**A website comes out empty or with only a few pages** — the site may block crawling in robots.txt,
+need a sign-in, build its pages with JavaScript, or mark them `noindex`. Raise **Link depth** or **Max
+pages** if it simply stopped early, or turn off **Stay under this path** if the pages you want are in a
+sibling folder. Read the source's error and the job message for which it was.
+
+**"File not found (moved or deleted?)"** on re-sync — the file is no longer where it was added from.
+Remove the source and add the file again from its new place.
+
+**The agent answers without searching** — check that you are in **Act** mode (the knowledge base tools
+are off in Plan mode), that the knowledge base has passages and a description that matches the
+question, and the `<local_knowledge_bases>` block on the **System prompt** tab. Telling the agent in
+its system prompt to search first helps. **Try a search** on the Knowledge Base tab shows whether the
+question finds anything at all.
+
+**Searches return the wrong passages** — try a lower **Semantic vs. keyword weight** for exact terms,
+more **Results per search**, or a smaller chunk size (for new knowledge bases).
+
+---
+
+## 25. Memory: rules and facts every chat knows
+
+### 25.1 What memory is
+
+Memory is one shared list of short items the assistant keeps in mind in every chat — your preferences,
+house rules, and facts about your setup — so you do not have to repeat them. Each item is one of two
+kinds:
+
+- A **rule** is an instruction the assistant always follows, unless you tell it otherwise in that chat.
+  For example: "Use pnpm instead of npm".
+- A **memory** is a fact it keeps in mind and uses when it is relevant. It is background, not an
+  instruction. For example: "The main repo is at ~/work/app".
+
+The two are given to the model differently: rules as instructions to always follow, which only an
+explicit instruction from you in that chat overrides; facts as background to use when relevant.
+
+### 25.2 Saving items from a chat
+
+Just say it: "add a rule: always use TypeScript", "remember that prod is eu-west-1", or "forget the pnpm
+rule". The agent uses its memory tools (`addMemory`, `updateMemory`, `removeMemory`;
+[Section 9.7](#97-memory-tools)) and the reply shows a small note — **Memory saved**, **Memory updated**
+or **Memory removed** — with **View** to open the Memory page and, for saved and removed items,
+**Undo**.
+
+This needs the memory tools enabled on the agent; every tool preset except Custom includes them. They
+work in Plan mode too.
+
+### 25.3 The Memory page
+
+Open **Memory** (the brain icon) in the sidebar. The page explains the two kinds and lists every item,
+with how many are enabled.
+
+- **Add** an item yourself: type it into **Add a memory or rule…**, choose its **Type** (Rule or
+  Memory), and click **Add**.
+- Each item shows whether it came **from chat** or was **added manually**, and when.
+- The checkbox (**Include in context**) switches a single item off without deleting it.
+- Click the kind label to switch an item between rule and memory.
+- **Edit** changes its text (Enter saves, Shift+Enter makes a new line, Esc cancels); **Delete** removes
+  it after asking.
+
+### 25.4 Turning memory on and off for a chat
+
+The **brain button** above the message box adds every switched-on item to the chat's system prompt. It
+is highlighted, with the number of items, while on. It is on for every new chat; turning it off only
+affects that chat. Its tooltip says whether memory is on. Open the **System prompt** tab to see the
+items as the model receives them.
+
+Memory is never added to the Help chat. Items are stored on your computer, in `memory.json` in the app
+data folder ([Section 19.1](#191-app-settings-and-chat-history)).
+
+Keep items short and few. Every switched-on item is sent with every message, so a long list costs a
+little on every turn and gives the model more to weigh.

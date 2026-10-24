@@ -7,6 +7,7 @@ export const settingTabsLabels = {
       chat: 'Chat',
       workspace: 'Workspace',
       sandbox: 'Sandbox',
+      knowledgebase: 'Knowledge Base',
       updates: 'Updates'
     }
   },
@@ -18,6 +19,7 @@ export const settingTabsLabels = {
       chat: 'チャット',
       workspace: 'ワークスペース',
       sandbox: 'サンドボックス',
+      knowledgebase: 'ナレッジベース',
       updates: 'アップデート'
     }
   }

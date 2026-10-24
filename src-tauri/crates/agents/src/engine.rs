@@ -27,7 +27,6 @@ use crate::store::{prompt_cache_enabled, StoreReader};
 use crate::tool_specs::{generate_tool_specs, tool_config, McpToolSpecProvider};
 use async_trait::async_trait;
 use bedrock::{ConverseRequest, InferenceConfig};
-use common::agent::McpServerConfig;
 use common::delegation::DelegationContext;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
@@ -651,12 +650,12 @@ impl AgentEngine {
         ctx.caller = CallerMetadata {
             agent_id: Some(config.agent_id.clone()),
             // From the agent's stored definition, never from the model.
-            mcp_servers: agent.get("mcpServers").filter(|v| !v.is_null()).map(|v| {
-                serde_json::from_value::<Vec<McpServerConfig>>(v.clone()).unwrap_or_else(|error| {
-                    tracing::warn!(%error, "Ignoring malformed mcpServers on agent");
-                    Vec::new()
-                })
-            }),
+            // Plus the built-in knowledgebase server when the agent has local knowledgebases.
+            mcp_servers: {
+                let servers = common::agent::effective_mcp_servers(agent);
+                (!servers.is_empty() || agent.get("mcpServers").is_some_and(|v| !v.is_null()))
+                    .then_some(servers)
+            },
             delegation_depth: Some(config.delegation_depth.unwrap_or(0)),
             delegation_lineage: Some(
                 config

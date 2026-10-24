@@ -28,6 +28,7 @@
 //! | module | TS | commands / callers |
 //! | ------ | -- | ------------------ |
 //! | [`image`] | `imageService` | `bedrock:generateImage` (generateImage tool) |
+//! | [`embed`] | — | local knowledgebases (Titan / Cohere embeddings) |
 //! | [`image_recognition`] | `imageRecognitionService` | `bedrock:recognizeImage` (recognizeImage tool) |
 //! | [`agent`] | `agentService` | `bedrock:invokeAgent`, `bedrock:retrieve`, `retrieve_and_generate` |
 //! | [`flow`] | `flowService` | `bedrock:invokeFlow` (invokeFlow tool) |
@@ -126,6 +127,7 @@ pub mod client;
 pub mod converse;
 pub mod convert;
 pub mod document;
+pub mod embed;
 pub mod error;
 pub mod flow;
 pub mod guardrail;

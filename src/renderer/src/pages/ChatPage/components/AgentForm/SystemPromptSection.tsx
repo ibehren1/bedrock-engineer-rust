@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FiZap, FiEye, FiEyeOff, FiChevronDown, FiChevronUp, FiMic } from 'react-icons/fi'
+import { FiZap, FiEye, FiEyeOff, FiChevronDown, FiChevronUp } from 'react-icons/fi'
 import { ToggleSwitch } from 'flowbite-react'
 import { SystemPromptSectionProps } from './types'
 import { replacePlaceholders } from '../../../../../../common/utils/placeholderUtils'
@@ -26,9 +26,7 @@ export const SystemPromptSection: React.FC<SystemPromptSectionProps> = ({
   onAdditionalInstructionChange,
   onEnvironmentContextSettingsChange,
   onAutoGenerate,
-  onVoiceChatGenerate,
   isGenerating,
-  isGeneratingVoiceChat,
   projectPath,
   allowedCommands,
   knowledgeBases,
@@ -133,23 +131,6 @@ export const SystemPromptSection: React.FC<SystemPromptSectionProps> = ({
                     <FiZap className={`w-3 h-3 mr-1 ${isGenerating ? 'animate-pulse' : ''}`} />
                     <span>{isGenerating ? t('generating') : t('generateSystemPrompt')}</span>
                   </motion.button>
-
-                  <motion.button
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    onClick={onVoiceChatGenerate}
-                    disabled={isGeneratingVoiceChat}
-                    className="inline-flex items-center text-xs bg-success-soft hover:bg-success-soft-strong
-                    text-success rounded-control px-2 py-0.5 transition-colors duration-200 border border-success"
-                    title={t('generateVoiceChatPromptTooltip')}
-                  >
-                    <FiMic
-                      className={`w-3 h-3 mr-1 ${isGeneratingVoiceChat ? 'animate-pulse' : ''}`}
-                    />
-                    <span>
-                      {isGeneratingVoiceChat ? t('generating') : t('generateVoiceChatPrompt')}
-                    </span>
-                  </motion.button>
                 </>
               )}
 
@@ -185,10 +166,10 @@ export const SystemPromptSection: React.FC<SystemPromptSectionProps> = ({
           <textarea
             value={additionalInstruction || ''}
             onChange={handleAdditionalInstructionChange}
-            disabled={isGenerating || isGeneratingVoiceChat}
+            disabled={isGenerating}
             className={`block w-full rounded-control border-strong bg-surface
               text-ink shadow-sm focus:border-accent focus:ring-accent sm:text-sm
-              h-[150px] ${isGenerating || isGeneratingVoiceChat ? 'opacity-50 cursor-not-allowed' : ''}`}
+              h-[150px] ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
             placeholder={t(
               'additionalInstructionPlaceholder',
               'Enter additional instructions for system prompt generation...'
@@ -228,10 +209,10 @@ export const SystemPromptSection: React.FC<SystemPromptSectionProps> = ({
           <textarea
             value={system}
             onChange={(e) => onChange(e.target.value)}
-            disabled={isGenerating || isGeneratingVoiceChat}
+            disabled={isGenerating}
             className={`block w-full rounded-control border-strong bg-surface
               text-ink shadow-sm focus:border-accent focus:ring-accent sm:text-sm
-              h-[512px] ${isGenerating || isGeneratingVoiceChat ? 'opacity-50 cursor-not-allowed' : ''}`}
+              h-[512px] ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
             required
             placeholder={t('systemPromptPlaceholder')}
           />

@@ -1,14 +1,15 @@
 # Renderer ↔ Rust bridge
 
 The React renderer calls `window.api`, `window.store`, `window.file`, `window.chatHistory`,
-`window.appWindow`, `window.ipc` and `window.logger` exactly as it did under Electron. Those
+`window.appWindow`, `window.ipc` and `window.logger` exactly as it did under Electron, plus the
+fork's `window.memory` and `window.workspaceFiles`. Those
 objects are installed by `src/renderer/src/lib/tauriBridge.ts`, backed by `invoke()` and Tauri
 events, and typed in `src/types/window.ts` + `src/types/bridge/`. The Electron preload
 (`src/preload/*.ts`, removed in Task 13; see git history) defined each method's behavior and
 return shape, which the commands below reproduce.
 
 To port a method: add a `#[tauri::command]` with the name and parameters listed below, register it
-in `src-tauri/app/src/main.rs`, and return the same JSON the Electron handler returned. Nothing in
+in the `generate_handler![...]` list in `src-tauri/app/src/commands/mod.rs`, and return the same JSON the Electron handler returned. Nothing in
 the renderer needs to change.
 
 ## Rules
@@ -34,8 +35,10 @@ the renderer needs to change.
    console. Nothing throws synchronously, so the UI still loads.
 5. **Events.** Main → renderer pushes keep their Electron channel as the Tauri event name:
    `background-agent:task-notification`, `background-agent:task-execution-start`,
-   `background-agent:task-skipped`, `context-menu-command`. New pushes without an Electron
-   ancestor: `memory-changed` (payload `MemoryItem[]`, the whole list) and `open-settings` (no
+   `background-agent:task-skipped`. (Electron's `context-menu-command` is gone: the Copy/Paste
+   context menu is native, see `context_menu_popup`.) New pushes without an Electron ancestor: `store-changed`,
+   `workspace-files-changed`, `camera:capture-request` and the `knowledge:*` events (each
+   described with its section below), `memory-changed` (payload `MemoryItem[]`, the whole list) and `open-settings` (no
    payload; the macOS app menu's Settings… item, sent to the `main` window only, which
    `appWindow.onOpenSettings` turns into a visit to the Settings page). Pub/sub messages for
    channel `c` are emitted as the event `pubsubEventName(c)` = `pubsub:` + `c` with every
@@ -210,6 +213,15 @@ Commands marked "(params object as-is)" take the params object's keys as their a
   and the addMemory / updateMemory / removeMemory tools share it; after every successful write
   Rust emits `memory-changed` with the full list to every window. The tools return
   `{ name, success: true, result: { item }, message }` with the added / updated / removed item.
+- **Local knowledgebases** (`commands/knowledge.rs`, logic in `crates/knowledge`):
+  `<userData>/knowledgebases/<agentId>/<kbId>.db`, one SQLite file each (sqlite-vec + FTS5), the
+  on-device model in `knowledgebases/.models/`. Ingestion runs as background jobs (one at a time
+  per knowledgebase) that emit `knowledge:progress`; `knowledge:changed` follows any change. An
+  agent whose `localKnowledgeBases` is non-empty gets the built-in MCP server
+  `{ name: 'local-knowledgebase', connectionType: 'builtin', agentId }`
+  (`common::agent::effective_mcp_servers`), reached in-process over a duplex stream
+  (`mcp::BuiltinServers`); the renderer adds its tool specs to the agent's tools
+  (`src/common/agents/knowledgeTools.ts`) and calls go through the usual MCP tool path.
 - **Files panel** (`commands/workspace_files.rs`, logic in `crates/workspace_files`): the root is
   the store's current `projectPath` (every command rejects `No project folder is set` without
   one). Path arguments are root-relative or absolute; each is resolved with symlinks and `..`
@@ -393,7 +405,7 @@ Notes on the file commands (`src-tauri/app/src/commands/{file,agent_files}.rs`):
 | `api.mcp.cleanup` | `mcp_cleanup` | — |
 | `api.codeInterpreter.checkDockerAvailability` | `check_docker_availability` | — |
 | `api.dockerSandbox.availability` | `docker_sandbox_availability` | `{ force }` |
-| `api.dockerSandbox.create` | `docker_sandbox_create` | `{ sessionId, options }` |
+| `api.dockerSandbox.create` | `docker_sandbox_create` | `{ sessionId, options }` (`options`: `{ services?, composeYaml?, env?, recreate?, os? }`; `os` is a sandbox OS catalog id such as `debian13`, overriding `dockerSandboxTool.os` for services that name no image) |
 | `api.dockerSandbox.status` | `docker_sandbox_status` | `{ sessionId }` |
 | `api.dockerSandbox.start` | `docker_sandbox_start` | `{ sessionId }` |
 | `api.dockerSandbox.stop` | `docker_sandbox_stop` | `{ sessionId }` |
@@ -427,6 +439,30 @@ Notes on the file commands (`src-tauri/app/src/commands/{file,agent_files}.rs`):
 | `api.appUpdate.check` | `app_update_check` | → `{ currentVersion, available, version, notes }` (main window only, see below) |
 | `api.appUpdate.download` | `app_update_download` | → `string` (the version now in place; verified against the update key) |
 | `api.appUpdate.restart` | `app_update_restart` | restarts into the downloaded version (Windows: runs its installer) |
+| `api.knowledge.list` | `knowledge_list` | `{ agentId }` → `KbInfo[]` (oldest first; main window only, like every `knowledge_*` command) |
+| `api.knowledge.create` | `knowledge_create` | `{ agentId, name, description? }` → `KbInfo` (with the current embedding / chunking settings) |
+| `api.knowledge.update` | `knowledge_update` | `{ agentId, kbId, name, description? }` → `KbInfo` |
+| `api.knowledge.delete` | `knowledge_delete` | `{ agentId, kbId }` (cancels its jobs first) |
+| `api.knowledge.deleteAgent` | `knowledge_delete_agent` | `{ agentId }` (every knowledgebase of the agent) |
+| `api.knowledge.copyAgent` | `knowledge_copy_agent` | `{ fromAgentId, toAgentId }` → `KbInfo[]` (the copies; same ids) |
+| `api.knowledge.rebuild` | `knowledge_rebuild` | `{ agentId, kbId }` → job id (re-embed with the current model) |
+| `api.knowledge.listSources` | `knowledge_list_sources` | `{ agentId, kbId }` → `SourceInfo[]` |
+| `api.knowledge.pickFiles` | `knowledge_pick_files` | `{ agentId, kbId }` → `SourceInfo[]` (native multi-file picker; `[]` when canceled) |
+| `api.knowledge.addUrl` | `knowledge_add_url` | `{ agentId, kbId, url, options? }` → `SourceInfo` (`options`: `{ maxDepth, maxPages, pathPrefixOnly }`, default from the crawler settings) |
+| `api.knowledge.updateSourceOptions` | `knowledge_update_source_options` | `{ agentId, kbId, sourceId, options }` → `SourceInfo` (website sources; used from the next sync) |
+| `api.knowledge.resyncSource` | `knowledge_resync_source` | `{ agentId, kbId, sourceId }` → job id |
+| `api.knowledge.removeSource` | `knowledge_remove_source` | `{ agentId, kbId, sourceId }` |
+| `api.knowledge.jobs` | `knowledge_jobs` | `{ agentId? }` → `KnowledgeJob[]` (running and queued) |
+| `api.knowledge.cancelJob` | `knowledge_cancel_job` | `{ jobId }` → `boolean` |
+| `api.knowledge.search` | `knowledge_search` | `{ agentId, query, kbId?, topK? }` → `KnowledgeSearchHit[]` |
+| `api.knowledge.stats` | `knowledge_stats` | `{ agentId, kbId }` → `KbStats` (`info`, `usage` over 30 days: daily agent searches, p50/p95 latency, last job; `health`: reclaimable bytes, issues) |
+| `api.knowledge.optimize` | `knowledge_optimize` | `{ agentId, kbId }` → `{ bytesBefore, bytesAfter, integrity }` (FTS optimize, quick_check, WAL checkpoint, VACUUM; waits for a running job) |
+| `api.knowledge.storageOverview` | `knowledge_storage_overview` | → `{ root, totalBytes, knowledgeBases: [{ agentId, kbId, name, bytes, sourceCount, chunkCount, embedding, orphan, stats }] }` |
+| `api.knowledge.purgeOrphans` | `knowledge_purge_orphans` | → number deleted (knowledgebases of agents not in `customAgents`) |
+| `api.knowledge.localModelStatus` | `knowledge_local_model_status` | → `{ installed, bytes, downloading, totalBytes, supported }` |
+| `api.knowledge.downloadLocalModel` | `knowledge_download_local_model` | resolves when done (progress: `knowledge:model-download`) |
+| `api.knowledge.deleteLocalModel` | `knowledge_delete_local_model` | also cancels a download in progress |
+| `api.knowledge.onProgress` / `onChanged` / `onModelDownload` | events `knowledge:progress`, `knowledge:changed`, `knowledge:model-download` | `KnowledgeJob` / `{ agentId, kbId }` / `{ state, received, total, file, error? }` |
 | `api.chatAttachments.list` | `chat_attachments_list` | `{ sessionId }` |
 | `api.chatAttachments.withFiles` | `chat_attachments_with_files` | `{ sessionIds }` |
 | `api.chatAttachments.add` | `chat_attachments_add` | `{ sessionId, files: [{ name, bytes: number[] }] }` |
@@ -598,7 +634,7 @@ is present per event. Field names are the SDK's camelCase:
   `tauri_build::AppManifest::commands` (which generates `allow-<command>` / `deny-<command>`
   under `permissions/autogenerated/`, gitignored) and writes `permissions/app-commands.toml`, a set
   granting all of them except the main-window-only commands (`MAIN_WINDOW_ONLY_PREFIXES`:
-  `local_terminal_*`), which `permissions/main-window-commands.toml` grants instead. With an app
+  `local_terminal_*`, `app_update_*`, `knowledge_*`), which `permissions/main-window-commands.toml` grants instead. With an app
   manifest Tauri checks every app command against the capabilities: `capabilities/default.json`
   gives `main`, `task-history` and the file viewers `app-commands`; `main-window.json` gives
   `main` alone `main-window-commands`;
@@ -606,7 +642,7 @@ is present per event. Field names are the SDK's camelCase:
   capability, so they have no IPC at all. Adding a command to `handler()` is all that's needed
   for the main windows; `commands/acl_tests.rs` fails if the capabilities name unknown commands,
   if `camera-preview.html` starts invoking one its capability lacks, or if any window but `main`
-  can reach a local terminal command.
+  can reach a local terminal, app update or knowledgebase command.
 - **Content-Security-Policy** (`app.security.csp` in `tauri.conf.json`; Tauri adds it to every
   HTML page it serves, i.e. production builds — `tauri dev` loads the Vite server directly and
   gets none, so check CSP changes with a `--features tauri/custom-protocol` build):
@@ -615,7 +651,7 @@ is present per event. Field names are the SDK's camelCase:
   ["style-src"]` keeps Tauri from adding nonces there, which would disable `'unsafe-inline'`),
   `img-src 'self' data: blob: https:` (chat markdown, Tavily result images and GitHub avatars are
   remote; plus `workspacefile: http://workspacefile.localhost` for the Files panel's image
-  viewer), `font-src 'self' data:`, `connect-src 'self' ipc: http://ipc.localhost chathistory:
+  viewer), `font-src 'self' data:`, `media-src 'self' data: blob:`, `connect-src 'self' ipc: http://ipc.localhost chathistory:
   http://chathistory.localhost workspacefile: http://workspacefile.localhost`, `frame-src htmlpreview: http://htmlpreview.localhost
   https://*.codesandbox.io https://embed.diagrams.net` (HTML previews, Website Generator,
   draw.io), `worker-src 'self' blob:`, `object-src 'none'`, `base-uri 'self'`,

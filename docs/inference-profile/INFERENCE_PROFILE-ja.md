@@ -70,10 +70,10 @@ aws bedrock get-inference-profile --region 'ap-northeast-1' \
 
 1. **設定画面を開く**
 
-   - メニューから「Settings」を選択
+   - サイドバーの設定をクリックし、**モデル**タブを開く
 
-2. **AWS設定セクションで有効化**
-   - 「Enable Inference Profiles」チェックボックスをオンにする
+2. **Bedrockモデルのセクションで有効化**
+   - 「アプリケーション推論プロファイルを有効にする」チェックボックスをオンにする
    - 設定は自動的に保存されます
 
 ## 🔗 参考資料

@@ -4,7 +4,7 @@ export const history = {
     'Edit title': 'Edit title',
     Delete: 'Delete',
     'No chat history': 'No chat history',
-    'Generate title': 'Geneate title',
+    'Generate title': 'Generate title',
     'Generate All Titles': 'Generate All Titles',
     'Delete All': 'Delete All',
     Select: 'Select',

@@ -9,7 +9,7 @@ import { McpServerConfig } from '../../types/agent-chat'
  * @param server MCPサーバー設定
  * @returns 推測されたconnectionType
  */
-export function inferConnectionType(server: McpServerConfig): 'command' | 'url' {
+export function inferConnectionType(server: McpServerConfig): 'command' | 'url' | 'builtin' {
   // connectionTypeが既に設定されている場合はそのまま使用
   if (server.connectionType) {
     return server.connectionType

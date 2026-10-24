@@ -1,0 +1,41 @@
+[
+  {
+    "name": "searchKnowledgeBase",
+    "description": "Search this agent's local knowledge bases (documents and websites the user added) and return the most relevant passages with their sources. Use it before answering questions the knowledge bases may cover, and cite the sources you use.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "query": { "type": "string", "description": "What to look for. A question or key terms." },
+        "knowledgeBase": {
+          "type": "string",
+          "description": "Search only this knowledge base (name or id). Omit to search all."
+        },
+        "topK": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "description": "Number of passages to return."
+        }
+      },
+      "required": ["query"]
+    }
+  },
+  {
+    "name": "listKnowledgeBases",
+    "description": "List this agent's local knowledge bases with their descriptions and sizes.",
+    "inputSchema": { "type": "object", "properties": {} }
+  },
+  {
+    "name": "listKnowledgeBaseSources",
+    "description": "List the files and websites in this agent's local knowledge bases.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "knowledgeBase": {
+          "type": "string",
+          "description": "Only this knowledge base (name or id). Omit for all."
+        }
+      }
+    }
+  }
+]

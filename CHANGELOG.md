@@ -28,6 +28,48 @@ overview of the fork with screenshots.
 - **Sandbox settings have their own tab.** Settings now has a Sandbox tab with Docker's status, the
   default container image and the container limits (memory, CPU and command timeout). The Docker
   Sandbox tool's panel shows a summary of these with a button that opens the tab.
+- **Local knowledge bases for agents.** A new Knowledge Base tab in the agent editor (after MCP
+  Servers) lets you give an agent one or more knowledge bases built from documents (text,
+  Markdown, code, PDF, Word, HTML, Excel and PowerPoint files) and websites. A website is crawled
+  by the app itself, staying on that site, up to a link depth and page limit you choose, and
+  honoring robots.txt. Everything is chunked, embedded and stored on your computer. An agent with a
+  knowledge base gets a built-in MCP server whose search tool finds the most relevant passages
+  (combining meaning and keyword matches) and cites their file or page; the MCP Servers tab shows
+  it as a built-in server with a connection test, and the Tools tab lists its tools. Each source can be
+  re-synced (unchanged documents are skipped) or removed, a website's link depth and page limit
+  are shown with it and can be changed later, and the tab has a search box for trying
+  a knowledge base out. Knowledge bases are copied when you duplicate an agent and deleted with it.
+  They are not included in shared or exported agents.
+- **Knowledge Base settings.** A new Settings tab picks the embedding model for new knowledge bases:
+  Amazon Titan Text Embeddings V2 or Cohere Embed through Bedrock, or multilingual-e5-small, which
+  runs on your computer and works offline after a one-time download of about 465 MB. It also holds
+  chunk size, the number of search results, the balance between meaning and keyword matches, the
+  crawler's defaults, and a list of every knowledge base on disk with its size. From that list you
+  can delete knowledge bases, including any left behind by deleted agents. A knowledge base keeps
+  the model it was built with, and the agent editor offers a rebuild when Settings name a
+  different one.
+- **Knowledge base dashboards and upkeep.** Each knowledge base in the agent editor shows tiles
+  for its passages, storage, how often the agent searched it over the last 30 days (with a
+  per-day trend) and its typical search time, plus a health badge. The Settings tab opens with
+  an overview of every knowledge base: totals, then a row per knowledge base with the same
+  figures. Health checks flag sources that failed to sync, websites not synced for 30 days, a
+  missing local model, a model that differs from Settings, and free space in the file.
+  **Optimize** (per knowledge base, or all at once) compacts the file, tidies the keyword index
+  and checks the file for errors; it also runs by itself after an update that leaves a lot of
+  free space.
+- **Help knows the whole user guide again.** The guide had grown past the size limit for an
+  attached file, so the Help chat only saw its first part. Help now gets the full guide, which was
+  also brought up to date: every Settings tab, the agent editor's four tabs, the chat tabs, the
+  Files and Terminal tabs, memory, and new chapters on knowledge bases and memory.
+- **MCP tools in the agent editor say which server they come from.** The Tools tab showed the
+  tool's own name after "From:" instead of the server's.
+- Fixed a typo in the chat history menu ("Geneate title").
+- **Page shortcuts work with Ctrl on Windows and Linux.** Ctrl+K opens the page search, Ctrl+,
+  opens Settings and Ctrl+1 to Ctrl+9 open the sidebar pages; before, they answered only to ⌘,
+  which those keyboards don't have. Hints and sidebar tooltips show the right key for your system,
+  and pages past the ninth no longer show a shortcut that doesn't exist.
+- **The Voice Chat prompt button is gone** from the agent editor's system prompt, along with the
+  remaining mentions of voice chat. Voice chat itself was removed earlier.
 
 ### 2026-10-22
 

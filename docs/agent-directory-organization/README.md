@@ -27,7 +27,7 @@ The AgentDirectory organization sharing feature allows you to share agents withi
 
 ### Step 2: Share Your Custom Agent to Organization's Agent Directory
 
-1. Open the agent settings modal on the Chat Page and click the three-dot menu of an agent. Select "Share to Organization".
+1. On the **My Agents** page, open the ⋮ menu of one of your agents and select "Share to Organization".
 
 ![Agent Selection](images/04-select-custom-agent.png)
 

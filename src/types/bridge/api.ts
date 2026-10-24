@@ -10,6 +10,7 @@ import type { McpRegistryServer } from '../../common/mcp/registry'
 import type { ApplicationInferenceProfile, BedrockSupportRegion } from '../llm'
 import type { IPCChannelDefinitions } from '../ipc'
 import type { ToolResult } from '../tools'
+import type { KnowledgeApi } from '../knowledge'
 
 export type API = {
   backgroundAgent: {
@@ -119,9 +120,6 @@ export type API = {
     getTranslationCacheStats: () => Promise<any>
     getModelMaxTokens: (modelId: string) => Promise<any>
   }
-  contextMenu: {
-    onContextMenuCommand: (callback: (command: string) => void) => void
-  }
   images: {
     getLocalImage: (path: string) => Promise<any>
   }
@@ -198,6 +196,8 @@ export type API = {
     /** Restart into the downloaded version. */
     restart: () => Promise<void>
   }
+  /** Agents' local knowledgebases (main window only). */
+  knowledge: KnowledgeApi
   /** Interactive shells on the user's own machine (the chat page's Terminal tab). */
   localTerminal: {
     open: (sessionId: string, cols: number, rows: number) => Promise<LocalTerminalOpened>

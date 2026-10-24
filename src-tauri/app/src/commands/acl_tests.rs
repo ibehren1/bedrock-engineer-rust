@@ -120,7 +120,7 @@ fn set_permissions(toml: &str) -> BTreeSet<String> {
 }
 
 #[test]
-fn local_terminals_and_updates_are_main_window_only() {
+fn local_terminals_updates_and_knowledge_are_main_window_only() {
     let local: Vec<String> = commands()
         .into_iter()
         .filter(|c| c.starts_with("local_terminal_"))
@@ -147,8 +147,8 @@ fn local_terminals_and_updates_are_main_window_only() {
         );
         assert!(main_only.contains(&allow_permission(c)), "{c}");
     }
-    // App updates are the only other main-window-only commands; nothing else is by accident,
-    // and the two sets cover every command.
+    // App updates and the knowledgebase commands are the only other main-window-only
+    // commands; nothing else is by accident, and the two sets cover every command.
     let updates: Vec<String> = commands()
         .into_iter()
         .filter(|c| c.starts_with("app_update_"))
@@ -170,7 +170,23 @@ fn local_terminals_and_updates_are_main_window_only() {
         );
         assert!(main_only.contains(&allow_permission(c)), "{c}");
     }
-    assert_eq!(main_only.len(), local.len() + updates.len());
+    let knowledge: Vec<String> = commands()
+        .into_iter()
+        .filter(|c| c.starts_with("knowledge_"))
+        .collect();
+    assert!(knowledge.contains(&"knowledge_pick_files".to_string()));
+    for c in &knowledge {
+        assert!(is_main_window_only(c));
+        assert!(
+            !all.contains(&allow_permission(c)),
+            "{c} is in app-commands"
+        );
+        assert!(main_only.contains(&allow_permission(c)), "{c}");
+    }
+    assert_eq!(
+        main_only.len(),
+        local.len() + updates.len() + knowledge.len()
+    );
     assert_eq!(all.len() + main_only.len(), commands().len());
     // The sandbox terminal stays available to every full-UI window.
     assert!(all.contains("allow-docker-sandbox-terminal-open"));

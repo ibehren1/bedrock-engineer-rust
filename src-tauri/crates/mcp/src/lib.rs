@@ -22,7 +22,7 @@ pub mod sse;
 pub mod utils;
 
 pub use client::McpClient;
-pub use manager::McpManager;
+pub use manager::{BuiltinServers, McpManager};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {

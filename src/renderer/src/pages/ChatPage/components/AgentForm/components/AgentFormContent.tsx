@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { formEventUtils } from '../utils/formEventUtils'
 import { BasicSection } from '../BasicSection'
 import { SystemPromptSection } from '../SystemPromptSection'
@@ -6,11 +6,14 @@ import { ScenariosSection } from '../ScenariosSection'
 import { TagsSection } from '../TagsSection'
 import { ToolsSection } from '../ToolsSection'
 import { McpServerSection } from '../McpServerSection'
+import { LocalKnowledgeBaseSection } from '../LocalKnowledgeBaseSection'
+import { BuiltinKnowledgeServerCard } from '../McpServerSection/BuiltinKnowledgeServerCard'
+import { knowledgeBaseTools, localKnowledgeBaseServer } from '@/common/agents/knowledgeTools'
 import { AgentCategory, CustomAgent, ToolState, McpServerConfig } from '@/types/agent-chat'
 import { useTranslation } from 'react-i18next'
 
 // タブ識別子の型定義
-type AgentFormTabId = 'basic' | 'mcp-servers' | 'tools'
+type AgentFormTabId = 'basic' | 'mcp-servers' | 'knowledge-base' | 'tools'
 
 /**
  * タブコンテンツコンポーネント
@@ -27,14 +30,14 @@ export const AgentFormContent: React.FC<{
   isLoadingMcpTools: boolean
   tempMcpTools: ToolState[]
   handleAutoGeneratePrompt: () => void
-  handleVoiceChatGenerate: () => void
   handleGenerateScenarios: () => void
   isGeneratingSystem: boolean
-  isGeneratingVoiceChat: boolean
   isGeneratingScenarios: boolean
   availableTags: string[]
   fetchMcpTools: (servers?: McpServerConfig[]) => Promise<void>
   handleAdditionalInstructionChange?: (value: string) => void
+  /** Shared agents can't have local knowledgebases. */
+  isSharedAgent?: boolean
 }> = ({
   activeTab,
   formData,
@@ -47,16 +50,32 @@ export const AgentFormContent: React.FC<{
   isLoadingMcpTools,
   tempMcpTools,
   handleAutoGeneratePrompt,
-  handleVoiceChatGenerate,
   handleGenerateScenarios,
   isGeneratingSystem,
-  isGeneratingVoiceChat,
   isGeneratingScenarios,
   availableTags,
   fetchMcpTools,
-  handleAdditionalInstructionChange
+  handleAdditionalInstructionChange,
+  isSharedAgent
 }) => {
   const { t } = useTranslation()
+
+  // The Tools tab also lists the built-in knowledgebase server's tools (always on, like MCP tools).
+  const kbRefs = formData.localKnowledgeBases
+  const toolsTabServers = useMemo(
+    () =>
+      kbRefs?.length
+        ? [...(formData.mcpServers || []), localKnowledgeBaseServer(formData.id)]
+        : formData.mcpServers || [],
+    [kbRefs, formData.mcpServers, formData.id]
+  )
+  const toolsTabMcpTools = useMemo(() => {
+    const kbTools = knowledgeBaseTools({ localKnowledgeBases: kbRefs })
+      .filter((k) => !tempMcpTools.some((m) => m.toolSpec?.name === k.toolSpec?.name))
+      .map((tool) => ({ ...tool, enabled: true }))
+    return [...tempMcpTools, ...kbTools] as ToolState[]
+  }, [kbRefs, tempMcpTools])
+
   switch (activeTab) {
     case 'basic':
       return (
@@ -85,9 +104,7 @@ export const AgentFormContent: React.FC<{
               updateField('environmentContextSettings', settings)
             }
             onAutoGenerate={handleAutoGeneratePrompt}
-            onVoiceChatGenerate={handleVoiceChatGenerate}
             isGenerating={isGeneratingSystem}
-            isGeneratingVoiceChat={isGeneratingVoiceChat}
             projectPath={projectPath}
             allowedCommands={formData.allowedCommands || []}
             knowledgeBases={formData.knowledgeBases || []}
@@ -115,7 +132,13 @@ export const AgentFormContent: React.FC<{
       )
     case 'mcp-servers':
       return (
-        <div className="pb-4" onClick={formEventUtils.preventPropagation}>
+        <div className="pb-4 space-y-3" onClick={formEventUtils.preventPropagation}>
+          {(formData.localKnowledgeBases?.length ?? 0) > 0 && (
+            <BuiltinKnowledgeServerCard
+              agentId={formData.id}
+              knowledgeBases={formData.localKnowledgeBases ?? []}
+            />
+          )}
           <McpServerSection
             mcpServers={formData.mcpServers || []}
             agentContext={{
@@ -153,6 +176,17 @@ export const AgentFormContent: React.FC<{
           />
         </div>
       )
+    case 'knowledge-base':
+      return (
+        <div className="pb-4" onClick={formEventUtils.preventPropagation}>
+          <LocalKnowledgeBaseSection
+            agentId={formData.id}
+            isShared={isSharedAgent}
+            value={formData.localKnowledgeBases}
+            onChange={(refs) => updateField('localKnowledgeBases', refs)}
+          />
+        </div>
+      )
     case 'tools':
       return (
         <div className="h-full pb-4">
@@ -169,8 +203,8 @@ export const AgentFormContent: React.FC<{
             onBedrockAgentsChange={(agents) => updateField('bedrockAgents', agents)}
             flows={formData.flows || []}
             onFlowsChange={(flows) => updateField('flows', flows)}
-            mcpServers={formData.mcpServers || []}
-            tempMcpTools={tempMcpTools}
+            mcpServers={toolsTabServers}
+            tempMcpTools={toolsTabMcpTools}
             isLoadingMcpTools={isLoadingMcpTools}
           />
         </div>

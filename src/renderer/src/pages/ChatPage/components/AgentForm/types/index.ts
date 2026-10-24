@@ -3,7 +3,7 @@ import { CustomAgent } from '@/types/agent-chat'
 /**
  * エージェントフォームのタブID型定義
  */
-export type AgentFormTabId = 'basic' | 'mcp-servers' | 'tools'
+export type AgentFormTabId = 'basic' | 'mcp-servers' | 'knowledge-base' | 'tools'
 
 /**
  * エージェントフォームのプロパティ型定義

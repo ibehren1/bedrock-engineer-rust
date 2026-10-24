@@ -1,4 +1,8 @@
 import { useTranslation } from 'react-i18next'
+import {
+  KNOWLEDGE_BASE_TOOL_NAMES,
+  LOCAL_KNOWLEDGE_BASE_SERVER
+} from '@/common/agents/knowledgeTools'
 import { useMemo } from 'react'
 import { McpServerConfig } from '@/types/agent-chat'
 import { isMcpTool } from '@/types/tools'
@@ -33,6 +37,11 @@ export function useToolsFormatter(mcpServers: McpServerConfig[] = []) {
 
         // 元のツール名をそのまま使用する新形式では、どのサーバーからのツールかを特定する必要がある
         // 複数のサーバーに同じ名前のツールがある場合は、最初に見つかったものを使用
+        // The built-in knowledgebase server's tools are known by name.
+        if (KNOWLEDGE_BASE_TOOL_NAMES.includes(toolName)) {
+          const builtin = mcpServers.find((s) => s.name === LOCAL_KNOWLEDGE_BASE_SERVER)
+          if (builtin) return `${t('From')}: ${builtin.name} (${builtin.description})`
+        }
         const server = mcpServers.find((_s) => {
           // サーバーからツールリストを取得できる場合の判定ロジックは後で実装
           // 現在は設定されたサーバーがあれば表示する

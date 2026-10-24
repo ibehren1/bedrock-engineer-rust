@@ -75,12 +75,16 @@ export const useAgentCrud = () => {
       }
 
       saveCustomAgents(customAgents.filter((a) => a.id !== id))
+      // Its local knowledgebases go with it (a no-op for an agent without any).
+      window.api.knowledge
+        .deleteAgent(id)
+        .catch((error) => console.error('Failed to delete knowledge bases of agent:', error))
     },
     [customAgents, hideDefaultAgent, saveCustomAgents]
   )
 
   const duplicateAgent = useCallback(
-    (agent: CustomAgent) => {
+    async (agent: CustomAgent) => {
       const newAgent: CustomAgent = {
         ...agent,
         id: crypto.randomUUID(),
@@ -90,6 +94,21 @@ export const useAgentCrud = () => {
         isShared: undefined,
         organizationId: undefined
       }
+      // The copy gets its own copies of the local knowledgebases.
+      if (agent.localKnowledgeBases?.length) {
+        try {
+          const copies = await window.api.knowledge.copyAgent(agent.id, newAgent.id)
+          newAgent.localKnowledgeBases = copies.map(({ id, name, description }) => ({
+            id,
+            name,
+            description
+          }))
+        } catch (error) {
+          console.error('Failed to copy knowledge bases:', error)
+          toast.error(String(error instanceof Error ? error.message : error))
+          newAgent.localKnowledgeBases = undefined
+        }
+      }
       saveCustomAgents([...customAgents, newAgent])
     },
     [customAgents, saveCustomAgents, t]
@@ -98,7 +117,11 @@ export const useAgentCrud = () => {
   const saveAsShared = useCallback(
     async (agent: CustomAgent) => {
       try {
-        const result = await window.file.saveSharedAgent(agent)
+        // Local knowledgebases stay on this computer.
+        const result = await window.file.saveSharedAgent({
+          ...agent,
+          localKnowledgeBases: undefined
+        })
         if (result.success) {
           // Load the updated shared agents to refresh the list in the UI
           await loadSharedAgents()
@@ -182,6 +205,7 @@ export const useAgentCrud = () => {
         organizationId: undefined,
         sharedFilePath: undefined,
         mcpTools: undefined,
+        localKnowledgeBases: undefined,
         mcpServers: result.agent.mcpServers || []
       }
 

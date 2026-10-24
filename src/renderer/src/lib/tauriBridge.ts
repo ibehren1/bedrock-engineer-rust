@@ -31,7 +31,7 @@
  * 4. Commands return `Result<T, String>`. The error string may be a plain message or a JSON object
  *    `{"name": "...", "message": "..."}`; both become an `Error` with that name/message.
  * 5. Main → renderer pushes (`ipcRenderer.on(channel)`) become Tauri events with the same name
- *    (`background-agent:task-notification`, `context-menu-command`). Pub/sub channels are emitted
+ *    (`background-agent:task-notification`, ...; list in docs/port/BRIDGE.md). Pub/sub channels are emitted
  *    as events named by `pubsubEventName(channel)`.
  *
  * Chat streaming (`tauriConverseStream`, used by lib/api.ts) is at the bottom of this file; its
@@ -749,6 +749,7 @@ function createApi(): Window['api'] {
   const CA = 'api.chatAttachments'
   const LT = 'api.localTerminal'
   const AU = 'api.appUpdate'
+  const KB = 'api.knowledge'
   const CAM = 'api.camera'
   const TD = 'api.todo'
   const MCP = 'api.mcp'
@@ -898,11 +899,6 @@ function createApi(): Window['api'] {
         })
       )
     },
-    contextMenu: {
-      onContextMenuCommand: (callback: (command: string) => void) => {
-        on<string>('context-menu-command', callback)
-      }
-    },
     images: {
       getLocalImage: cmd('api.images.getLocalImage', 'get_local_image', (path) => ({ path }))
     },
@@ -1025,6 +1021,77 @@ function createApi(): Window['api'] {
       check: cmd(`${AU}.check`, 'app_update_check'),
       download: cmd(`${AU}.download`, 'app_update_download'),
       restart: cmd(`${AU}.restart`, 'app_update_restart')
+    },
+    knowledge: {
+      list: cmd(`${KB}.list`, 'knowledge_list', (agentId) => ({ agentId })),
+      create: cmd(`${KB}.create`, 'knowledge_create', (agentId, name, description) => ({
+        agentId,
+        name,
+        description
+      })),
+      update: cmd(`${KB}.update`, 'knowledge_update', (agentId, kbId, name, description) => ({
+        agentId,
+        kbId,
+        name,
+        description
+      })),
+      delete: cmd(`${KB}.delete`, 'knowledge_delete', (agentId, kbId) => ({ agentId, kbId })),
+      deleteAgent: cmd(`${KB}.deleteAgent`, 'knowledge_delete_agent', (agentId) => ({ agentId })),
+      copyAgent: cmd(`${KB}.copyAgent`, 'knowledge_copy_agent', (fromAgentId, toAgentId) => ({
+        fromAgentId,
+        toAgentId
+      })),
+      rebuild: cmd(`${KB}.rebuild`, 'knowledge_rebuild', (agentId, kbId) => ({ agentId, kbId })),
+      listSources: cmd(`${KB}.listSources`, 'knowledge_list_sources', (agentId, kbId) => ({
+        agentId,
+        kbId
+      })),
+      pickFiles: cmd(`${KB}.pickFiles`, 'knowledge_pick_files', (agentId, kbId) => ({
+        agentId,
+        kbId
+      })),
+      addUrl: cmd(`${KB}.addUrl`, 'knowledge_add_url', (agentId, kbId, url, options) => ({
+        agentId,
+        kbId,
+        url,
+        options
+      })),
+      updateSourceOptions: cmd(
+        `${KB}.updateSourceOptions`,
+        'knowledge_update_source_options',
+        (agentId, kbId, sourceId, options) => ({ agentId, kbId, sourceId, options })
+      ),
+      resyncSource: cmd(
+        `${KB}.resyncSource`,
+        'knowledge_resync_source',
+        (agentId, kbId, sourceId) => ({ agentId, kbId, sourceId })
+      ),
+      removeSource: cmd(
+        `${KB}.removeSource`,
+        'knowledge_remove_source',
+        (agentId, kbId, sourceId) => ({ agentId, kbId, sourceId })
+      ),
+      jobs: cmd(`${KB}.jobs`, 'knowledge_jobs', (agentId) => ({ agentId })),
+      cancelJob: cmd(`${KB}.cancelJob`, 'knowledge_cancel_job', (jobId) => ({ jobId })),
+      search: cmd(`${KB}.search`, 'knowledge_search', (agentId, query, kbId, topK) => ({
+        agentId,
+        query,
+        kbId,
+        topK
+      })),
+      stats: cmd(`${KB}.stats`, 'knowledge_stats', (agentId, kbId) => ({ agentId, kbId })),
+      optimize: cmd(`${KB}.optimize`, 'knowledge_optimize', (agentId, kbId) => ({
+        agentId,
+        kbId
+      })),
+      storageOverview: cmd(`${KB}.storageOverview`, 'knowledge_storage_overview'),
+      purgeOrphans: cmd(`${KB}.purgeOrphans`, 'knowledge_purge_orphans'),
+      localModelStatus: cmd(`${KB}.localModelStatus`, 'knowledge_local_model_status'),
+      downloadLocalModel: cmd(`${KB}.downloadLocalModel`, 'knowledge_download_local_model'),
+      deleteLocalModel: cmd(`${KB}.deleteLocalModel`, 'knowledge_delete_local_model'),
+      onProgress: (callback) => on('knowledge:progress', callback),
+      onChanged: (callback) => on('knowledge:changed', callback),
+      onModelDownload: (callback) => on('knowledge:model-download', callback)
     },
     localTerminal: {
       open: cmd(`${LT}.open`, 'local_terminal_open', (sessionId, cols, rows) => ({

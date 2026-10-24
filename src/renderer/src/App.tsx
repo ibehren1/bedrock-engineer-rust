@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react'
+import { modKeyLabel, pageShortcut } from './lib/platform'
 import { FiGithub, FiHelpCircle } from 'react-icons/fi'
 import { Flowbite, Tooltip } from 'flowbite-react'
 import { flowbiteTheme } from './flowbiteTheme'
@@ -100,7 +101,11 @@ const Layout: React.FC = () => {
                       key={page.name}
                       selected={isRouteActive(location.pathname, page.href)}
                       href={page.href}
-                      toolTipContent={page.name + ' ⌘ ' + shortcut}
+                      toolTipContent={
+                        pageShortcut(shortcut)
+                          ? `${page.name} ${modKeyLabel()}${modKeyLabel() === '⌘' ? ' ' : '+'}${shortcut}`
+                          : page.name
+                      }
                     >
                       <page.icon className="w-4 h-4" />
                     </ListItem>
@@ -109,7 +114,7 @@ const Layout: React.FC = () => {
             </ul>
             <ul>
               {/* Opens a chat with the bundled user guide attached. Not a route: keeping it out
-                  of `routes` leaves the ⌘1..⌘N numbering and the sidebar settings list alone. */}
+                  of `routes` leaves the ⌘1..⌘9 (Ctrl+1..9) numbering and the sidebar settings list alone. */}
               <ListItem href="/chat?help=1" toolTipContent={t('help.sidebarTooltip')}>
                 <FiHelpCircle className="w-4 h-4" />
               </ListItem>

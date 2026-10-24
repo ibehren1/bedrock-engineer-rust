@@ -24,6 +24,7 @@ import { agentDirectory } from './agentDirectory'
 import { planActMode } from './planActMode'
 import { help } from './help'
 import { memoryItems } from './memoryItems'
+import { knowledgeBase } from './knowledgeBase'
 import { filesPanel } from './filesPanel'
 import { appUpdate } from './appUpdate'
 
@@ -968,6 +969,7 @@ const en = {
   ...planActMode.en,
   ...help.en,
   ...memoryItems.en,
+  ...knowledgeBase.en,
   ...filesPanel.en,
   ...appUpdate.en,
   ...TodoModal,

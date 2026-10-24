@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Kbd } from 'flowbite-react'
 import { useSettings } from '@renderer/contexts/SettingsContext'
 import { SettingSection } from '../SettingSection'
+import { modKeyLabel } from '@renderer/lib/platform'
 
 export const AdvancedSection: React.FC = () => {
   const { t } = useTranslation()
@@ -53,7 +54,7 @@ export const AdvancedSection: React.FC = () => {
                 bg-raised border-subtle cursor-pointer"
             />
             <label className="ms-2 text-sm font-medium text-ink cursor-pointer">
-              {t('Start a new line (use')} <Kbd className="bg-raised">⌘</Kbd> +{' '}
+              {t('Start a new line (use')} <Kbd className="bg-raised">{modKeyLabel()}</Kbd> +{' '}
               <Kbd className="bg-raised">{t('Enter')}</Kbd> {t('to send)')}
             </label>
           </div>

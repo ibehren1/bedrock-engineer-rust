@@ -85,6 +85,9 @@ pub struct FlowConfig {
 pub enum ConnectionType {
     Command,
     Url,
+    /// A server hosted inside the app (the local knowledgebase server), reached over an
+    /// in-memory stream. Never stored on an agent: see [`effective_mcp_servers`].
+    Builtin,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -104,6 +107,78 @@ pub struct McpServerConfig {
     pub url: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub headers: Option<IndexMap<String, String>>,
+    /// The agent a built-in server serves.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_id: Option<String>,
+}
+
+/// An agent's local knowledgebase, as listed on the agent (the knowledgebase files are the
+/// source of truth; this list decides whether the agent gets the knowledgebase MCP server).
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalKnowledgeBaseRef {
+    pub id: String,
+    pub name: String,
+    #[serde(default)]
+    pub description: String,
+}
+
+/// Name of the built-in MCP server that searches an agent's local knowledgebases.
+pub const LOCAL_KNOWLEDGE_BASE_SERVER: &str = "local-knowledgebase";
+
+/// The agent's MCP servers plus the built-in local knowledgebase server when the agent has
+/// local knowledgebases. Malformed `mcpServers` entries are dropped (logged). Mirrors
+/// `effectiveMcpServers` in `src/common/mcp/effectiveServers.ts`.
+pub fn effective_mcp_servers(agent: &Value) -> Vec<McpServerConfig> {
+    let mut servers: Vec<McpServerConfig> = match agent.get("mcpServers") {
+        Some(v) if !v.is_null() => serde_json::from_value(v.clone()).unwrap_or_else(|error| {
+            tracing::warn!(%error, "Ignoring malformed mcpServers on agent");
+            Vec::new()
+        }),
+        _ => Vec::new(),
+    };
+    servers.retain(|s| s.connection_type != Some(ConnectionType::Builtin));
+    let has_kbs = agent
+        .get("localKnowledgeBases")
+        .and_then(Value::as_array)
+        .is_some_and(|a| !a.is_empty());
+    let agent_id = agent.get("id").and_then(Value::as_str).unwrap_or_default();
+    if has_kbs && !agent_id.is_empty() {
+        servers.push(local_knowledge_base_server(agent_id));
+    }
+    servers
+}
+
+/// [`effective_mcp_servers`] as raw JSON: the stored entries as they are (not validated),
+/// plus the built-in entry. `[]` when there are none.
+pub fn effective_mcp_servers_json(agent: &Value) -> Value {
+    let mut servers: Vec<Value> = agent
+        .get("mcpServers")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    servers.retain(|s| s.get("connectionType").and_then(Value::as_str) != Some("builtin"));
+    let has_kbs = agent
+        .get("localKnowledgeBases")
+        .and_then(Value::as_array)
+        .is_some_and(|a| !a.is_empty());
+    let agent_id = agent.get("id").and_then(Value::as_str).unwrap_or_default();
+    if has_kbs && !agent_id.is_empty() {
+        servers
+            .push(serde_json::to_value(local_knowledge_base_server(agent_id)).unwrap_or_default());
+    }
+    Value::Array(servers)
+}
+
+/// The built-in server entry for an agent.
+pub fn local_knowledge_base_server(agent_id: &str) -> McpServerConfig {
+    McpServerConfig {
+        name: LOCAL_KNOWLEDGE_BASE_SERVER.into(),
+        description: "Searches this agent's local knowledge bases".into(),
+        connection_type: Some(ConnectionType::Builtin),
+        agent_id: Some(agent_id.into()),
+        ..Default::default()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -183,6 +258,8 @@ pub struct CustomAgent {
     pub flows: Option<Vec<FlowConfig>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mcp_servers: Option<Vec<McpServerConfig>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub local_knowledge_bases: Option<Vec<LocalKnowledgeBaseRef>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mcp_tools: Option<Vec<Value>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -542,12 +619,24 @@ fn build_mcp_server_config() -> Schema {
     object(vec![
         req("name", Schema::String),
         req("description", Schema::String),
-        opt("connectionType", Schema::Enum(vec!["command", "url"])),
+        opt(
+            "connectionType",
+            Schema::Enum(vec!["command", "url", "builtin"]),
+        ),
         opt("command", Schema::String),
         opt("args", array(Schema::String)),
         opt("env", record(Schema::String)),
         opt("url", Schema::String),
         opt("headers", record(Schema::String)),
+        opt("agentId", Schema::String),
+    ])
+}
+
+fn build_local_knowledge_base_ref() -> Schema {
+    object(vec![
+        req("id", Schema::String),
+        req("name", Schema::String),
+        opt("description", Schema::String),
     ])
 }
 
@@ -596,6 +685,10 @@ fn build_custom_agent() -> Schema {
         opt("knowledgeBases", array(build_knowledge_base())),
         opt("flows", array(build_flow_config())),
         opt("mcpServers", array(build_mcp_server_config())),
+        opt(
+            "localKnowledgeBases",
+            array(build_local_knowledge_base_ref()),
+        ),
         opt("mcpTools", array(Schema::Any)),
         opt("tavilySearchConfig", build_tavily_search_config()),
         opt("additionalInstruction", Schema::String),
@@ -672,3 +765,48 @@ cached_schema!(
     custom_agent_schema,
     build_custom_agent
 );
+
+#[cfg(test)]
+mod effective_servers_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn adds_builtin_server_only_with_local_knowledge_bases() {
+        let stdio = json!({ "name": "fs", "description": "", "command": "npx" });
+        let agent = json!({ "id": "a1", "mcpServers": [stdio] });
+        let s = effective_mcp_servers(&agent);
+        assert_eq!(s.len(), 1);
+        assert_eq!(s[0].name, "fs");
+
+        let agent = json!({
+            "id": "a1",
+            "mcpServers": [stdio, { "name": "x", "description": "", "connectionType": "builtin", "agentId": "other" }],
+            "localKnowledgeBases": [{ "id": "kb1", "name": "Docs" }]
+        });
+        let s = effective_mcp_servers(&agent);
+        assert_eq!(s.len(), 2, "stored builtin entries are dropped");
+        assert_eq!(s[1], local_knowledge_base_server("a1"));
+
+        let agent = json!({ "id": "a1", "localKnowledgeBases": [] });
+        assert!(effective_mcp_servers(&agent).is_empty());
+        let agent = json!({ "id": "a1", "mcpServers": "bad", "localKnowledgeBases": [{ "id": "k", "name": "n" }] });
+        assert_eq!(effective_mcp_servers(&agent).len(), 1);
+    }
+
+    #[test]
+    fn schema_accepts_local_knowledge_bases() {
+        let agent = json!({
+            "id": "a", "name": "n", "description": "d", "system": "s", "scenarios": [],
+            "localKnowledgeBases": [{ "id": "kb", "name": "Docs", "description": "x" }]
+        });
+        assert!(custom_agent_schema().safe_parse(&agent).is_ok());
+        let bad = json!({
+            "id": "a", "name": "n", "description": "d", "system": "s", "scenarios": [],
+            "localKnowledgeBases": [{ "id": 1 }]
+        });
+        assert!(custom_agent_schema().safe_parse(&bad).is_err());
+        let parsed: CustomAgent = serde_json::from_value(agent).unwrap();
+        assert_eq!(parsed.local_knowledge_bases.unwrap()[0].name, "Docs");
+    }
+}

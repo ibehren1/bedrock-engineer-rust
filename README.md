@@ -116,7 +116,8 @@ AWS CLI, and writing the `~/.aws/credentials` and `~/.aws/config` files.
 ### Where settings and history live
 
 Settings (`config.json`), chat history (`chat-sessions/`, `chat-sessions-meta.json`), memory items
-(`memory.json`) and logs (`logs/`) are kept in one folder named after the app:
+(`memory.json`), local knowledge bases and the downloaded on-device embedding model
+(`knowledgebases/`) and logs (`logs/`) are kept in one folder named after the app:
 
 | System  | Folder                                            |
 | ------- | ------------------------------------------------- |
@@ -310,6 +311,49 @@ Rules and facts you want every chat to know live in one shared memory list.
   highlighted (with a count of the items) while on, starts on for each new chat, and turning it off
   only affects that chat.
 
+### Local knowledge bases
+
+An agent can search documents and websites you give it, all stored on your computer.
+
+- The **Knowledge Base** tab in the agent editor (after MCP Servers) holds the agent's knowledge
+  bases. Create one with a name and a short description; the description tells the model what it
+  covers.
+- **Add files** takes text, Markdown and code files, PDF, Word, HTML, Excel and PowerPoint. **Add
+  website** crawls a site with the app's own crawler. It starts at the URL you give, stays on that
+  site (and under that folder, unless you turn that off), follows links up to the depth and page
+  limit you set, reads sitemap.xml, honors robots.txt and waits between requests.
+- Sources are processed in the background with a progress bar, and can be stopped. **Re-sync**
+  picks up changes and skips documents that are unchanged; **Remove** takes a source and its
+  passages out again. A search box on the tab shows what the agent would find for a question.
+- An agent with a knowledge base gets a built-in MCP server, `local-knowledgebase`. Its
+  `searchKnowledgeBase` tool returns the most relevant passages, ranked by both meaning and
+  keyword matches, with the file path or page URL they came from (`listKnowledgeBases` and
+  `listKnowledgeBaseSources` let it see what is there). Its system prompt lists the
+  knowledge bases and asks the agent to search them and cite its sources. Background agents and
+  sub-agents get the same tools. The agent editor's **MCP Servers** tab shows the server as
+  **Built-in** with its tools and a **Test connection** button, and the **Tools** tab lists the
+  tools with the other MCP tools. In a chat, each search shows up as a `searchKnowledgeBase` tool
+  call with the query and the passages it returned.
+- **Settings → Knowledge Base** picks the embedding model for new knowledge bases: Amazon Titan
+  Text Embeddings V2 or Cohere Embed on Bedrock, or **multilingual-e5-small** running on your
+  computer (works offline and covers about 100 languages; a one-time download of about 465 MB). The
+  tab also has chunk size, the number of results, the balance between meaning and keyword matches,
+  the crawler's defaults, and a list of every knowledge base on disk with its size and a delete
+  button, including any left behind by deleted agents.
+- Each knowledge base card shows tiles for passages, storage (with the space an optimize would
+  give back), agent searches over 30 days with a per-day trend, and the typical search time, plus
+  a health badge and a **Maintenance** panel. The panel lists anything that needs attention
+  (failed sources, websites not synced for 30 days, a missing local model, a model that differs
+  from Settings, free space) and has an **Optimize** button. Optimize compacts the file, tidies
+  the keyword index and checks for errors, and also runs on its own after an update that leaves
+  a lot of free space. **Settings → Knowledge Base** opens with an **Overview** of every knowledge
+  base: totals, then a table with each one's agent, model, size, searches, search time, last use
+  and health, with **Optimize all**.
+- Each knowledge base is one SQLite file under `knowledgebases/` in the app's data folder. It keeps
+  the model it was built with; when Settings name a different one, the agent editor offers a
+  rebuild. Duplicating an agent copies its knowledge bases and deleting the agent deletes them.
+  They are never written into shared or exported agent files.
+
 ### Files tab
 
 The chat's **Files** tab shows the project folder, so the agent's output is one click away.
@@ -317,10 +361,13 @@ The chat's **Files** tab shows the project folder, so the agent's output is one 
 - Open it from the tab strip or with the **Files** button above the message box. When the agent
   creates or changes files, the tab shows how many with a fuchsia count that pulses briefly and
   stays until you look (no animation when the system asks for reduced motion).
-- Click a file to preview it: text and code with syntax highlighting, Markdown (rendered or as
-  source), HTML, images, PDF (page by page, with zoom) and Word documents. Text files can be edited
-  and saved; if the file changed on disk in the meantime, you are asked before anything is
-  overwritten.
+- Click a file to preview it: text and code with syntax highlighting and line numbers, Markdown
+  (rendered or as source), HTML, images, PDF (page by page, with zoom) and Word documents. Text
+  files can be edited and saved; if the file changed on disk in the meantime, you are asked before
+  anything is overwritten.
+- Drag the divider between the file list and the preview to make the list wider or narrower (the
+  arrow keys move it too, and a double-click resets it); the width is remembered. After clicking in
+  a preview, ⌘A (Ctrl+A on Windows and Linux) selects just that file's content.
 - **Open** opens the file in its default app, **Reveal** shows it in Finder or Explorer, and the
   header button opens the whole project folder.
 - **Pop out** opens the file in a window of its own (one per file; popping out the same file again
@@ -398,8 +445,8 @@ context pointing at a remote daemon disables that tab and says why; the rest of 
 
 ![settings-sidebar](./assets/settings-sidebar.png)
 
-- **Settings are grouped into five tabs** — General, AWS, Models, Chat and Workspace — with a
-  sidebar down the left, rather than one long column. Each tab has its own address
+- **Settings are grouped into tabs** — General, AWS, Models, Chat, Workspace, Sandbox, Knowledge
+  Base and Updates — with a sidebar down the left, rather than one long column. Each tab has its own address
   (`#/setting/aws`), so links into settings open the relevant tab.
 - **Five appearances**, lightest to darkest — Light, **Newspaper**, Dim (default), **Charcoal** and
   Dark. Newspaper is a flat, monochrome, black-on-white view in the spirit of a printed page or an
@@ -407,7 +454,7 @@ context pointing at a remote daemon disables that tab and says why; the rest of 
   states. Charcoal is a warm grey with an amber accent.
 - **The app has its own typeface, and you can choose it.** Text is set in Inter and code in JetBrains
   Mono by default, both bundled so they render identically on every platform with no network. Settings
-  → Appearance offers Inter or Geist for interface text and JetBrains Mono or Geist Mono for code as
+  → General → Appearance offers Inter or Geist for interface text and JetBrains Mono or Geist Mono for code as
   two separate settings, because JetBrains Mono makes `1`, `l`, `I` and `0`, `O` easier to tell apart
   when you're reading a tool-use ID or a file path.
 - Every text size carries a line height and letter spacing chosen for it, figures are fixed-width so
@@ -460,7 +507,9 @@ the details.
 ### Prerequisites
 
 - Node.js 24 or later.
-- A Rust toolchain (stable, via [rustup](https://rustup.rs/)).
+- A Rust toolchain (stable, via [rustup](https://rustup.rs/)), plus the platform's C compiler
+  below: the build compiles SQLite (for local knowledge bases) and a few other C libraries from
+  source.
 - **macOS:** the Xcode command-line tools (`xcode-select --install`).
 - **Windows:** the Microsoft C++ Build Tools and WebView2 (see
   [Tauri's prerequisites](https://tauri.app/start/prerequisites/)).

@@ -12,6 +12,7 @@ import {
 import { BedrockAgent } from '../agent'
 import { AWSCredentials } from '../aws'
 import { CodeInterpreterContainerConfig, DockerSandboxConfig } from '../sandbox'
+import type { KnowledgeSettings } from '../knowledge'
 
 export type StoreScheme = {
   /** アプリケーションのユーザーデータ保存先パス（config.json のあるディレクトリ） */
@@ -70,6 +71,8 @@ export type StoreScheme = {
 
   /** Docker サンドボックスツールの設定（チャットごとのコンテナのリソース上限） */
   dockerSandboxTool?: DockerSandboxConfig
+  /** Local knowledgebases: embedding model, chunking, retrieval and crawler defaults. */
+  knowledgebase?: KnowledgeSettings
 
   /** アプリケーションの表示言語設定（日本語または英語） */
   language: 'ja' | 'en'

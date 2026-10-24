@@ -65,15 +65,57 @@ pub fn environment_context(agent: &Value) -> String {
     generate_environment_context(settings.as_ref(), None)
 }
 
+/// The `<local_knowledge_bases>` block telling the model about the agent's local
+/// knowledgebases and their search tool; `''` without any. Same text as
+/// `buildKnowledgeBasePrompt` in `src/common/agents/knowledgePrompt.ts`.
+pub fn knowledge_base_prompt(agent: &Value) -> String {
+    let Some(kbs) = agent
+        .get("localKnowledgeBases")
+        .and_then(Value::as_array)
+        .filter(|a| !a.is_empty())
+    else {
+        return String::new();
+    };
+    let mut lines = vec![
+        "<local_knowledge_bases>".to_string(),
+        "You have local knowledge bases with documents and websites the user added:".to_string(),
+    ];
+    for kb in kbs {
+        let name = kb
+            .get("name")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .trim();
+        let description = kb
+            .get("description")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .trim();
+        lines.push(if description.is_empty() {
+            format!("- {name}")
+        } else {
+            format!("- {name}: {description}")
+        });
+    }
+    lines.push("Search them with the searchKnowledgeBase tool before answering questions they may cover, and cite the sources (file path or URL) of the passages you use.".to_string());
+    lines.push("</local_knowledge_bases>".to_string());
+    lines.join("\n")
+}
+
 /// `buildSystemPrompt(agent, projectDirectory)`: `''` when the agent has no system prompt,
-/// otherwise `agent.system + '\n\n' + environmentContext` with placeholders replaced.
+/// otherwise `agent.system + '\n\n' + environmentContext` with placeholders replaced, plus
+/// the [`knowledge_base_prompt`] when the agent has local knowledgebases.
 /// `working_directory` is [`working_directory`]`(projectDirectory, store)`.
 pub fn build_system_prompt(agent: &Value, working_directory: &str) -> String {
     let system = match agent.get("system").and_then(Value::as_str) {
         Some(s) if !s.is_empty() => s,
         _ => return String::new(),
     };
-    let full = format!("{system}\n\n{}", environment_context(agent));
+    let mut full = format!("{system}\n\n{}", environment_context(agent));
+    let kb = knowledge_base_prompt(agent);
+    if !kb.is_empty() {
+        full = format!("{full}\n\n{kb}");
+    }
     replace_agent_placeholders(&full, agent, working_directory)
 }
 
@@ -121,6 +163,27 @@ mod tests {
             "2026-09-30",
         );
         assert_eq!(out, r#"/p|2026-09-30|[{"pattern":"ls *"}]|[]|[]"#);
+    }
+
+    #[test]
+    fn knowledge_base_block() {
+        assert_eq!(knowledge_base_prompt(&json!({})), "");
+        assert_eq!(
+            knowledge_base_prompt(&json!({ "localKnowledgeBases": [] })),
+            ""
+        );
+        let agent = json!({
+            "system": "Be helpful.",
+            "localKnowledgeBases": [
+                { "id": "a", "name": "Docs", "description": "Product docs" },
+                { "id": "b", "name": "Notes" }
+            ]
+        });
+        assert_eq!(
+            knowledge_base_prompt(&agent),
+            "<local_knowledge_bases>\nYou have local knowledge bases with documents and websites the user added:\n- Docs: Product docs\n- Notes\nSearch them with the searchKnowledgeBase tool before answering questions they may cover, and cite the sources (file path or URL) of the passages you use.\n</local_knowledge_bases>"
+        );
+        assert!(build_system_prompt(&agent, "/p").ends_with("</local_knowledge_bases>"));
     }
 
     #[test]

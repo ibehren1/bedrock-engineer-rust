@@ -8,7 +8,8 @@ the Electron build config and dependencies. Paths such as `src/main/...` and `sr
 below, in `BRIDGE.md` and in Rust doc comments name that TypeScript, which is in git history up to
 `c9a9a13` on `rust-port`.
 
-Coverage checklist: `COVERAGE_PARITY.md`.
+Coverage checklist: `COVERAGE_PARITY.md`. This plan covers the port only; features built in Rust after it (memory, Files panel,
+local terminal, in-app updates, local knowledge bases, …) are listed in `STATUS.md` and `CHANGELOG.md`.
 
 ## Architecture notes
 

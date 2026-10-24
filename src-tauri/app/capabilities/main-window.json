@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main-window",
-  "description": "Main window only, on top of the full app UI in default.json: the commands left out of app-commands because nothing else may call them (local terminals, which run a shell on the user's machine for the chat page, and app updates, which download and install a new version of the app).",
+  "description": "Main window only, on top of the full app UI in default.json: the commands left out of app-commands because nothing else may call them (local terminals, which run a shell on the user's machine for the chat page, app updates, which download and install a new version of the app, and the local knowledgebase commands, which read files from any path they are given).",
   "windows": ["main"],
   "permissions": ["main-window-commands"]
 }

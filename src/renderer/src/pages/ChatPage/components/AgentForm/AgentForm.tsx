@@ -27,10 +27,8 @@ export const AgentForm: React.FC<AgentFormProps> = ({ agent, onSave, onCancel })
     isLoadingMcpTools,
     tempMcpTools,
     generateSystemPrompt,
-    generateVoiceChatPrompt,
     generateScenarios,
     isGeneratingSystem,
-    isGeneratingVoiceChat,
     isGeneratingScenarios,
     updateField,
     handleSubmit,
@@ -45,8 +43,18 @@ export const AgentForm: React.FC<AgentFormProps> = ({ agent, onSave, onCancel })
     [updateField]
   )
 
+  // Discarding a new agent also discards the knowledgebases created for it.
+  const handleCancel = React.useCallback(() => {
+    if (!agent?.id && formData.localKnowledgeBases?.length) {
+      window.api.knowledge
+        .deleteAgent(formData.id)
+        .catch((error) => console.error('Failed to delete knowledge bases:', error))
+    }
+    onCancel()
+  }, [agent?.id, formData.id, formData.localKnowledgeBases, onCancel])
+
   // 合成された生成状態
-  const isGenerating = isGeneratingSystem || isGeneratingVoiceChat || isGeneratingScenarios
+  const isGenerating = isGeneratingSystem || isGeneratingScenarios
 
   return (
     <div className="h-full">
@@ -81,21 +89,20 @@ export const AgentForm: React.FC<AgentFormProps> = ({ agent, onSave, onCancel })
               isLoadingMcpTools={isLoadingMcpTools}
               tempMcpTools={tempMcpTools}
               handleAutoGeneratePrompt={generateSystemPrompt}
-              handleVoiceChatGenerate={generateVoiceChatPrompt}
               handleGenerateScenarios={generateScenarios}
               isGeneratingSystem={isGeneratingSystem}
-              isGeneratingVoiceChat={isGeneratingVoiceChat}
               isGeneratingScenarios={isGeneratingScenarios}
               availableTags={availableTags}
               fetchMcpTools={fetchMcpTools}
               handleAdditionalInstructionChange={handleAdditionalInstructionChange}
+              isSharedAgent={agent?.isShared}
             />
           </div>
         </div>
 
         {/* フッター固定部分 - 常に画面下部に表示 */}
         <div className="flex-shrink-0 px-3 py-2 sticky bottom-0 z-10 bg-surface border-t border-subtle backdrop-blur-sm">
-          <FormActionButtons onCancel={onCancel} isGenerating={isGenerating} />
+          <FormActionButtons onCancel={handleCancel} isGenerating={isGenerating} />
         </div>
       </form>
     </div>

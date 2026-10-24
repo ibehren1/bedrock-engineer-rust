@@ -6,6 +6,7 @@ import {
   AwsTab,
   ChatTab,
   GeneralTab,
+  KnowledgeBaseTab,
   ModelsTab,
   SandboxTab,
   UpdatesTab,
@@ -20,6 +21,7 @@ const TAB_PANELS: Record<SettingTabId, React.FC> = {
   chat: ChatTab,
   workspace: WorkspaceTab,
   sandbox: SandboxTab,
+  knowledgebase: KnowledgeBaseTab,
   updates: UpdatesTab
 }
 
