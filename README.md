@@ -249,12 +249,13 @@ are in the [MCP Server Configuration Guide](./docs/mcp-server/MCP_SERVER_CONFIGU
 
 ### AWS Solutions Architect agent
 
-A built-in **AWS Solutions Architect** agent answers AWS questions from the official documentation
-and links each point to its source. It comes with four AWS MCP servers already set up: AWS
-Documentation, the hosted AWS Knowledge server (which also covers Regional availability), the
-Infrastructure as Code server (CloudFormation validation, compliance checks, deployment
-troubleshooting and CDK guidance, and it never deploys), and AWS Pricing for cost estimates. Three
-of them run with `uvx`, so install [uv](https://docs.astral.sh/uv/) first.
+The **AWS Solutions Architect** agent in the Agent Directory answers AWS questions from the official
+documentation and links each point to its source. Add it to My Agents to use it and adjust it like
+any agent of your own. It comes with four AWS MCP servers already set up: AWS Documentation, the
+hosted AWS Knowledge server (which also covers Regional availability), the Infrastructure as Code
+server (CloudFormation validation, compliance checks, deployment troubleshooting and CDK guidance,
+and it never deploys), and AWS Pricing for cost estimates. Three of them run with `uvx`, so install
+[uv](https://docs.astral.sh/uv/) first.
 
 The servers that call AWS use the credentials from **Settings → AWS**. Any MCP server can do the
 same by putting `{{awsProfile}}` and `{{awsRegion}}` in its `env`. With an access key instead of a

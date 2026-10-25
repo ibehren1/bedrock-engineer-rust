@@ -1813,8 +1813,10 @@ Only servers whose `env` uses a placeholder get your credentials. No other MCP s
 
 ### 11.5 The AWS Solutions Architect agent
 
-The built-in **AWS Solutions Architect** agent comes with four AWS MCP servers already set up. It
-answers from the official AWS documentation and links each point to the page it came from:
+The **AWS Solutions Architect** agent in the [Agent Directory](#13-agent-directory) comes with four
+AWS MCP servers already set up. Add it to My Agents to use it, and change its prompt, tools or
+servers like any of your own agents. It answers from the official AWS documentation and links each
+point to the page it came from:
 
 | Server              | What it provides                                                                                         |
 | ------------------- | -------------------------------------------------------------------------------------------------------- |

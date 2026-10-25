@@ -151,7 +151,7 @@ npm run build:linux   # .AppImage + .deb
 
 ### エージェントを選択する
 
-左上のメニューからエージェントを選択します。デフォルトでは汎用的なソフトウェア開発に特化した Software Developer, プログラミング学習を支援する Programming Mentor, サービスやプロダクトの構想段階を支援する Product Designer、AWS 公式ドキュメントをもとに出典リンク付きで回答し CDK / CloudFormation の検証やコストの見積もりも行う AWS Solutions Architect を搭載しています。AWS Solutions Architect は AWS の MCP サーバー（Documentation、Knowledge、Infrastructure as Code、Pricing）が設定済みで、`uvx` で起動するため事前に [uv](https://docs.astral.sh/uv/) をインストールしてください。
+左上のメニューからエージェントを選択します。デフォルトでは汎用的なソフトウェア開発に特化した Software Developer, プログラミング学習を支援する Programming Mentor, サービスやプロダクトの構想段階を支援する Product Designer を搭載しています。エージェントディレクトリには、AWS 公式ドキュメントをもとに出典リンク付きで回答し CDK / CloudFormation の検証やコストの見積もりも行う AWS Solutions Architect があり、マイエージェントに追加すると自由に編集できます。AWS Solutions Architect は AWS の MCP サーバー（Documentation、Knowledge、Infrastructure as Code、Pricing）が設定済みで、`uvx` で起動するため事前に [uv](https://docs.astral.sh/uv/) をインストールしてください。
 
 ![select-agents](./assets/select-agents.png)
 

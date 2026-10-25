@@ -15,6 +15,7 @@ import { ToolName } from 'src/types/tools'
 import { CustomAgent } from '@/types/agent-chat'
 import { replacePlaceholders } from '../../../common/utils/placeholderUtils'
 import { DEFAULT_AGENTS } from '@renderer/pages/ChatPage/constants/DEFAULT_AGENTS'
+import { adoptRetiredDefaultAgents } from '@renderer/pages/ChatPage/constants/retiredDefaultAgents'
 import { EXCLUDED_CHAT_AGENT_IDS } from '@renderer/pages/ChatPage/components/AgentList/useAgentFilter'
 import { sortAgentsByOrder } from '@renderer/pages/ChatPage/components/AgentList/agentOrder'
 import {
@@ -667,7 +668,10 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
 
     // Load Custom Agents
-    const savedAgents = window.store.get('customAgents') || []
+    // ディレクトリへ移したデフォルトエージェントの保存済みコピーはカスタムエージェントとして残す
+    const { agents: savedAgents, changed: adoptedRetiredDefaults } = adoptRetiredDefaultAgents(
+      window.store.get('customAgents') || []
+    )
 
     // ユーザーが非表示にしたデフォルトエージェントは再シードしない
     const hiddenDefaults = window.store.get('hiddenDefaultAgentIds') || []
@@ -677,7 +681,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setStateAgentOrder(window.store.get('agentOrder') || [])
 
     // DEFAULT_AGENTSの各エージェントについて、全ての重要なプロパティを比較し、変更があれば更新
-    let hasChanges = false
+    let hasChanges = adoptedRetiredDefaults
     // 更新後のエージェントリスト
     const finalAgents: CustomAgent[] = []
     // 処理済みのエージェントIDを追跡

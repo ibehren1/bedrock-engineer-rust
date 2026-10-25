@@ -24,6 +24,10 @@ overview of the fork with screenshots.
   than sending the whole guide every time, so Help answers cost much less. The guide's search index
   ships with the app; if you have downloaded the on-device model for local knowledge bases, it
   matches by meaning as well as by keyword.
+- **The AWS Solutions Architect agent moved to the Agent Directory.** It is no longer a built-in
+  agent, so it can be edited: add it from the Agent Directory to change its prompt, tools or MCP
+  servers. If you already had it, your copy stays in My Agents and is now editable like your own
+  agents.
 
 ### 2026-10-24
 

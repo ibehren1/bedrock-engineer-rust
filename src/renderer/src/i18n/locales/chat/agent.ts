@@ -141,8 +141,6 @@ export const agent = {
       'This AI designer helps you with product design and UX/UI tasks.',
     'helpAgent.description':
       'Answers questions about using this app from the user guide that ships with it.',
-    'awsSolutionsArchitectAgent.description':
-      'Answers AWS architecture questions from the official AWS documentation, with links to the sources, and validates CDK / CloudFormation and estimates costs.',
     pleaseEnterNameAndDescription: 'Please enter the agent name and description',
     generating: 'Generating...',
     generateSystemPrompt: 'Generate system prompt',
@@ -324,8 +322,6 @@ export const agent = {
       'ユーザーインターフェースとUXの専門家として、魅力的で使いやすいデザインを提案します。',
     'helpAgent.description':
       'アプリに同梱されたユーザーガイドをもとに、このアプリの使い方に関する質問に答えます。',
-    'awsSolutionsArchitectAgent.description':
-      'AWS 公式ドキュメントをもとに出典リンク付きで AWS のアーキテクチャに関する質問に答え、CDK / CloudFormation の検証やコストの見積もりも行います。',
     pleaseEnterNameAndDescription: 'エージェント名と説明を入力してください',
     generating: '生成中...',
     generateSystemPrompt: 'System Prompt を自動生成する',

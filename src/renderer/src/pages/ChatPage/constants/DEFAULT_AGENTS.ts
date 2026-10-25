@@ -1,10 +1,5 @@
 import { CustomAgent } from '@/types/agent-chat'
 import { HELP_AGENT_ID, HELP_AGENT_SYSTEM_PROMPT } from './helpAgent'
-import {
-  AWS_SOLUTIONS_ARCHITECT_AGENT_ID,
-  AWS_SOLUTIONS_ARCHITECT_MCP_SERVERS,
-  AWS_SOLUTIONS_ARCHITECT_SYSTEM_PROMPT
-} from './awsSolutionsArchitectAgent'
 
 export const DEFAULT_AGENTS: CustomAgent[] = [
   {
@@ -718,41 +713,6 @@ However, you may want to minimize the amount of information in the output if you
     allowedCommands: [],
     bedrockAgents: [],
     knowledgeBases: [],
-    isCustom: false
-  },
-  {
-    id: AWS_SOLUTIONS_ARCHITECT_AGENT_ID,
-    name: 'AWS Solutions Architect',
-    description: 'awsSolutionsArchitectAgent.description',
-    system: AWS_SOLUTIONS_ARCHITECT_SYSTEM_PROMPT,
-    scenarios: [
-      { title: 'Compare AWS services', content: '' },
-      { title: 'Design a reference architecture', content: '' },
-      { title: 'Estimate monthly cost', content: '' },
-      { title: 'Generate CDK for a pattern', content: '' }
-    ],
-    icon: 'aws',
-    iconColor: '#3174d8',
-    category: 'general',
-    tools: [
-      'createFolder',
-      'writeToFile',
-      'readFiles',
-      'listFiles',
-      'applyDiffEdit',
-      'moveFile',
-      'copyFile',
-      'fetchWebsite',
-      'tavilySearch',
-      'think',
-      'addMemory',
-      'updateMemory',
-      'removeMemory'
-    ],
-    allowedCommands: [],
-    bedrockAgents: [],
-    knowledgeBases: [],
-    mcpServers: AWS_SOLUTIONS_ARCHITECT_MCP_SERVERS,
     isCustom: false
   },
   {
