@@ -89,7 +89,8 @@ export const useMcpRegistrySearch = () => {
           userMessage: buildMcpSearchQueryUserMessage(context),
           outputSchema: mcpSearchQuerySchema,
           toolOptions: MCP_SEARCH_QUERY_TOOL,
-          inferenceConfig: { maxTokens: 512, temperature: 0.3 }
+          inferenceConfig: { maxTokens: 512, temperature: 0.3 },
+          usageContext: { feature: 'agent-editor' }
         })
 
         const terms = (queries || [])

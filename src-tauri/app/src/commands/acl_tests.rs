@@ -147,7 +147,7 @@ fn local_terminals_updates_and_knowledge_are_main_window_only() {
         );
         assert!(main_only.contains(&allow_permission(c)), "{c}");
     }
-    // App updates and the knowledgebase commands are the only other main-window-only
+    // App updates, the knowledgebase and the usage commands are the only other main-window-only
     // commands; nothing else is by accident, and the two sets cover every command.
     let updates: Vec<String> = commands()
         .into_iter()
@@ -183,9 +183,33 @@ fn local_terminals_updates_and_knowledge_are_main_window_only() {
         );
         assert!(main_only.contains(&allow_permission(c)), "{c}");
     }
+    let usage: Vec<String> = commands()
+        .into_iter()
+        .filter(|c| c.starts_with("usage_"))
+        .collect();
+    assert_eq!(
+        usage,
+        [
+            "usage_summary",
+            "usage_breakdown",
+            "usage_months",
+            "usage_events",
+            "usage_info",
+            "usage_export_csv",
+            "usage_budget_status",
+        ]
+    );
+    for c in &usage {
+        assert!(is_main_window_only(c));
+        assert!(
+            !all.contains(&allow_permission(c)),
+            "{c} is in app-commands"
+        );
+        assert!(main_only.contains(&allow_permission(c)), "{c}");
+    }
     assert_eq!(
         main_only.len(),
-        local.len() + updates.len() + knowledge.len()
+        local.len() + updates.len() + knowledge.len() + usage.len()
     );
     assert_eq!(all.len() + main_only.len(), commands().len());
     // The sandbox terminal stays available to every full-UI window.

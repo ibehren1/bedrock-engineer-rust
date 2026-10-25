@@ -72,7 +72,19 @@ export const examples = {
       'Prepare design specifications and assets for a new feature, ensuring a smooth handoff to the development team.',
     'Design Trend Research': 'Design Trend Research',
     'Design Trend Research description':
-      'Investigate the latest design trends and provide recommendations on how to incorporate them into an upcoming product redesign.'
+      'Investigate the latest design trends and provide recommendations on how to incorporate them into an upcoming product redesign.',
+    'Compare AWS services': 'Compare AWS services',
+    'Compare AWS services description':
+      'Compare Amazon SQS, Amazon SNS and Amazon EventBridge for decoupling microservices: delivery guarantees, ordering, throughput limits, pricing model and when to choose each. Link every point to the AWS documentation.',
+    'Design a reference architecture': 'Design a reference architecture',
+    'Design a reference architecture description':
+      'Design a highly available, multi-AZ architecture for a containerized web application with a relational database on AWS. Explain each service choice against the Well-Architected Framework, draw it as a Mermaid diagram and cite the AWS documentation.',
+    'Estimate monthly cost': 'Estimate monthly cost',
+    'Estimate monthly cost description':
+      'Estimate the monthly cost in us-east-1 of an application with an Application Load Balancer, two m7g.large EC2 instances, a db.r7g.large Multi-AZ Aurora PostgreSQL cluster and 500 GB of S3 Standard storage. Show the prices you used and their source.',
+    'Generate CDK for a pattern': 'Generate CDK for a pattern',
+    'Generate CDK for a pattern description':
+      'Write an AWS CDK (TypeScript) stack for an S3 bucket that triggers a Lambda function writing to DynamoDB, following CDK best practices, and save it to {{projectPath}}. Explain the security settings you chose with links to the documentation.'
   },
   ja: {
     'Simple website': 'シンプルなウェブサイト',
@@ -146,6 +158,18 @@ export const examples = {
       '新機能のデザイン仕様とアセットを準備し、開発チームへのスムーズな引き渡しを確保してください。',
     'Design Trend Research': 'デザイントレンド調査',
     'Design Trend Research description':
-      '最新のデザイントレンドを調査し、今後の製品リデザインにどのように取り入れるかの提案を行ってください。'
+      '最新のデザイントレンドを調査し、今後の製品リデザインにどのように取り入れるかの提案を行ってください。',
+    'Compare AWS services': 'AWSサービスの比較',
+    'Compare AWS services description':
+      'マイクロサービスの疎結合化について、Amazon SQS、Amazon SNS、Amazon EventBridge を配信保証、順序、スループット上限、料金体系、使い分けの観点で比較してください。各項目に AWS ドキュメントへのリンクを付けてください。',
+    'Design a reference architecture': 'リファレンスアーキテクチャの設計',
+    'Design a reference architecture description':
+      'リレーショナルデータベースを使うコンテナ化された Web アプリケーション向けに、AWS 上でマルチ AZ の高可用性アーキテクチャを設計してください。各サービスの選定理由を Well-Architected フレームワークに照らして説明し、Mermaid 図で示し、AWS ドキュメントを引用してください。',
+    'Estimate monthly cost': '月額コストの見積もり',
+    'Estimate monthly cost description':
+      'Application Load Balancer、m7g.large の EC2 インスタンス 2 台、db.r7g.large のマルチ AZ Aurora PostgreSQL クラスター、S3 Standard 500 GB で構成されるアプリケーションの us-east-1 での月額コストを見積もってください。使用した料金とその出典を示してください。',
+    'Generate CDK for a pattern': 'パターンのCDK生成',
+    'Generate CDK for a pattern description':
+      'S3 バケットへのアップロードで Lambda 関数を起動し DynamoDB に書き込む AWS CDK (TypeScript) スタックを CDK のベストプラクティスに沿って作成し、{{projectPath}} に保存してください。選択したセキュリティ設定をドキュメントへのリンク付きで説明してください。'
   }
 }

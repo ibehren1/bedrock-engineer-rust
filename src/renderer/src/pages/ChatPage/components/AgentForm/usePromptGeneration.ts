@@ -203,7 +203,8 @@ export function usePromptGeneration(
     loading: loadingSystem,
     handleSubmit: submitSystemPrompt
   } = useAgentChat(llm?.modelId || '', systemPromptTemplate, undefined, undefined, {
-    enableHistory: false
+    enableHistory: false,
+    usageFeature: 'agent-editor'
   })
 
   // シナリオ生成
@@ -214,7 +215,8 @@ export function usePromptGeneration(
     loading: loadingScenarios,
     handleSubmit: submitScenarioPrompt
   } = useAgentChat(llm?.modelId || '', scenarioPromptTemplate, undefined, undefined, {
-    enableHistory: false
+    enableHistory: false,
+    usageFeature: 'agent-editor'
   })
 
   // システムプロンプト生成

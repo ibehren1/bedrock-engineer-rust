@@ -1,4 +1,4 @@
-.PHONY: version dev build-mac build build-native install sign test notices clean
+.PHONY: version dev build-mac build build-native install sign test notices clean help-kb
 
 # Version format: YYYY.MMDD.N (semver-compatible)
 # e.g., 2026.601.0 = first change committed on June 1, 2026
@@ -49,6 +49,12 @@ APP_NAME := $(shell node -p "require('./package.json').productName")
 # the same way the bundler does (ad-hoc, hardened runtime, the app's entitlements).
 sign:
 	sudo codesign --force --deep --options runtime --entitlements src-tauri/app/entitlements.mac.plist --sign - "/Applications/$(APP_NAME).app"
+
+# Rebuild docs/help-kb.db, the user guide's knowledge base that ships with the app, from
+# docs/USER_GUIDE.md with the on-device embedding model (downloaded once if needed). The
+# pre-commit hook runs this whenever the guide is committed; a stale index fails `make test`.
+help-kb:
+	cd src-tauri && cargo run --release -p knowledge --bin build-help-kb
 
 # Rust + JS unit tests (what CI runs).
 test:

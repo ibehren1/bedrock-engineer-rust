@@ -126,6 +126,8 @@
 }
 .reactMarkDown ol {
   list-style: decimal outside none;
+  /* Room for two-digit numbers ("10."), which 1.3em clipped to "0.". */
+  padding-left: 2em;
 }
 .reactMarkDown li {
   display: list-item;

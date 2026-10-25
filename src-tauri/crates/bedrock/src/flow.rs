@@ -13,6 +13,7 @@ use crate::sdk::{
     SdkConfigSource,
 };
 use crate::settings::AwsSettings;
+use crate::usage::{self, UsageService};
 use serde_json::{json, Map, Value};
 
 /// Timestamp members in flow trace events.
@@ -181,7 +182,7 @@ pub async fn invoke_flow(
         let raw = RawBody::default();
         let mut out = client
             .invoke_flow()
-            .flow_identifier(flow_id)
+            .flow_identifier(flow_id.clone())
             .flow_alias_identifier(alias_id)
             .customize()
             .interceptor(body)
@@ -215,6 +216,7 @@ pub async fn invoke_flow(
             json!(out.execution_id.unwrap_or_default()),
         );
         result.extend(processed);
+        usage::record_call(UsageService::Flow, &flow_id, &aws.region, "tool:invokeFlow");
         Ok(Value::Object(result))
     }
     .await;

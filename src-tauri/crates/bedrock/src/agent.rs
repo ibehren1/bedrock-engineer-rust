@@ -18,6 +18,7 @@ use crate::sdk::{
     JsonBody, RawBody, SdkConfigSource,
 };
 use crate::settings::AwsSettings;
+use crate::usage::{self, UsageContext, UsageEvent, UsageService};
 use base64::Engine;
 use serde::{Serialize, Serializer};
 use serde_json::{json, Map, Value};
@@ -141,6 +142,23 @@ pub fn aggregate_agent_events(events: &[(String, Value)]) -> Completion {
     out
 }
 
+/// Tokens the agent's models used, from its traces (only present with `enableTrace`). Steps
+/// whose trace names no model are recorded under the agent id, unpriced.
+fn record_agent_usage(agent_id: &str, region: &str, traces: &[Value]) {
+    for (model, input, output) in usage::agent_trace_usage(traces) {
+        let id = if model.is_empty() { agent_id } else { &model };
+        let mut event = UsageEvent::new(
+            UsageService::Agent,
+            id,
+            region,
+            UsageContext::feature("tool:invokeBedrockAgent"),
+        );
+        event.input_tokens = input;
+        event.output_tokens = output;
+        usage::record(event);
+    }
+}
+
 /// `invokeAgent(params)`. `params` is `InvokeAgentInput` JSON: `agentId`, `agentAliasId`,
 /// `inputText`, optional `sessionId` (generated when absent), `enableTrace` (default `false`) and
 /// any other `InvokeAgentCommandInput` member (`sessionState`, `endSession`, `memoryId`, ...).
@@ -170,7 +188,7 @@ pub async fn invoke_agent(
         let raw = RawBody::default();
         let mut out = client
             .invoke_agent()
-            .agent_id(agent_id)
+            .agent_id(agent_id.clone())
             .agent_alias_id(agent_alias_id)
             .session_id(session_id)
             .set_source_arn(source_arn)
@@ -183,11 +201,13 @@ pub async fn invoke_agent(
         // Drive the stream to the end; errors inside it fail the call like the TS for-await.
         while out.completion.recv().await.map_err(Error::from)?.is_some() {}
         let events = decode_event_frames(&raw.bytes());
+        let completion = aggregate_agent_events(&events);
+        record_agent_usage(&agent_id, &aws.region, &completion.traces);
         Ok(InvokeAgentResult {
             metadata: raw.metadata(),
             content_type: out.content_type,
             session_id: out.session_id,
-            completion: Some(aggregate_agent_events(&events)),
+            completion: Some(completion),
         })
     }
     .await;
@@ -251,13 +271,19 @@ pub async fn retrieve(
     let raw = RawBody::default();
     client
         .retrieve()
-        .knowledge_base_id(knowledge_base_id)
+        .knowledge_base_id(knowledge_base_id.clone())
         .customize()
         .interceptor(body)
         .interceptor(raw.clone())
         .send()
         .await
         .map_err(Error::from)?;
+    usage::record_call(
+        UsageService::Retrieve,
+        &knowledge_base_id,
+        &aws.region,
+        "tool:retrieve",
+    );
     Ok(with_metadata(&raw))
 }
 
@@ -293,6 +319,16 @@ pub async fn retrieve_and_generate(
             .send()
             .await
             .map_err(Error::from)?;
+        let kb = input
+            .pointer("/retrieveAndGenerateConfiguration/knowledgeBaseConfiguration/knowledgeBaseId")
+            .and_then(Value::as_str)
+            .unwrap_or("retrieve-and-generate");
+        usage::record_call(
+            UsageService::Retrieve,
+            kb,
+            &aws.region,
+            "retrieveAndGenerate",
+        );
         Ok(with_metadata(&raw))
     }
     .await;

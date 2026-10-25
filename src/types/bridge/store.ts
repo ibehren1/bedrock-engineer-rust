@@ -1,5 +1,6 @@
 // Shape of the settings file (config.json) as the renderer sees it through `window.store`.
 // The Rust `store` crate (src-tauri/crates/store) owns the file, its defaults and migrations.
+import type { UsageBudget } from '../usage'
 import { LLM, InferenceParameters, ThinkingMode } from '../llm'
 import {
   AgentChatConfig,
@@ -32,6 +33,9 @@ export type StoreScheme = {
 
   /** コード・ID・パスなど等幅テキストの書体。デフォルトは 'jetbrains' */
   appFontMono?: 'jetbrains' | 'geist-mono' | 'system'
+
+  /** Accounting page: monthly budget and its alert thresholds. */
+  usageBudget?: UsageBudget
 
   /** 現在選択されている言語モデル (LLM) の設定 */
   llm?: LLM

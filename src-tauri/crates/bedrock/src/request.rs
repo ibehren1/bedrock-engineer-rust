@@ -46,6 +46,9 @@ pub struct ConverseRequest {
     /// Disable extended thinking for this request (title generation etc.).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub disable_thinking: Option<bool>,
+    /// What the call is for, recorded with its usage (never sent to Bedrock).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub usage_context: Option<crate::usage::UsageContext>,
 }
 
 /// The equivalent of the TS `commandParams` object, still in JSON form.

@@ -62,6 +62,9 @@ try {
           'by scripts/port/gen-models-json.mjs from src/common/models/models.ts; do not edit',
         textModels: mod.__TEXT_MODELS,
         imageModels: mod.__IMAGE_MODELS,
+        embeddingModels: mod.EMBEDDING_MODEL_PRICING,
+        retiredModels: mod.RETIRED_MODEL_PRICING,
+        unitPricing: mod.UNIT_PRICING,
         regionOrder,
         imageRegionOrder
       },

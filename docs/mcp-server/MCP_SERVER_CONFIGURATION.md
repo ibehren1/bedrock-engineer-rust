@@ -76,6 +76,36 @@ On macOS and Linux, command servers started with `npx`, `uvx` and similar see yo
 - **git**: Git operation tools
 - **postgres**: PostgreSQL database operation tools
 
+## Using the App's AWS Settings
+
+A command server's `env` values can use `{{awsRegion}}` and `{{awsProfile}}`. They are filled in
+from **Settings → AWS** each time the server starts:
+
+```json
+{
+  "mcpServers": {
+    "aws-pricing": {
+      "command": "uvx",
+      "args": ["awslabs.aws-pricing-mcp-server@latest"],
+      "env": {
+        "AWS_PROFILE": "{{awsProfile}}",
+        "AWS_REGION": "{{awsRegion}}"
+      }
+    }
+  }
+}
+```
+
+- `{{awsRegion}}` becomes the app's region.
+- `{{awsProfile}}` becomes the profile name when the app uses a named profile (`default` if the
+  name is empty).
+- When the app uses an access key instead, the entry whose value is `{{awsProfile}}` is dropped and
+  `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and (if set) `AWS_SESSION_TOKEN` are passed instead.
+- Values produced by placeholders override the same variables in the app's own environment. Other
+  `env` entries are still overridden by it, as before.
+
+Only servers whose `env` uses a placeholder receive the app's credentials.
+
 ## Built-in Server for Local Knowledge Bases
 
 An agent that has local knowledge bases (agent editor → **Knowledge Base** tab) automatically gets

@@ -14,6 +14,7 @@ use crate::error::{Error, Result};
 use crate::retry::{random_index, with_retries, FailoverConfig, RetryPolicy};
 use crate::sdk::{blobs_in_list, object_of, required_str, JsonBody, RawBody, SdkConfigSource};
 use crate::settings::AwsSettings;
+use crate::usage::{self, UnitKind, UsageContext, UsageEvent, UsageService};
 use aws_sdk_bedrockruntime::types::GuardrailContentSource;
 use serde_json::{Map, Value};
 use std::time::Duration;
@@ -97,8 +98,29 @@ pub async fn apply_guardrail_with_policy(
         },
     )
     .await;
-    if let Err(e) = &result {
-        tracing::error!(guardrail_id = %identifier, error = %e, "Error in applyGuardrail");
+    match &result {
+        Ok(out) => {
+            for (policy, units) in out
+                .get("usage")
+                .map(usage::guardrail_units)
+                .unwrap_or_default()
+            {
+                // Priced by policy; the raw id keeps which guardrail it was.
+                let mut event = UsageEvent::units(
+                    UsageService::Guardrail,
+                    &identifier,
+                    &aws.region,
+                    UsageContext::feature("guardrail"),
+                    UnitKind::GuardrailTextUnits,
+                    units,
+                );
+                event.invoked_model_id = Some(policy.to_string());
+                usage::record(event);
+            }
+        }
+        Err(e) => {
+            tracing::error!(guardrail_id = %identifier, error = %e, "Error in applyGuardrail");
+        }
     }
     result
 }

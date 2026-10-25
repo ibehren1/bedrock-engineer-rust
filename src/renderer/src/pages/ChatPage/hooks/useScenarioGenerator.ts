@@ -140,7 +140,7 @@ export const useScenarioGenerator = () => {
     promptTemplate,
     undefined,
     undefined,
-    { enableHistory: false }
+    { enableHistory: false, usageFeature: 'agent-editor' }
   )
 
   const generateScenarios = async (name: string, description: string, systemPrompt: string) => {

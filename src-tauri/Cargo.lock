@@ -134,6 +134,7 @@ dependencies = [
  "background",
  "base64 0.22.1",
  "bedrock",
+ "chrono",
  "common",
  "dirs 6.0.0",
  "docker",
@@ -166,6 +167,7 @@ dependencies = [
  "tokio",
  "tools",
  "tracing",
+ "usage",
  "webkit2gtk",
  "webview2-com",
  "windows",
@@ -4183,6 +4185,7 @@ dependencies = [
  "candle-transformers",
  "chrono",
  "common",
+ "dirs 6.0.0",
  "dom_query",
  "dom_smoothie",
  "futures-util",
@@ -8439,6 +8442,20 @@ dependencies = [
  "regex",
  "serde",
  "url",
+]
+
+[[package]]
+name = "usage"
+version = "2026.930.0"
+dependencies = [
+ "bedrock",
+ "chrono",
+ "models",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tracing",
 ]
 
 [[package]]

@@ -92,12 +92,19 @@ pub fn shape_call_tool_result(result: &Value) -> Value {
 }
 
 /// Environment for a stdio server: the configured `env`, overridden by the app's own environment
-/// (the TS spreads `process.env` after `env`), with `PATH` taken from the app.
-pub fn stdio_environment(env: Option<&IndexMap<String, String>>) -> Vec<(String, String)> {
+/// (the TS spreads `process.env` after `env`), with `PATH` taken from the app. The `forced` keys
+/// (filled in from the app's AWS settings, see [`crate::env_placeholders`]) keep their configured
+/// value.
+pub fn stdio_environment(
+    env: Option<&IndexMap<String, String>>,
+    forced: &[String],
+) -> Vec<(String, String)> {
     let process: Vec<(String, String)> = std::env::vars().collect();
     let mut out: IndexMap<String, String> = env.cloned().unwrap_or_default();
     for (k, v) in process {
-        out.insert(k, v);
+        if !forced.contains(&k) {
+            out.insert(k, v);
+        }
     }
     out.insert("PATH".into(), std::env::var("PATH").unwrap_or_default());
     out.into_iter().collect()
@@ -142,17 +149,18 @@ impl McpClient {
         Ok(Self { service, tools })
     }
 
-    /// `MCPClient.fromCommand`: spawn a stdio server.
+    /// `MCPClient.fromCommand`: spawn a stdio server. `forced` as in [`stdio_environment`].
     pub async fn from_command(
         command: &str,
         args: &[String],
         env: Option<&IndexMap<String, String>>,
+        forced: &[String],
     ) -> Result<Self> {
         let resolved = resolve_command(command);
         if resolved != command {
             tracing::info!(category = "mcp", resolved = %resolved, original = %command, "Using resolved command path");
         }
-        let environment = stdio_environment(env);
+        let environment = stdio_environment(env, forced);
         if cfg!(windows) {
             // `cmd /c` below always starts, so a missing command would only show up as a closed
             // connection; report it as Node's cross-spawn does.
@@ -326,8 +334,25 @@ mod tests {
         let mut env = IndexMap::new();
         env.insert("MCP_TEST_ONLY_VAR".to_string(), "configured".to_string());
         env.insert("PATH".to_string(), "/nope".to_string());
-        let out: HashMap<String, String> = stdio_environment(Some(&env)).into_iter().collect();
+        let out: HashMap<String, String> =
+            stdio_environment(Some(&env), &[]).into_iter().collect();
         assert_eq!(out["MCP_TEST_ONLY_VAR"], "configured");
         assert_eq!(out["PATH"], std::env::var("PATH").unwrap_or_default());
+    }
+
+    #[test]
+    fn forced_keys_beat_the_app_environment() {
+        // A forced entry must not be replaced by the app's own value (HOME on Unix, USERPROFILE on
+        // Windows; both are set in any test environment).
+        let key = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
+        let mut env = IndexMap::new();
+        env.insert(key.to_string(), "/configured".to_string());
+        let out: HashMap<String, String> = stdio_environment(Some(&env), &[key.to_string()])
+            .into_iter()
+            .collect();
+        assert_eq!(out[key], "/configured");
+        let out: HashMap<String, String> =
+            stdio_environment(Some(&env), &[]).into_iter().collect();
+        assert_eq!(out[key], std::env::var(key).unwrap());
     }
 }

@@ -185,6 +185,12 @@ pub fn init(data: &mut Map<String, Value>, env: &Env) {
 
     missing(data, "appFontSans", json!("inter"));
     missing(data, "appFontMono", json!("jetbrains"));
+    // Accounting page: no budget until the user sets one; alerts at 80% and 100%.
+    missing(
+        data,
+        "usageBudget",
+        json!({ "monthlyUsd": null, "alertAt": [0.8, 1.0] }),
+    );
 }
 
 /// `if (!value)` in TS.
@@ -257,6 +263,7 @@ mod tests {
                 "appTheme",
                 "appFontSans",
                 "appFontMono",
+                "usageBudget",
             ]
         );
         assert_eq!(m["projectPath"], json!("/Users/me"));

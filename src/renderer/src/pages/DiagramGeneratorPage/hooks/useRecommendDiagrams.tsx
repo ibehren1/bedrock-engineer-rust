@@ -209,6 +209,7 @@ The value property should contain a detailed description of what to create. This
         modelId: getLightProcessingModelId(llm, lightProcessingModel),
         system: [{ text: systemPrompt }],
         messages: [{ role: 'user', content: [{ text: diagramXml }] }],
+        usageContext: { feature: 'diagram' },
         inferenceConfig: {
           maxTokens: 4096,
           temperature: 0.5

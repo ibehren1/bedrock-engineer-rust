@@ -38,7 +38,8 @@ the renderer needs to change.
    `background-agent:task-skipped`. (Electron's `context-menu-command` is gone: the Copy/Paste
    context menu is native, see `context_menu_popup`.) New pushes without an Electron ancestor: `store-changed`,
    `workspace-files-changed`, `camera:capture-request` and the `knowledge:*` events (each
-   described with its section below), `memory-changed` (payload `MemoryItem[]`, the whole list) and `open-settings` (no
+   described with its section below), `memory-changed` (payload `MemoryItem[]`, the whole list), `usage-changed`
+   (no payload; see "Usage ledger") and `open-settings` (no
    payload; the macOS app menu's Settings… item, sent to the `main` window only, which
    `appWindow.onOpenSettings` turns into a visit to the Settings page). Pub/sub messages for
    channel `c` are emitted as the event `pubsubEventName(c)` = `pubsub:` + `c` with every
@@ -213,6 +214,30 @@ Commands marked "(params object as-is)" take the params object's keys as their a
   and the addMemory / updateMemory / removeMemory tools share it; after every successful write
   Rust emits `memory-changed` with the full list to every window. The tools return
   `{ name, success: true, result: { item }, message }` with the added / updated / removed item.
+- **Usage ledger** (`commands/usage.rs`, logic in `crates/usage`): every billable Bedrock call
+  is reported to `bedrock::usage`'s process-wide sink, which the app points at the ledger,
+  `<userData>/usage/usage.db` (SQLite, one row per call, kept forever). That covers
+  Converse / ConverseStream (wherever they come from: the renderer's chat streams, the agent
+  engine for background agents and sub-agents, structured output, image recognition), Titan /
+  Cohere embeddings (Cohere's tokens are estimated from text length), Claude image recognition
+  over InvokeModel, image generation (per image), Nova Reel (per second; MULTI_SHOT_MANUAL bills
+  6 s a shot), Bedrock Agents (tokens summed per foundation model from the traces), ApplyGuardrail
+  (text units per policy, as `guardrail:<policy>`), Amazon Translate (per character; cache hits
+  are free) and Knowledge Base Retrieve / RetrieveAndGenerate and InvokeFlow (counted only: no
+  usage is reported). Each row is priced with the model catalog when it is written (`cost_usd` is
+  null when there is no price) and keeps the rates it used: a model's `pricingRules` adjust the
+  catalog rate for the profile prefix the request used and for prompts over its long-context
+  threshold. Requests through an application inference profile ARN are priced as the model the
+  profile copies (looked up once per profile with `GetInferenceProfile`, or learned from the
+  profile list). The renderer labels its calls with `usageContext: { feature,
+  agentId?, sessionId? }` on the `converse_stream` / `converse` `request` and on
+  `get_structured_output`'s `request`; it is never sent to Bedrock. The writer thread batches
+  queued events and emits `usage-changed` once per batch. Main window only, like `knowledge_*`.
+  On the first launch with the ledger, the usage chat history already holds
+  (`metadata.converseMetadata.usage` on assistant messages) is imported in the background, up to
+  the moment live recording began (`meta.live_since`), as `source = 'backfill'` rows; repeat
+  runs skip rows already imported. On every open, rows still without a price are priced if the
+  catalog now knows their model (retired models are priced from `RETIRED_MODEL_PRICING`).
 - **Local knowledgebases** (`commands/knowledge.rs`, logic in `crates/knowledge`):
   `<userData>/knowledgebases/<agentId>/<kbId>.db`, one SQLite file each (sqlite-vec + FTS5), the
   on-device model in `knowledgebases/.models/`. Ingestion runs as background jobs (one at a time
@@ -463,6 +488,15 @@ Notes on the file commands (`src-tauri/app/src/commands/{file,agent_files}.rs`):
 | `api.knowledge.downloadLocalModel` | `knowledge_download_local_model` | resolves when done (progress: `knowledge:model-download`) |
 | `api.knowledge.deleteLocalModel` | `knowledge_delete_local_model` | also cancels a download in progress |
 | `api.knowledge.onProgress` / `onChanged` / `onModelDownload` | events `knowledge:progress`, `knowledge:changed`, `knowledge:model-download` | `KnowledgeJob` / `{ agentId, kbId }` / `{ state, received, total, file, error? }` |
+| `api.usage.summary` | `usage_summary` | `{ query: { from, to, modelId?, feature? }, groupBy: 'day' \| 'month' \| 'model' \| 'feature' \| 'service' }` → `UsageSummaryRow[]` (inclusive local days `YYYY-MM-DD`; ordered by key; main window only, like every `usage_*` command) |
+| `api.usage.breakdown` | `usage_breakdown` | `{ query, by, then }` → `UsageBreakdownRow[]` (`{ key, subKey, subLabel, calls, costUsd }` per (`by`, `then`) pair; ordered by `by`, then cost) |
+| `api.usage.months` | `usage_months` | → `YYYY-MM[]` with recorded usage, newest first |
+| `api.usage.info` | `usage_info` | → `{ liveSince, historyImported }` (`liveSince`: Unix ms; earlier rows were imported from chat history) |
+| `api.usage.sessionCosts` | `session_usage_costs` | `{ sessions: [{ sessionId, fromTs?, toTs? }] }` → `[{ sessionId, calls, costUsd }]` in order (`fromTs` exclusive, `toTs` inclusive, Unix ms). Not `usage_`-prefixed on purpose: every full-UI window may call it (chat history, task history window) |
+| `api.usage.budgetStatus` | `usage_budget_status` | → `{ month, spentUsd, budgetUsd, fraction, projectedUsd, overBudget }` for the current local month against the store key `usageBudget` (`{ monthlyUsd, alertAt }`); also sends any budget notification now due. The same check runs after every batch of recorded usage; each threshold notifies once per month (remembered in the ledger) |
+| `api.usage.exportCsv` | `usage_export_csv` | `{ query, fileName? }` → the saved path, or `null` if the save dialog (opened in Downloads) is canceled; every matching call, oldest first |
+| `api.usage.events` | `usage_events` | `{ query, limit?, offset? }` → `UsageEventRow[]`, newest first (`limit` defaults to 100, at most 1000) |
+| `api.usage.onChanged` | event `usage-changed` | no payload; fires after newly recorded usage is written |
 | `api.chatAttachments.list` | `chat_attachments_list` | `{ sessionId }` |
 | `api.chatAttachments.withFiles` | `chat_attachments_with_files` | `{ sessionIds }` |
 | `api.chatAttachments.add` | `chat_attachments_add` | `{ sessionId, files: [{ name, bytes: number[] }] }` |
@@ -473,7 +507,9 @@ Notes on the file commands (`src-tauri/app/src/commands/{file,agent_files}.rs`):
 | `api.chatAttachments.rename` | `chat_attachments_rename` | `{ sessionId }` |
 | `api.chatAttachments.buildContext` | `chat_attachments_build_context` | `{ sessionId }` |
 | `api.chatAttachments.openFolder` | `chat_attachments_open_folder` | `{ sessionId }` |
-| `api.help.prepareUserGuide` | `help_prepare_user_guide` | `{ sessionId }` |
+| `api.help.prepareUserGuide` | `help_prepare_user_guide` | `{ sessionId }` (attaches the whole guide; the renderer no longer calls it) |
+| `api.help.userGuide` | `help_user_guide` | → the user guide's Markdown (repository copy in dev, bundled `docs/USER_GUIDE.md` otherwise) |
+| `api.help.search` | `help_search` | `{ query, topK? }` → `{ mode: 'hybrid' \| 'keyword', hits: [{ headingPath, text, score }] }` from the guide's shipped knowledge base (`docs/help-kb.db`, copied to `knowledgebases/helpAgent/user-guide.db` when its guide hash changes). Hybrid when the on-device model is installed, keyword-only otherwise; both offline |
 | `api.screen.listAvailableWindows` | `screen_list_available_windows` | — |
 | `api.camera.saveCapturedImage` | `camera_save_captured_image` | `{ request }` |
 | `api.camera.showPreviewWindow` | `camera_show_preview_window` | `{ options }` |

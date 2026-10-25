@@ -8,6 +8,7 @@
 //! - [`adapter`]: the `mcp` tool adapter (routing a tool use to the agent's servers).
 //! - [`registry`]: the official MCP Registry search and config builders.
 //! - [`schemas`], [`utils`], [`command_resolver`]: config validation and helpers.
+//! - [`env_placeholders`]: `{{awsRegion}}` / `{{awsProfile}}` in a stdio server's `env`.
 //!
 //! MCP tool names are passed through unchanged (no prefix); the legacy `mcp_` prefix is stripped
 //! (see `common::tool_names`).
@@ -15,6 +16,7 @@
 pub mod adapter;
 pub mod client;
 pub mod command_resolver;
+pub mod env_placeholders;
 pub mod manager;
 pub mod registry;
 pub mod schemas;

@@ -86,12 +86,49 @@ pub async fn list_application_inference_profiles(
     }
     .await;
     match result {
-        Ok(profiles) => profiles,
+        Ok(profiles) => {
+            profiles.iter().for_each(remember);
+            profiles
+        }
         Err(e) => {
             tracing::error!(error = %e, "Failed to fetch inference profiles list");
             Vec::new()
         }
     }
+}
+
+/// Application inference profile ARN -> the foundation model it copies, learned from every
+/// list / get in this process, so recorded usage can be priced by model.
+static PROFILE_MODELS: std::sync::LazyLock<
+    std::sync::Mutex<std::collections::HashMap<String, String>>,
+> = std::sync::LazyLock::new(Default::default);
+
+/// Whether `model_id` is an application inference profile ARN.
+pub fn is_application_profile(model_id: &str) -> bool {
+    model_id.starts_with("arn:") && model_id.contains(":application-inference-profile/")
+}
+
+fn remember(profile: &ApplicationInferenceProfile) {
+    let model = extract_model_id_from_arn(&profile.model_source.copy_from);
+    if model != "unknown" {
+        if let Ok(mut m) = PROFILE_MODELS.lock() {
+            m.insert(profile.inference_profile_arn.clone(), model.to_string());
+        }
+    }
+}
+
+/// The foundation model behind an application inference profile: from the cache, else one
+/// `GetInferenceProfile` call (remembered). `None` if it can't be found.
+pub async fn resolve_profile_model(
+    configs: &dyn SdkConfigSource,
+    aws: &AwsSettings,
+    arn: &str,
+) -> Option<String> {
+    if let Some(m) = PROFILE_MODELS.lock().ok().and_then(|m| m.get(arn).cloned()) {
+        return Some(m);
+    }
+    get_application_inference_profile(configs, aws, arn).await?;
+    PROFILE_MODELS.lock().ok().and_then(|m| m.get(arn).cloned())
 }
 
 /// `getApplicationInferenceProfile(arn)`; `None` when missing or on any failure.
@@ -113,7 +150,7 @@ pub async fn get_application_inference_profile(
             tracing::warn!(inference_profile_arn, "Inference profile not found");
             return Ok(None);
         }
-        Ok(Some(ApplicationInferenceProfile {
+        let profile = ApplicationInferenceProfile {
             inference_profile_arn: p.inference_profile_arn.clone(),
             inference_profile_name: p.inference_profile_name.clone(),
             description: p.description.clone(),
@@ -124,7 +161,9 @@ pub async fn get_application_inference_profile(
                 copy_from: copy_from(Some(&p.models)),
             },
             profile_type: p.r#type.as_str().to_string(),
-        }))
+        };
+        remember(&profile);
+        Ok(Some(profile))
     }
     .await;
     result.unwrap_or_else(|e| {

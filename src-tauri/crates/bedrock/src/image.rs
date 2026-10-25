@@ -8,6 +8,7 @@
 use crate::error::{Error, Result};
 use crate::sdk::SdkConfigSource;
 use crate::settings::AwsSettings;
+use crate::usage::{self, UnitKind, UsageService};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 
@@ -165,6 +166,16 @@ pub async fn generate_image(
         parse_image_response(out.body.as_ref())
     }
     .await;
+    if let Ok(generated) = &result {
+        usage::record_units(
+            UsageService::Image,
+            &req.model_id,
+            &aws.region,
+            "tool:generateImage",
+            UnitKind::Images,
+            generated.images.len() as f64,
+        );
+    }
     result.map_err(|e| {
         tracing::error!(error = %e, "Error generating image");
         match e.service_name() {

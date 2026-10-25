@@ -273,6 +273,22 @@ impl KbStore {
         &self.path
     }
 
+    /// A value stored with [`KbStore::set_extra`] (keys outside the store's own settings).
+    pub fn extra(&self, key: &str) -> Result<Option<String>> {
+        Self::meta_value(&self.lock(), key)
+    }
+
+    pub fn set_extra(&self, key: &str, value: &str) -> Result<()> {
+        self.lock()
+            .execute(
+                "INSERT INTO meta(key, value) VALUES (?1, ?2)
+                 ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                [key, value],
+            )
+            .map_err(err)?;
+        Ok(())
+    }
+
     fn meta_value(c: &Connection, key: &str) -> Result<Option<String>> {
         c.query_row("SELECT value FROM meta WHERE key = ?1", [key], |r| r.get(0))
             .optional()

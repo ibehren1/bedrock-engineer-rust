@@ -7,6 +7,7 @@ import type {
   ToolConfiguration
 } from '@aws-sdk/client-bedrock-runtime'
 import { supportsStreamingWithToolUse } from '@common/models/models'
+import type { UsageContext } from '@/types/usage'
 import { call, tauriConverse, tauriConverseStream, withAbort } from './tauriBridge'
 
 export type StreamChatCompletionProps = {
@@ -14,6 +15,8 @@ export type StreamChatCompletionProps = {
   system: { text: string }[] | undefined
   messages: Message[]
   toolConfig?: ToolConfiguration
+  /** What the call is for, recorded with its usage for the Accounting page. */
+  usageContext?: UsageContext
 }
 
 // These invoke Rust commands (contract: docs/port/BRIDGE.md, "Converse").
@@ -92,6 +95,8 @@ type ConverseProps = {
    * Used by lightweight calls such as title generation.
    */
   disableThinking?: boolean
+  /** What the call is for, recorded with its usage for the Accounting page. */
+  usageContext?: UsageContext
 }
 
 export async function converse(props: ConverseProps, abortSignal?: AbortSignal) {
@@ -136,6 +141,8 @@ export async function getStructuredOutput<T>(params: {
     description?: string
   }
   inferenceConfig?: InferenceConfiguration
+  /** Defaults to the `structured` feature. */
+  usageContext?: UsageContext
 }): Promise<T> {
   try {
     return await call<T>('getStructuredOutput', 'get_structured_output', { request: params })

@@ -1,5 +1,9 @@
 #!/bin/sh
-# pre-commit: stamp package.json with the version of the commit being created.
+# pre-commit:
+# 1. When docs/USER_GUIDE.md is part of the commit, rebuild docs/help-kb.db (the guide's
+#    knowledge base that ships with the app, embedded with the on-device model) and stage it,
+#    so the guide and its index never drift apart. CI fails on a stale index too.
+# 2. Stamp package.json with the version of the commit being created.
 #
 # The version is git-derived (see scripts/compute-version.sh). In --pending
 # mode it accounts for the fact that this commit does not exist yet, so the
@@ -15,6 +19,23 @@
 set -e
 
 repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+
+# Branches without the builder (older history) skip this step.
+builder="$repo_root/src-tauri/crates/knowledge/src/bin/build_help_kb.rs"
+if [ -f "$builder" ] && git diff --cached --name-only | grep -qx 'docs/USER_GUIDE.md'; then
+  if ! git diff --quiet -- docs/USER_GUIDE.md; then
+    echo "pre-commit: docs/USER_GUIDE.md has unstaged changes; stage them (the help index is built" >&2
+    echo "            from the working copy) or stash them, then commit again." >&2
+    exit 1
+  fi
+  echo "pre-commit: docs/USER_GUIDE.md changed, rebuilding docs/help-kb.db …"
+  if ! (cd "$repo_root/src-tauri" && cargo run --release -q -p knowledge --bin build-help-kb); then
+    echo "pre-commit: building docs/help-kb.db failed; fix it or run 'make help-kb', then commit again." >&2
+    exit 1
+  fi
+  git add "$repo_root/docs/help-kb.db"
+fi
+
 compute="$repo_root/scripts/compute-version.sh"
 [ -x "$compute" ] || exit 0
 

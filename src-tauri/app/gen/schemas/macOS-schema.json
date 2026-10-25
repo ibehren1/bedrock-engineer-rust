@@ -345,16 +345,16 @@
       "description": "Permission identifier",
       "oneOf": [
         {
-          "description": "Every app command (commands::handler()) except the main-window-only ones.\n#### This permission set includes:\n\n- `allow-store-get`\n- `allow-store-set`\n- `allow-store-delete`\n- `allow-store-all`\n- `allow-store-flush-done`\n- `allow-logger-log`\n- `allow-chat-history-snapshot`\n- `allow-chat-history-create-session`\n- `allow-chat-history-add-message`\n- `allow-chat-history-get-session`\n- `allow-chat-history-update-session-title`\n- `allow-chat-history-delete-session`\n- `allow-chat-history-delete-sessions`\n- `allow-chat-history-delete-all-sessions`\n- `allow-chat-history-get-recent-sessions`\n- `allow-chat-history-get-all-session-metadata`\n- `allow-chat-history-set-active-session`\n- `allow-chat-history-get-active-session-id`\n- `allow-chat-history-update-message-content`\n- `allow-chat-history-delete-message`\n- `allow-chat-history-set-use-memory-items`\n- `allow-chat-history-add-touched-files`\n- `allow-workspace-files-list`\n- `allow-workspace-files-read-text`\n- `allow-workspace-files-write-text`\n- `allow-workspace-files-open`\n- `allow-workspace-files-reveal`\n- `allow-workspace-files-exists`\n- `allow-workspace-files-watch`\n- `allow-workspace-files-unwatch`\n- `allow-memory-list`\n- `allow-memory-add`\n- `allow-memory-update`\n- `allow-memory-delete`\n- `allow-open-file`\n- `allow-open-directory`\n- `allow-get-local-image`\n- `allow-read-project-ignore`\n- `allow-write-project-ignore`\n- `allow-save-chat-to-markdown`\n- `allow-save-chat-to-docx`\n- `allow-save-chat-to-pdf`\n- `allow-file-read-shared-agents`\n- `allow-file-read-directory-agents`\n- `allow-save-shared-agent`\n- `allow-delete-shared-agent`\n- `allow-export-agent-yaml`\n- `allow-import-agent-file`\n- `allow-load-organization-agents`\n- `allow-save-agent-to-organization`\n- `allow-converse-stream`\n- `allow-converse`\n- `allow-converse-cancel`\n- `allow-retrieve-and-generate`\n- `allow-list-models`\n- `allow-list-agent-tags`\n- `allow-get-structured-output`\n- `allow-get-website-recommendations`\n- `allow-bedrock-apply-guardrail`\n- `allow-bedrock-list-application-inference-profiles`\n- `allow-bedrock-translate-text`\n- `allow-bedrock-translate-batch`\n- `allow-bedrock-get-translation-cache`\n- `allow-bedrock-clear-translation-cache`\n- `allow-bedrock-get-translation-cache-stats`\n- `allow-bedrock-get-model-max-tokens`\n- `allow-bedrock-generate-image`\n- `allow-bedrock-recognize-image`\n- `allow-bedrock-retrieve`\n- `allow-bedrock-invoke-agent`\n- `allow-bedrock-invoke-flow`\n- `allow-bedrock-generate-video`\n- `allow-bedrock-start-video-generation`\n- `allow-bedrock-check-video-status`\n- `allow-bedrock-download-video`\n- `allow-bedrock-execute-tool`\n- `allow-tools-execute`\n- `allow-tools-get-tool-specs`\n- `allow-chat-attachments-list`\n- `allow-chat-attachments-with-files`\n- `allow-chat-attachments-add`\n- `allow-chat-attachments-add-from-picker`\n- `allow-chat-attachments-remove`\n- `allow-chat-attachments-remove-all`\n- `allow-chat-attachments-remove-every-folder`\n- `allow-chat-attachments-rename`\n- `allow-chat-attachments-build-context`\n- `allow-chat-attachments-open-folder`\n- `allow-help-prepare-user-guide`\n- `allow-todo-init`\n- `allow-todo-update`\n- `allow-get-todo-list`\n- `allow-delete-todo-list`\n- `allow-get-recent-todos`\n- `allow-get-all-todo-metadata`\n- `allow-set-active-todo-list`\n- `allow-get-active-todo-list-id`\n- `allow-mcp-init`\n- `allow-mcp-get-tools`\n- `allow-mcp-execute-tool`\n- `allow-mcp-test-connection`\n- `allow-mcp-test-all-connections`\n- `allow-mcp-search-registry`\n- `allow-mcp-cleanup`\n- `allow-sub-agent-invoke`\n- `allow-convert-agent-to-strands`\n- `allow-screen-list-available-windows`\n- `allow-screen-capture`\n- `allow-screen-check-permissions`\n- `allow-camera-save-captured-image`\n- `allow-camera-show-preview-window`\n- `allow-camera-hide-preview-window`\n- `allow-camera-close-preview-window`\n- `allow-camera-update-preview-settings`\n- `allow-camera-get-preview-status`\n- `allow-camera-capture-response`\n- `allow-window-open-task-history`\n- `allow-window-open-file-viewer`\n- `allow-context-menu-popup`\n- `allow-app-menu-action`\n- `allow-background-agent-chat`\n- `allow-background-agent-create-session`\n- `allow-background-agent-delete-session`\n- `allow-background-agent-list-sessions`\n- `allow-background-agent-get-session-history`\n- `allow-background-agent-get-session-stats`\n- `allow-background-agent-get-all-sessions-metadata`\n- `allow-background-agent-get-sessions-by-project`\n- `allow-background-agent-get-sessions-by-agent`\n- `allow-background-agent-schedule-task`\n- `allow-background-agent-update-task`\n- `allow-background-agent-cancel-task`\n- `allow-background-agent-toggle-task`\n- `allow-background-agent-list-tasks`\n- `allow-background-agent-get-task`\n- `allow-background-agent-get-task-execution-history`\n- `allow-background-agent-execute-task-manually`\n- `allow-background-agent-get-scheduler-stats`\n- `allow-background-agent-continue-session`\n- `allow-background-agent-get-task-system-prompt`\n- `allow-background-agent-task-notification`\n- `allow-pubsub-subscribe`\n- `allow-pubsub-unsubscribe`\n- `allow-pubsub-publish`\n- `allow-pubsub-stats`\n- `allow-check-docker-availability`\n- `allow-docker-sandbox-availability`\n- `allow-docker-sandbox-create`\n- `allow-docker-sandbox-status`\n- `allow-docker-sandbox-start`\n- `allow-docker-sandbox-stop`\n- `allow-docker-sandbox-remove`\n- `allow-docker-sandbox-rename`\n- `allow-docker-sandbox-logs`\n- `allow-docker-sandbox-exec`\n- `allow-docker-sandbox-send-input`\n- `allow-docker-sandbox-has-pid`\n- `allow-docker-sandbox-list`\n- `allow-docker-sandbox-open-folder`\n- `allow-docker-sandbox-open-port`\n- `allow-docker-sandbox-insights`\n- `allow-docker-sandbox-compose`\n- `allow-docker-sandbox-activity`\n- `allow-docker-sandbox-terminal-capability`\n- `allow-docker-sandbox-terminal-open`\n- `allow-docker-sandbox-terminal-attach`\n- `allow-docker-sandbox-terminal-input`\n- `allow-docker-sandbox-terminal-resize`\n- `allow-docker-sandbox-terminal-backlog`\n- `allow-docker-sandbox-terminal-close`",
+          "description": "Every app command (commands::handler()) except the main-window-only ones.\n#### This permission set includes:\n\n- `allow-store-get`\n- `allow-store-set`\n- `allow-store-delete`\n- `allow-store-all`\n- `allow-store-flush-done`\n- `allow-logger-log`\n- `allow-chat-history-snapshot`\n- `allow-chat-history-create-session`\n- `allow-chat-history-add-message`\n- `allow-chat-history-get-session`\n- `allow-chat-history-update-session-title`\n- `allow-chat-history-delete-session`\n- `allow-chat-history-delete-sessions`\n- `allow-chat-history-delete-all-sessions`\n- `allow-chat-history-get-recent-sessions`\n- `allow-chat-history-get-all-session-metadata`\n- `allow-chat-history-set-active-session`\n- `allow-chat-history-get-active-session-id`\n- `allow-chat-history-update-message-content`\n- `allow-chat-history-delete-message`\n- `allow-chat-history-set-use-memory-items`\n- `allow-chat-history-add-touched-files`\n- `allow-workspace-files-list`\n- `allow-workspace-files-read-text`\n- `allow-workspace-files-write-text`\n- `allow-workspace-files-open`\n- `allow-workspace-files-reveal`\n- `allow-workspace-files-exists`\n- `allow-workspace-files-watch`\n- `allow-workspace-files-unwatch`\n- `allow-memory-list`\n- `allow-memory-add`\n- `allow-memory-update`\n- `allow-memory-delete`\n- `allow-open-file`\n- `allow-open-directory`\n- `allow-get-local-image`\n- `allow-read-project-ignore`\n- `allow-write-project-ignore`\n- `allow-save-chat-to-markdown`\n- `allow-save-chat-to-docx`\n- `allow-save-chat-to-pdf`\n- `allow-file-read-shared-agents`\n- `allow-file-read-directory-agents`\n- `allow-save-shared-agent`\n- `allow-delete-shared-agent`\n- `allow-export-agent-yaml`\n- `allow-import-agent-file`\n- `allow-load-organization-agents`\n- `allow-save-agent-to-organization`\n- `allow-converse-stream`\n- `allow-converse`\n- `allow-converse-cancel`\n- `allow-retrieve-and-generate`\n- `allow-list-models`\n- `allow-list-agent-tags`\n- `allow-get-structured-output`\n- `allow-get-website-recommendations`\n- `allow-bedrock-apply-guardrail`\n- `allow-bedrock-list-application-inference-profiles`\n- `allow-bedrock-translate-text`\n- `allow-bedrock-translate-batch`\n- `allow-bedrock-get-translation-cache`\n- `allow-bedrock-clear-translation-cache`\n- `allow-bedrock-get-translation-cache-stats`\n- `allow-bedrock-get-model-max-tokens`\n- `allow-bedrock-generate-image`\n- `allow-bedrock-recognize-image`\n- `allow-bedrock-retrieve`\n- `allow-bedrock-invoke-agent`\n- `allow-bedrock-invoke-flow`\n- `allow-bedrock-generate-video`\n- `allow-bedrock-start-video-generation`\n- `allow-bedrock-check-video-status`\n- `allow-bedrock-download-video`\n- `allow-bedrock-execute-tool`\n- `allow-tools-execute`\n- `allow-tools-get-tool-specs`\n- `allow-chat-attachments-list`\n- `allow-chat-attachments-with-files`\n- `allow-chat-attachments-add`\n- `allow-chat-attachments-add-from-picker`\n- `allow-chat-attachments-remove`\n- `allow-chat-attachments-remove-all`\n- `allow-chat-attachments-remove-every-folder`\n- `allow-chat-attachments-rename`\n- `allow-chat-attachments-build-context`\n- `allow-chat-attachments-open-folder`\n- `allow-help-prepare-user-guide`\n- `allow-help-user-guide`\n- `allow-help-search`\n- `allow-todo-init`\n- `allow-todo-update`\n- `allow-get-todo-list`\n- `allow-delete-todo-list`\n- `allow-get-recent-todos`\n- `allow-get-all-todo-metadata`\n- `allow-set-active-todo-list`\n- `allow-get-active-todo-list-id`\n- `allow-mcp-init`\n- `allow-mcp-get-tools`\n- `allow-mcp-execute-tool`\n- `allow-mcp-test-connection`\n- `allow-mcp-test-all-connections`\n- `allow-mcp-search-registry`\n- `allow-mcp-cleanup`\n- `allow-sub-agent-invoke`\n- `allow-convert-agent-to-strands`\n- `allow-screen-list-available-windows`\n- `allow-screen-capture`\n- `allow-screen-check-permissions`\n- `allow-camera-save-captured-image`\n- `allow-camera-show-preview-window`\n- `allow-camera-hide-preview-window`\n- `allow-camera-close-preview-window`\n- `allow-camera-update-preview-settings`\n- `allow-camera-get-preview-status`\n- `allow-camera-capture-response`\n- `allow-window-open-task-history`\n- `allow-window-open-file-viewer`\n- `allow-context-menu-popup`\n- `allow-app-menu-action`\n- `allow-background-agent-chat`\n- `allow-background-agent-create-session`\n- `allow-background-agent-delete-session`\n- `allow-background-agent-list-sessions`\n- `allow-background-agent-get-session-history`\n- `allow-background-agent-get-session-stats`\n- `allow-background-agent-get-all-sessions-metadata`\n- `allow-background-agent-get-sessions-by-project`\n- `allow-background-agent-get-sessions-by-agent`\n- `allow-background-agent-schedule-task`\n- `allow-background-agent-update-task`\n- `allow-background-agent-cancel-task`\n- `allow-background-agent-toggle-task`\n- `allow-background-agent-list-tasks`\n- `allow-background-agent-get-task`\n- `allow-background-agent-get-task-execution-history`\n- `allow-background-agent-execute-task-manually`\n- `allow-background-agent-get-scheduler-stats`\n- `allow-background-agent-continue-session`\n- `allow-background-agent-get-task-system-prompt`\n- `allow-background-agent-task-notification`\n- `allow-pubsub-subscribe`\n- `allow-pubsub-unsubscribe`\n- `allow-pubsub-publish`\n- `allow-pubsub-stats`\n- `allow-check-docker-availability`\n- `allow-docker-sandbox-availability`\n- `allow-docker-sandbox-create`\n- `allow-docker-sandbox-status`\n- `allow-docker-sandbox-start`\n- `allow-docker-sandbox-stop`\n- `allow-docker-sandbox-remove`\n- `allow-docker-sandbox-rename`\n- `allow-docker-sandbox-logs`\n- `allow-docker-sandbox-exec`\n- `allow-docker-sandbox-send-input`\n- `allow-docker-sandbox-has-pid`\n- `allow-docker-sandbox-list`\n- `allow-docker-sandbox-open-folder`\n- `allow-docker-sandbox-open-port`\n- `allow-docker-sandbox-insights`\n- `allow-docker-sandbox-compose`\n- `allow-docker-sandbox-activity`\n- `allow-docker-sandbox-terminal-capability`\n- `allow-docker-sandbox-terminal-open`\n- `allow-docker-sandbox-terminal-attach`\n- `allow-docker-sandbox-terminal-input`\n- `allow-docker-sandbox-terminal-resize`\n- `allow-docker-sandbox-terminal-backlog`\n- `allow-docker-sandbox-terminal-close`\n- `allow-session-usage-costs`",
           "type": "string",
           "const": "app-commands",
-          "markdownDescription": "Every app command (commands::handler()) except the main-window-only ones.\n#### This permission set includes:\n\n- `allow-store-get`\n- `allow-store-set`\n- `allow-store-delete`\n- `allow-store-all`\n- `allow-store-flush-done`\n- `allow-logger-log`\n- `allow-chat-history-snapshot`\n- `allow-chat-history-create-session`\n- `allow-chat-history-add-message`\n- `allow-chat-history-get-session`\n- `allow-chat-history-update-session-title`\n- `allow-chat-history-delete-session`\n- `allow-chat-history-delete-sessions`\n- `allow-chat-history-delete-all-sessions`\n- `allow-chat-history-get-recent-sessions`\n- `allow-chat-history-get-all-session-metadata`\n- `allow-chat-history-set-active-session`\n- `allow-chat-history-get-active-session-id`\n- `allow-chat-history-update-message-content`\n- `allow-chat-history-delete-message`\n- `allow-chat-history-set-use-memory-items`\n- `allow-chat-history-add-touched-files`\n- `allow-workspace-files-list`\n- `allow-workspace-files-read-text`\n- `allow-workspace-files-write-text`\n- `allow-workspace-files-open`\n- `allow-workspace-files-reveal`\n- `allow-workspace-files-exists`\n- `allow-workspace-files-watch`\n- `allow-workspace-files-unwatch`\n- `allow-memory-list`\n- `allow-memory-add`\n- `allow-memory-update`\n- `allow-memory-delete`\n- `allow-open-file`\n- `allow-open-directory`\n- `allow-get-local-image`\n- `allow-read-project-ignore`\n- `allow-write-project-ignore`\n- `allow-save-chat-to-markdown`\n- `allow-save-chat-to-docx`\n- `allow-save-chat-to-pdf`\n- `allow-file-read-shared-agents`\n- `allow-file-read-directory-agents`\n- `allow-save-shared-agent`\n- `allow-delete-shared-agent`\n- `allow-export-agent-yaml`\n- `allow-import-agent-file`\n- `allow-load-organization-agents`\n- `allow-save-agent-to-organization`\n- `allow-converse-stream`\n- `allow-converse`\n- `allow-converse-cancel`\n- `allow-retrieve-and-generate`\n- `allow-list-models`\n- `allow-list-agent-tags`\n- `allow-get-structured-output`\n- `allow-get-website-recommendations`\n- `allow-bedrock-apply-guardrail`\n- `allow-bedrock-list-application-inference-profiles`\n- `allow-bedrock-translate-text`\n- `allow-bedrock-translate-batch`\n- `allow-bedrock-get-translation-cache`\n- `allow-bedrock-clear-translation-cache`\n- `allow-bedrock-get-translation-cache-stats`\n- `allow-bedrock-get-model-max-tokens`\n- `allow-bedrock-generate-image`\n- `allow-bedrock-recognize-image`\n- `allow-bedrock-retrieve`\n- `allow-bedrock-invoke-agent`\n- `allow-bedrock-invoke-flow`\n- `allow-bedrock-generate-video`\n- `allow-bedrock-start-video-generation`\n- `allow-bedrock-check-video-status`\n- `allow-bedrock-download-video`\n- `allow-bedrock-execute-tool`\n- `allow-tools-execute`\n- `allow-tools-get-tool-specs`\n- `allow-chat-attachments-list`\n- `allow-chat-attachments-with-files`\n- `allow-chat-attachments-add`\n- `allow-chat-attachments-add-from-picker`\n- `allow-chat-attachments-remove`\n- `allow-chat-attachments-remove-all`\n- `allow-chat-attachments-remove-every-folder`\n- `allow-chat-attachments-rename`\n- `allow-chat-attachments-build-context`\n- `allow-chat-attachments-open-folder`\n- `allow-help-prepare-user-guide`\n- `allow-todo-init`\n- `allow-todo-update`\n- `allow-get-todo-list`\n- `allow-delete-todo-list`\n- `allow-get-recent-todos`\n- `allow-get-all-todo-metadata`\n- `allow-set-active-todo-list`\n- `allow-get-active-todo-list-id`\n- `allow-mcp-init`\n- `allow-mcp-get-tools`\n- `allow-mcp-execute-tool`\n- `allow-mcp-test-connection`\n- `allow-mcp-test-all-connections`\n- `allow-mcp-search-registry`\n- `allow-mcp-cleanup`\n- `allow-sub-agent-invoke`\n- `allow-convert-agent-to-strands`\n- `allow-screen-list-available-windows`\n- `allow-screen-capture`\n- `allow-screen-check-permissions`\n- `allow-camera-save-captured-image`\n- `allow-camera-show-preview-window`\n- `allow-camera-hide-preview-window`\n- `allow-camera-close-preview-window`\n- `allow-camera-update-preview-settings`\n- `allow-camera-get-preview-status`\n- `allow-camera-capture-response`\n- `allow-window-open-task-history`\n- `allow-window-open-file-viewer`\n- `allow-context-menu-popup`\n- `allow-app-menu-action`\n- `allow-background-agent-chat`\n- `allow-background-agent-create-session`\n- `allow-background-agent-delete-session`\n- `allow-background-agent-list-sessions`\n- `allow-background-agent-get-session-history`\n- `allow-background-agent-get-session-stats`\n- `allow-background-agent-get-all-sessions-metadata`\n- `allow-background-agent-get-sessions-by-project`\n- `allow-background-agent-get-sessions-by-agent`\n- `allow-background-agent-schedule-task`\n- `allow-background-agent-update-task`\n- `allow-background-agent-cancel-task`\n- `allow-background-agent-toggle-task`\n- `allow-background-agent-list-tasks`\n- `allow-background-agent-get-task`\n- `allow-background-agent-get-task-execution-history`\n- `allow-background-agent-execute-task-manually`\n- `allow-background-agent-get-scheduler-stats`\n- `allow-background-agent-continue-session`\n- `allow-background-agent-get-task-system-prompt`\n- `allow-background-agent-task-notification`\n- `allow-pubsub-subscribe`\n- `allow-pubsub-unsubscribe`\n- `allow-pubsub-publish`\n- `allow-pubsub-stats`\n- `allow-check-docker-availability`\n- `allow-docker-sandbox-availability`\n- `allow-docker-sandbox-create`\n- `allow-docker-sandbox-status`\n- `allow-docker-sandbox-start`\n- `allow-docker-sandbox-stop`\n- `allow-docker-sandbox-remove`\n- `allow-docker-sandbox-rename`\n- `allow-docker-sandbox-logs`\n- `allow-docker-sandbox-exec`\n- `allow-docker-sandbox-send-input`\n- `allow-docker-sandbox-has-pid`\n- `allow-docker-sandbox-list`\n- `allow-docker-sandbox-open-folder`\n- `allow-docker-sandbox-open-port`\n- `allow-docker-sandbox-insights`\n- `allow-docker-sandbox-compose`\n- `allow-docker-sandbox-activity`\n- `allow-docker-sandbox-terminal-capability`\n- `allow-docker-sandbox-terminal-open`\n- `allow-docker-sandbox-terminal-attach`\n- `allow-docker-sandbox-terminal-input`\n- `allow-docker-sandbox-terminal-resize`\n- `allow-docker-sandbox-terminal-backlog`\n- `allow-docker-sandbox-terminal-close`"
+          "markdownDescription": "Every app command (commands::handler()) except the main-window-only ones.\n#### This permission set includes:\n\n- `allow-store-get`\n- `allow-store-set`\n- `allow-store-delete`\n- `allow-store-all`\n- `allow-store-flush-done`\n- `allow-logger-log`\n- `allow-chat-history-snapshot`\n- `allow-chat-history-create-session`\n- `allow-chat-history-add-message`\n- `allow-chat-history-get-session`\n- `allow-chat-history-update-session-title`\n- `allow-chat-history-delete-session`\n- `allow-chat-history-delete-sessions`\n- `allow-chat-history-delete-all-sessions`\n- `allow-chat-history-get-recent-sessions`\n- `allow-chat-history-get-all-session-metadata`\n- `allow-chat-history-set-active-session`\n- `allow-chat-history-get-active-session-id`\n- `allow-chat-history-update-message-content`\n- `allow-chat-history-delete-message`\n- `allow-chat-history-set-use-memory-items`\n- `allow-chat-history-add-touched-files`\n- `allow-workspace-files-list`\n- `allow-workspace-files-read-text`\n- `allow-workspace-files-write-text`\n- `allow-workspace-files-open`\n- `allow-workspace-files-reveal`\n- `allow-workspace-files-exists`\n- `allow-workspace-files-watch`\n- `allow-workspace-files-unwatch`\n- `allow-memory-list`\n- `allow-memory-add`\n- `allow-memory-update`\n- `allow-memory-delete`\n- `allow-open-file`\n- `allow-open-directory`\n- `allow-get-local-image`\n- `allow-read-project-ignore`\n- `allow-write-project-ignore`\n- `allow-save-chat-to-markdown`\n- `allow-save-chat-to-docx`\n- `allow-save-chat-to-pdf`\n- `allow-file-read-shared-agents`\n- `allow-file-read-directory-agents`\n- `allow-save-shared-agent`\n- `allow-delete-shared-agent`\n- `allow-export-agent-yaml`\n- `allow-import-agent-file`\n- `allow-load-organization-agents`\n- `allow-save-agent-to-organization`\n- `allow-converse-stream`\n- `allow-converse`\n- `allow-converse-cancel`\n- `allow-retrieve-and-generate`\n- `allow-list-models`\n- `allow-list-agent-tags`\n- `allow-get-structured-output`\n- `allow-get-website-recommendations`\n- `allow-bedrock-apply-guardrail`\n- `allow-bedrock-list-application-inference-profiles`\n- `allow-bedrock-translate-text`\n- `allow-bedrock-translate-batch`\n- `allow-bedrock-get-translation-cache`\n- `allow-bedrock-clear-translation-cache`\n- `allow-bedrock-get-translation-cache-stats`\n- `allow-bedrock-get-model-max-tokens`\n- `allow-bedrock-generate-image`\n- `allow-bedrock-recognize-image`\n- `allow-bedrock-retrieve`\n- `allow-bedrock-invoke-agent`\n- `allow-bedrock-invoke-flow`\n- `allow-bedrock-generate-video`\n- `allow-bedrock-start-video-generation`\n- `allow-bedrock-check-video-status`\n- `allow-bedrock-download-video`\n- `allow-bedrock-execute-tool`\n- `allow-tools-execute`\n- `allow-tools-get-tool-specs`\n- `allow-chat-attachments-list`\n- `allow-chat-attachments-with-files`\n- `allow-chat-attachments-add`\n- `allow-chat-attachments-add-from-picker`\n- `allow-chat-attachments-remove`\n- `allow-chat-attachments-remove-all`\n- `allow-chat-attachments-remove-every-folder`\n- `allow-chat-attachments-rename`\n- `allow-chat-attachments-build-context`\n- `allow-chat-attachments-open-folder`\n- `allow-help-prepare-user-guide`\n- `allow-help-user-guide`\n- `allow-help-search`\n- `allow-todo-init`\n- `allow-todo-update`\n- `allow-get-todo-list`\n- `allow-delete-todo-list`\n- `allow-get-recent-todos`\n- `allow-get-all-todo-metadata`\n- `allow-set-active-todo-list`\n- `allow-get-active-todo-list-id`\n- `allow-mcp-init`\n- `allow-mcp-get-tools`\n- `allow-mcp-execute-tool`\n- `allow-mcp-test-connection`\n- `allow-mcp-test-all-connections`\n- `allow-mcp-search-registry`\n- `allow-mcp-cleanup`\n- `allow-sub-agent-invoke`\n- `allow-convert-agent-to-strands`\n- `allow-screen-list-available-windows`\n- `allow-screen-capture`\n- `allow-screen-check-permissions`\n- `allow-camera-save-captured-image`\n- `allow-camera-show-preview-window`\n- `allow-camera-hide-preview-window`\n- `allow-camera-close-preview-window`\n- `allow-camera-update-preview-settings`\n- `allow-camera-get-preview-status`\n- `allow-camera-capture-response`\n- `allow-window-open-task-history`\n- `allow-window-open-file-viewer`\n- `allow-context-menu-popup`\n- `allow-app-menu-action`\n- `allow-background-agent-chat`\n- `allow-background-agent-create-session`\n- `allow-background-agent-delete-session`\n- `allow-background-agent-list-sessions`\n- `allow-background-agent-get-session-history`\n- `allow-background-agent-get-session-stats`\n- `allow-background-agent-get-all-sessions-metadata`\n- `allow-background-agent-get-sessions-by-project`\n- `allow-background-agent-get-sessions-by-agent`\n- `allow-background-agent-schedule-task`\n- `allow-background-agent-update-task`\n- `allow-background-agent-cancel-task`\n- `allow-background-agent-toggle-task`\n- `allow-background-agent-list-tasks`\n- `allow-background-agent-get-task`\n- `allow-background-agent-get-task-execution-history`\n- `allow-background-agent-execute-task-manually`\n- `allow-background-agent-get-scheduler-stats`\n- `allow-background-agent-continue-session`\n- `allow-background-agent-get-task-system-prompt`\n- `allow-background-agent-task-notification`\n- `allow-pubsub-subscribe`\n- `allow-pubsub-unsubscribe`\n- `allow-pubsub-publish`\n- `allow-pubsub-stats`\n- `allow-check-docker-availability`\n- `allow-docker-sandbox-availability`\n- `allow-docker-sandbox-create`\n- `allow-docker-sandbox-status`\n- `allow-docker-sandbox-start`\n- `allow-docker-sandbox-stop`\n- `allow-docker-sandbox-remove`\n- `allow-docker-sandbox-rename`\n- `allow-docker-sandbox-logs`\n- `allow-docker-sandbox-exec`\n- `allow-docker-sandbox-send-input`\n- `allow-docker-sandbox-has-pid`\n- `allow-docker-sandbox-list`\n- `allow-docker-sandbox-open-folder`\n- `allow-docker-sandbox-open-port`\n- `allow-docker-sandbox-insights`\n- `allow-docker-sandbox-compose`\n- `allow-docker-sandbox-activity`\n- `allow-docker-sandbox-terminal-capability`\n- `allow-docker-sandbox-terminal-open`\n- `allow-docker-sandbox-terminal-attach`\n- `allow-docker-sandbox-terminal-input`\n- `allow-docker-sandbox-terminal-resize`\n- `allow-docker-sandbox-terminal-backlog`\n- `allow-docker-sandbox-terminal-close`\n- `allow-session-usage-costs`"
         },
         {
-          "description": "App commands only the main window may call (local terminals).\n#### This permission set includes:\n\n- `allow-local-terminal-open`\n- `allow-local-terminal-attach`\n- `allow-local-terminal-input`\n- `allow-local-terminal-resize`\n- `allow-local-terminal-close`\n- `allow-local-terminal-list`\n- `allow-local-terminal-backlog`\n- `allow-app-update-current-version`\n- `allow-app-update-check`\n- `allow-app-update-download`\n- `allow-app-update-restart`\n- `allow-knowledge-list`\n- `allow-knowledge-create`\n- `allow-knowledge-update`\n- `allow-knowledge-delete`\n- `allow-knowledge-delete-agent`\n- `allow-knowledge-copy-agent`\n- `allow-knowledge-rebuild`\n- `allow-knowledge-list-sources`\n- `allow-knowledge-pick-files`\n- `allow-knowledge-add-url`\n- `allow-knowledge-update-source-options`\n- `allow-knowledge-resync-source`\n- `allow-knowledge-remove-source`\n- `allow-knowledge-jobs`\n- `allow-knowledge-cancel-job`\n- `allow-knowledge-search`\n- `allow-knowledge-stats`\n- `allow-knowledge-optimize`\n- `allow-knowledge-storage-overview`\n- `allow-knowledge-purge-orphans`\n- `allow-knowledge-local-model-status`\n- `allow-knowledge-download-local-model`\n- `allow-knowledge-delete-local-model`",
+          "description": "App commands only the main window may call (local terminals).\n#### This permission set includes:\n\n- `allow-local-terminal-open`\n- `allow-local-terminal-attach`\n- `allow-local-terminal-input`\n- `allow-local-terminal-resize`\n- `allow-local-terminal-close`\n- `allow-local-terminal-list`\n- `allow-local-terminal-backlog`\n- `allow-app-update-current-version`\n- `allow-app-update-check`\n- `allow-app-update-download`\n- `allow-app-update-restart`\n- `allow-knowledge-list`\n- `allow-knowledge-create`\n- `allow-knowledge-update`\n- `allow-knowledge-delete`\n- `allow-knowledge-delete-agent`\n- `allow-knowledge-copy-agent`\n- `allow-knowledge-rebuild`\n- `allow-knowledge-list-sources`\n- `allow-knowledge-pick-files`\n- `allow-knowledge-add-url`\n- `allow-knowledge-update-source-options`\n- `allow-knowledge-resync-source`\n- `allow-knowledge-remove-source`\n- `allow-knowledge-jobs`\n- `allow-knowledge-cancel-job`\n- `allow-knowledge-search`\n- `allow-knowledge-stats`\n- `allow-knowledge-optimize`\n- `allow-knowledge-storage-overview`\n- `allow-knowledge-purge-orphans`\n- `allow-knowledge-local-model-status`\n- `allow-knowledge-download-local-model`\n- `allow-knowledge-delete-local-model`\n- `allow-usage-summary`\n- `allow-usage-breakdown`\n- `allow-usage-months`\n- `allow-usage-events`\n- `allow-usage-info`\n- `allow-usage-export-csv`\n- `allow-usage-budget-status`",
           "type": "string",
           "const": "main-window-commands",
-          "markdownDescription": "App commands only the main window may call (local terminals).\n#### This permission set includes:\n\n- `allow-local-terminal-open`\n- `allow-local-terminal-attach`\n- `allow-local-terminal-input`\n- `allow-local-terminal-resize`\n- `allow-local-terminal-close`\n- `allow-local-terminal-list`\n- `allow-local-terminal-backlog`\n- `allow-app-update-current-version`\n- `allow-app-update-check`\n- `allow-app-update-download`\n- `allow-app-update-restart`\n- `allow-knowledge-list`\n- `allow-knowledge-create`\n- `allow-knowledge-update`\n- `allow-knowledge-delete`\n- `allow-knowledge-delete-agent`\n- `allow-knowledge-copy-agent`\n- `allow-knowledge-rebuild`\n- `allow-knowledge-list-sources`\n- `allow-knowledge-pick-files`\n- `allow-knowledge-add-url`\n- `allow-knowledge-update-source-options`\n- `allow-knowledge-resync-source`\n- `allow-knowledge-remove-source`\n- `allow-knowledge-jobs`\n- `allow-knowledge-cancel-job`\n- `allow-knowledge-search`\n- `allow-knowledge-stats`\n- `allow-knowledge-optimize`\n- `allow-knowledge-storage-overview`\n- `allow-knowledge-purge-orphans`\n- `allow-knowledge-local-model-status`\n- `allow-knowledge-download-local-model`\n- `allow-knowledge-delete-local-model`"
+          "markdownDescription": "App commands only the main window may call (local terminals).\n#### This permission set includes:\n\n- `allow-local-terminal-open`\n- `allow-local-terminal-attach`\n- `allow-local-terminal-input`\n- `allow-local-terminal-resize`\n- `allow-local-terminal-close`\n- `allow-local-terminal-list`\n- `allow-local-terminal-backlog`\n- `allow-app-update-current-version`\n- `allow-app-update-check`\n- `allow-app-update-download`\n- `allow-app-update-restart`\n- `allow-knowledge-list`\n- `allow-knowledge-create`\n- `allow-knowledge-update`\n- `allow-knowledge-delete`\n- `allow-knowledge-delete-agent`\n- `allow-knowledge-copy-agent`\n- `allow-knowledge-rebuild`\n- `allow-knowledge-list-sources`\n- `allow-knowledge-pick-files`\n- `allow-knowledge-add-url`\n- `allow-knowledge-update-source-options`\n- `allow-knowledge-resync-source`\n- `allow-knowledge-remove-source`\n- `allow-knowledge-jobs`\n- `allow-knowledge-cancel-job`\n- `allow-knowledge-search`\n- `allow-knowledge-stats`\n- `allow-knowledge-optimize`\n- `allow-knowledge-storage-overview`\n- `allow-knowledge-purge-orphans`\n- `allow-knowledge-local-model-status`\n- `allow-knowledge-download-local-model`\n- `allow-knowledge-delete-local-model`\n- `allow-usage-summary`\n- `allow-usage-breakdown`\n- `allow-usage-months`\n- `allow-usage-events`\n- `allow-usage-info`\n- `allow-usage-export-csv`\n- `allow-usage-budget-status`"
         },
         {
           "description": "Enables the app_menu_action command without any pre-configured scope.",
@@ -1077,16 +1077,22 @@
           "markdownDescription": "Enables the help_prepare_user_guide command without any pre-configured scope."
         },
         {
+          "description": "Enables the help_search command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-help-search",
+          "markdownDescription": "Enables the help_search command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the help_user_guide command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-help-user-guide",
+          "markdownDescription": "Enables the help_user_guide command without any pre-configured scope."
+        },
+        {
           "description": "Enables the import_agent_file command without any pre-configured scope.",
           "type": "string",
           "const": "allow-import-agent-file",
           "markdownDescription": "Enables the import_agent_file command without any pre-configured scope."
-        },
-        {
-          "description": "Enables the knowledge_add_files command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-knowledge-add-files",
-          "markdownDescription": "Enables the knowledge_add_files command without any pre-configured scope."
         },
         {
           "description": "Enables the knowledge_add_url command without any pre-configured scope.",
@@ -1213,12 +1219,6 @@
           "type": "string",
           "const": "allow-knowledge-storage-overview",
           "markdownDescription": "Enables the knowledge_storage_overview command without any pre-configured scope."
-        },
-        {
-          "description": "Enables the knowledge_supported_extensions command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-knowledge-supported-extensions",
-          "markdownDescription": "Enables the knowledge_supported_extensions command without any pre-configured scope."
         },
         {
           "description": "Enables the knowledge_update command without any pre-configured scope.",
@@ -1461,6 +1461,12 @@
           "markdownDescription": "Enables the screen_list_available_windows command without any pre-configured scope."
         },
         {
+          "description": "Enables the session_usage_costs command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-session-usage-costs",
+          "markdownDescription": "Enables the session_usage_costs command without any pre-configured scope."
+        },
+        {
           "description": "Enables the set_active_todo_list command without any pre-configured scope.",
           "type": "string",
           "const": "allow-set-active-todo-list",
@@ -1525,6 +1531,48 @@
           "type": "string",
           "const": "allow-tools-get-tool-specs",
           "markdownDescription": "Enables the tools_get_tool_specs command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the usage_breakdown command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-usage-breakdown",
+          "markdownDescription": "Enables the usage_breakdown command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the usage_budget_status command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-usage-budget-status",
+          "markdownDescription": "Enables the usage_budget_status command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the usage_events command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-usage-events",
+          "markdownDescription": "Enables the usage_events command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the usage_export_csv command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-usage-export-csv",
+          "markdownDescription": "Enables the usage_export_csv command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the usage_info command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-usage-info",
+          "markdownDescription": "Enables the usage_info command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the usage_months command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-usage-months",
+          "markdownDescription": "Enables the usage_months command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the usage_summary command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-usage-summary",
+          "markdownDescription": "Enables the usage_summary command without any pre-configured scope."
         },
         {
           "description": "Enables the window_open_file_viewer command without any pre-configured scope.",
@@ -2313,16 +2361,22 @@
           "markdownDescription": "Denies the help_prepare_user_guide command without any pre-configured scope."
         },
         {
+          "description": "Denies the help_search command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-help-search",
+          "markdownDescription": "Denies the help_search command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the help_user_guide command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-help-user-guide",
+          "markdownDescription": "Denies the help_user_guide command without any pre-configured scope."
+        },
+        {
           "description": "Denies the import_agent_file command without any pre-configured scope.",
           "type": "string",
           "const": "deny-import-agent-file",
           "markdownDescription": "Denies the import_agent_file command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the knowledge_add_files command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-knowledge-add-files",
-          "markdownDescription": "Denies the knowledge_add_files command without any pre-configured scope."
         },
         {
           "description": "Denies the knowledge_add_url command without any pre-configured scope.",
@@ -2449,12 +2503,6 @@
           "type": "string",
           "const": "deny-knowledge-storage-overview",
           "markdownDescription": "Denies the knowledge_storage_overview command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the knowledge_supported_extensions command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-knowledge-supported-extensions",
-          "markdownDescription": "Denies the knowledge_supported_extensions command without any pre-configured scope."
         },
         {
           "description": "Denies the knowledge_update command without any pre-configured scope.",
@@ -2697,6 +2745,12 @@
           "markdownDescription": "Denies the screen_list_available_windows command without any pre-configured scope."
         },
         {
+          "description": "Denies the session_usage_costs command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-session-usage-costs",
+          "markdownDescription": "Denies the session_usage_costs command without any pre-configured scope."
+        },
+        {
           "description": "Denies the set_active_todo_list command without any pre-configured scope.",
           "type": "string",
           "const": "deny-set-active-todo-list",
@@ -2761,6 +2815,48 @@
           "type": "string",
           "const": "deny-tools-get-tool-specs",
           "markdownDescription": "Denies the tools_get_tool_specs command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the usage_breakdown command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-usage-breakdown",
+          "markdownDescription": "Denies the usage_breakdown command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the usage_budget_status command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-usage-budget-status",
+          "markdownDescription": "Denies the usage_budget_status command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the usage_events command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-usage-events",
+          "markdownDescription": "Denies the usage_events command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the usage_export_csv command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-usage-export-csv",
+          "markdownDescription": "Denies the usage_export_csv command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the usage_info command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-usage-info",
+          "markdownDescription": "Denies the usage_info command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the usage_months command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-usage-months",
+          "markdownDescription": "Denies the usage_months command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the usage_summary command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-usage-summary",
+          "markdownDescription": "Denies the usage_summary command without any pre-configured scope."
         },
         {
           "description": "Denies the window_open_file_viewer command without any pre-configured scope.",

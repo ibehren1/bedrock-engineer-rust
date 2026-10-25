@@ -4,6 +4,7 @@
 use crate::error::{Error, Result};
 use crate::sdk::SdkConfigSource;
 use crate::settings::AwsSettings;
+use crate::usage::{self, UsageContext, UsageEvent, UsageService};
 use serde_json::{json, Value};
 use std::time::Duration;
 
@@ -68,9 +69,51 @@ fn floats(v: &Value) -> Option<Vec<f32>> {
 }
 
 pub fn parse_titan_response(body: &[u8]) -> Result<Vec<f32>> {
+    Ok(parse_titan_response_counted(body)?.0)
+}
+
+/// The vector and `inputTextTokenCount` (absent in old responses).
+pub fn parse_titan_response_counted(body: &[u8]) -> Result<(Vec<f32>, Option<u64>)> {
     let v: Value = serde_json::from_slice(body)
         .map_err(|e| Error::plain(format!("Invalid embedding response: {e}")))?;
-    floats(&v["embedding"]).ok_or_else(|| Error::plain("Embedding response has no embedding"))
+    let vector = floats(&v["embedding"])
+        .ok_or_else(|| Error::plain("Embedding response has no embedding"))?;
+    Ok((vector, v["inputTextTokenCount"].as_u64()))
+}
+
+/// A rough token count for providers that don't report one (about 4 characters a token).
+pub fn estimate_tokens(texts: &[String]) -> u64 {
+    texts
+        .iter()
+        .map(|t| t.chars().count().div_ceil(4) as u64)
+        .sum()
+}
+
+fn record_usage(
+    client: &aws_sdk_bedrockruntime::Client,
+    model_id: &str,
+    input: InputType,
+    tokens: u64,
+    estimated: bool,
+) {
+    let region = client
+        .config()
+        .region()
+        .map(|r| r.to_string())
+        .unwrap_or_default();
+    let feature = match input {
+        InputType::Document => "kb-ingest",
+        InputType::Query => "kb-search",
+    };
+    let mut event = UsageEvent::new(
+        UsageService::Embed,
+        model_id,
+        &region,
+        UsageContext::feature(feature),
+    );
+    event.input_tokens = tokens;
+    event.estimated = estimated;
+    usage::record(event);
 }
 
 /// `{"embeddings": {"float": [[..]]}}` (with `embedding_types`) or `{"embeddings": [[..]]}`.
@@ -137,15 +180,27 @@ pub async fn embedding_client(
     Ok(aws_sdk_bedrockruntime::Client::new(&conf))
 }
 
-/// Embed one text with Titan Text Embeddings V2 (normalized).
+/// Embed one text with Titan Text Embeddings V2 (normalized). `input` only labels the usage.
 pub async fn embed_titan(
     client: &aws_sdk_bedrockruntime::Client,
     model_id: &str,
     text: &str,
+    input: InputType,
     dimensions: usize,
 ) -> Result<Vec<f32>> {
     let body = invoke(client, model_id, &titan_request(text, dimensions)).await?;
-    parse_titan_response(&body)
+    let (vector, tokens) = parse_titan_response_counted(&body)?;
+    match tokens {
+        Some(n) => record_usage(client, model_id, input, n, false),
+        None => record_usage(
+            client,
+            model_id,
+            input,
+            estimate_tokens(&[text.to_string()]),
+            true,
+        ),
+    }
+    Ok(vector)
 }
 
 /// Embed up to [`COHERE_MAX_BATCH`] texts with Cohere Embed.
@@ -163,6 +218,8 @@ pub async fn embed_cohere(
     )
     .await?;
     let out = parse_cohere_response(&body)?;
+    // Cohere's response body carries no token count.
+    record_usage(client, model_id, input, estimate_tokens(texts), true);
     if out.len() != texts.len() {
         return Err(Error::plain(format!(
             "Expected {} embeddings, got {}",
@@ -216,6 +273,13 @@ mod tests {
             vec![0.5, 1.0]
         );
         assert!(parse_titan_response(b"{}").is_err());
+        assert_eq!(
+            parse_titan_response_counted(br#"{"embedding":[1],"inputTextTokenCount":7}"#)
+                .unwrap()
+                .1,
+            Some(7)
+        );
+        assert_eq!(estimate_tokens(&["abcde".into(), "ab".into()]), 3);
         assert_eq!(
             parse_cohere_response(br#"{"embeddings":{"float":[[1],[2]]}}"#).unwrap(),
             vec![vec![1.0], vec![2.0]]

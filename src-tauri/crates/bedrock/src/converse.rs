@@ -9,6 +9,7 @@ use crate::request::{prepare_request, ConverseRequest, PreparedRequest, SdkReque
 use crate::retry::{random_index, with_retries, FailoverConfig, RetryPolicy};
 use crate::settings::{AwsSettings, ConverseSettings};
 use crate::stream_event::{converse_output_to_json, stream_event_to_json};
+use crate::usage::{self, UsageEvent, UsageService};
 use aws_sdk_bedrockruntime::operation::RequestId;
 use aws_sdk_bedrockruntime::types::ConverseStreamOutput;
 use aws_sdk_bedrockruntime::Client;
@@ -152,8 +153,11 @@ impl ConverseService {
     ) -> Result<Value> {
         let parts = Arc::new(self.prepare(settings, req).to_sdk()?);
         let failover = self.failover(settings, &req.model_id);
-        with_retries(self.retry, &failover, cancel, random_index, |region| {
+        let used_region = UsedRegion::new(settings);
+        let profile_model = profile_model(settings, &req.model_id).await;
+        let out = with_retries(self.retry, &failover, cancel, random_index, |region| {
             let aws = Self::aws_for(settings, region);
+            used_region.set(&aws.region);
             let parts = parts.clone();
             let clients = self.clients.clone();
             async move {
@@ -161,7 +165,12 @@ impl ConverseService {
                 send_converse(&client, &parts).await
             }
         })
-        .await
+        .await?;
+        let mut event = usage_event(req, &used_region.get(), profile_model);
+        if usage::fill_from_converse(&mut event, &out) {
+            usage::record(event);
+        }
+        Ok(out)
     }
 
     /// Streaming Converse. Each event is passed to `on_event` as the exact JSON object the Express
@@ -190,8 +199,11 @@ impl ConverseService {
             "Sending stream converse request"
         );
         let failover = self.failover(settings, &req.model_id);
+        let used_region = UsedRegion::new(settings);
+        let profile_model = profile_model(settings, &req.model_id).await;
         let receiver = with_retries(self.retry, &failover, cancel, random_index, |region| {
             let aws = Self::aws_for(settings, region);
+            used_region.set(&aws.region);
             let parts = parts.clone();
             let clients = self.clients.clone();
             async move {
@@ -218,8 +230,64 @@ impl ConverseService {
             }
         })
         .await?;
-        pump_events(receiver, cancel, on_event).await
+        // The usage arrives in the final `metadata` event.
+        let region = used_region.get();
+        let mut on_event = on_event;
+        pump_events(receiver, cancel, move |json| {
+            if let Some(metadata) = json.get("metadata") {
+                let mut event = usage_event(req, &region, profile_model.clone());
+                if usage::fill_from_converse(&mut event, metadata) {
+                    usage::record(event);
+                }
+            }
+            on_event(json)
+        })
+        .await
     }
+}
+
+/// The region a request was last sent to (failover may move it off the configured one).
+struct UsedRegion(std::sync::Mutex<String>);
+
+impl UsedRegion {
+    fn new(settings: &ConverseSettings) -> Self {
+        Self(std::sync::Mutex::new(settings.aws.region.clone()))
+    }
+
+    fn set(&self, region: &str) {
+        if let Ok(mut r) = self.0.lock() {
+            region.clone_into(&mut r);
+        }
+    }
+
+    fn get(&self) -> String {
+        self.0.lock().map(|r| r.clone()).unwrap_or_default()
+    }
+}
+
+fn usage_event(req: &ConverseRequest, region: &str, profile_model: Option<String>) -> UsageEvent {
+    let mut event = UsageEvent::new(
+        UsageService::Converse,
+        &req.model_id,
+        region,
+        req.usage_context.clone().unwrap_or_default(),
+    );
+    event.invoked_model_id = profile_model;
+    event
+}
+
+/// For an application inference profile, the model it runs (so its usage can be priced). One
+/// `GetInferenceProfile` per profile per run of the app; `None` for every other model id.
+async fn profile_model(settings: &ConverseSettings, model_id: &str) -> Option<String> {
+    if !crate::inference_profile::is_application_profile(model_id) {
+        return None;
+    }
+    crate::inference_profile::resolve_profile_model(
+        &crate::sdk::DefaultSdkConfig,
+        &settings.aws,
+        model_id,
+    )
+    .await
 }
 
 async fn send_converse(client: &Client, parts: &SdkRequestParts) -> Result<Value> {

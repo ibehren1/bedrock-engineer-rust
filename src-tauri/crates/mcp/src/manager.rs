@@ -5,6 +5,7 @@
 //! managed state. Clients are (re)created only when the server config materially changes.
 
 use crate::client::McpClient;
+use crate::env_placeholders::{expand_server_env, AwsEnvSource, ExpandedServer};
 use crate::schemas::mcp_server_config_schema;
 use crate::utils::infer_connection_type;
 use crate::{Error, Result};
@@ -204,9 +205,11 @@ fn config_data(servers: &[McpServerConfig]) -> Value {
     json!({ "mcpServers": map })
 }
 
-/// Connects to an MCP server according to its config.
+/// Connects to an MCP server according to its config. `forced` as in
+/// [`crate::client::stdio_environment`].
 async fn connect(
     server: &McpServerConfig,
+    forced: &[String],
     http: &reqwest::Client,
     builtin: Option<&Arc<dyn BuiltinServers>>,
 ) -> Result<McpClient> {
@@ -219,7 +222,7 @@ async fn connect(
         ConnectionType::Command => {
             let command = server.command.as_deref().unwrap_or_default();
             let args = server.args.clone().unwrap_or_default();
-            McpClient::from_command(command, &args, server.env.as_ref()).await
+            McpClient::from_command(command, &args, server.env.as_ref(), forced).await
         }
         ConnectionType::Url => {
             McpClient::from_url(
@@ -237,6 +240,7 @@ pub struct McpManager {
     state: Mutex<State>,
     http: reqwest::Client,
     builtin: OnceLock<Arc<dyn BuiltinServers>>,
+    aws_env: OnceLock<Arc<dyn AwsEnvSource>>,
 }
 
 impl Default for McpManager {
@@ -252,6 +256,7 @@ impl McpManager {
             state: Mutex::new(State::default()),
             http,
             builtin: OnceLock::new(),
+            aws_env: OnceLock::new(),
         }
     }
 
@@ -262,9 +267,36 @@ impl McpManager {
         }
     }
 
+    /// Install the source of the app's AWS settings for `{{awsRegion}}` / `{{awsProfile}}` in a
+    /// server's `env` (once, at startup). Without one the placeholders are left as they are.
+    pub fn set_aws_env(&self, source: Arc<dyn AwsEnvSource>) {
+        if self.aws_env.set(source).is_err() {
+            tracing::warn!(category = CATEGORY, "MCP AWS environment source already set");
+        }
+    }
+
+    /// `servers` with their AWS placeholders filled in.
+    fn expand(&self, servers: &[McpServerConfig]) -> Vec<ExpandedServer> {
+        let aws = self.aws_env.get().map(|s| s.aws_env());
+        servers
+            .iter()
+            .map(|server| match &aws {
+                Some(aws) => expand_server_env(server, aws),
+                None => ExpandedServer {
+                    config: server.clone(),
+                    forced: Vec::new(),
+                },
+            })
+            .collect()
+    }
+
     /// `initMcpFromAgentConfig`: (re)connect when the config changed. Connection failures of
     /// individual servers are logged and skipped; an invalid config is an error.
     pub async fn init_from_agent_config(&self, servers: &[McpServerConfig]) -> Result<()> {
+        // The cache compares the filled-in config, so changed AWS settings reconnect.
+        let expanded = self.expand(servers);
+        let servers: Vec<McpServerConfig> = expanded.iter().map(|e| e.config.clone()).collect();
+        let servers = servers.as_slice();
         // Holding the lock for the whole initialization serializes concurrent calls, like the TS
         // `initializationInProgress` promise; waiters re-check for changes afterwards.
         let mut state = self.state.lock().await;
@@ -293,16 +325,17 @@ impl McpManager {
             return Err(Error::Mcp("Invalid MCP server configuration".into()));
         }
 
-        let targets: Vec<&McpServerConfig> = servers
+        let targets: Vec<&ExpandedServer> = expanded
             .iter()
-            .filter(|s| is_command_server(s))
-            .chain(servers.iter().filter(|s| is_url_server(s)))
-            .chain(servers.iter().filter(|s| is_builtin_server(s)))
+            .filter(|s| is_command_server(&s.config))
+            .chain(expanded.iter().filter(|s| is_url_server(&s.config)))
+            .chain(expanded.iter().filter(|s| is_builtin_server(&s.config)))
             .collect();
         let builtin = self.builtin.get();
-        let connections = futures_util::future::join_all(targets.iter().map(|server| async {
+        let connections = futures_util::future::join_all(targets.iter().map(|target| async {
+            let server = &target.config;
             tracing::info!(category = CATEGORY, server = %server.name, "Connecting to MCP server");
-            match connect(server, &self.http, builtin).await {
+            match connect(server, &target.forced, &self.http, builtin).await {
                 Ok(client) => {
                     tracing::info!(category = CATEGORY, server = %server.name, "Successfully connected to MCP server");
                     Some((server.name.clone(), client))
@@ -422,7 +455,14 @@ impl McpManager {
 
     /// `testMcpServerConnection`: connect, list tools, disconnect.
     pub async fn test_connection(&self, server: &McpServerConfig) -> McpTestResult {
-        test_server_connection(server, &self.http, self.builtin.get()).await
+        let expanded = self.expand(std::slice::from_ref(server)).remove(0);
+        test_server_connection(
+            &expanded.config,
+            &expanded.forced,
+            &self.http,
+            self.builtin.get(),
+        )
+        .await
     }
 
     /// `testAllMcpServerConnections`: sequentially, keyed by server name.
@@ -470,11 +510,12 @@ pub async fn test_mcp_server_connection(
     server: &McpServerConfig,
     http: &reqwest::Client,
 ) -> McpTestResult {
-    test_server_connection(server, http, None).await
+    test_server_connection(server, &[], http, None).await
 }
 
 async fn test_server_connection(
     server: &McpServerConfig,
+    forced: &[String],
     http: &reqwest::Client,
     builtin: Option<&Arc<dyn BuiltinServers>>,
 ) -> McpTestResult {
@@ -502,7 +543,7 @@ async fn test_server_connection(
                     "Command and args fields are required for command-type servers",
                 );
             };
-            McpClient::from_command(command, args, server.env.as_ref()).await
+            McpClient::from_command(command, args, server.env.as_ref(), forced).await
         }
         ConnectionType::Url => {
             let Some(url) = server.url.as_deref().filter(|u| !u.is_empty()) else {
@@ -513,7 +554,7 @@ async fn test_server_connection(
             };
             McpClient::from_url(url, server.headers.as_ref(), http.clone()).await
         }
-        ConnectionType::Builtin => connect(server, http, builtin).await,
+        ConnectionType::Builtin => connect(server, forced, http, builtin).await,
     };
 
     match client {

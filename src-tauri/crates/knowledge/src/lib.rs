@@ -6,6 +6,7 @@ pub mod chunk;
 pub mod crawl;
 pub mod embed;
 pub mod extract;
+pub mod help;
 pub mod html;
 pub mod local;
 pub mod mcp_server;

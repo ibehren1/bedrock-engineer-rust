@@ -1,5 +1,11 @@
 // `window.api`, installed by src/renderer/src/lib/tauriBridge.ts. Each method maps to a Tauri
 // command in src-tauri/app/src/commands (table: docs/port/BRIDGE.md).
+/** `help_search`: keyword-only, or hybrid when the on-device embedding model is installed. */
+export type HelpSearchResult = {
+  mode: 'hybrid' | 'keyword'
+  hits: { headingPath: string; text: string; score: number }[]
+}
+
 import type {
   ApplyGuardrailRequest,
   ApplyGuardrailCommandOutput,
@@ -11,6 +17,7 @@ import type { ApplicationInferenceProfile, BedrockSupportRegion } from '../llm'
 import type { IPCChannelDefinitions } from '../ipc'
 import type { ToolResult } from '../tools'
 import type { KnowledgeApi } from '../knowledge'
+import type { UsageApi } from '../usage'
 
 export type API = {
   backgroundAgent: {
@@ -198,6 +205,8 @@ export type API = {
   }
   /** Agents' local knowledgebases (main window only). */
   knowledge: KnowledgeApi
+  /** The usage ledger behind the Accounting page (main window only). */
+  usage: UsageApi
   /** Interactive shells on the user's own machine (the chat page's Terminal tab). */
   localTerminal: {
     open: (sessionId: string, cols: number, rows: number) => Promise<LocalTerminalOpened>
@@ -229,6 +238,10 @@ export type API = {
   }
   help: {
     prepareUserGuide: (sessionId: string) => Promise<any>
+    /** The user guide's Markdown (works offline). */
+    userGuide: () => Promise<string>
+    /** Guide sections matching `query` from its shipped knowledge base (works offline). */
+    search: (query: string, topK?: number) => Promise<HelpSearchResult>
   }
   screen: {
     listAvailableWindows: () => Promise<any>

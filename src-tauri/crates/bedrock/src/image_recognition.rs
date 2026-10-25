@@ -10,6 +10,7 @@ use crate::error::{Error, Result};
 use crate::request::ConverseRequest;
 use crate::sdk::SdkConfigSource;
 use crate::settings::ConverseSettings;
+use crate::usage::{self, UsageContext, UsageEvent, UsageService};
 use base64::Engine;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -184,8 +185,28 @@ pub fn nova_converse_request(
             ]
         })],
         system: Some(vec![json!({ "text": RECOGNITION_SYSTEM_PROMPT })]),
+        usage_context: Some(crate::usage::UsageContext::feature("tool:recognizeImage")),
         ..Default::default()
     }
+}
+
+/// Tokens from a Claude Messages API body (`usage.input_tokens`, snake_case).
+fn record_claude_usage(model_id: &str, region: &str, body: &Value) {
+    let Some(u) = body.get("usage") else {
+        return;
+    };
+    let n = |k: &str| u.get(k).and_then(Value::as_u64).unwrap_or(0);
+    let mut event = UsageEvent::new(
+        UsageService::Converse,
+        model_id,
+        region,
+        UsageContext::feature("tool:recognizeImage"),
+    );
+    event.input_tokens = n("input_tokens");
+    event.output_tokens = n("output_tokens");
+    event.cache_read_tokens = n("cache_read_input_tokens");
+    event.cache_write_tokens = n("cache_creation_input_tokens");
+    usage::record(event);
 }
 
 /// `recognizeImage(props)`: the model's description of the image.
@@ -233,6 +254,7 @@ pub async fn recognize_image(
                     message: e.to_string(),
                     fields: Default::default(),
                 })?;
+            record_claude_usage(model_id, &settings.aws.region, &result);
             claude_response_text(&result)
         }
     }

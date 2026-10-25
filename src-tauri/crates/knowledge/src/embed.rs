@@ -86,7 +86,7 @@ impl Embedder for BedrockEmbedder {
                 let model_id = self.model_id.as_str();
                 let dims = self.dimensions;
                 futures_util::stream::iter(texts.iter().cloned().map(move |t| async move {
-                    bedrock_embed::embed_titan(client, model_id, &t, dims)
+                    bedrock_embed::embed_titan(client, model_id, &t, input, dims)
                         .await
                         .map_err(describe)
                 }))

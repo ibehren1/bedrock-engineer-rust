@@ -28,6 +28,7 @@ import { StepType, TourProvider } from '@reactour/tour'
 import { useTranslation } from 'react-i18next'
 import { ToastService } from './services/ToastService'
 import { useTheme } from './hooks/useTheme'
+import { useBudgetStatus } from './pages/AccountingPage/useBudgetStatus'
 
 const ListItem: React.FC<{
   children: any
@@ -63,6 +64,8 @@ const Layout: React.FC = () => {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { sidebarHiddenItems } = useSetting()
+  // Badge on the Accounting icon while this month is over budget.
+  const budget = useBudgetStatus()
   // Keep <html data-theme> in sync with the appearance setting (and OS changes
   // when 'system' is selected).
   useTheme()
@@ -107,15 +110,30 @@ const Layout: React.FC = () => {
                           : page.name
                       }
                     >
-                      <page.icon className="w-4 h-4" />
+                      {page.href === '/accounting' && budget?.overBudget ? (
+                        <span className="relative block">
+                          <page.icon className="w-4 h-4" />
+                          <span
+                            className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-danger"
+                            aria-label={t('accounting.budget.overBadge')}
+                          />
+                        </span>
+                      ) : (
+                        <page.icon className="w-4 h-4" />
+                      )}
                     </ListItem>
                   )
                 })}
             </ul>
             <ul>
-              {/* Opens a chat with the bundled user guide attached. Not a route: keeping it out
-                  of `routes` leaves the ⌘1..⌘9 (Ctrl+1..9) numbering and the sidebar settings list alone. */}
-              <ListItem href="/chat?help=1" toolTipContent={t('help.sidebarTooltip')}>
+              {/* Opens the user guide (works offline); its "Ask a question" starts the Help chat.
+                  A hidden route, so the ⌘1..⌘9 (Ctrl+1..9) numbering and the sidebar settings list
+                  are unaffected. */}
+              <ListItem
+                href="/help"
+                selected={isRouteActive(location.pathname, '/help')}
+                toolTipContent={t('help.sidebarTooltip')}
+              >
                 <FiHelpCircle className="w-4 h-4" />
               </ListItem>
               <div onClick={() => open('https://github.com/ibehren1/bedrock-engineer-rust')}>

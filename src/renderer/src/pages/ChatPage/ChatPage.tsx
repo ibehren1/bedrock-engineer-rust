@@ -52,7 +52,12 @@ import { DrawioRasterizer, DrawioRasterizerRef } from './utils/DrawioRasterizer'
 import { allModels } from '@common/models/models'
 import { IdentifiableMessage } from '@/types/chat/message'
 import toast from 'react-hot-toast'
-import { HELP_AGENT_ID, HELP_AGENT_SYSTEM_PROMPT, HELP_CHAT_TITLE } from './constants/helpAgent'
+import {
+  HELP_AGENT_ID,
+  HELP_AGENT_SYSTEM_PROMPT,
+  formatGuideExcerpts,
+  HELP_CHAT_TITLE
+} from './constants/helpAgent'
 import { HelpSessionProvider } from './lib/helpSession'
 import { useMemoryItems } from '@renderer/contexts/MemoryContext'
 import { withMemoryPrompt } from '@common/agents/memoryPrompt'
@@ -78,21 +83,12 @@ export default function ChatPage() {
 
   const inputFormRef = useRef<InputFormContainerRef>(null)
 
-  const {
-    deleteMessage,
-    getSession,
-    updateSessionTitle,
-    createSession,
-    sessions,
-    setUseMemoryItems
-  } = useChatHistory()
+  const { deleteMessage, getSession, updateSessionTitle, setUseMemoryItems } = useChatHistory()
   const { getLightModelId } = useLightProcessingModel()
 
   // Help チャット。セッション自身の agentId から判定するので、履歴から開き直しても、
   // アプリを再起動しても Help のままになる。
   const [isHelpSession, setIsHelpSession] = useState(false)
-  // 添付できなかった場合だけ使うユーザーガイド本文（システムプロンプトに載せる）。
-  const [helpGuideText, setHelpGuideText] = useState<string>()
 
   const helpAgent = agents.find((agent) => agent.id === HELP_AGENT_ID)
 
@@ -109,11 +105,25 @@ export default function ChatPage() {
     [systemPrompt, memoryItems, useMemory]
   )
 
-  const activeSystemPrompt = isHelpSession
-    ? helpGuideText
-      ? `${HELP_AGENT_SYSTEM_PROMPT}\n<user_guide>\n${helpGuideText}\n</user_guide>\n`
-      : HELP_AGENT_SYSTEM_PROMPT
-    : chatSystemPrompt
+  const activeSystemPrompt = isHelpSession ? HELP_AGENT_SYSTEM_PROMPT : chatSystemPrompt
+
+  // Each Help question gets the guide sections that match it (and the previous question, so
+  // follow-ups work) from the guide's shipped knowledge base. If that index can't be searched,
+  // the whole guide goes along instead, as Help used to do.
+  const helpPrepareTurn = useCallback(
+    async (input: string, earlier: string[]) => {
+      const query = [earlier[earlier.length - 1], input].filter(Boolean).join('\n')
+      try {
+        const result = await window.api.help.search(query, 6)
+        return formatGuideExcerpts(result.hits)
+      } catch {
+        toast(t('help.excerptsFailed'))
+        const guide = await window.api.help.userGuide()
+        return `<user_guide>\n${guide}\n</user_guide>`
+      }
+    },
+    [t]
+  )
 
   const currentScenarios = (isHelpSession ? helpAgent?.scenarios : currentAgent?.scenarios) || []
 
@@ -130,7 +140,9 @@ export default function ChatPage() {
     clearChat,
     setMessages,
     stopGeneration
-  } = useAgentChat(activeModelId, activeSystemPrompt, activeAgentId)
+  } = useAgentChat(activeModelId, activeSystemPrompt, activeAgentId, undefined, {
+    prepareTurn: isHelpSession ? helpPrepareTurn : undefined
+  })
 
   // The tab showing in each chat (see TabMemory); chats open on Chat.
   const tabMemory = useRef(new TabMemory())
@@ -617,70 +629,13 @@ export default function ChatPage() {
     }
   }, [location.search, agents, setSelectedAgentId])
 
-  // Opening the Help chat from the sidebar (`/chat?help=1`).
-  //
-  // Reuse comes first so repeated clicks continue the same conversation instead of leaving a
-  // trail of half-empty Help chats, each with its own copy of the guide on disk.
-  const helpOpenInFlight = useRef(false)
+  // `/chat?help=1` was the Help entry point; Help now lives on its own page, with the chat in a
+  // panel beside the guide. Help chats already in the history still open here.
   useEffect(() => {
-    if (!new URLSearchParams(location.search).has('help')) return
-    if (helpOpenInFlight.current) return
-    helpOpenInFlight.current = true
-
-    const openHelpChat = async () => {
-      try {
-        let sessionId = currentSessionId
-        const alreadyOnHelp = !!sessionId && getSession(sessionId)?.agentId === HELP_AGENT_ID
-
-        if (!alreadyOnHelp) {
-          // Session metadata hides chats with no messages, so an untouched Help chat can be
-          // missing here. The `alreadyOnHelp` check above covers the case that matters.
-          const previous = sessions
-            .filter((session) => session.agentId === HELP_AGENT_ID)
-            .sort((a, b) => b.updatedAt - a.updatedAt)[0]
-
-          if (previous) {
-            sessionId = previous.id
-          } else {
-            sessionId = await createSession(
-              HELP_AGENT_ID,
-              getLightModelId(),
-              HELP_AGENT_SYSTEM_PROMPT
-            )
-            // Titled before the guide is attached so the attachments folder is named from the
-            // real title on creation. A title that isn't "Chat …" is also never auto-renamed.
-            await updateSessionTitle(sessionId, HELP_CHAT_TITLE)
-          }
-        }
-
-        if (!sessionId) return
-
-        const result = await window.api.help.prepareUserGuide(sessionId)
-        if (result.attached) {
-          setHelpGuideText(undefined)
-        } else {
-          setHelpGuideText(result.text)
-          toast(t('help.guideInPromptNotice'))
-        }
-
-        setIsHelpSession(true)
-        if (sessionId !== currentSessionId) setCurrentSessionId(sessionId)
-        if (result.attached) await attachments.refresh()
-      } catch (error) {
-        toast.error(
-          t('help.guideFailed', {
-            error: error instanceof Error ? error.message : String(error)
-          })
-        )
-      } finally {
-        // Cleared only after the param is gone, so the effect cannot re-enter on the same click.
-        navigate('/chat', { replace: true })
-        helpOpenInFlight.current = false
-      }
+    if (new URLSearchParams(location.search).has('help')) {
+      navigate('/help?ask=1', { replace: true })
     }
-
-    void openHelpChat()
-  }, [location.search])
+  }, [location.search, navigate])
 
   const paneClass = (tab: ChatTab) =>
     `absolute inset-0 ${activeTab === tab ? '' : 'invisible pointer-events-none'}`

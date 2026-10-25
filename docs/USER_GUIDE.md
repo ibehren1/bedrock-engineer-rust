@@ -10,15 +10,15 @@ a technical word is unavoidable, it is explained the first time it appears, and 
 **How to find things fast:** use the [Table of contents](#table-of-contents) for topics, or the
 [Question index](#20-question-index-how-do-i) if you have a specific "how do I…" question.
 
-**Or just ask.** The **Help** button in the bottom-left corner of the app opens a chat with this
-guide already attached, so you can ask your question in your own words instead of hunting for the
-section that answers it. See [Section 23](#23-getting-help-inside-the-app).
+**Or just ask.** The **Help** button in the bottom-left corner of the app opens this guide inside
+the app, with search, and **Ask a question** there lets you ask in your own words instead of hunting
+for the section that answers it. See [Section 23](#23-getting-help-inside-the-app).
 
 > **Note for the AI assistant in this app**
 >
 > This file is written to be read by you as well as by people. If the user asks how the app works,
 > answer from this file instead of guessing — read it with `readFiles` if you have that tool, or use
-> the copy already in your context if it was attached to the conversation, as it is in the Help chat.
+> the sections already in your context (the Help chat receives the ones that match each question).
 > Every section has a stable heading and is written to stand on its own, so you can quote or
 > summarize a single section without needing the rest. Section 20 maps common questions to the
 > section that answers them. If the user's question is about something this guide does not cover, say
@@ -53,6 +53,7 @@ section that answers it. See [Section 23](#23-getting-help-inside-the-app).
 23. [Getting help inside the app](#23-getting-help-inside-the-app)
 24. [Local knowledge bases: letting an agent search your documents](#24-local-knowledge-bases-letting-an-agent-search-your-documents)
 25. [Memory: rules and facts every chat knows](#25-memory-rules-and-facts-every-chat-knows)
+26. [Accounting: what Bedrock is costing you](#26-accounting-what-bedrock-is-costing-you)
 
 ---
 
@@ -163,18 +164,19 @@ Try: _"List the files in my project folder and tell me what this project seems t
 Every screen in the app is reachable from the icon strip down the left edge. The icons have no text
 labels; hover over one to see its name and its keyboard shortcut.
 
-| Icon           | Page                         | What it is for                                                                                     |
-| -------------- | ---------------------------- | -------------------------------------------------------------------------------------------------- |
-| House          | **Home**                     | The starting screen.                                                                               |
-| Speech bubbles | **Chat**                     | The main workspace. Talk to an agent, which uses tools to get things done.                         |
-| Robot          | **My Agents**                | Create, edit, arrange and hide your agents.                                                        |
-| Brain          | **Memory**                   | Rules and facts every chat can use. See [Section 25](#25-memory-rules-and-facts-every-chat-knows). |
-| Book           | **Agent Directory**          | Browse ready-made agents other people have shared, and add them to your own list.                  |
-| Pulse          | **Background Agent**         | Set an agent to run automatically on a schedule.                                                   |
-| Feather        | **Website Generator**        | Describe a web page and watch it get built, with a live preview.                                   |
-| Merging arrows | **Step Functions Generator** | Build an AWS Step Functions workflow from a description.                                           |
-| Layout         | **Diagram Generator**        | Turn a description into an AWS architecture diagram.                                               |
-| Gear           | **Settings**                 | Everything configurable.                                                                           |
+| Icon           | Page                         | What it is for                                                                                                                                      |
+| -------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| House          | **Home**                     | The starting screen.                                                                                                                                |
+| Speech bubbles | **Chat**                     | The main workspace. Talk to an agent, which uses tools to get things done.                                                                          |
+| Robot          | **My Agents**                | Create, edit, arrange and hide your agents.                                                                                                         |
+| Brain          | **Memory**                   | Rules and facts every chat can use. See [Section 25](#25-memory-rules-and-facts-every-chat-knows).                                                  |
+| Book           | **Agent Directory**          | Browse ready-made agents other people have shared, and add them to your own list.                                                                   |
+| Pulse          | **Background Agent**         | Set an agent to run automatically on a schedule.                                                                                                    |
+| Feather        | **Website Generator**        | Describe a web page and watch it get built, with a live preview.                                                                                    |
+| Merging arrows | **Step Functions Generator** | Build an AWS Step Functions workflow from a description.                                                                                            |
+| Layout         | **Diagram Generator**        | Turn a description into an AWS architecture diagram.                                                                                                |
+| Dollar sign    | **Accounting**               | Estimated Bedrock cost by month, day, model, feature and agent, and a monthly budget. See [Section 26](#26-accounting-what-bedrock-is-costing-you). |
+| Gear           | **Settings**                 | Everything configurable.                                                                                                                            |
 
 You can hide any icon you never use: **Settings → General → Sidebar Settings**. Hiding an icon does
 not disable the feature; the page still exists at its address, and its keyboard shortcut still works.
@@ -183,10 +185,10 @@ Settings itself cannot be hidden.
 Two more buttons sit at the **bottom** of the strip, below the gap. These are not pages, and they
 cannot be hidden:
 
-| Icon          | What it does                                                                                                         |
-| ------------- | -------------------------------------------------------------------------------------------------------------------- |
-| Question mark | **Help** — opens a chat that can answer questions about this app. See [Section 23](#23-getting-help-inside-the-app). |
-| GitHub cat    | Opens the project's page on GitHub in your web browser.                                                              |
+| Icon          | What it does                                                                                                                                                  |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Question mark | **Help** — opens this guide, with search, and a chat that answers questions about this app. Works offline. See [Section 23](#23-getting-help-inside-the-app). |
+| GitHub cat    | Opens the project's page on GitHub in your web browser.                                                                                                       |
 
 ### 3.2 Keyboard shortcuts
 
@@ -886,8 +888,9 @@ selected, either as **Markdown** (plain text with `**bold**` style markers) or a
 ### 6.9 Chat history
 
 The panel on the left lists your past conversations, newest first, and is open whenever you go to
-the Chat page. Click one to reopen it — everything is still there. Each row shows the date and the
-number of messages.
+the Chat page. Click one to reopen it — everything is still there. Each row shows the date, the
+number of messages and, once the chat has cost anything, its estimated cost so far
+([Section 26](#26-accounting-what-bedrock-is-costing-you)).
 
 **Hide chat history** collapses the panel to a narrow strip instead of hiding it completely. The strip
 has **Show chat history**, a green **New chat** button, and your most recent chats as one- or
@@ -1783,6 +1786,52 @@ remove the server.
 The built-in **local-knowledgebase** card has its own **Test connection** button, which should report
 three tools.
 
+### 11.4 Using the app's AWS settings in a server
+
+Many AWS MCP servers need AWS credentials. Instead of typing a profile name or keys into the
+server's `env`, use these two placeholders. The app fills them in from **Settings → AWS** each time
+the server starts:
+
+| Value in `env`   | Becomes                                                                  |
+| ---------------- | ------------------------------------------------------------------------ |
+| `{{awsRegion}}`  | The region set in the app                                                |
+| `{{awsProfile}}` | The profile name, when the app signs in with a named profile (see below) |
+
+```json
+"env": {
+  "AWS_PROFILE": "{{awsProfile}}",
+  "AWS_REGION": "{{awsRegion}}"
+}
+```
+
+If the app signs in with an access key instead of a profile, the `AWS_PROFILE` entry is left out
+and the server gets the access key, secret key and session token in its place. Values the
+placeholders produce take priority over any AWS variables already in the app's environment.
+Changing your AWS settings reconnects the servers that use them the next time you send a message.
+
+Only servers whose `env` uses a placeholder get your credentials. No other MCP server is given them.
+
+### 11.5 The AWS Solutions Architect agent
+
+The built-in **AWS Solutions Architect** agent comes with four AWS MCP servers already set up. It
+answers from the official AWS documentation and links each point to the page it came from:
+
+| Server              | What it provides                                                                                         |
+| ------------------- | -------------------------------------------------------------------------------------------------------- |
+| `aws-documentation` | Search, read and get related pages from the AWS documentation                                            |
+| `aws-knowledge`     | AWS's hosted knowledge server: documentation, which Regions offer a service or feature, AWS agent skills |
+| `aws-iac`           | Validate CloudFormation templates, check them for compliance, troubleshoot failed deployments, CDK docs  |
+| `aws-pricing`       | Prices from the AWS Pricing API, for cost estimates                                                      |
+
+The `aws-iac` and `aws-pricing` servers use your AWS settings through the placeholders in
+[Section 11.4](#114-using-the-apps-aws-settings-in-a-server). `aws-iac` only reads and validates, and
+it never deploys anything. The pricing server needs read access to the AWS Pricing API, and the
+IaC server's deployment troubleshooting reads CloudFormation and CloudTrail.
+
+Three of the servers are started with `uvx`, so install [uv](https://docs.astral.sh/uv/) first. The
+first start downloads each server and can take a minute. If a server's tools are missing after
+that, run the connection test on the agent's **MCP Servers** tab.
+
 ---
 
 ## 12. Handing work to another agent with `@`
@@ -1887,8 +1936,8 @@ there was one. Its buttons:
 
 - **Test Execution** runs the task immediately, without waiting for the schedule. Use this to test.
 - **Enable task** / **Disable task**, **Edit Task** and **Delete Task**.
-- **Execution History** opens a separate window with every past run, what it did, and how long it
-  took. You can filter it by outcome (all, success only, failure only) and by date, and **Continue
+- **Execution History** opens a separate window with every past run, what it did, how long it
+  took and its estimated Bedrock cost. You can filter it by outcome (all, success only, failure only) and by date, and **Continue
   Conversation** sends a follow-up instruction into that session.
 - **Show system prompt** shows exactly what the agent is told when the task runs.
 
@@ -2036,6 +2085,10 @@ Four things actually move the needle:
 Watch the chat's **Cost** tab ([6.6](#66-the-chat-tabs)) to see where your money is going. Its label
 is the running cost of the conversation.
 
+For the whole app — every chat, generator, background agent, sub-agent and knowledge base, month by
+month — open the **Accounting** page, and set a monthly budget there to be warned before a month
+gets expensive ([Section 26](#26-accounting-what-bedrock-is-costing-you)).
+
 Knowledge bases built with Bedrock embeddings also cost a little each time you add or re-sync a source,
 and each search embeds the question. The on-device model costs nothing to run. See
 [Section 24.8](#248-costs-permissions-and-privacy).
@@ -2055,6 +2108,7 @@ On a Mac:
   chat-sessions-meta.json  ← the index of conversations
   window-state.json        ← the window's size and position, so it reopens where you left it
   memory.json              ← your memory items (rules and facts)
+  usage/usage.db           ← the cost ledger behind the Accounting page (every Bedrock call)
   knowledgebases/
     <agent id>/<kb id>.db  ← one file per local knowledge base
     .models/               ← the on-device embedding model, once downloaded
@@ -2073,7 +2127,7 @@ folder name; the app moves that folder here the first time it starts.
 
 ```
 <your project folder>/
-  attachments/<chat>-<id>/       ← files you attached to a chat (and the Help chat's copy of this guide)
+  attachments/<chat>-<id>/       ← files you attached to a chat
   docker-sandboxes/<chat>-<id>/  ← compose file and mapped data for a chat's container
   .bedrock-engineer/
     agents/                      ← agents shared with this project
@@ -2205,6 +2259,8 @@ the conversation.
 - _…add a tool the app does not have?_ → MCP,
   [Section 11](#11-mcp-servers-adding-tools-from-outside-the-app)
 - _…find an MCP server for a service I use?_ → [Section 11.2](#112-finding-servers)
+- _…let an MCP server use my AWS credentials?_ → [Section 11.4](#114-using-the-apps-aws-settings-in-a-server)
+- _…get answers from the AWS documentation with source links?_ → [Section 11.5](#115-the-aws-solutions-architect-agent)
 
 **Automation**
 
@@ -2226,6 +2282,12 @@ the conversation.
 **Cost and models**
 
 - _…spend less money?_ → [Section 18.5](#185-managing-cost)
+- _…see what I've spent this month, or in an earlier month?_ → the Accounting page,
+  [Section 26](#26-accounting-what-bedrock-is-costing-you)
+- _…get warned before I spend too much?_ → a monthly budget,
+  [Section 26.4](#264-a-monthly-budget)
+- _…see which model, agent or feature costs the most?_ →
+  [Section 26.2](#262-reading-the-page)
 - _…hide models I never use?_ → Visible Models, [Section 5.3](#53-models-tab)
 - _…stop getting throttling errors?_ → Region failover or Global routing,
   [Section 18.3](#183-routing-why-some-models-appear-twice)
@@ -2478,8 +2540,9 @@ Restart the app. Pages shown inside the app only read the proxy setting at start
 
 ### The app is using a lot of money
 
-Open the chat's **Cost** tab to see where. Then work through
-[Section 18.5](#185-managing-cost) — Context Length and the Light Processing Model are usually the
+Open the **Accounting** page ([Section 26](#26-accounting-what-bedrock-is-costing-you)) to see which
+model, feature, agent or day it comes from, and the chat's **Cost** tab for a single conversation. Then
+work through [Section 18.5](#185-managing-cost) — Context Length and the Light Processing Model are usually the
 two biggest wins.
 
 ### An MCP server will not connect
@@ -2505,58 +2568,73 @@ what you were doing, what you expected, what happened, and the relevant log file
 
 ## 23. Getting help inside the app
 
-You do not have to read this guide to use it. The **Help** button — the question mark at the very
-bottom of the sidebar, just above the GitHub link — opens a chat that has this whole guide in front
-of it, so you can ask in your own words:
+You do not have to read this guide from start to finish to use it. The **Help** button — the
+question mark at the very bottom of the sidebar, just above the GitHub link — opens it inside the
+app, and from there you can search it or ask a question in your own words:
 
 - "Where do I put my AWS keys?"
 - "What's the difference between Plan and Act mode?"
 - "Which tool lets an agent look something up on the web?"
 - "Why is my chat costing so much?"
 
-### 23.1 What the help chat is
+### 23.1 The guide page
 
-It is an ordinary chat, on the Chat page, using an agent called **Bedrock Engineer Help**. It shows
-up in your chat history like any other conversation, and you can export it, rename it or delete it
-the same way.
+**Help** opens this guide as a page of its own. It needs no AWS access, no internet connection and no
+setup, so it works on a new install before anything is configured:
 
-Two things make it different:
+- **Contents** on the left lists every section; the one you are reading is highlighted. Click one to
+  jump to it. Links inside the guide jump the same way.
+- **Search the guide** at the top finds the sections that match what you type — try "budget",
+  "proxy" or "plan mode". Pick a result to jump to it, or press Enter for the first one.
+- **Ask a question** opens the help chat ([23.2](#232-the-help-chat)).
 
-- **The guide is already attached.** The version of the guide that shipped with your build is
-  attached to the chat as a file, so the answers match the app you are actually running. Nothing is
-  downloaded, and it works with no internet connection.
+The guide is the version that shipped with your build, so it always matches the app you are running.
+
+### 23.2 The help chat
+
+**Ask a question** opens a chat with an agent called **Bedrock Engineer Help**. It is an ordinary
+chat on the Chat page: it shows up in your chat history, and you can export, rename or delete it like
+any other.
+
+- **It answers from this guide.** With each question, the app looks up the sections of the guide
+  that match it (and your previous question, so follow-ups work) and gives only those to the model,
+  which names the section it used so you can read more. The look-up runs on your computer; only the
+  question, the matching sections and the answer go to Amazon Bedrock.
+- **It needs Amazon Bedrock.** The answer comes from a Bedrock model, so the chat needs working AWS
+  access ([Section 4](#4-setting-up-access-to-amazon-bedrock)). Until then the guide page says so and
+  links to the setup section; the guide itself still works.
 - **It has no tools.** It cannot read your files, run commands, search the web or look at your
-  settings. It answers from the guide and nothing else. That is deliberate: a help button should not
-  be able to touch your machine. It also means that when the guide does not cover your question, it
-  will tell you so instead of guessing — and if answering needs something checked on your computer,
-  it will tell you what to look at rather than looking itself.
+  settings. That is deliberate: a help button should not be able to touch your machine. When the
+  guide does not cover your question, it tells you so instead of guessing — and if answering needs
+  something checked on your computer, it tells you what to look at rather than looking itself.
 
-### 23.2 Which model it uses
+### 23.3 How the guide is searched
+
+The app ships with an index of this guide (a small knowledge base, built from the guide with the
+on-device embedding model when the app is built), so there is nothing to download or build and no
+cost to search it. Search works two ways:
+
+- **By keyword**, always. This needs nothing beyond the app.
+- **By meaning as well**, if you have downloaded the on-device model for local knowledge bases
+  (**Settings → Knowledge Base**, [Section 24](#24-local-knowledge-bases-letting-an-agent-search-your-documents)).
+  Then a question finds the right section even when it uses different words from the guide.
+
+When the app is updated, the index is replaced along with the guide. If the index ever can't be
+read, the help chat falls back to sending the whole guide with your question, and says so.
+
+### 23.4 Which model it uses
 
 The help chat runs on whichever model you selected as the **Light Processing Model** in
-**Settings → Models** (see [Section 5.3](#53-models-tab)). The guide is long, so every question
-carries a lot of text with it; a small, cheap model like Haiku or Nova handles that comfortably and
-keeps the cost low. If you have not chosen a Light Processing Model, the help chat uses your main
-conversation model instead.
+**Settings → Models** (see [Section 5.3](#53-models-tab)). Each question carries only a few sections
+of the guide, so a small, cheap model like Haiku or Nova answers well and costs little. If you have
+not chosen a Light Processing Model, the help chat uses your main conversation model instead.
 
 The agent and model shown at the bottom of a help chat are displayed as plain text rather than
 dropdowns, because the help chat pins both and the pickers would not be able to change them.
 
-### 23.3 Reopening it
-
-Clicking **Help** again returns to the same help conversation, so you can carry on where you left
-off. To start a fresh one, use the **New chat** button inside the help chat — that gives you a normal
-chat, then click **Help** again.
-
-When the app is updated, the attached guide is replaced with the new version the next time you open
-Help, so it never goes stale.
-
-### 23.4 If you have not set a project directory
-
-Attachments are saved into your project directory, so without one the guide cannot be attached as a
-file. Help still works: the guide is handed to the agent directly instead, and a short notice
-explains why no attachment is listed. Setting a project directory
-([Section 5.5](#55-workspace-tab)) makes the attachment appear on the next open.
+Clicking **Ask a question** again returns to the same help conversation, so you can carry on where you
+left off. To start a fresh one, use the **New chat** button inside the help chat — that gives you a
+normal chat — then ask again from the guide page.
 
 ### 23.5 When to use the help chat, and when not to
 
@@ -2564,11 +2642,12 @@ Use it for "how does this app work" questions. It is the fastest way to find a s
 what a tool does, or work out which page you need. It is also a good way through first-time AWS
 setup, because [Section 4](#4-setting-up-access-to-amazon-bedrock) walks that whole process through
 step by step — the help chat can talk you along it and tell you which step a given error belongs to.
+(While Bedrock isn't working yet, read Section 4 on the guide page instead.)
 
-Do not use it for work — it has no tools, so it cannot write files, run anything or search. And it
-only knows what is in this guide, so it cannot answer general questions about Amazon Bedrock, AWS or
-the models beyond what Sections 4 and 19 cover, and it cannot look at your AWS account or run the
-verification commands for you. For anything wider, ask a normal agent with the web search tool
+Do not use it for work — it has no tools, so it cannot write files, run anything or search the web.
+And it only knows what is in this guide, so it cannot answer general questions about Amazon Bedrock,
+AWS or the models beyond what Sections 4 and 19 cover, and it cannot look at your AWS account or run
+the verification commands for you. For anything wider, ask a normal agent with the web search tool
 enabled, or read the AWS documentation.
 
 ---
@@ -2895,7 +2974,9 @@ quarter of the file), the app optimizes the knowledge base by itself.
 - **Cost.** Bedrock charges per token embedded. Adding or re-syncing a source embeds every new or
   changed passage (unchanged documents are skipped); each search embeds the question, which is tiny.
   Embedding is much cheaper than chatting, but a large website or document collection adds up, and a
-  **Rebuild** embeds everything again. The app does not show embedding costs on the Cost tab.
+  **Rebuild** embeds everything again. Embedding costs are not on a chat's Cost tab; the Accounting
+  page shows them as "Knowledge base indexing" and "Knowledge base search"
+  ([Section 26](#26-accounting-what-bedrock-is-costing-you)).
 - **Permissions.** Your AWS identity needs `bedrock:InvokeModel` on the embedding model. Both policies
   under **Settings → AWS → View required IAM policies** already allow `InvokeModel` on all models, so
   nothing extra is needed if you use one of them
@@ -3003,3 +3084,76 @@ data folder ([Section 19.1](#191-app-settings-and-chat-history)).
 
 Keep items short and few. Every switched-on item is sent with every message, so a long list costs a
 little on every turn and gives the model more to weigh.
+
+---
+
+## 26. Accounting: what Bedrock is costing you
+
+### 26.1 What it records
+
+The **Accounting** page (the dollar sign in the sidebar) shows the estimated Amazon Bedrock cost of
+everything the app does, not just chats. Every call to Bedrock is recorded the moment it is made:
+
+- chats, the Website, Diagram and Step Functions generators, chat titles and the agent editor's
+  generators
+- background agents and sub-agents (`@` delegation)
+- knowledge bases that use a Bedrock embedding model, both indexing and searching (the on-device
+  model is free and is not recorded)
+- tools that call Bedrock: image generation (priced per image), video generation (per second),
+  image recognition, Bedrock Agents, Knowledge Base retrieval and Flows
+- guardrail checks (per text unit) and Amazon Translate (per character)
+
+Each call is priced when it happens, with the list price at that time, and the record is kept for
+good. It is separate from your chat history: deleting a chat does not remove its cost. The first
+time the app runs with this page, it also imports the token usage your saved chats already held, so
+earlier months are not empty. Before that, only chats saved their usage, so imported months show chat
+cost only, and the page says so.
+
+### 26.2 Reading the page
+
+Pick a month at the top. You see:
+
+- **Tiles:** the month's total so far, where the month is heading at the current pace (this month
+  only), the previous month's total, the number of calls, how much prompt caching saved, and how many
+  calls had no known price.
+- **Cost per day:** a bar per day, stacked by model.
+- **Cost per month:** every month on record; click a bar to open that month.
+- **Tables by model, by feature, by agent and by day**, with input, output and cache tokens, other
+  units (images, seconds of video, characters) and the share of the month.
+- **The individual calls**, newest first, with **Load more** at the bottom.
+
+Click a row in the model, feature or agent table to show only that on the whole page; click it again,
+or the × on its button at the top, to go back. Chats made before the page existed show under
+"Earlier chats (agent not recorded)" in the agent table, because chats were not saved with their
+agent.
+
+The chat history list shows each chat's cost, and a background task's **Execution History** shows
+each run's cost.
+
+### 26.3 Exporting
+
+**Export CSV** saves every call of the month (or of the current filter) as a spreadsheet file, by
+default in your Downloads folder.
+
+### 26.4 A monthly budget
+
+On the Accounting page, **Set a budget** takes an amount in dollars per month and the levels to warn
+at, as percentages (80 and 100 unless you change them). The card then shows how much of the budget
+the month has used.
+
+The first time the month's estimated cost reaches each level, you get a desktop notification — once
+per level per month. While the month is over budget, the dollar sign in the sidebar has a red dot.
+**Edit** changes the budget and **Remove budget** turns it off. The budget is a warning only: nothing
+is ever blocked.
+
+### 26.5 How accurate it is
+
+The figures are estimates from on-demand list prices, and your AWS bill is the final word.
+
+- Where a model's price differs between its global and geography profiles, or for very long prompts,
+  and the app's model list records how, that is applied. Calls through your own application inference
+  profiles are priced as the model the profile uses (the app looks this up once per profile).
+- Discounts, savings plans, taxes and anything the model list doesn't record are not reflected.
+- Cohere embedding tokens are estimated from the text length; the Titan model reports its count.
+- Knowledge Base retrieval and Flows report no usage, so they are counted but not priced. Calls to a
+  model with no known price are counted too, flagged, and left out of the totals.

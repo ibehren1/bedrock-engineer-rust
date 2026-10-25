@@ -962,6 +962,9 @@ impl KnowledgeService {
                 .filter(|e| e.path().is_dir())
                 .map(|e| e.file_name().to_string_lossy().into_owned())
                 .filter(|n| common::json_file::is_safe_file_id(n))
+                // The user guide's index belongs to the app (restored from the bundle), not to
+                // the user: never listed, never purged.
+                .filter(|n| n != crate::help::HELP_OWNER)
                 .collect();
             agents.sort();
             for agent in agents {

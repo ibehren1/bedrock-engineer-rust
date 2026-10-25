@@ -45,6 +45,9 @@ pub struct StructuredOutputRequest {
     pub tool_options: Option<ToolOptions>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub inference_config: Option<InferenceConfig>,
+    /// Recorded with the call's usage; the feature defaults to `structured`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub usage_context: Option<crate::usage::UsageContext>,
 }
 
 /// The `get_website_recommendations` command's `request`.
@@ -100,6 +103,11 @@ pub fn structured_output_converse_request(
             "toolChoice": { "tool": { "name": tool_name } }
         })),
         inference_config: req.inference_config.clone(),
+        usage_context: Some(
+            req.usage_context
+                .clone()
+                .unwrap_or_else(|| crate::usage::UsageContext::feature("structured")),
+        ),
         ..Default::default()
     };
     (request, tool_name)
@@ -233,6 +241,7 @@ pub fn website_recommendation_request(
             temperature: Some(0.5),
             ..Default::default()
         }),
+        usage_context: Some(crate::usage::UsageContext::feature("website")),
     }
 }
 

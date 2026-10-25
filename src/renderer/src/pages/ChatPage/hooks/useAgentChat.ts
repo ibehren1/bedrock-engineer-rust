@@ -9,6 +9,7 @@ import type {
 import { ToolState } from '@/types/agent-chat'
 import { generateMessageId } from '@/types/chat/metadata'
 import { StreamChatCompletionProps, streamChatCompletion } from '@renderer/lib/api'
+import type { UsageFeature } from '@/types/usage'
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import {
   abortRun,
@@ -67,6 +68,24 @@ type TurnContext = {
    * ターン内の全リクエスト（ツール実行の再帰を含む）で使い回す。
    */
   attachments: ContentBlock[]
+  /** The system prompt for this turn, when `prepareTurn` added to it. */
+  systemPrompt?: string
+}
+
+/** The text of the user's earlier prompts in a conversation (not tool results), oldest first. */
+export function previousUserPrompts(messages: Message[]): string[] {
+  return messages
+    .filter((m) => m.role === 'user')
+    .map((m) =>
+      (m.content ?? [])
+        .map(
+          (c) =>
+            ('text' in c && c.text) || ('guardContent' in c && c.guardContent?.text?.text) || ''
+        )
+        .join(' ')
+        .trim()
+    )
+    .filter(Boolean)
 }
 
 // メッセージの送信時に、Trace を全て載せると InputToken が逼迫するので取り除く
@@ -150,9 +169,22 @@ export const useAgentChat = (
   options?: {
     enableHistory?: boolean
     tools?: ToolState[] // 明示的なツールリストを受け取るオプション
+    /** Accounting label for this hook's model calls (default `chat`). */
+    usageFeature?: UsageFeature
+    /**
+     * Extra system-prompt text for one turn, from the new prompt and the earlier ones (the Help
+     * chat adds the guide sections that match the question). Failures are the caller's to
+     * handle; a rejection sends the turn with the plain system prompt.
+     */
+    prepareTurn?: (userInput: string, earlierPrompts: string[]) => Promise<string | undefined>
   }
 ) => {
-  const { enableHistory = true, tools: explicitTools } = options || {} // デフォルトで履歴保存は有効
+  const {
+    enableHistory = true,
+    tools: explicitTools,
+    usageFeature = 'chat',
+    prepareTurn
+  } = options || {} // デフォルトで履歴保存は有効
 
   const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(sessionId)
 
@@ -541,6 +573,7 @@ export const useAgentChat = (
         props.messages = limitedMessages
       }
 
+      props.usageContext = { feature: usageFeature, agentId, sessionId: turnSessionId }
       const generator = streamChatCompletion(props, controller.signal)
 
       let s = ''
@@ -1187,7 +1220,7 @@ export const useAgentChat = (
       {
         messages: currentMessages,
         modelId,
-        system: systemPrompt ? [{ text: systemPrompt }] : undefined,
+        system: turnSystem(turnCtx) ? [{ text: turnSystem(turnCtx)! }] : undefined,
         toolConfig: turnCtx.tools.length ? { tools: turnCtx.tools } : undefined
       },
       currentMessages,
@@ -1234,6 +1267,9 @@ export const useAgentChat = (
       }
     }
   }
+
+  /** This turn's system prompt: the hook's, plus whatever `prepareTurn` added. */
+  const turnSystem = (turnCtx: TurnContext) => turnCtx.systemPrompt ?? systemPrompt
 
   const handleSubmit = async (userInput: string, attachedImages?: AttachedImage[]) => {
     if (!userInput && (!attachedImages || attachedImages.length === 0)) {
@@ -1306,6 +1342,13 @@ export const useAgentChat = (
       patchRunState(turnKey, { loading: true })
       const currentMessages = [...getRunState(turnKey).messages]
 
+      if (prepareTurn) {
+        const extra = await prepareTurn(userInput, previousUserPrompts(currentMessages)).catch(
+          () => undefined
+        )
+        if (extra) turnCtx.systemPrompt = systemPrompt ? `${systemPrompt}\n${extra}` : extra
+      }
+
       const imageContents: any =
         attachedImages?.map((image) => ({
           image: {
@@ -1359,7 +1402,7 @@ export const useAgentChat = (
         {
           messages: currentMessages,
           modelId,
-          system: systemPrompt ? [{ text: systemPrompt }] : undefined,
+          system: turnSystem(turnCtx) ? [{ text: turnSystem(turnCtx)! }] : undefined,
           toolConfig: turnCtx.tools.length ? { tools: turnCtx.tools } : undefined
         },
         currentMessages,

@@ -9,6 +9,7 @@
 use crate::error::{Error, Result};
 use crate::sdk::SdkConfigSource;
 use crate::settings::AwsSettings;
+use crate::usage::{self, UnitKind, UsageService};
 use aws_sdk_translate::types::{Formality, Profanity, TranslationSettings};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map};
@@ -220,6 +221,14 @@ impl TranslateService {
 
         match result {
             Ok(r) => {
+                usage::record_units(
+                    UsageService::Translate,
+                    "amazon.translate",
+                    &aws.region,
+                    "translate",
+                    UnitKind::Characters,
+                    text.chars().count() as f64,
+                );
                 if let Ok(mut c) = self.cache.lock() {
                     c.insert(key, r.clone());
                 }

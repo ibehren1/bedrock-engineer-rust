@@ -21,7 +21,7 @@ use tokio_util::sync::CancellationToken;
 pub const DOWNLOAD_EVENT: &str = "knowledge:model-download";
 
 const REPO: &str = "intfloat/multilingual-e5-small";
-const REVISION: &str = "614241f622f53c4eeff9890bdc4f31cfecc418b3";
+pub const REVISION: &str = "614241f622f53c4eeff9890bdc4f31cfecc418b3";
 
 /// `(file, size, sha256)`.
 const FILES: &[(&str, u64, &str)] = &[

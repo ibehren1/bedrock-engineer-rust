@@ -7,6 +7,62 @@ dated section here for anything user-visible.
 See the [README](./README.md#whats-different-in-this-fork) for a feature-by-feature
 overview of the fork with screenshots.
 
+### 2026-10-25
+
+- **Costs by agent, per chat and per background task run.** The Accounting page has a table of
+  cost by agent (click one to see only its usage). The chat history list now shows what each chat
+  has cost, and a background task's history shows the cost of each run.
+- **Prompt caching savings.** The Accounting page shows how much prompt caching saved this month.
+- **More accurate cost estimates.** Calls through your own application inference profiles are now
+  priced as the model the profile uses instead of being left unpriced. For models whose price
+  differs between the global and geography profiles, or rises for very long prompts, the
+  Accounting page now uses the rate the request actually billed at.
+- **Help works offline and opens the user guide first.** The Help button now opens the user guide
+  inside the app, with a table of contents, working section links and a search box. It needs no AWS
+  access or internet connection, so it helps even before anything is set up. **Ask a question**
+  opens the Help chat, which now answers from the guide sections that match each question rather
+  than sending the whole guide every time, so Help answers cost much less. The guide's search index
+  ships with the app; if you have downloaded the on-device model for local knowledge bases, it
+  matches by meaning as well as by keyword.
+
+### 2026-10-24
+
+- **New built-in AWS Solutions Architect agent.** It answers AWS questions from the official AWS
+  documentation and links each point to its source. It comes with four AWS MCP servers already set
+  up: AWS Documentation, the hosted AWS Knowledge server (documentation and Regional availability),
+  Infrastructure as Code (validate CloudFormation templates, check compliance, troubleshoot failed
+  deployments, look up CDK guidance, and never deploy), and AWS Pricing for cost estimates. Three
+  of the servers run with `uvx`, so install uv first. Built-in agents with MCP servers now also get
+  those servers' tools in chat; before, their tools were fetched and then dropped.
+- **MCP servers can use your AWS settings.** In a server's environment variables, `{{awsProfile}}`
+  and `{{awsRegion}}` are filled in from Settings → AWS each time the server starts. If you sign in
+  with an access key instead of a profile, the key pair is passed in place of the profile. Only
+  servers that use these placeholders receive your credentials, and the values take priority over
+  AWS variables already in the app's environment.
+- **New Accounting page.** A page in the left sidebar shows the estimated Amazon Bedrock cost of
+  the app's model calls, month by month. Pick a month to see its total and tables by model, by
+  feature (chat, the generators, background agents, sub-agents, chat titles, knowledge base
+  indexing and search, and so on) and by day. Recording starts with this version and nothing is
+  ever deleted, so you can look back at earlier months. Costs are estimates from list prices at
+  the time of each call; calls to models without a known price are counted but not added to the
+  totals. Embedding calls for knowledge bases that use Titan or Cohere models are included.
+- **Accounting charts, filters, CSV export and past chats.** The Accounting page now charts cost
+  per day, stacked by model, and cost per month; click a month's bar to open it. Clicking a model
+  or feature in its table narrows the whole page to it, and the list of individual calls at the
+  bottom shows each one's time, model, tokens and cost. **Export CSV** saves the calls of the month
+  or filter. On first launch the page also imports the usage your chats already saved, so earlier
+  months aren't empty (they show chat cost only) and older models that are no longer offered are
+  still priced.
+- **Monthly budget alerts.** Set a monthly budget on the Accounting page and you get a
+  notification the first time the month's estimated Bedrock cost reaches 80% and 100% of it (you
+  can choose other levels). While you're over budget the `$` icon in the sidebar shows a red dot,
+  and the page shows how much of the budget is used and the projected month-end cost.
+- **More Bedrock costs counted.** The Accounting page now also records image generation (per
+  image), Nova Reel videos (per second), Bedrock Agents, guardrail checks, Amazon Translate and
+  image recognition with Claude models, with their images, seconds or characters shown next to
+  the cost. Knowledge Base retrieval and Flows are counted too, though AWS reports no usage for
+  them to price.
+
 ### 2026-10-23
 
 - **The Files panel's file list can be resized.** Drag the divider between the file list and the

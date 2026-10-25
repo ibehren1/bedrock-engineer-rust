@@ -24,6 +24,7 @@ import { agentDirectory } from './agentDirectory'
 import { planActMode } from './planActMode'
 import { help } from './help'
 import { memoryItems } from './memoryItems'
+import { accounting } from './accounting'
 import { knowledgeBase } from './knowledgeBase'
 import { filesPanel } from './filesPanel'
 import { appUpdate } from './appUpdate'
@@ -803,6 +804,7 @@ const BackgroundAgent = {
     user: 'User',
     assistant: 'Assistant',
     executionHistoryList: 'Execution History',
+    estimatedCost: 'Estimated Bedrock cost of this run',
     executionDetails: 'Execution Details',
     sessionId: 'Session ID',
     toolExecution: 'Tool Execution',
@@ -969,6 +971,7 @@ const en = {
   ...planActMode.en,
   ...help.en,
   ...memoryItems.en,
+  ...accounting.en,
   ...knowledgeBase.en,
   ...filesPanel.en,
   ...appUpdate.en,

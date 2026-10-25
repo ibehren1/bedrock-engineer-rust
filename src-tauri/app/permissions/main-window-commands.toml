@@ -39,4 +39,11 @@ permissions = [
   "allow-knowledge-local-model-status",
   "allow-knowledge-download-local-model",
   "allow-knowledge-delete-local-model",
+  "allow-usage-summary",
+  "allow-usage-breakdown",
+  "allow-usage-months",
+  "allow-usage-events",
+  "allow-usage-info",
+  "allow-usage-export-csv",
+  "allow-usage-budget-status",
 ]

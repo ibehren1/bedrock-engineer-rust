@@ -50,7 +50,7 @@ async fn stdio_lists_and_calls_tools() {
     let Some(py) = python() else { return };
     let mut env = IndexMap::new();
     env.insert("FAKE_MCP_REQUIRE_ENV".to_string(), "yes".to_string());
-    let client = McpClient::from_command(&py, &[script()], Some(&env))
+    let client = McpClient::from_command(&py, &[script()], Some(&env), &[])
         .await
         .expect("connect");
 

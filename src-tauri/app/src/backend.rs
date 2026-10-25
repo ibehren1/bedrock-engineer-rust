@@ -51,6 +51,65 @@ pub struct Backend {
     pub knowledge: Arc<knowledge::service::KnowledgeService>,
     /// The on-device embedding model (download, status, inference).
     pub local_model: Arc<knowledge::local::LocalModel>,
+    /// The user guide's shipped knowledge base (Help page search, Help chat excerpts).
+    pub help_kb: Arc<knowledge::help::HelpKb>,
+    /// `<userData>/usage/usage.db`: every billable Bedrock call, for the Accounting page.
+    /// `None` if it couldn't be opened (the app runs on; nothing is recorded).
+    pub usage: Option<Arc<usage::UsageLedger>>,
+}
+
+/// Opens the usage ledger and makes it the sink for every Bedrock call's usage; its writes are
+/// pushed to the windows as `usage-changed`.
+fn open_usage_ledger(app: &AppHandle, user_data: &Path) -> Option<Arc<usage::UsageLedger>> {
+    let ledger = match usage::UsageLedger::open(&user_data.join("usage").join("usage.db")) {
+        Ok(l) => l,
+        Err(error) => {
+            tracing::error!(%error, "Failed to open the usage ledger; usage is not recorded");
+            return None;
+        }
+    };
+    ledger.set_on_change({
+        let app = app.clone();
+        let weak = Arc::downgrade(&ledger);
+        move || {
+            let event = crate::commands::usage::USAGE_CHANGED_EVENT;
+            if let Err(e) = app.emit(event, ()) {
+                tracing::warn!(event, error = %e, "Failed to emit event");
+            }
+            if let Some(ledger) = weak.upgrade() {
+                if let Err(error) = crate::budget::check(&app, &ledger) {
+                    tracing::warn!(%error, "Failed to check the usage budget");
+                }
+            }
+        }
+    });
+    bedrock::usage::set_sink(ledger.sink());
+    import_chat_history_once(&ledger, user_data);
+    Some(ledger)
+}
+
+/// On the first launch with the ledger, import the usage already saved in chat history (in the
+/// background: hundreds of sessions take a moment to read).
+fn import_chat_history_once(ledger: &Arc<usage::UsageLedger>, user_data: &Path) {
+    if ledger.history_imported().unwrap_or(true) {
+        return;
+    }
+    let ledger = ledger.clone();
+    let dir = user_data.join("chat-sessions");
+    let spawned = std::thread::Builder::new()
+        .name("usage-import".into())
+        .spawn(move || match ledger.import_chat_history(&dir) {
+            Ok(report) => tracing::info!(
+                sessions = report.sessions,
+                imported = report.imported,
+                unreadable = report.unreadable,
+                "Imported chat history usage"
+            ),
+            Err(error) => tracing::error!(%error, "Failed to import chat history usage"),
+        });
+    if let Err(error) = spawned {
+        tracing::error!(%error, "Failed to start the chat history usage import");
+    }
 }
 
 /// `store.all()`; `{}` if the lock is poisoned.
@@ -176,6 +235,33 @@ impl agents::McpToolSpecProvider for McpSpecs {
     }
 }
 
+/// The app's AWS settings for `{{awsRegion}}` / `{{awsProfile}}` in MCP server env.
+struct McpAwsEnv(AppHandle);
+
+impl mcp::env_placeholders::AwsEnvSource for McpAwsEnv {
+    fn aws_env(&self) -> mcp::env_placeholders::AppAwsEnv {
+        let aws = settings::aws_settings(&store_snapshot(&self.0));
+        let use_profile = aws.use_profile.unwrap_or(false);
+        mcp::env_placeholders::AppAwsEnv {
+            region: aws.region.clone(),
+            // An empty profile name means the default profile, as for the Bedrock clients.
+            profile: use_profile.then(|| {
+                aws.profile
+                    .clone()
+                    .filter(|p| !p.is_empty())
+                    .unwrap_or_else(|| "default".into())
+            }),
+            keys: (!use_profile && !aws.access_key_id.is_empty()).then(|| {
+                mcp::env_placeholders::AwsKeys {
+                    access_key_id: aws.access_key_id.clone(),
+                    secret_access_key: aws.secret_access_key.clone(),
+                    session_token: aws.session_token.clone(),
+                }
+            }),
+        }
+    }
+}
+
 /// Store, proxy and events for the knowledgebase service.
 struct KnowledgeHost(AppHandle);
 
@@ -247,6 +333,10 @@ impl Backend {
         let local_model = Arc::new(knowledge::local::LocalModel::new(
             kb_root.join(knowledge::service::MODELS_DIR),
         ));
+        let help_kb = Arc::new(knowledge::help::HelpKb::new(
+            crate::commands::help::shipped_help_kb_path(app),
+            &kb_root,
+        ));
         let knowledge = knowledge::service::KnowledgeService::new(
             kb_root,
             Arc::new(KnowledgeHost(app.clone())),
@@ -260,6 +350,7 @@ impl Backend {
             }),
             runtime.clone(),
         );
+        mcp.set_aws_env(Arc::new(McpAwsEnv(app.clone())));
         mcp.set_builtin(Arc::new(knowledge::mcp_server::KnowledgeMcp {
             svc: knowledge.clone(),
             runtime: runtime.clone(),
@@ -286,6 +377,7 @@ impl Backend {
             ..Default::default()
         };
 
+        let usage = open_usage_ledger(app, user_data);
         let converse = Arc::new(ConverseService::default());
         let converse_backend = Arc::new(BedrockConverseBackend::new(
             converse.clone(),
@@ -340,6 +432,8 @@ impl Backend {
             )),
             knowledge,
             local_model,
+            help_kb,
+            usage,
         })
     }
 

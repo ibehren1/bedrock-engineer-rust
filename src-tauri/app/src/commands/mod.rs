@@ -24,6 +24,7 @@ pub mod store;
 pub mod strands;
 pub mod todo;
 pub mod tools;
+pub mod usage;
 pub mod video;
 pub mod window;
 pub mod workspace_files;
@@ -158,6 +159,8 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         attachments::chat_attachments_open_folder,
         // window.api.help
         help::help_prepare_user_guide,
+        help::help_user_guide,
+        help::help_search,
         // window.api.todo
         todo::todo_init,
         todo::todo_update,
@@ -286,6 +289,15 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         knowledge::knowledge_local_model_status,
         knowledge::knowledge_download_local_model,
         knowledge::knowledge_delete_local_model,
+        // window.api.usage (main window only: capabilities/main-window.json)
+        usage::usage_summary,
+        usage::usage_breakdown,
+        usage::usage_months,
+        usage::usage_events,
+        usage::usage_info,
+        usage::usage_export_csv,
+        usage::usage_budget_status,
+        usage::session_usage_costs,
     ]
 }
 

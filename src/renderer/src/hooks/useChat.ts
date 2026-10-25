@@ -1,5 +1,6 @@
 import type { StopReason } from '@aws-sdk/client-bedrock-runtime'
 import { streamChatCompletion } from '@renderer/lib/api'
+import type { UsageFeature } from '@/types/usage'
 import { useCallback, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
@@ -7,6 +8,8 @@ import { useTranslation } from 'react-i18next'
 type UseChatProps = {
   systemPrompt: string
   modelId: string
+  /** Accounting label for the model calls. */
+  usageFeature?: UsageFeature
 }
 export const useChat = (props: UseChatProps) => {
   const [messages, setMessages] = useState<{ role: string; content: { text: string }[] }[]>([])
@@ -52,7 +55,8 @@ export const useChat = (props: UseChatProps) => {
           {
             text: props.systemPrompt
           }
-        ]
+        ],
+        usageContext: { feature: props.usageFeature ?? 'other' }
       })
 
       let s = ''

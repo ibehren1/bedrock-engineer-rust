@@ -709,7 +709,10 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         existingAgent.system === defaultAgent.system &&
         existingAgent.icon === defaultAgent.icon &&
         existingAgent.iconColor === defaultAgent.iconColor &&
-        existingAgent.category === defaultAgent.category
+        existingAgent.category === defaultAgent.category &&
+        // MCPサーバー設定（変更時はキャッシュ済みの mcpTools も破棄され、再取得される）
+        JSON.stringify(existingAgent.mcpServers ?? []) ===
+          JSON.stringify(defaultAgent.mcpServers ?? [])
 
       if (existingAgent && !isIdentical) {
         // IDが一致するが内容が異なる場合は、デフォルトエージェントの内容で更新
@@ -1454,10 +1457,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               enabled: true
             })) as ToolState[]
 
-            // カスタムエージェントの場合はグローバル状態を更新して保存
-            if (currentAgent.isCustom) {
+            // カスタムエージェントとデフォルトエージェント（どちらも customAgents に保存されている）は
+            // グローバル状態を更新して保存
+            if (!currentAgent.isShared) {
               updateAgentMcpTools(currentAgent.id, toolStates)
-            } else if (currentAgent.isShared) {
+            } else {
               // 共有エージェントやディレクトリエージェントの場合は一時的にメモリ上でのみ設定
               // 既存の参照を変更せずに新しい配列を作成しmcpToolsプロパティを設定
               // これによりオブジェクトの参照が変更され、UIが再レンダリングされる
@@ -1465,11 +1469,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 agent.id === currentAgent.id ? { ...agent, mcpTools: toolStates } : agent
               )
 
-              // 共有エージェントの場合
-              if (currentAgent.isShared) {
-                setSharedAgents(updatedAgentsArray)
-                // ここではwindow.store.setは呼ばない（再起動時に再度読み込まれるため）
-              }
+              setSharedAgents(updatedAgentsArray)
+              // ここではwindow.store.setは呼ばない（再起動時に再度読み込まれるため）
             }
           } else {
             console.log(`No MCP tools found for agent: ${currentAgent.name}`)

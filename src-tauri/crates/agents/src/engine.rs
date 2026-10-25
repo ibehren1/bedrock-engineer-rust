@@ -131,6 +131,20 @@ fn tool_use_of(block: &Value) -> Option<&Map<String, Value>> {
     block.get("toolUse").and_then(Value::as_object)
 }
 
+/// Usage label for a run's Converse calls: delegated runs are sub-agents, the rest background
+/// agents.
+fn usage_context(config: &AgentRunConfig, session_id: &str) -> bedrock::usage::UsageContext {
+    let feature = match config.delegation_depth {
+        Some(d) if d > 0 => "subagent",
+        _ => "background",
+    };
+    bedrock::usage::UsageContext {
+        feature: feature.to_string(),
+        agent_id: Some(config.agent_id.clone()),
+        session_id: Some(session_id.to_string()),
+    }
+}
+
 /// `deduplicateToolUseIds`: make `toolUseId`s unique within one assistant message (`id_1`, …).
 /// Some models number tool uses per call, and Bedrock rejects duplicate ids on the next request.
 pub fn deduplicate_tool_use_ids(mut content: Vec<Value>) -> Vec<Value> {
@@ -474,6 +488,7 @@ impl AgentEngine {
             system: (!processed_system.is_empty()).then_some(processed_system),
             tool_config: processed_tools,
             inference_config: config.inference_config.clone(),
+            usage_context: Some(usage_context(config, session_id)),
             ..Default::default()
         };
         let response = tokio::time::timeout(options.timeout, self.call_converse(request))
@@ -591,6 +606,7 @@ impl AgentEngine {
                 system: (!system.is_empty()).then(|| system.clone()),
                 tool_config: tools_cfg.clone(),
                 inference_config: config.inference_config.clone(),
+                usage_context: Some(usage_context(config, session_id)),
                 ..Default::default()
             };
             let next = self.call_converse(request).await?;

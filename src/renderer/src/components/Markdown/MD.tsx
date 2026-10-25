@@ -7,9 +7,15 @@ import { FilePathAnchor, FilePathCode } from '../FilePathLink'
 import rehypeKatex from 'rehype-katex'
 import remarkMath from 'remark-math'
 import 'katex/dist/katex.min.css' // `rehype-katex` does not import the CSS for you
+import { rehypeHeadingIds } from './slug'
+import { rehypeSoftBreaks } from './softBreaks'
 
 type MDProps = {
   children: string | null | undefined
+  /** Give headings GitHub-style `id`s (`#26-accounting-…`), for long documents like the guide. */
+  headingIds?: boolean
+  /** Handles `#…` links (scroll in-page) instead of opening them; the app uses a hash router. */
+  onAnchorClick?: (id: string) => void
 }
 
 type AnchorProps = {
@@ -30,6 +36,7 @@ type ImgProps = {
 }
 
 const MD = (props: MDProps) => {
+  const { headingIds, onAnchorClick } = props
   const components: Partial<Components> = useMemo(() => {
     return {
       // Links and inline code naming a project file open it in the chat's Files panel
@@ -40,11 +47,23 @@ const MD = (props: MDProps) => {
           <table>{children}</table>
         </div>
       ),
-      a: ({ href, title, children }: AnchorProps) => (
-        <FilePathAnchor href={href} title={title}>
-          {children}
-        </FilePathAnchor>
-      ),
+      a: ({ href, title, children }: AnchorProps) =>
+        onAnchorClick && href?.startsWith('#') ? (
+          <a
+            href={href}
+            title={title}
+            onClick={(e) => {
+              e.preventDefault()
+              onAnchorClick(decodeURIComponent(href.slice(1)))
+            }}
+          >
+            {children}
+          </a>
+        ) : (
+          <FilePathAnchor href={href} title={title}>
+            {children}
+          </FilePathAnchor>
+        ),
       code: ({ className, children }: CodeProps) => {
         const text = String(children ?? '')
         // Fenced blocks carry a language class or span lines; only inline code is a candidate.
@@ -72,13 +91,20 @@ const MD = (props: MDProps) => {
         return <LocalImage src={src || ''} alt={alt || ''} {...props} />
       }
     }
-  }, [])
+  }, [onAnchorClick])
+  const rehypePlugins = useMemo(
+    () =>
+      headingIds
+        ? [rehypeKatex, rehypeSoftBreaks, rehypeHeadingIds]
+        : [rehypeKatex, rehypeSoftBreaks],
+    [headingIds]
+  )
 
   return (
     <Markdown
       className={style.reactMarkDown}
       remarkPlugins={[[remarkGfm, { singleTilde: false }], [remarkMath]]}
-      rehypePlugins={[rehypeKatex]}
+      rehypePlugins={rehypePlugins}
       components={components}
     >
       {props.children}

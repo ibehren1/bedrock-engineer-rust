@@ -13,7 +13,8 @@ export const sidebarSettings = {
         'Background Agent': 'Background Agent',
         'Website Generator': 'Website Generator',
         'Step Functions Generator': 'Step Functions Generator',
-        'Diagram Generator': 'Diagram Generator'
+        'Diagram Generator': 'Diagram Generator',
+        Accounting: 'Accounting'
       }
     }
   },
@@ -31,7 +32,8 @@ export const sidebarSettings = {
         'Background Agent': 'バックグラウンドエージェント',
         'Website Generator': 'ウェブサイトジェネレーター',
         'Step Functions Generator': 'Step Functions ジェネレーター',
-        'Diagram Generator': 'ダイアグラムジェネレーター'
+        'Diagram Generator': 'ダイアグラムジェネレーター',
+        Accounting: 'コスト'
       }
     }
   }

@@ -38,7 +38,8 @@ function StepFunctionsGeneratorPage() {
   const { currentLLM: llm, sendMsgKey } = useSetting()
   const { messages, handleSubmit, loading, lastText } = useChat({
     systemPrompt,
-    modelId: llm.modelId
+    modelId: llm.modelId,
+    usageFeature: 'stepfunctions'
   })
   const onSubmit = (input: string, images: AttachedImage[]) => {
     handleSubmit(input, images)

@@ -24,6 +24,7 @@ import { agentDirectory } from './agentDirectory'
 import { planActMode } from './planActMode'
 import { help } from './help'
 import { memoryItems } from './memoryItems'
+import { accounting } from './accounting'
 import { knowledgeBase } from './knowledgeBase'
 import { filesPanel } from './filesPanel'
 import { appUpdate } from './appUpdate'
@@ -823,6 +824,7 @@ const BackgroundAgent = {
     user: 'ユーザー',
     assistant: 'アシスタント',
     executionHistoryList: '実行履歴',
+    estimatedCost: 'この実行の Bedrock 推定コスト',
     executionDetails: '実行詳細',
     sessionId: 'セッションID',
     toolExecution: 'ツール実行',
@@ -989,6 +991,7 @@ const ja = {
   ...planActMode.ja,
   ...help.ja,
   ...memoryItems.ja,
+  ...accounting.ja,
   ...knowledgeBase.ja,
   ...filesPanel.ja,
   ...appUpdate.ja,

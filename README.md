@@ -20,8 +20,8 @@ diagrams and Step Functions workflows.
 
 **New to the app, or looking for how something works?** The [User Guide](./docs/USER_GUIDE.md) is a
 complete, plain-language walkthrough of every screen, every tool and every setting, with a question
-index and a troubleshooting section. It is bundled into the app, and the **Help** button opens a
-chat that answers from it.
+index and a troubleshooting section. It is bundled into the app: the **Help** button opens it, with
+search, and offers a chat that answers from it.
 
 The dated changelog is in [CHANGELOG.md](./CHANGELOG.md); its newest dated section is published as
 the release notes for each build.
@@ -149,20 +149,22 @@ Camera permission. Voice Chat (Nova Sonic) did not come along.
 
 ### Help, without leaving the app
 
-A **Help** button sits in the bottom-left corner, just above the GitHub link. It opens a chat called
-"Bedrock Engineer Help" with the user guide already attached, so you can ask how something works and
-get an answer taken from the guide instead of guessed at. The guide is bundled into the build, so it
-always matches the version you are running and works offline.
+A **Help** button sits in the bottom-left corner, just above the GitHub link. It opens the user guide
+inside the app, with a table of contents, working section links and a search box. The guide page
+needs no AWS access and no internet connection, so it works on a fresh install before anything is
+set up. The guide is bundled into the build, so it always matches the version you are running.
 
-The help chat runs on whichever model you chose as the **Light Processing Model** in Settings — the
-guide is long, and a small model keeps it cheap — falling back to your main conversation model if
-that setting is empty. It deliberately has no tools, so it cannot read your files or inspect your
-settings; it answers from the guide and says so when the guide does not cover your question. Clicking
-Help again continues the same conversation rather than starting a new one.
+**Ask a question** on that page opens a chat called "Bedrock Engineer Help". For each question the
+app searches the guide and gives the model only the sections that match, and the answer names the
+section it came from. The search uses an index of the guide that ships with the app (built with the
+on-device embedding model), so there is nothing to download or build. It matches by keyword, and by
+meaning too if you have downloaded the on-device model for local knowledge bases. The chat itself
+needs Amazon Bedrock; the guide page says so, and links to the setup section, until it works.
 
-If you have not set a project directory yet, the guide cannot be saved as a chat attachment. Help
-still works — the guide is given to the agent directly, and a note explains why no attachment is
-listed.
+The help chat runs on whichever model you chose as the **Light Processing Model** in Settings,
+falling back to your main conversation model. It deliberately has no tools, so it cannot read your
+files or inspect your settings. It answers from the guide and says so when the guide does not cover
+your question. Asking again continues the same conversation rather than starting a new one.
 
 ### My Agents
 
@@ -245,6 +247,20 @@ MCP servers started with `npx`, `uvx` and similar commands see your login shell'
 and Linux, even when the app is opened from the Dock or a desktop launcher. Configuration details
 are in the [MCP Server Configuration Guide](./docs/mcp-server/MCP_SERVER_CONFIGURATION.md).
 
+### AWS Solutions Architect agent
+
+A built-in **AWS Solutions Architect** agent answers AWS questions from the official documentation
+and links each point to its source. It comes with four AWS MCP servers already set up: AWS
+Documentation, the hosted AWS Knowledge server (which also covers Regional availability), the
+Infrastructure as Code server (CloudFormation validation, compliance checks, deployment
+troubleshooting and CDK guidance, and it never deploys), and AWS Pricing for cost estimates. Three
+of them run with `uvx`, so install [uv](https://docs.astral.sh/uv/) first.
+
+The servers that call AWS use the credentials from **Settings → AWS**. Any MCP server can do the
+same by putting `{{awsProfile}}` and `{{awsRegion}}` in its `env`. With an access key instead of a
+profile, the key pair is passed. Servers that don't use the placeholders never see your
+credentials.
+
 ### Chat interface
 
 ![chat-conversation](./assets/chat-conversation.png)
@@ -310,6 +326,43 @@ Rules and facts you want every chat to know live in one shared memory list.
   switched-on item to the system prompt, which you can see on the System prompt tab. It is
   highlighted (with a count of the items) while on, starts on for each new chat, and turning it off
   only affects that chat.
+
+### Accounting
+
+The **Accounting** page in the sidebar shows what the app's model calls are estimated to cost on
+Amazon Bedrock.
+
+- Every model call the app makes is recorded. That includes chats, the Website, Diagram and Step
+  Functions generators, background agents and sub-agents, chat titles, the agent editor's
+  generators, and knowledge base indexing and search with Bedrock embeddings. Each call is priced
+  at the moment it happens and the record is kept forever, so you can look back at any month.
+- Pick a month to see its total so far, the previous month's total, a chart of cost per day
+  stacked by model, a chart of cost per month (click a bar to open that month), and tables by
+  model, by feature and by day, with input, output and cache tokens next to the cost.
+- Click a model, feature or agent in its table to narrow the whole page to it. The list of
+  individual calls at the bottom shows when each one happened and what it cost.
+- The chat history list shows what each chat has cost, and a background task's history shows the
+  cost of each run.
+- A tile shows how much prompt caching saved this month.
+- **Export CSV** saves every call of the month (or of the current filter) for a spreadsheet.
+- On first launch, the usage your chats already saved is imported, so earlier months aren't
+  empty. Before this feature only chats recorded their usage, so those months show chat cost only;
+  imported calls are marked.
+- Image generation (per image), Nova Reel video (per second), Bedrock Agents (from their traces),
+  guardrails (per text unit) and Amazon Translate (per character) are recorded and priced too; the
+  tables show those units next to the tokens. Knowledge Base retrieval and Flows report no usage,
+  so they are counted but not priced.
+- Set a **monthly budget** on the page. You get a notification the first time the month's
+  estimated cost reaches each alert level (80% and 100% unless you change them), the `$` icon in
+  the sidebar gets a red dot while you're over, and the page shows how much is used and where the
+  month is heading at the current pace.
+- Figures are estimates from on-demand list prices. Where a model's pricing differs by
+  inference profile (global vs. a geography) or for very long prompts, and the catalog records
+  how, that is applied. Calls through your own application inference profiles are priced as the
+  model the profile uses. Your AWS bill is the final word: discounts, taxes and pricing details
+  the catalog doesn't record can differ. Calls to models with no known
+  price are counted but left out of the totals and flagged. Cohere embedding tokens are estimated
+  from text length.
 
 ### Local knowledge bases
 

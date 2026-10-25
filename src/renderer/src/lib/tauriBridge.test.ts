@@ -273,6 +273,48 @@ describe('installTauriBridge', () => {
     expect(seen).toEqual([[{ id: 'm2' }]])
   })
 
+  it('maps window.api.help to the help_* commands', async () => {
+    await installTauriBridge()
+    invokeMock.mockReset()
+    invokeMock.mockResolvedValue('')
+    await g.window.api.help.userGuide()
+    await g.window.api.help.search('budget', 5)
+    expect(invokeMock).toHaveBeenCalledWith('help_user_guide', undefined)
+    expect(invokeMock).toHaveBeenCalledWith('help_search', { query: 'budget', topK: 5 })
+  })
+
+  it('maps window.api.usage to the usage_* commands and usage-changed', async () => {
+    await installTauriBridge()
+    invokeMock.mockReset()
+    invokeMock.mockResolvedValue([])
+    const query = { from: '2026-10-01', to: '2026-10-31' }
+
+    await g.window.api.usage.summary(query, 'model')
+    await g.window.api.usage.months()
+    await g.window.api.usage.events(query, 50, 100)
+    await g.window.api.usage.breakdown(query, 'day', 'model')
+    await g.window.api.usage.info()
+    await g.window.api.usage.budgetStatus()
+    await g.window.api.usage.sessionCosts([{ sessionId: 's1' }])
+    expect(invokeMock).toHaveBeenCalledWith('session_usage_costs', {
+      sessions: [{ sessionId: 's1' }]
+    })
+    expect(invokeMock).toHaveBeenCalledWith('usage_budget_status', undefined)
+    await g.window.api.usage.exportCsv(query, 'usage.csv')
+    expect(invokeMock).toHaveBeenCalledWith('usage_breakdown', { query, by: 'day', then: 'model' })
+    expect(invokeMock).toHaveBeenCalledWith('usage_info', undefined)
+    expect(invokeMock).toHaveBeenCalledWith('usage_export_csv', { query, fileName: 'usage.csv' })
+    expect(invokeMock).toHaveBeenCalledWith('usage_summary', { query, groupBy: 'model' })
+    expect(invokeMock).toHaveBeenCalledWith('usage_months', undefined)
+    expect(invokeMock).toHaveBeenCalledWith('usage_events', { query, limit: 50, offset: 100 })
+
+    let changes = 0
+    g.window.api.usage.onChanged(() => changes++)
+    await tick()
+    mockListeners.get('usage-changed')?.({ payload: null })
+    expect(changes).toBe(1)
+  })
+
   it('maps window.workspaceFiles to the workspace_files_* commands', async () => {
     await installTauriBridge()
     invokeMock.mockReset()

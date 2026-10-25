@@ -51,8 +51,9 @@ pub fn allow_permission(command: &str) -> String {
 /// machine, and only the chat page in the main window opens one; app updates download and
 /// install a new version of the app, which only the main window's Settings and banner drive;
 /// knowledgebase commands read files from any path the caller names (agent editor and
-/// Settings only).
-pub const MAIN_WINDOW_ONLY_PREFIXES: &[&str] = &["local_terminal_", "app_update_", "knowledge_"];
+/// Settings only); usage commands read the whole spending history (Accounting page only).
+pub const MAIN_WINDOW_ONLY_PREFIXES: &[&str] =
+    &["local_terminal_", "app_update_", "knowledge_", "usage_"];
 
 pub fn is_main_window_only(command: &str) -> bool {
     MAIN_WINDOW_ONLY_PREFIXES

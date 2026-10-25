@@ -84,6 +84,7 @@ export async function generateSessionTitle(
       modelId: modelId,
       system,
       disableThinking: true,
+      usageContext: { feature: 'title' },
       inferenceConfig: {
         // A title is a handful of words. The old 4096 left room for the model to
         // return a paragraph, which then had to be salvaged.

@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import { useSessionCosts } from '@renderer/hooks/useSessionCosts'
+import { formatUsd } from '@renderer/pages/AccountingPage/accountingUtils'
+import React, { useEffect, useMemo, useState } from 'react'
 import { FiLoader } from 'react-icons/fi'
 import { useTranslation } from 'react-i18next'
 import { FiMoreHorizontal, FiEdit2, FiTrash2, FiZap, FiCheckSquare, FiX } from 'react-icons/fi'
@@ -53,6 +55,10 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
   // Sandbox / attachment indicators for the rows below.
   const { withSandbox: sessionsWithSandbox, withAttachments: sessionsWithAttachments } =
     useSessionResources(sessions.map((session) => session.id))
+  // Estimated cost of each chat, from the usage ledger.
+  const costWindows = useMemo(() => sessions.map((s) => ({ sessionId: s.id })), [sessions])
+  const sessionCosts = useSessionCosts(costWindows)
+  const costOf = (index: number) => sessionCosts[index] ?? 0
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -422,6 +428,8 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
                     ) : (
                       <p className="text-xs text-ink-muted whitespace-nowrap">
                         {formatDate(session.updatedAt)} · {session.messageCount} messages
+                        {costOf(sessions.indexOf(session)) > 0 &&
+                          ` · ${formatUsd(costOf(sessions.indexOf(session)))}`}
                       </p>
                     )}
                   </div>

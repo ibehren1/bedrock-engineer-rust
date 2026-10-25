@@ -177,7 +177,8 @@ function WebsiteGeneratorPageContents(props: WebsiteGeneratorPageContentsProps) 
 
   const options = {
     enableHistory: false,
-    tools: websiteAgentTools // 明示的にツール設定を渡す
+    tools: websiteAgentTools, // 明示的にツール設定を渡す
+    usageFeature: 'website' as const
   }
 
   const {

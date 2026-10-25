@@ -1,0 +1,18 @@
+[package]
+name = "usage"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+rusqlite.workspace = true
+bedrock = { path = "../bedrock" }
+models = { path = "../models" }
+chrono = { version = "=0.4.45", default-features = false, features = ["clock", "std"] }
+tracing = "=0.1.44"
+
+[dev-dependencies]
+tempfile.workspace = true

@@ -77,6 +77,7 @@
     "resources": {
       "bundle-resources/directory-agents/": "directory-agents/",
       "bundle-resources/docs/USER_GUIDE.md": "docs/USER_GUIDE.md",
+      "bundle-resources/docs/help-kb.db": "docs/help-kb.db",
       "bundle-resources/notices/": "notices/",
       "bundle-resources/LICENSE": "LICENSE",
       "bundle-resources/NOTICE": "NOTICE"

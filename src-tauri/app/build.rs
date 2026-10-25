@@ -26,6 +26,7 @@ const RESOURCES: &[(&str, &str)] = &[
         "directory-agents",
     ),
     ("../../docs/USER_GUIDE.md", "docs/USER_GUIDE.md"),
+    ("../../docs/help-kb.db", "docs/help-kb.db"),
     ("../../notices", "notices"),
     ("../../LICENSE", "LICENSE"),
     ("../../NOTICE", "NOTICE"),

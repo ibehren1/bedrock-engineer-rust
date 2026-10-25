@@ -9,13 +9,7 @@ export type CacheableField = 'messages' | 'system' | 'tools'
  * Type definition for model providers
  */
 export type ModelProvider =
-  | 'anthropic'
-  | 'amazon'
-  | 'deepseek'
-  | 'stability'
-  | 'openai'
-  | 'moonshotai'
-  | 'xai'
+  'anthropic' | 'amazon' | 'deepseek' | 'stability' | 'openai' | 'moonshotai' | 'xai'
 
 /**
  * Type definition for model categories
@@ -103,6 +97,24 @@ export interface ModelConfig {
   cache?: {
     supported: boolean
     cacheableFields: CacheableField[]
+  }
+
+  /**
+   * How the bill differs from `pricing` (used by the cost report only):
+   * - `profileMultiplier`: every rate times this for requests through that profile prefix
+   *   (`global`, `us`, `eu`, `apac`, `jp`, or `base` for no prefix).
+   * - `longContext`: when the prompt (input + cache read + cache write tokens) exceeds
+   *   `thresholdTokens`, the whole request bills at these multiples (1 when omitted).
+   */
+  pricingRules?: {
+    profileMultiplier?: Partial<Record<'global' | 'us' | 'eu' | 'apac' | 'jp' | 'base', number>>
+    longContext?: {
+      thresholdTokens: number
+      input?: number
+      output?: number
+      cacheRead?: number
+      cacheWrite?: number
+    }
   }
 }
 
@@ -278,6 +290,12 @@ const MODEL_REGISTRY: ModelConfig[] = [
       output: 0.0005,
       cacheRead: 0.00001,
       cacheWrite: 0.000125
+    },
+    // The stored rates are the global rate: geo profiles cost 10% more, and a prompt over 100K
+    // tokens bills at 5x every rate.
+    pricingRules: {
+      profileMultiplier: { us: 1.1, eu: 1.1, jp: 1.1 },
+      longContext: { thresholdTokens: 100000, input: 5, output: 5, cacheRead: 5, cacheWrite: 5 }
     },
     cache: {
       supported: true,
@@ -1062,6 +1080,12 @@ const MODEL_REGISTRY: ModelConfig[] = [
       output: 0.055,
       cacheRead: 0.0011,
       cacheWrite: 0.01375
+    },
+    // The stored rates are the geo rate: the global profile is ~9% cheaper. Input beyond 272K
+    // bills at ~2x (the model card names no other rate).
+    pricingRules: {
+      profileMultiplier: { global: 0.91 },
+      longContext: { thresholdTokens: 272000, input: 2 }
     }
   },
 
@@ -1111,6 +1135,12 @@ const MODEL_REGISTRY: ModelConfig[] = [
       output: 0.011,
       cacheRead: 0.00011,
       cacheWrite: 0.00275
+    },
+    // The stored rates are the US rate: the global profile is 10% cheaper. Input above 272K
+    // bills the whole request at 2x input and 1.5x output.
+    pricingRules: {
+      profileMultiplier: { global: 0.9 },
+      longContext: { thresholdTokens: 272000, input: 2, output: 1.5 }
     }
   },
 
@@ -1424,7 +1454,9 @@ const MODEL_REGISTRY: ModelConfig[] = [
       output: 0.0165,
       cacheRead: 0.00033,
       cacheWrite: 0
-    }
+    },
+    // The stored rates are the US rate: global bills about 10% less.
+    pricingRules: { profileMultiplier: { global: 0.9 } }
   },
 
   // Moonshot AI Kimi K2.5
@@ -1534,7 +1566,9 @@ const MODEL_REGISTRY: ModelConfig[] = [
       output: 0.0066,
       cacheRead: 0.00055,
       cacheWrite: 0
-    }
+    },
+    // The stored rates are the US rate: global bills about 10% less.
+    pricingRules: { profileMultiplier: { global: 0.9 } }
   },
 
   // xAI Grok 4.7
@@ -1608,7 +1642,9 @@ const MODEL_REGISTRY: ModelConfig[] = [
       output: 0.006,
       cacheRead: 0.0005,
       cacheWrite: 0
-    }
+    },
+    // The stored rates are the global rate: the US profile bills about 10% more.
+    pricingRules: { profileMultiplier: { us: 1.1 } }
   }
 
   // Custom model (this is example)
@@ -1675,6 +1711,143 @@ const IMAGE_GENERATION_MODELS: ModelConfig[] = [
         regions: ['us-west-2']
       }
     ]
+  }
+]
+
+/**
+ * On-demand prices of the Bedrock embedding models local knowledge bases can use, in dollars
+ * per 1000 input tokens (embeddings have no output tokens). Used by the cost report.
+ */
+export interface EmbeddingModelPricing {
+  modelId: string
+  name: string
+  inputPer1k: number
+}
+
+export const EMBEDDING_MODEL_PRICING: EmbeddingModelPricing[] = [
+  {
+    modelId: 'amazon.titan-embed-text-v2:0',
+    name: 'Titan Text Embeddings V2',
+    inputPer1k: 0.00002
+  },
+  { modelId: 'cohere.embed-english-v3', name: 'Cohere Embed English v3', inputPer1k: 0.0001 },
+  {
+    modelId: 'cohere.embed-multilingual-v3',
+    name: 'Cohere Embed Multilingual v3',
+    inputPer1k: 0.0001
+  },
+  { modelId: 'cohere.embed-v4:0', name: 'Cohere Embed v4', inputPer1k: 0.00012 }
+]
+
+/**
+ * Prices of text models no longer offered (removed from the registry above), so the cost report
+ * can still price usage recorded with them, including chat history from before the report
+ * existed. Never offered for selection.
+ */
+/**
+ * On-demand prices of the services billed per unit rather than per token, in dollars per unit:
+ * image models (per image), Nova Reel (per second of 720p video), Amazon Translate (per
+ * character), and guardrail policies (per text unit of up to 1000 characters; word filters are
+ * free). Used by the cost report.
+ */
+export interface UnitPricing {
+  /** Model id, `amazon.translate`, or `guardrail:<policy>`. */
+  id: string
+  name: string
+  unit: 'image' | 'videoSecond' | 'character' | 'guardrailTextUnit'
+  price: number
+}
+
+export const UNIT_PRICING: UnitPricing[] = [
+  {
+    id: 'stability.sd3-5-large-v1:0',
+    name: 'Stable Diffusion 3.5 Large',
+    unit: 'image',
+    price: 0.08
+  },
+  { id: 'stability.stable-image-core-v1:0', name: 'Stable Image Core', unit: 'image', price: 0.04 },
+  {
+    id: 'stability.stable-image-ultra-v1:0',
+    name: 'Stable Image Ultra',
+    unit: 'image',
+    price: 0.14
+  },
+  { id: 'amazon.nova-reel-v1:1', name: 'Amazon Nova Reel 1.1', unit: 'videoSecond', price: 0.08 },
+  { id: 'amazon.nova-reel-v1:0', name: 'Amazon Nova Reel', unit: 'videoSecond', price: 0.08 },
+  { id: 'amazon.translate', name: 'Amazon Translate', unit: 'character', price: 0.000015 },
+  {
+    id: 'guardrail:content',
+    name: 'Guardrails: content filters',
+    unit: 'guardrailTextUnit',
+    price: 0.00015
+  },
+  {
+    id: 'guardrail:topic',
+    name: 'Guardrails: denied topics',
+    unit: 'guardrailTextUnit',
+    price: 0.00015
+  },
+  {
+    id: 'guardrail:sensitiveInformation',
+    name: 'Guardrails: sensitive information filters',
+    unit: 'guardrailTextUnit',
+    price: 0.0001
+  },
+  {
+    id: 'guardrail:contextualGrounding',
+    name: 'Guardrails: contextual grounding checks',
+    unit: 'guardrailTextUnit',
+    price: 0.0001
+  },
+  { id: 'guardrail:word', name: 'Guardrails: word filters', unit: 'guardrailTextUnit', price: 0 }
+]
+
+export interface RetiredModelPricing {
+  baseId: string
+  name: string
+  pricing: NonNullable<ModelConfig['pricing']>
+}
+
+export const RETIRED_MODEL_PRICING: RetiredModelPricing[] = [
+  {
+    baseId: 'anthropic.claude-opus-4-20250514-v1:0',
+    name: 'Claude Opus 4',
+    pricing: { input: 0.015, output: 0.075, cacheRead: 0.0015, cacheWrite: 0.01875 }
+  },
+  {
+    baseId: 'anthropic.claude-opus-4-1-20250805-v1:0',
+    name: 'Claude Opus 4.1',
+    pricing: { input: 0.015, output: 0.075, cacheRead: 0.0015, cacheWrite: 0.01875 }
+  },
+  {
+    baseId: 'anthropic.claude-opus-4-5-20251101-v1:0',
+    name: 'Claude Opus 4.5',
+    pricing: { input: 0.005, output: 0.025, cacheRead: 0.0005, cacheWrite: 0.00625 }
+  },
+  {
+    baseId: 'anthropic.claude-sonnet-4-20250514-v1:0',
+    name: 'Claude Sonnet 4',
+    pricing: { input: 0.003, output: 0.015, cacheRead: 0.0003, cacheWrite: 0.00375 }
+  },
+  {
+    baseId: 'anthropic.claude-sonnet-4-5-20250929-v1:0',
+    name: 'Claude Sonnet 4.5',
+    pricing: { input: 0.003, output: 0.015, cacheRead: 0.0003, cacheWrite: 0.00375 }
+  },
+  {
+    baseId: 'anthropic.claude-3-7-sonnet-20250219-v1:0',
+    name: 'Claude 3.7 Sonnet',
+    pricing: { input: 0.003, output: 0.015, cacheRead: 0.0003, cacheWrite: 0.00375 }
+  },
+  {
+    baseId: 'anthropic.claude-3-haiku-20240307-v1:0',
+    name: 'Claude 3 Haiku',
+    pricing: { input: 0.00025, output: 0.00125, cacheRead: 0.00003, cacheWrite: 0.0003 }
+  },
+  {
+    baseId: 'amazon.nova-premier-v1:0',
+    name: 'Amazon Nova Premier',
+    pricing: { input: 0.0025, output: 0.0125, cacheRead: 0.000625, cacheWrite: 0 }
   }
 ]
 

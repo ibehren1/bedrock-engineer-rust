@@ -94,6 +94,8 @@ permissions = [
   "allow-chat-attachments-build-context",
   "allow-chat-attachments-open-folder",
   "allow-help-prepare-user-guide",
+  "allow-help-user-guide",
+  "allow-help-search",
   "allow-todo-init",
   "allow-todo-update",
   "allow-get-todo-list",
@@ -175,4 +177,5 @@ permissions = [
   "allow-docker-sandbox-terminal-resize",
   "allow-docker-sandbox-terminal-backlog",
   "allow-docker-sandbox-terminal-close",
+  "allow-session-usage-costs",
 ]

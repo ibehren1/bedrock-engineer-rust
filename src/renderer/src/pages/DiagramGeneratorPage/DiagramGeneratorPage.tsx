@@ -166,7 +166,8 @@ export default function DiagramGeneratorPage() {
     undefined,
     {
       enableHistory: true,
-      tools: diagramAgentTools // 明示的にツール設定を渡す
+      tools: diagramAgentTools, // 明示的にツール設定を渡す
+      usageFeature: 'diagram'
     }
   )
 

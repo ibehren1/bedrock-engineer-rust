@@ -25,6 +25,7 @@ use crate::error::{Error, Result};
 use crate::retry::random_index;
 use crate::sdk::{iso_millis, now_iso, SdkConfigSource};
 use crate::settings::AwsSettings;
+use crate::usage::{self, UnitKind, UsageService};
 use aws_sdk_bedrockruntime::types::{AsyncInvokeOutputDataConfig, AsyncInvokeS3OutputDataConfig};
 use base64::Engine;
 use serde::{Deserialize, Serialize};
@@ -515,6 +516,35 @@ async fn start_async_invoke(
     Ok(out.invocation_arn)
 }
 
+/// Seconds of video a started job bills: `durationSeconds`, or 6 per shot for
+/// MULTI_SHOT_MANUAL (which sends no duration).
+fn billed_seconds(request: &Value, requested: f64) -> f64 {
+    if let Some(d) = request
+        .pointer("/videoGenerationConfig/durationSeconds")
+        .and_then(Value::as_f64)
+    {
+        return d;
+    }
+    match request
+        .pointer("/multiShotManualParams/shots")
+        .and_then(Value::as_array)
+    {
+        Some(shots) => shots.len() as f64 * 6.0,
+        None => requested,
+    }
+}
+
+fn record_video(model_id: &str, aws: &AwsSettings, seconds: f64) {
+    usage::record_units(
+        UsageService::Video,
+        model_id,
+        video_region(aws),
+        "tool:generateVideo",
+        UnitKind::VideoSeconds,
+        seconds,
+    );
+}
+
 /// `startVideoGeneration(request)`.
 pub async fn start_video_generation(
     configs: &dyn SdkConfigSource,
@@ -532,7 +562,14 @@ pub async fn start_video_generation(
 
     tracing::debug!(request = %request, model_id, "Nova Reel request");
     let error = match start_async_invoke(&runtime, model_id, &request, &req.s3_uri).await {
-        Ok(arn) => return Ok(in_progress(&arn, model_id, &req.s3_uri)),
+        Ok(arn) => {
+            record_video(
+                model_id,
+                aws,
+                billed_seconds(&request, req.duration_seconds),
+            );
+            return Ok(in_progress(&arn, model_id, &req.s3_uri));
+        }
         Err(e) => e,
     };
     tracing::error!(error = %error, "Error starting video generation");
@@ -561,6 +598,7 @@ pub async fn start_video_generation(
                 tracing::info!(
                     "Fallback succeeded! Note: Images were not used due to API limitations."
                 );
+                record_video(model_id, aws, req.duration_seconds);
                 Ok(in_progress(&arn, model_id, &req.s3_uri))
             }
             Err(fallback_error) => Err(Error::plain(format!(

@@ -750,6 +750,7 @@ function createApi(): Window['api'] {
   const LT = 'api.localTerminal'
   const AU = 'api.appUpdate'
   const KB = 'api.knowledge'
+  const US = 'api.usage'
   const CAM = 'api.camera'
   const TD = 'api.todo'
   const MCP = 'api.mcp'
@@ -1093,6 +1094,28 @@ function createApi(): Window['api'] {
       onChanged: (callback) => on('knowledge:changed', callback),
       onModelDownload: (callback) => on('knowledge:model-download', callback)
     },
+    usage: {
+      summary: cmd(`${US}.summary`, 'usage_summary', (query, groupBy) => ({ query, groupBy })),
+      breakdown: cmd(`${US}.breakdown`, 'usage_breakdown', (query, by, then) => ({
+        query,
+        by,
+        then
+      })),
+      info: cmd(`${US}.info`, 'usage_info'),
+      budgetStatus: cmd(`${US}.budgetStatus`, 'usage_budget_status'),
+      sessionCosts: cmd(`${US}.sessionCosts`, 'session_usage_costs', (sessions) => ({ sessions })),
+      exportCsv: cmd(`${US}.exportCsv`, 'usage_export_csv', (query, fileName) => ({
+        query,
+        fileName
+      })),
+      months: cmd(`${US}.months`, 'usage_months'),
+      events: cmd(`${US}.events`, 'usage_events', (query, limit, offset) => ({
+        query,
+        limit,
+        offset
+      })),
+      onChanged: (callback) => on('usage-changed', () => callback())
+    },
     localTerminal: {
       open: cmd(`${LT}.open`, 'local_terminal_open', (sessionId, cols, rows) => ({
         sessionId,
@@ -1158,7 +1181,9 @@ function createApi(): Window['api'] {
         (sessionId) => ({
           sessionId
         })
-      )
+      ),
+      userGuide: cmd('api.help.userGuide', 'help_user_guide'),
+      search: cmd('api.help.search', 'help_search', (query, topK) => ({ query, topK }))
     },
     screen: {
       listAvailableWindows: cmd('api.screen.listAvailableWindows', 'screen_list_available_windows')

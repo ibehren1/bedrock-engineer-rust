@@ -1,5 +1,5 @@
 import { IconType } from 'react-icons'
-import { FiHome, FiFeather, FiSettings } from 'react-icons/fi'
+import { FiHome, FiFeather, FiSettings, FiDollarSign } from 'react-icons/fi'
 import { LuCombine, LuBookDown, LuBrain } from 'react-icons/lu'
 import { HiOutlineChatAlt2 } from 'react-icons/hi'
 import { BsLayoutWtf } from 'react-icons/bs'
@@ -14,6 +14,8 @@ import DiagramGeneratorPage from './pages/DiagramGeneratorPage/DiagramGeneratorP
 import { AgentDirectoryPage } from './pages/AgentDirectoryPage/AgentDirectoryPage'
 import { MyAgentsPage } from './pages/MyAgentsPage/MyAgentsPage'
 import { MemoryPage } from './pages/MemoryPage/MemoryPage'
+import { AccountingPage } from './pages/AccountingPage/AccountingPage'
+import { HelpPage } from './pages/HelpPage/HelpPage'
 import BackgroundAgentPage from './pages/BackgroundAgentPage/BackgroundAgentPage'
 import TaskExecutionHistoryPage from './pages/BackgroundAgentPage/TaskExecutionHistoryPage'
 import FileViewerPage from './pages/FileViewerPage/FileViewerPage'
@@ -92,11 +94,26 @@ export const routes: AppRoute[] = [
     element: <DiagramGeneratorPage />
   },
   {
+    name: 'Accounting',
+    href: '/accounting',
+    icon: FiDollarSign,
+    position: 'top',
+    element: <AccountingPage />
+  },
+  {
     name: 'Settings',
     href: '/setting',
     icon: FiSettings,
     position: 'top',
     element: <SettingPage />
+  },
+  {
+    // Opened from the Help button at the bottom of the sidebar, not listed with the pages.
+    name: 'Help',
+    href: '/help',
+    icon: FiSettings,
+    position: 'hidden',
+    element: <HelpPage />
   },
   {
     name: 'Task History',

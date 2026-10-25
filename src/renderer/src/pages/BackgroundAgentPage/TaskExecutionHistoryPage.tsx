@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import {
@@ -15,6 +15,8 @@ import {
 } from '@heroicons/react/24/outline'
 import { useBackgroundAgent, ScheduledTask, TaskExecutionResult } from './hooks/useBackgroundAgent'
 import JSONViewer from '../../components/JSONViewer'
+import { runWindows, useSessionCosts } from '@renderer/hooks/useSessionCosts'
+import { formatUsd } from '@renderer/pages/AccountingPage/accountingUtils'
 import { BackgroundAgentTextArea } from './components/BackgroundAgentTextArea'
 
 interface HistoryFilter {
@@ -32,6 +34,11 @@ const TaskExecutionHistoryPage: React.FC = () => {
   const [task, setTask] = useState<ScheduledTask | null>(null)
   const [history, setHistory] = useState<TaskExecutionResult[]>([])
   const [filteredHistory, setFilteredHistory] = useState<TaskExecutionResult[]>([])
+  // Estimated cost of each run, from the usage ledger (windows over the whole history, so a
+  // continued session's earlier runs are not counted again).
+  const costWindows = useMemo(() => runWindows(history), [history])
+  const runCosts = useSessionCosts(costWindows)
+  const runCost = (execution: TaskExecutionResult) => runCosts[history.indexOf(execution)] ?? 0
   const [selectedExecution, setSelectedExecution] = useState<TaskExecutionResult | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [sessionHistories, setSessionHistories] = useState<Record<string, any[]>>({})
@@ -550,6 +557,14 @@ const TaskExecutionHistoryPage: React.FC = () => {
                         <span>{formatDateTime(execution.executedAt)}</span>
                         <span className="hidden md:inline">•</span>
                         <span className="hidden md:inline">{execution.messageCount}msg</span>
+                        {runCost(execution) > 0 && (
+                          <>
+                            <span>•</span>
+                            <span title={t('backgroundAgent.history.estimatedCost')}>
+                              {formatUsd(runCost(execution))}
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>

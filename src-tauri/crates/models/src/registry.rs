@@ -129,6 +129,35 @@ pub struct ModelConfig {
     pub pricing: Option<Pricing>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cache: Option<CacheConfig>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pricing_rules: Option<PricingRules>,
+}
+
+/// `ModelConfig['pricingRules']`: how the bill differs from `pricing` (cost report only).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PricingRules {
+    /// Profile prefix (`global`, `us`, ..., `base`) -> multiplier on every rate.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub profile_multiplier: std::collections::BTreeMap<String, f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub long_context: Option<LongContextRule>,
+}
+
+/// Above `threshold_tokens` of prompt, the whole request bills at these multiples (1 when
+/// unset).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LongContextRule {
+    pub threshold_tokens: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub input: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cache_read: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cache_write: Option<f64>,
 }
 
 /// One selectable model/profile combination (`LLM` in `src/types/llm.ts`).
@@ -165,6 +194,12 @@ pub struct ImageModel {
 pub(crate) struct Data {
     pub text_models: Vec<ModelConfig>,
     pub image_models: Vec<ModelConfig>,
+    #[serde(default)]
+    pub embedding_models: Vec<EmbeddingModelPricing>,
+    #[serde(default)]
+    pub retired_models: Vec<RetiredModelPricing>,
+    #[serde(default)]
+    pub unit_pricing: Vec<UnitPricing>,
     /// `getModelsForRegion(region)` model IDs as computed by the TS code (test fixture).
     #[cfg_attr(not(test), allow(dead_code))]
     pub region_order: BTreeMap<String, Vec<String>>,
@@ -189,6 +224,65 @@ pub fn model_registry() -> &'static [ModelConfig] {
 /// The image generation registry (`IMAGE_GENERATION_MODELS`), in registry order.
 pub fn image_generation_models() -> &'static [ModelConfig] {
     &DATA.image_models
+}
+
+/// Price of a Bedrock embedding model (`EMBEDDING_MODEL_PRICING`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EmbeddingModelPricing {
+    pub model_id: String,
+    pub name: String,
+    /// Dollars per 1000 input tokens.
+    pub input_per1k: f64,
+}
+
+/// Price of a text model no longer offered (`RETIRED_MODEL_PRICING`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RetiredModelPricing {
+    pub base_id: String,
+    pub name: String,
+    pub pricing: Pricing,
+}
+
+/// What a [`UnitPricing`] entry charges for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum PricedUnit {
+    Image,
+    VideoSecond,
+    Character,
+    GuardrailTextUnit,
+}
+
+/// Price of one unit of a non-token service (`UNIT_PRICING`): an image model, Nova Reel, Amazon
+/// Translate, or one guardrail policy (`guardrail:<policy>`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UnitPricing {
+    pub id: String,
+    pub name: String,
+    pub unit: PricedUnit,
+    /// Dollars per unit.
+    pub price: f64,
+}
+
+/// The unit price for `id` (a model id, `amazon.translate` or `guardrail:<policy>`).
+pub fn get_unit_pricing(id: &str) -> Option<&'static UnitPricing> {
+    let base = get_base_model_id(id);
+    DATA.unit_pricing.iter().find(|m| m.id == base)
+}
+
+/// The retired model `model_id` names (a cross-region prefix is allowed).
+pub fn get_retired_pricing(model_id: &str) -> Option<&'static RetiredModelPricing> {
+    let base = get_base_model_id(model_id);
+    DATA.retired_models.iter().find(|m| m.base_id == base)
+}
+
+/// The embedding model `model_id` names (a cross-region prefix is allowed).
+pub fn get_embedding_pricing(model_id: &str) -> Option<&'static EmbeddingModelPricing> {
+    let base = get_base_model_id(model_id);
+    DATA.embedding_models.iter().find(|m| m.model_id == base)
 }
 
 fn is_arn_model_id(model_id: &str) -> bool {

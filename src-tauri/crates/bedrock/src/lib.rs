@@ -37,6 +37,7 @@
 //! | [`inference_profile`] | `inferenceProfileService` | `bedrock_list_application_inference_profiles` |
 //! | [`catalog`] | `modelService`, `getModelMaxTokens` | `list_models`, `list_agent_tags`, `bedrock_get_model_max_tokens` |
 //! | [`structured_output`] | `structuredOutputService`, `websiteRecommendationFactory` | `get_structured_output`, `get_website_recommendations` |
+//! | [`usage`] | — | usage metering for the cost report (process-wide sink) |
 //! | [`video`] | `movieService` | `bedrock:generateVideo`, `bedrock:startVideoGeneration`, `bedrock:checkVideoStatus`, `bedrock:downloadVideo` (video tools) |
 //!
 //! `NotificationService` is not ported here: it is Electron UI (OS notifications, window focus)
@@ -142,6 +143,7 @@ pub mod settings;
 pub mod stream_event;
 pub mod structured_output;
 pub mod translate;
+pub mod usage;
 pub mod video;
 
 pub use client::{load_sdk_config, runtime_client};
