@@ -63,7 +63,9 @@ async fn installs_once_and_searches_by_keyword_or_hybrid() {
     assert_eq!(mode, SearchMode::Hybrid);
     assert!(hits.iter().any(|h| h.heading_path.contains("26.4")));
 
-    // A new guide ships: the installed copy is replaced on next open.
+    // A new guide ships: the installed copy is replaced on next open. Close the first instance's
+    // connection first, as an app restart does: Windows can't replace a file that's open.
+    drop(kb);
     let changed = format!("{GUIDE}\n## 27. New\n\nSomething new about widgets.\n");
     std::fs::remove_file(&shipped).unwrap();
     built(dir.path(), &changed).await;
