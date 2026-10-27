@@ -219,6 +219,72 @@ mod openai_gpt_6_1_sol {
     }
 }
 
+/// describe('OpenAI GPT-6.1 Terra registry integration')
+mod openai_gpt_6_1_terra {
+    use super::*;
+
+    #[test]
+    fn us_and_global_profiles() {
+        let ids = ids();
+        assert!(has(&ids, "us.openai.gpt-6.1-terra"));
+        assert!(has(&ids, "global.openai.gpt-6.1-terra"));
+        assert!(!has(&ids, "openai.gpt-6.1-terra"));
+    }
+
+    #[test]
+    fn display_name_and_capabilities() {
+        let m = find("us.openai.gpt-6.1-terra").unwrap();
+        assert_eq!(m.model_name, "GPT-6.1 Terra (US)");
+        assert_eq!(
+            find("global.openai.gpt-6.1-terra").unwrap().model_name,
+            "GPT-6.1 Terra (Global)"
+        );
+        assert!(m.tool_use);
+        assert_eq!(m.supports_thinking, Some(true));
+        assert_eq!(m.max_tokens_limit, Some(128000));
+    }
+
+    #[test]
+    fn offered_in_us_regions_only() {
+        for region in ["us-east-1", "us-east-2", "us-west-2"] {
+            let ids = region_ids(region);
+            assert!(has(&ids, "us.openai.gpt-6.1-terra"), "{region}");
+            assert!(has(&ids, "global.openai.gpt-6.1-terra"), "{region}");
+        }
+        for region in ["eu-west-1", "ap-northeast-1"] {
+            assert!(
+                !has(&region_ids(region), "us.openai.gpt-6.1-terra"),
+                "{region}"
+            );
+        }
+    }
+
+    #[test]
+    fn does_not_resolve_to_gpt_5_6_terra_or_gpt_6_1_sol() {
+        assert_eq!(name_of("us.openai.gpt-6.1-terra"), Some("GPT-6.1 Terra"));
+        assert_eq!(name_of("global.openai.gpt-6.1-terra"), Some("GPT-6.1 Terra"));
+        assert_eq!(name_of("us.openai.gpt-5.6-terra"), Some("GPT-5.6 Terra"));
+        assert_eq!(name_of("us.openai.gpt-6.1-sol"), Some("GPT-6.1 Sol"));
+    }
+
+    #[test]
+    fn no_explicit_prompt_cache() {
+        assert_eq!(
+            get_model_config("us.openai.gpt-6.1-terra").unwrap().cache,
+            None
+        );
+    }
+
+    #[test]
+    fn pricing_us_cris_short_context() {
+        let calc = PricingCalculator::new("us.openai.gpt-6.1-terra");
+        assert_close(calc.calculate_input_cost(1_000_000), 1.1);
+        assert_close(calc.calculate_output_cost(1_000_000), 5.5);
+        assert_close(calc.calculate_cache_read_cost(1_000_000), 0.055);
+        assert_close(calc.calculate_cache_write_cost(1_000_000), 1.375);
+    }
+}
+
 /// Shared shape of the Opus 5.5 / Sonnet 5.5 / Haiku 5.5 describe blocks.
 fn assert_geo_profiles_only(base: &str) {
     let ids = ids();
@@ -583,6 +649,7 @@ fn model_output_ceilings() {
         ("us.deepseek.r1-v1:0", 32768),
         ("us.openai.gpt-6-astra", 128000),
         ("us.openai.gpt-6.1-sol", 131072),
+        ("us.openai.gpt-6.1-terra", 128000),
         ("us.openai.gpt-6-sol", 128000),
         ("us.openai.gpt-6-luna", 128000),
         ("us.openai.gpt-5.6-sol", 128000),

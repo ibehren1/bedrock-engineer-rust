@@ -1144,6 +1144,57 @@ const MODEL_REGISTRY: ModelConfig[] = [
     }
   },
 
+  // OpenAI GPT-6.1 Terra
+  // Launched 2026-10-26: the Terra line's successor to GPT-5.6 Terra, with
+  // visual reasoning, computer use and factuality approaching GPT-6 Astra at
+  // under half GPT-6.1 Sol's price.
+  // On bedrock-runtime, Converse is reachable only through a cross-region
+  // inference profile (`us.openai.gpt-6.1-terra` / `global.openai.gpt-6.1-terra`);
+  // in-region invocation of the bare model ID is not supported.
+  // 1.05M-token context window, 128K max output tokens, text and image input.
+  // Explicit prompt caching is Responses-API only, so no `cache` block is
+  // declared; implicit caching is still billed, so cache pricing is recorded.
+  // Pricing (US CRIS short context, per 1M in/out/cache-read/cache-write):
+  // $1.10/$5.50/$0.055/$1.375, stored per 1K. The (Global) profile is ~9%
+  // cheaper ($1.00/$5.00/$0.05/$1.25). Input above 272K tokens bills the whole
+  // request at the long-context tier (2x input and cache, 1.5x output).
+  {
+    baseId: 'gpt-6.1-terra',
+    name: 'GPT-6.1 Terra',
+    provider: 'openai',
+    category: 'text',
+    toolUse: true,
+    maxTokensLimit: 128000,
+    supportsThinking: true,
+    supportedThinkingTypes: ['enabled'],
+    inferenceProfiles: [
+      {
+        type: 'global',
+        prefix: 'global',
+        regions: ['us-east-1', 'us-east-2', 'us-west-2'],
+        displaySuffix: '(Global)'
+      },
+      {
+        type: 'regional-us',
+        prefix: 'us',
+        regions: ['us-east-1', 'us-east-2', 'us-west-2'],
+        displaySuffix: '(US)'
+      }
+    ],
+    pricing: {
+      input: 0.0011,
+      output: 0.0055,
+      cacheRead: 0.000055,
+      cacheWrite: 0.001375
+    },
+    // The stored rates are the US rate: the global profile is ~9% cheaper. Input above 272K
+    // bills the whole request at 2x input and cache, 1.5x output.
+    pricingRules: {
+      profileMultiplier: { global: 0.91 },
+      longContext: { thresholdTokens: 272000, input: 2, output: 1.5, cacheRead: 2, cacheWrite: 2 }
+    }
+  },
+
   // OpenAI GPT-6 Sol
   // Invoked through the Bedrock Converse API via a cross-region inference
   // profile (`us.openai.gpt-6-sol` / `global.openai.gpt-6-sol`); on-demand

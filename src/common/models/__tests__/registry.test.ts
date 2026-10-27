@@ -12,8 +12,7 @@ import { PricingCalculator } from '../pricing'
 // so each is exposed only via cross-region inference profiles (global.* and
 // us.*). These cases guard registration, per-region availability, config
 // resolution, and pricing.
-// GPT-6.1 Sol is the exception: it has no global profile, only the US geo one,
-// so it is excluded from the shared cases and covered separately below.
+// GPT-6.1 Sol and GPT-6.1 Terra are covered separately below.
 const OPENAI_GPT_MODELS = [
   { base: 'gpt-6-astra', name: 'GPT-6 Astra' },
   { base: 'gpt-6-sol', name: 'GPT-6 Sol' },
@@ -167,6 +166,61 @@ describe('OpenAI GPT-6.1 Sol registry integration', () => {
     expect(calc.calculateOutputCost(1_000_000)).toBeCloseTo(11.0, 5)
     expect(calc.calculateCacheReadCost(1_000_000)).toBeCloseTo(0.11, 5)
     expect(calc.calculateCacheWriteCost(1_000_000)).toBeCloseTo(2.75, 5)
+  })
+})
+
+// GPT-6.1 Terra, like GPT-6.1 Sol, has only the US geo and global profiles. Its
+// base ID sits next to GPT-5.6 Terra's, which costs twice as much, so config
+// resolution must keep the two apart.
+describe('OpenAI GPT-6.1 Terra registry integration', () => {
+  test('is exposed as the us.* and global.* profiles (no bare model ID)', () => {
+    const ids = allModels.map((m) => m.modelId)
+    expect(ids).toContain('us.openai.gpt-6.1-terra')
+    expect(ids).toContain('global.openai.gpt-6.1-terra')
+    expect(ids).not.toContain('openai.gpt-6.1-terra')
+  })
+
+  test('display name carries the routing suffix and capabilities are set', () => {
+    const model = allModels.find((m) => m.modelId === 'us.openai.gpt-6.1-terra')
+    expect(model?.modelName).toBe('GPT-6.1 Terra (US)')
+    expect(allModels.find((m) => m.modelId === 'global.openai.gpt-6.1-terra')?.modelName).toBe(
+      'GPT-6.1 Terra (Global)'
+    )
+    expect(model?.toolUse).toBe(true)
+    expect(model?.supportsThinking).toBe(true)
+    expect(model?.maxTokensLimit).toBe(128000)
+  })
+
+  test('is offered in the three US regions and nowhere else', () => {
+    for (const region of ['us-east-1', 'us-east-2', 'us-west-2'] as const) {
+      const ids = getModelsForRegion(region).map((m) => m.modelId)
+      expect(ids).toContain('us.openai.gpt-6.1-terra')
+      expect(ids).toContain('global.openai.gpt-6.1-terra')
+    }
+    for (const region of ['eu-west-1', 'ap-northeast-1'] as const) {
+      expect(getModelsForRegion(region).map((m) => m.modelId)).not.toContain(
+        'us.openai.gpt-6.1-terra'
+      )
+    }
+  })
+
+  test('does not resolve to GPT-5.6 Terra or GPT-6.1 Sol', () => {
+    expect(getModelConfig('us.openai.gpt-6.1-terra')?.name).toBe('GPT-6.1 Terra')
+    expect(getModelConfig('global.openai.gpt-6.1-terra')?.name).toBe('GPT-6.1 Terra')
+    expect(getModelConfig('us.openai.gpt-5.6-terra')?.name).toBe('GPT-5.6 Terra')
+    expect(getModelConfig('us.openai.gpt-6.1-sol')?.name).toBe('GPT-6.1 Sol')
+  })
+
+  test('no explicit prompt cache is declared (implicit caching only)', () => {
+    expect(getModelConfig('us.openai.gpt-6.1-terra')?.cache).toBeUndefined()
+  })
+
+  test('pricing uses the US CRIS short-context rate ($1.10/$5.50/$0.055/$1.375 per 1M)', () => {
+    const calc = new PricingCalculator('us.openai.gpt-6.1-terra')
+    expect(calc.calculateInputCost(1_000_000)).toBeCloseTo(1.1, 5)
+    expect(calc.calculateOutputCost(1_000_000)).toBeCloseTo(5.5, 5)
+    expect(calc.calculateCacheReadCost(1_000_000)).toBeCloseTo(0.055, 5)
+    expect(calc.calculateCacheWriteCost(1_000_000)).toBeCloseTo(1.375, 5)
   })
 })
 
@@ -475,6 +529,7 @@ describe('model output ceilings', () => {
     ['us.deepseek.r1-v1:0', 32768],
     ['us.openai.gpt-6-astra', 128000],
     ['us.openai.gpt-6.1-sol', 131072],
+    ['us.openai.gpt-6.1-terra', 128000],
     ['us.openai.gpt-6-sol', 128000],
     ['us.openai.gpt-6-luna', 128000],
     ['us.openai.gpt-5.6-sol', 128000],

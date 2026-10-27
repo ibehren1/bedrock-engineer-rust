@@ -7,6 +7,17 @@ dated section here for anything user-visible.
 See the [README](./README.md#whats-different-in-this-fork) for a feature-by-feature
 overview of the fork with screenshots.
 
+### 2026-10-27
+
+- **OpenAI GPT-6.1 Terra** is now in the model dropdown, as **(US)** and **(Global)**, in US East
+  (N. Virginia, Ohio) and US West (Oregon). It follows GPT-5.6 Terra and OpenAI reports it doing
+  about as well as GPT-6 Astra on agent tasks while finishing them faster, at $1.10 per million
+  tokens in and $5.50 per million out (Global is about 9% cheaper), half the price of GPT-6.1 Sol.
+  It takes text and images, has a 1.05M-token context window, can return up to 128,000 tokens in
+  one answer, and thinks by effort level, so **Deeper** asks it to think as hard as it can. Prompt
+  content is cached automatically and there are no cache settings to set. Prompts longer than
+  272,000 tokens bill at a higher rate, and the Accounting page prices them that way.
+
 ### 2026-10-25
 
 - **Costs by agent, per chat and per background task run.** The Accounting page has a table of

@@ -482,7 +482,7 @@ context pointing at a remote daemon disables that tab and says why; the rest of 
 ### Models
 
 - Added Claude Fable 5.1, Fable 5, Opus 5.5, Opus 5, Sonnet 5.5, Sonnet 5, Haiku 5.5 and Opus 4.8, Kimi K3,
-  Kimi 2.5, xAI Grok 4.7 and 4.6, the OpenAI GPT-6.1 Sol, GPT-6 (Astra/Sol/Luna) and GPT-5.6
+  Kimi 2.5, xAI Grok 4.7 and 4.6, the OpenAI GPT-6.1 (Sol/Terra), GPT-6 (Astra/Sol/Luna) and GPT-5.6
   (Sol/Terra/Luna) models, all served through the standard Bedrock Converse API.
 - Adaptive thinking for newer Claude models, with the thinking type translated per model so
   switching model generations doesn't 400. On models that expose reasoning-effort levels rather than

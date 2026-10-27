@@ -2027,6 +2027,7 @@ Useful when you know what the steps are but not the exact JSON syntax for expres
 | A very large context window for huge documents           | **Claude Fable 5.1** (1M tokens) or **Grok 4.7** (500K)      |
 | OpenAI's most capable model, cost no object              | **GPT-6 Astra** (1.05M tokens, $11/$55 per 1M)               |
 | Near-Astra quality at a mid-tier OpenAI price            | **GPT-6.1 Sol** (1M tokens, $2.20/$11 per 1M)                |
+| A strong, low-cost OpenAI model for agent work           | **GPT-6.1 Terra** (1.05M tokens, $1.10/$5.50 per 1M)         |
 | A mid-priced OpenAI model for everyday work              | **GPT-6 Sol** ($2/$10 per 1M)                                |
 | The cheapest OpenAI model for high-volume work           | **GPT-6 Luna** ($0.10/$0.50 per 1M)                          |
 
@@ -2042,7 +2043,7 @@ Opus 4.8, Opus 5, Opus 5.5, Fable 5, Fable 5.1
 
 **Amazon (Nova):** Nova Micro, Nova Lite, Nova 2 Lite, Nova Pro
 
-**OpenAI:** GPT-6 Astra, GPT-6.1 Sol, GPT-6 Sol, GPT-6 Luna, GPT-5.6 Sol, GPT-5.6 Terra, GPT-5.6 Luna,
+**OpenAI:** GPT-6 Astra, GPT-6.1 Sol, GPT-6.1 Terra, GPT-6 Sol, GPT-6 Luna, GPT-5.6 Sol, GPT-5.6 Terra, GPT-5.6 Luna,
 GPT-OSS 20B, GPT-OSS 120B
 
 **Others:** DeepSeek R1, Kimi K3, Kimi K2.5, Grok 4.6, Grok 4.7

@@ -1197,6 +1197,58 @@
       }
     },
     {
+      "baseId": "gpt-6.1-terra",
+      "name": "GPT-6.1 Terra",
+      "provider": "openai",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 128000,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "enabled"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "global",
+          "prefix": "global",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(Global)"
+        },
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        }
+      ],
+      "pricing": {
+        "input": 0.0011,
+        "output": 0.0055,
+        "cacheRead": 0.000055,
+        "cacheWrite": 0.001375
+      },
+      "pricingRules": {
+        "profileMultiplier": {
+          "global": 0.91
+        },
+        "longContext": {
+          "thresholdTokens": 272000,
+          "input": 2,
+          "output": 1.5,
+          "cacheRead": 2,
+          "cacheWrite": 2
+        }
+      }
+    },
+    {
       "baseId": "gpt-6-sol",
       "name": "GPT-6 Sol",
       "provider": "openai",
@@ -2233,6 +2285,8 @@
       "us.openai.gpt-6-sol",
       "global.openai.gpt-6.1-sol",
       "us.openai.gpt-6.1-sol",
+      "global.openai.gpt-6.1-terra",
+      "us.openai.gpt-6.1-terra",
       "global.xai.grok-4.6",
       "us.xai.grok-4.6",
       "global.xai.grok-4.7",
@@ -2283,6 +2337,8 @@
       "us.openai.gpt-6-sol",
       "global.openai.gpt-6.1-sol",
       "us.openai.gpt-6.1-sol",
+      "global.openai.gpt-6.1-terra",
+      "us.openai.gpt-6.1-terra",
       "global.xai.grok-4.6",
       "us.xai.grok-4.6",
       "global.xai.grok-4.7",
@@ -2357,6 +2413,8 @@
       "us.openai.gpt-6-sol",
       "global.openai.gpt-6.1-sol",
       "us.openai.gpt-6.1-sol",
+      "global.openai.gpt-6.1-terra",
+      "us.openai.gpt-6.1-terra",
       "openai.gpt-oss-120b-1:0",
       "openai.gpt-oss-20b-1:0",
       "global.xai.grok-4.6",
