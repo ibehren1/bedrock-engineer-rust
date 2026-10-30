@@ -4,8 +4,9 @@
 //!
 //! Calls reach the ledger through [`bedrock::usage`]: the app installs [`UsageLedger::sink`] as
 //! the process-wide sink. The sink only queues the event; a writer thread inserts queued events
-//! in one transaction and then calls the change hook once, so a burst of calls (an ingest, a
-//! long agent run) produces one `usage-changed` event rather than hundreds.
+//! in one transaction per wake-up and calls the change hook at most once per
+//! [`NOTIFY_INTERVAL`], so a stream of calls (an ingest embeds passage by passage, a long agent
+//! run) produces about one `usage-changed` event a second rather than one per call.
 //!
 //! Chat history from before the ledger existed can be imported once
 //! ([`UsageLedger::import_chat_history`]); those rows have `source = 'backfill'`.
@@ -25,6 +26,10 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
+
+/// Least time between two calls of the change hook; writes in between are reported together.
+pub const NOTIFY_INTERVAL: Duration = Duration::from_secs(1);
 
 const SCHEMA_VERSION: i64 = 1;
 
@@ -56,6 +61,8 @@ CREATE TABLE IF NOT EXISTS usage_events (
     dedupe_key TEXT UNIQUE
 );
 CREATE INDEX IF NOT EXISTS usage_events_day ON usage_events (local_day);
+-- Covers the month total behind the budget badge, so it never reads the table itself.
+CREATE INDEX IF NOT EXISTS usage_events_day_cost ON usage_events (local_day, cost_usd);
 CREATE INDEX IF NOT EXISTS usage_events_model_day ON usage_events (model_id, local_day);
 CREATE INDEX IF NOT EXISTS usage_events_feature_day ON usage_events (feature, local_day);
 ";
@@ -237,21 +244,51 @@ fn notify(hook: &ChangeHook) {
     }
 }
 
-/// Inserts queued events until every sender is gone, a batch per wake-up.
+/// Inserts queued events until every sender is gone, a batch per wake-up. The change hook runs
+/// at most once per [`NOTIFY_INTERVAL`]; a write inside the interval is reported when it ends.
 fn writer(conn: Connection, queue: mpsc::Receiver<UsageEvent>, on_change: ChangeHook) {
     let mut conn = conn;
-    while let Ok(first) = queue.recv() {
-        let mut batch = vec![first];
-        batch.extend(queue.try_iter());
-        let result = conn.transaction().and_then(|tx| {
-            for event in &batch {
-                insert(&tx, event, Source::Live, None)?;
+    let mut last_notify: Option<Instant> = None;
+    let mut pending = false;
+    loop {
+        let first = if pending {
+            let wait = last_notify.map_or(Duration::ZERO, |t| {
+                NOTIFY_INTERVAL.saturating_sub(t.elapsed())
+            });
+            match queue.recv_timeout(wait) {
+                Ok(e) => Some(e),
+                Err(mpsc::RecvTimeoutError::Timeout) => None,
+                Err(mpsc::RecvTimeoutError::Disconnected) => {
+                    notify(&on_change);
+                    return;
+                }
             }
-            tx.commit()
-        });
-        match result {
-            Ok(()) => notify(&on_change),
-            Err(e) => tracing::error!(error = %e, dropped = batch.len(), "Failed to record usage"),
+        } else {
+            match queue.recv() {
+                Ok(e) => Some(e),
+                Err(_) => return,
+            }
+        };
+        if let Some(first) = first {
+            let mut batch = vec![first];
+            batch.extend(queue.try_iter());
+            let result = conn.transaction().and_then(|tx| {
+                for event in &batch {
+                    insert(&tx, event, Source::Live, None)?;
+                }
+                tx.commit()
+            });
+            match result {
+                Ok(()) => pending = true,
+                Err(e) => {
+                    tracing::error!(error = %e, dropped = batch.len(), "Failed to record usage")
+                }
+            }
+        }
+        if pending && last_notify.is_none_or(|t| t.elapsed() >= NOTIFY_INTERVAL) {
+            notify(&on_change);
+            last_notify = Some(Instant::now());
+            pending = false;
         }
     }
 }

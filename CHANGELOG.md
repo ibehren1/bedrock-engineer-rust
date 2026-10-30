@@ -19,6 +19,12 @@ overview of the fork with screenshots.
   knowledge base costs nothing to check. Turn it off or change the interval under **Settings →
   Knowledge Base → Automatic re-sync**. Re-syncing also skips files whose modification date hasn't
   changed, so it no longer re-reads every file. Websites are still re-synced only when you ask.
+- Fixed the window becoming unresponsive while a knowledge base was being indexed. Every embedded
+  passage is recorded on the Accounting page, and each new record made the sidebar's budget badge
+  recalculate the month's total on the thread that draws the window, many times a second. Those
+  updates now come at most once a second, run in the background, and the month's total is
+  much quicker to work out. Indexing also reuses one connection to Bedrock instead of opening a
+  new one for every batch of passages.
 
 ### 2026-10-27
 

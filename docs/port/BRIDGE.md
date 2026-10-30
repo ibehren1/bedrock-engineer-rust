@@ -44,7 +44,14 @@ the renderer needs to change.
    `appWindow.onOpenSettings` turns into a visit to the Settings page). Pub/sub messages for
    channel `c` are emitted as the event `pubsubEventName(c)` = `pubsub:` + `c` with every
    character outside `[A-Za-z0-9-/:_]` replaced by `_`; the payload is the published `data`.
-6. **Binary data** can't go through JSON as `Uint8Array`, so it is sent as `number[]`
+6. **Threads.** A command declared `fn` (not `async fn`) runs on the main thread, which also
+   draws the window and serves every other IPC call. Only make a command synchronous when it is
+   trivially quick; one that queries SQLite, touches the disk, waits on a lock that a background
+   job holds, or calls the network is `async` and runs that work on a blocking thread
+   (`spawn_blocking`). The `usage_*` commands are the example: they were synchronous, and while a
+   knowledge base ingest wrote a usage row per embedded passage, the sidebar's budget check
+   froze the window.
+7. **Binary data** can't go through JSON as `Uint8Array`, so it is sent as `number[]`
    (serde `Vec<u8>`): `chatAttachments.add` files, the sandbox terminal's live `data` frames
    (`bytes`, which `new Uint8Array(bytes)` accepts as is) and its backlogs (the shim converts
    `terminal.attach` / `terminal.backlog` results to `Uint8Array`, because the renderer checks

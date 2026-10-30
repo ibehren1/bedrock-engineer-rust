@@ -176,6 +176,38 @@ fn sink_writes_in_background_and_notifies() {
 }
 
 #[test]
+fn a_stream_of_calls_notifies_about_once_a_second() {
+    let (_d, l) = ledger();
+    let (tx, rx) = mpsc::channel();
+    l.set_on_change(move || {
+        let _ = tx.send(std::time::Instant::now());
+    });
+    let sink = l.sink();
+    // One call every 20 ms for 1.5 s, like an ingest embedding passage by passage.
+    let start = std::time::Instant::now();
+    for _ in 0..75 {
+        sink.record(event("2026-10-05", SONNET, "kb-ingest", 1, 0));
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    // The last writes are reported once the interval after the previous notice ends.
+    let mut notices = Vec::new();
+    while let Ok(at) = rx.recv_timeout(NOTIFY_INTERVAL * 2) {
+        notices.push(at);
+    }
+    assert!(
+        (2..=4).contains(&notices.len()),
+        "{} notices in {:?}",
+        notices.len(),
+        start.elapsed()
+    );
+    for pair in notices.windows(2) {
+        assert!(pair[1] - pair[0] >= NOTIFY_INTERVAL - Duration::from_millis(5));
+    }
+    let calls = l.summary(&month("2026-10"), GroupBy::Month).unwrap()[0].calls;
+    assert_eq!(calls, 75);
+}
+
+#[test]
 fn reopening_prices_rows_that_had_no_price() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("usage.db");

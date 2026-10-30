@@ -30,6 +30,9 @@ pub struct BedrockEmbedder {
     model_id: String,
     family: EmbeddingFamily,
     dimensions: usize,
+    /// Built on first use and kept for the embedder's life (one ingest job or search), so a
+    /// job doesn't reload the AWS config and open new connections for every batch.
+    client: tokio::sync::OnceCell<bedrock_embed::EmbeddingClient>,
 }
 
 impl BedrockEmbedder {
@@ -46,6 +49,7 @@ impl BedrockEmbedder {
             model_id: spec.model_id.clone(),
             family,
             dimensions: spec.dimensions,
+            client: tokio::sync::OnceCell::new(),
         })
     }
 }
@@ -77,12 +81,13 @@ impl Embedder for BedrockEmbedder {
         if texts.is_empty() {
             return Ok(Vec::new());
         }
-        let client = bedrock_embed::embedding_client(self.sdk.as_ref(), &self.aws)
+        let client = self
+            .client
+            .get_or_try_init(|| bedrock_embed::embedding_client(self.sdk.as_ref(), &self.aws))
             .await
             .map_err(describe)?;
         match self.family {
             EmbeddingFamily::Titan => {
-                let client = &client;
                 let model_id = self.model_id.as_str();
                 let dims = self.dimensions;
                 futures_util::stream::iter(texts.iter().cloned().map(move |t| async move {
@@ -99,7 +104,7 @@ impl Embedder for BedrockEmbedder {
                 for batch in texts.chunks(bedrock_embed::COHERE_MAX_BATCH) {
                     out.extend(
                         bedrock_embed::embed_cohere(
-                            &client,
+                            client,
                             &self.model_id,
                             batch,
                             input,

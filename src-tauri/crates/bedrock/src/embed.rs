@@ -171,6 +171,9 @@ async fn invoke(
     }
 }
 
+/// The client [`embedding_client`] returns (callers keep one without naming the SDK crate).
+pub type EmbeddingClient = aws_sdk_bedrockruntime::Client;
+
 /// A Bedrock runtime client for embedding calls.
 pub async fn embedding_client(
     configs: &dyn SdkConfigSource,
