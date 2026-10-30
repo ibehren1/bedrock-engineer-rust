@@ -146,15 +146,14 @@ pub fn supported_extensions() -> Vec<&'static str> {
     v
 }
 
-/// Most files one folder pick may add.
-pub const MAX_FOLDER_FILES: usize = 1000;
+/// Adding a folder with at least this many supported files asks for confirmation first.
+pub const LARGE_FOLDER_FILES: usize = 500;
 
 /// Directories never descended into when adding a folder (besides hidden ones).
 const SKIPPED_DIRS: &[&str] = &["node_modules", "target", "__pycache__", "venv"];
 
 /// Every supported file under `dir`, recursively and sorted. Hidden entries, dependency and
-/// build directories, symlinks and files over [`MAX_FILE_BYTES`] are skipped. Errors when
-/// there are more than [`MAX_FOLDER_FILES`].
+/// build directories, symlinks and files over [`MAX_FILE_BYTES`] are skipped.
 pub fn supported_files_in(dir: &Path) -> Result<Vec<std::path::PathBuf>, String> {
     let mut out = Vec::new();
     let mut stack = vec![dir.to_path_buf()];
@@ -178,11 +177,6 @@ pub fn supported_files_in(dir: &Path) -> Result<Vec<std::path::PathBuf>, String>
                 && entry.metadata().is_ok_and(|m| m.len() <= MAX_FILE_BYTES)
             {
                 out.push(path);
-                if out.len() > MAX_FOLDER_FILES {
-                    return Err(format!(
-                        "The folder has more than {MAX_FOLDER_FILES} supported files; pick a smaller folder"
-                    ));
-                }
             }
         }
     }

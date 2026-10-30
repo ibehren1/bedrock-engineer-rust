@@ -2764,8 +2764,10 @@ folder are removed from the knowledge base. Files whose modification time has no
 again. A folder source leaves out hidden files and folders (names starting with `.`, such as `.git`),
 dependency and build folders (`node_modules`, `target`, `venv`, `__pycache__`), shortcuts and symbolic
 links, unsupported file types and files over 100 MB. A file that cannot be read (a damaged PDF, say)
-is counted as skipped and tried again when it changes or when you re-sync the folder. A folder with more
-than 1,000 supported files is refused; pick a smaller folder instead.
+is counted as skipped and tried again when it changes or when you re-sync the folder. There is no limit
+on how many files a folder can have, but a folder with 500 or more supported files asks before it is
+added, since reading and embedding that many takes a while and, with a Bedrock embedding model, costs
+embedding tokens.
 
 **Adding a website**
 
@@ -3050,8 +3052,6 @@ Remove the source and add the file again from its new place.
 **"Cannot read …"** on a folder source — the folder was moved, renamed or deleted, or is on a drive
 that is not connected. Reconnect the drive and **Re-sync**, or remove the source and add the folder
 from its new place.
-
-**"The folder has more than 1000 supported files"** — pick a subfolder, or add several smaller folders.
 
 **Edits to a file don't show up in answers yet** — automatic re-sync checks every hour by default.
 **Re-sync** the source to pick them up now, or shorten the interval in **Settings → Knowledge Base →

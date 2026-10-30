@@ -10,7 +10,7 @@
 use crate::chunk::{chunk_text, TextKind};
 use crate::crawl::{crawl, CrawlOptions};
 use crate::embed::{batch_size, embed_checked, EmbedInput, Embedder, EmbedderProvider};
-use crate::extract::{extract_file, format_for_path, supported_files_in};
+use crate::extract::{extract_file, format_for_path, supported_files_in, LARGE_FOLDER_FILES};
 use crate::search::hybrid_search;
 use crate::store::{db_files, db_size, embed_text, KbMeta, KbStore, NewChunk};
 use crate::types::*;
@@ -468,14 +468,16 @@ impl KnowledgeService {
     }
 
     /// Add a folder and queue its ingestion: every supported file under it becomes a document
-    /// of the one source, re-scanned on each sync. Errors when it has no supported files or
-    /// too many (the walk runs here, so call it from a blocking thread).
+    /// of the one source, re-scanned on each sync. Errors when it has no supported files. With
+    /// [`LARGE_FOLDER_FILES`] or more, `confirm` is asked with the count first and `None`
+    /// returned when it declines. The walk runs here, so call it from a blocking thread.
     pub fn add_folder(
         self: &Arc<Self>,
         agent_id: &str,
         kb_id: &str,
         path: &str,
-    ) -> Result<SourceInfo, String> {
+        confirm: impl FnOnce(usize) -> bool,
+    ) -> Result<Option<SourceInfo>, String> {
         let store = self.store(agent_id, kb_id)?;
         let dir = PathBuf::from(path);
         if !dir.is_absolute() {
@@ -488,8 +490,12 @@ impl KnowledgeService {
         if store.list_sources()?.iter().any(|s| s.uri == uri) {
             return Err("This folder is already a source of the knowledge base".into());
         }
-        if supported_files_in(&dir)?.is_empty() {
+        let count = supported_files_in(&dir)?.len();
+        if count == 0 {
             return Err("The folder has no supported files".into());
+        }
+        if count >= LARGE_FOLDER_FILES && !confirm(count) {
+            return Ok(None);
         }
         let title = dir
             .file_name()
@@ -499,7 +505,10 @@ impl KnowledgeService {
         store.add_source(&id, SourceKind::Folder, &uri, &title, None, &now())?;
         self.spawn(agent_id, kb_id, JobKind::Source(id.clone()));
         self.emit_changed(agent_id, kb_id);
-        store.source(&id)?.ok_or_else(|| "Source not found".into())
+        store
+            .source(&id)?
+            .map(Some)
+            .ok_or_else(|| "Source not found".into())
     }
 
     /// Add a website and queue its crawl.
@@ -1652,17 +1661,21 @@ mod tests {
         write_at(&folder.join("image.png"), "x", 1_000);
         let uri = folder.to_string_lossy().into_owned();
 
-        assert!(svc.add_folder("agent1", &kb.id, "relative").is_err());
+        let yes = |_: usize| true;
+        assert!(svc.add_folder("agent1", &kb.id, "relative", yes).is_err());
         let empty = dir.path().join("empty");
         std::fs::create_dir_all(&empty).unwrap();
         assert!(svc
-            .add_folder("agent1", &kb.id, &empty.to_string_lossy())
+            .add_folder("agent1", &kb.id, &empty.to_string_lossy(), yes)
             .unwrap_err()
             .contains("no supported files"));
-        let src = svc.add_folder("agent1", &kb.id, &uri).unwrap();
+        let src = svc
+            .add_folder("agent1", &kb.id, &uri, yes)
+            .unwrap()
+            .unwrap();
         assert_eq!(src.kind, SourceKind::Folder);
         assert_eq!(src.title, "docs");
-        assert!(svc.add_folder("agent1", &kb.id, &uri).is_err());
+        assert!(svc.add_folder("agent1", &kb.id, &uri, yes).is_err());
         wait_idle(&svc).await;
         let s = svc.list_sources("agent1", &kb.id).unwrap().remove(0);
         assert_eq!(s.status, SourceStatus::Ready, "{s:?}");
@@ -1708,6 +1721,36 @@ mod tests {
         let s = svc.list_sources("agent1", &kb.id).unwrap().remove(0);
         assert_eq!(s.status, SourceStatus::Error);
         assert_eq!(svc.auto_sync_pass(), 0);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn large_folders_ask_first() {
+        let dir = tempfile::tempdir().unwrap();
+        let (svc, _host) = service(dir.path());
+        let kb = svc.create("agent1", "Docs", "").unwrap();
+        let folder = dir.path().join("many");
+        std::fs::create_dir_all(&folder).unwrap();
+        for i in 0..LARGE_FOLDER_FILES {
+            std::fs::write(folder.join(format!("{i}.txt")), "x").unwrap();
+        }
+        let uri = folder.to_string_lossy().into_owned();
+        let mut asked = None;
+        let declined = svc
+            .add_folder("agent1", &kb.id, &uri, |n| {
+                asked = Some(n);
+                false
+            })
+            .unwrap();
+        assert!(declined.is_none());
+        assert_eq!(asked, Some(LARGE_FOLDER_FILES));
+        assert!(svc.list_sources("agent1", &kb.id).unwrap().is_empty());
+        // Small folders are added without asking.
+        std::fs::remove_file(folder.join("0.txt")).unwrap();
+        let added = svc
+            .add_folder("agent1", &kb.id, &uri, |_| panic!("asked"))
+            .unwrap();
+        assert!(added.is_some());
+        svc.cancel_all();
     }
 
     #[tokio::test(flavor = "multi_thread")]

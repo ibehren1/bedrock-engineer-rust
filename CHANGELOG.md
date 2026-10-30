@@ -12,7 +12,8 @@ overview of the fork with screenshots.
 - Local knowledge bases have an **Add folder** button next to **Add files**. The folder becomes one
   source that follows its contents: files added to the folder later are indexed, edited files are
   re-read, and files deleted from it are removed from the knowledge base. Hidden files, dependency and
-  build folders such as `node_modules`, and files over 100 MB are left out.
+  build folders such as `node_modules`, and files over 100 MB are left out. A folder with 500 or more
+  files asks before it is added.
 - File and folder sources now stay up to date on their own. The app checks them about 30 seconds after
   it starts and then every hour, and re-syncs only those whose files changed, so an unchanged
   knowledge base costs nothing to check. Turn it off or change the interval under **Settings →

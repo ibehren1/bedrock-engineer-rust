@@ -13,7 +13,7 @@ use knowledge::types::{JobInfo, KbInfo, SearchHit, SourceInfo, StorageOverview, 
 use serde_json::Value;
 use std::collections::HashSet;
 use tauri::{AppHandle, Emitter, State, WebviewWindow};
-use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
 #[tauri::command]
 pub async fn knowledge_list(
@@ -130,7 +130,7 @@ pub async fn knowledge_pick_files(
 }
 
 /// Pick a folder in the native dialog and add it as one source that follows the folder's
-/// contents; `None` when canceled.
+/// contents. A large folder is confirmed in a native dialog first. `None` when canceled.
 #[tauri::command]
 pub async fn knowledge_pick_folder(
     window: WebviewWindow,
@@ -149,11 +149,33 @@ pub async fn knowledge_pick_folder(
         return Ok(None);
     };
     let svc = backend.knowledge.clone();
-    // `add_folder` walks the folder to check it has supported files.
-    tauri::async_runtime::spawn_blocking(move || svc.add_folder(&agent_id, &kb_id, &dir))
-        .await
-        .map_err(|e| e.to_string())?
-        .map(Some)
+    // `add_folder` walks the folder, so off the async runtime; the confirmation blocks too.
+    tauri::async_runtime::spawn_blocking(move || {
+        let confirm = |count: usize| {
+            let name = std::path::Path::new(&dir)
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_else(|| dir.clone());
+            window
+                .dialog()
+                .message(format!(
+                    "\u{201c}{name}\u{201d} has {count} files to index. Reading and embedding them \
+                     takes a while and, with a Bedrock embedding model, costs embedding tokens. \
+                     Add the folder?"
+                ))
+                .title("Add a large folder?")
+                .kind(MessageDialogKind::Warning)
+                .buttons(MessageDialogButtons::OkCancelCustom(
+                    "Add folder".into(),
+                    "Cancel".into(),
+                ))
+                .parent(&window)
+                .blocking_show()
+        };
+        svc.add_folder(&agent_id, &kb_id, &dir, confirm)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
