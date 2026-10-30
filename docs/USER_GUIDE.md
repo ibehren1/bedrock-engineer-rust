@@ -3140,7 +3140,9 @@ everything the app does, not just chats. Every call to Bedrock is recorded the m
 - guardrail checks (per text unit) and Amazon Translate (per character)
 
 Each call is priced when it happens, with the list price at that time, and the record is kept for
-good. It is separate from your chat history: deleting a chat does not remove its cost. The first
+good. Knowledge base indexing with Amazon Titan embeddings makes one call per passage, so those calls
+are recorded together, one entry per batch of passages (marked **×32**, for instance, in the list of
+calls); the call counts and costs still include every call. It is separate from your chat history: deleting a chat does not remove its cost. The first
 time the app runs with this page, it also imports the token usage your saved chats already held, so
 earlier months are not empty. Before that, only chats saved their usage, so imported months show chat
 cost only, and the page says so.
@@ -3169,7 +3171,8 @@ each run's cost.
 ### 26.3 Exporting
 
 **Export CSV** saves every call of the month (or of the current filter) as a spreadsheet file, by
-default in your Downloads folder.
+default in your Downloads folder. The `calls` column says how many calls a row stands for (more than 1
+for a batch of Titan embeddings).
 
 ### 26.4 A monthly budget
 

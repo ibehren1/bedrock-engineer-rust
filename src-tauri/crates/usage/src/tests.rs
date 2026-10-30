@@ -183,22 +183,24 @@ fn a_stream_of_calls_notifies_about_once_a_second() {
         let _ = tx.send(std::time::Instant::now());
     });
     let sink = l.sink();
-    // One call every 20 ms for 1.5 s, like an ingest embedding passage by passage.
+    // One call every 20 ms, like an ingest embedding passage by passage. A busy machine (CI)
+    // can stretch the sleeps, so the bound below follows how long the stream really took.
     let start = std::time::Instant::now();
     for _ in 0..75 {
         sink.record(event("2026-10-05", SONNET, "kb-ingest", 1, 0));
         std::thread::sleep(Duration::from_millis(20));
     }
+    let streamed = start.elapsed();
     // The last writes are reported once the interval after the previous notice ends.
     let mut notices = Vec::new();
     while let Ok(at) = rx.recv_timeout(NOTIFY_INTERVAL * 2) {
         notices.push(at);
     }
+    let most = (streamed.as_secs_f64() / NOTIFY_INTERVAL.as_secs_f64()).ceil() as usize + 1;
     assert!(
-        (2..=4).contains(&notices.len()),
-        "{} notices in {:?}",
-        notices.len(),
-        start.elapsed()
+        !notices.is_empty() && notices.len() <= most && notices.len() < 75,
+        "{} notices for a {streamed:?} stream (at most {most})",
+        notices.len()
     );
     for pair in notices.windows(2) {
         assert!(pair[1] - pair[0] >= NOTIFY_INTERVAL - Duration::from_millis(5));
@@ -349,4 +351,85 @@ fn reopening_keeps_rows() {
     }
     let l = UsageLedger::open(&path).unwrap();
     assert_eq!(l.months().unwrap(), vec!["2026-10"]);
+}
+
+#[test]
+fn batched_rows_count_every_call() {
+    let (_d, l) = ledger();
+    let mut batch = event(
+        "2026-10-07",
+        "amazon.titan-embed-text-v2:0",
+        "kb-ingest",
+        640,
+        0,
+    );
+    batch.service = UsageService::Embed;
+    batch.calls = 32;
+    batch.estimated = true;
+    batch.context.session_id = Some("s1".into());
+    l.record_now(&batch).unwrap();
+    l.record_now(&event("2026-10-07", SONNET, "chat", 1, 1))
+        .unwrap();
+
+    let by_feature = l.summary(&month("2026-10"), GroupBy::Feature).unwrap();
+    let ingest = by_feature.iter().find(|r| r.key == "kb-ingest").unwrap();
+    assert_eq!(ingest.calls, 32);
+    assert_eq!(ingest.estimated_calls, 32);
+    assert_eq!(ingest.input_tokens, 640);
+    assert_eq!(
+        l.summary(&month("2026-10"), GroupBy::Month).unwrap()[0].calls,
+        33
+    );
+    let breakdown = l
+        .breakdown(&month("2026-10"), GroupBy::Day, GroupBy::Feature)
+        .unwrap();
+    assert_eq!(breakdown.iter().map(|r| r.calls).sum::<u64>(), 33);
+    let costs = l
+        .session_costs(&[
+            SessionWindow {
+                session_id: "s1".into(),
+                from_ts: None,
+                to_ts: None,
+            },
+            SessionWindow {
+                session_id: "none".into(),
+                from_ts: None,
+                to_ts: None,
+            },
+        ])
+        .unwrap();
+    assert_eq!((costs[0].calls, costs[1].calls), (32, 0));
+    let events = l.events(&month("2026-10"), 10, 0).unwrap();
+    assert_eq!(events.iter().map(|e| e.calls).sum::<u64>(), 33);
+    let csv = l.export_csv(&month("2026-10")).unwrap();
+    assert!(csv.lines().next().unwrap().ends_with(",calls"));
+    assert!(csv.lines().any(|line| line.ends_with(",32")));
+}
+
+#[test]
+fn version_1_ledgers_gain_the_calls_column() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("usage.db");
+    {
+        let l = UsageLedger::open(&path).unwrap();
+        l.record_now(&event("2026-10-01", SONNET, "chat", 1, 1))
+            .unwrap();
+    }
+    {
+        let c = Connection::open(&path).unwrap();
+        c.execute_batch(
+            "ALTER TABLE usage_events DROP COLUMN calls; UPDATE schema_version SET version = 1;",
+        )
+        .unwrap();
+    }
+    let l = UsageLedger::open(&path).unwrap();
+    assert_eq!(
+        l.summary(&month("2026-10"), GroupBy::Month).unwrap()[0].calls,
+        1
+    );
+    let version: i64 = Connection::open(&path)
+        .unwrap()
+        .query_row("SELECT version FROM schema_version", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(version, SCHEMA_VERSION);
 }

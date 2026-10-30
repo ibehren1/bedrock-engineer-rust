@@ -137,6 +137,8 @@ export type UsageEventRow = {
   source: 'live' | 'backfill'
   units?: number | null
   unitKind?: UsageUnitKind | null
+  /** Bedrock calls the row stands for: more than 1 for a batch of Titan embeddings. */
+  calls: number
 }
 
 export type UsageApi = {

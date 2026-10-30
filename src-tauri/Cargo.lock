@@ -1102,6 +1102,7 @@ dependencies = [
  "aws-smithy-types",
  "base64 0.22.1",
  "bytes",
+ "futures-util",
  "http 1.5.0",
  "http-body",
  "models",

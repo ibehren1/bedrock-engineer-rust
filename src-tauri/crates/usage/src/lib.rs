@@ -31,7 +31,8 @@ use std::time::{Duration, Instant};
 /// Least time between two calls of the change hook; writes in between are reported together.
 pub const NOTIFY_INTERVAL: Duration = Duration::from_secs(1);
 
-const SCHEMA_VERSION: i64 = 1;
+/// 1: the ledger. 2: adds `usage_events.calls` (rows that stand for a batch of calls).
+const SCHEMA_VERSION: i64 = 2;
 
 const SCHEMA: &str = "
 CREATE TABLE IF NOT EXISTS schema_version (version INTEGER NOT NULL);
@@ -58,7 +59,8 @@ CREATE TABLE IF NOT EXISTS usage_events (
     price_snapshot TEXT,
     estimated INTEGER NOT NULL DEFAULT 0,
     source TEXT NOT NULL DEFAULT 'live',
-    dedupe_key TEXT UNIQUE
+    dedupe_key TEXT UNIQUE,
+    calls INTEGER NOT NULL DEFAULT 1
 );
 CREATE INDEX IF NOT EXISTS usage_events_day ON usage_events (local_day);
 -- Covers the month total behind the budget badge, so it never reads the table itself.
@@ -118,6 +120,18 @@ fn open_connection(path: &Path) -> rusqlite::Result<Connection> {
 }
 
 /// Insert one row; a `dedupe_key` that is already present is skipped (returns `false`).
+/// Bring a ledger from an older version up to [`SCHEMA_VERSION`]. Idempotent.
+fn migrate(conn: &Connection) -> rusqlite::Result<()> {
+    let has_calls = conn
+        .prepare("SELECT 1 FROM pragma_table_info('usage_events') WHERE name = 'calls'")?
+        .exists([])?;
+    if !has_calls {
+        conn.execute_batch("ALTER TABLE usage_events ADD COLUMN calls INTEGER NOT NULL DEFAULT 1")?;
+    }
+    conn.execute("UPDATE schema_version SET version = ?1", [SCHEMA_VERSION])?;
+    Ok(())
+}
+
 fn insert(
     conn: &Connection,
     event: &UsageEvent,
@@ -134,9 +148,9 @@ fn insert(
         "INSERT OR IGNORE INTO usage_events (ts, local_day, model_id, model_name, raw_model_id,
             region, service, feature, agent_id, session_id, input_tokens, output_tokens,
             cache_read_tokens, cache_write_tokens, cost_usd, price_snapshot, estimated, source,
-            dedupe_key, units, unit_kind)
+            dedupe_key, units, unit_kind, calls)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18,
-            ?19, ?20, ?21)",
+            ?19, ?20, ?21, ?22)",
         params![
             event.ts_ms,
             local_day(event.ts_ms),
@@ -159,6 +173,7 @@ fn insert(
             dedupe_key,
             event.unit_kind.map(|_| event.units),
             event.unit_kind.map(UnitKind::as_str),
+            event.calls.max(1),
         ],
     )?;
     Ok(n > 0)
@@ -420,7 +435,7 @@ pub struct BreakdownRow {
     pub cost_usd: f64,
 }
 
-/// One recorded call.
+/// One recorded call, or batch of calls (see `calls`).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EventRow {
@@ -444,6 +459,8 @@ pub struct EventRow {
     pub source: String,
     pub units: Option<f64>,
     pub unit_kind: Option<String>,
+    /// Bedrock calls the row stands for (more than 1 for a batch of Titan embeddings).
+    pub calls: u64,
 }
 
 struct QueueSink(mpsc::Sender<UsageEvent>);
@@ -473,6 +490,7 @@ impl UsageLedger {
             )
             .map_err(|e| e.to_string())?;
         }
+        migrate(&conn).map_err(|e| e.to_string())?;
         // Ledgers created before `meta` existed already hold live rows; start from the first.
         if meta(&conn, LIVE_SINCE)
             .map_err(|e| e.to_string())?
@@ -585,9 +603,11 @@ impl UsageLedger {
     ) -> Result<Vec<SummaryRow>, String> {
         let (filter, args) = query.where_clause();
         let sql = format!(
-            "SELECT {key}, {label}, COUNT(*), SUM(input_tokens), SUM(output_tokens),
+            "SELECT {key}, {label}, SUM(calls), SUM(input_tokens), SUM(output_tokens),
                 SUM(cache_read_tokens), SUM(cache_write_tokens), COALESCE(SUM(cost_usd), 0),
-                SUM(cost_usd IS NULL), SUM(estimated), SUM(source = 'backfill'),
+                SUM(CASE WHEN cost_usd IS NULL THEN calls ELSE 0 END),
+                SUM(CASE WHEN estimated THEN calls ELSE 0 END),
+                SUM(CASE WHEN source = 'backfill' THEN calls ELSE 0 END),
                 COALESCE(SUM(CASE unit_kind WHEN 'images' THEN units END), 0),
                 COALESCE(SUM(CASE unit_kind WHEN 'video_seconds' THEN units END), 0),
                 COALESCE(SUM(CASE unit_kind WHEN 'characters' THEN units END), 0),
@@ -638,7 +658,7 @@ impl UsageLedger {
     ) -> Result<Vec<BreakdownRow>, String> {
         let (filter, args) = query.where_clause();
         let sql = format!(
-            "SELECT {key}, {sub}, {sub_label}, COUNT(*), COALESCE(SUM(cost_usd), 0) AS cost
+            "SELECT {key}, {sub}, {sub_label}, SUM(calls), COALESCE(SUM(cost_usd), 0) AS cost
              FROM usage_events WHERE {filter} GROUP BY {key}, {sub} ORDER BY {key}, cost DESC",
             key = by.key(),
             sub = then.key(),
@@ -669,7 +689,7 @@ impl UsageLedger {
     pub fn session_costs(&self, sessions: &[SessionWindow]) -> Result<Vec<SessionCost>, String> {
         self.with_conn(|c| {
             let mut stmt = c.prepare_cached(
-                "SELECT COUNT(*), COALESCE(SUM(cost_usd), 0) FROM usage_events
+                "SELECT COALESCE(SUM(calls), 0), COALESCE(SUM(cost_usd), 0) FROM usage_events
                  WHERE session_id = ?1 AND ts > COALESCE(?2, -1) AND ts <= COALESCE(?3, 9223372036854775807)",
             )?;
             sessions
@@ -711,7 +731,7 @@ impl UsageLedger {
         let sql = format!(
             "SELECT id, ts, local_day, model_id, model_name, raw_model_id, region, service, feature,
                 agent_id, session_id, input_tokens, output_tokens, cache_read_tokens,
-                cache_write_tokens, cost_usd, estimated, source, units, unit_kind
+                cache_write_tokens, cost_usd, estimated, source, units, unit_kind, calls
              FROM usage_events WHERE {filter} ORDER BY ts DESC, id DESC
              LIMIT CAST(?{l} AS INTEGER) OFFSET CAST(?{o} AS INTEGER)",
             l = args.len() - 1,
@@ -741,6 +761,7 @@ impl UsageLedger {
                     source: r.get(17)?,
                     units: r.get(18)?,
                     unit_kind: r.get(19)?,
+                    calls: r.get::<_, i64>(20)? as u64,
                 })
             })?;
             rows.collect()

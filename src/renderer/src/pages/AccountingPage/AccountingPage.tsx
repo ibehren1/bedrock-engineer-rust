@@ -221,6 +221,11 @@ export const AccountingPage: React.FC = () => {
           <span className="inline-flex items-center gap-1">
             {featureLabel(r.feature)}
             {r.source === 'backfill' && <Badge>{t('accounting.importedBadge')}</Badge>}
+            {r.calls > 1 && (
+              <span title={t('accounting.batchTitle', { count: r.calls })}>
+                <Badge>{t('accounting.batchBadge', { count: r.calls })}</Badge>
+              </span>
+            )}
           </span>
         )
       },

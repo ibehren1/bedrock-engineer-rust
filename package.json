@@ -1,7 +1,7 @@
 {
   "name": "bedrock-engineer",
   "productName": "Bedrock Engineer",
-  "version": "2026.1030.4",
+  "version": "2026.1030.9",
   "browserslist": [
     "chrome >= 105",
     "safari >= 15"

@@ -223,7 +223,8 @@ Commands marked "(params object as-is)" take the params object's keys as their a
   `{ name, success: true, result: { item }, message }` with the added / updated / removed item.
 - **Usage ledger** (`commands/usage.rs`, logic in `crates/usage`): every billable Bedrock call
   is reported to `bedrock::usage`'s process-wide sink, which the app points at the ledger,
-  `<userData>/usage/usage.db` (SQLite, one row per call, kept forever). That covers
+  `<userData>/usage/usage.db` (SQLite, one row per call, kept forever; a row's `calls` column
+  is more than 1 when calls are recorded together, as each batch of Titan embeddings is). That covers
   Converse / ConverseStream (wherever they come from: the renderer's chat streams, the agent
   engine for background agents and sub-agents, structured output, image recognition), Titan /
   Cohere embeddings (Cohere's tokens are estimated from text length), Claude image recognition

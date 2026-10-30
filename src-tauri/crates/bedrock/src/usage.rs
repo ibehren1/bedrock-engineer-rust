@@ -140,6 +140,9 @@ pub struct UsageEvent {
     /// Billed quantity of a non-token service (with `unit_kind`).
     pub units: f64,
     pub unit_kind: Option<UnitKind>,
+    /// Bedrock calls this event stands for (1, or a batch's size when its calls are recorded
+    /// together, as Titan embeddings are); tokens and units are the batch's totals.
+    pub calls: u32,
 }
 
 impl UsageEvent {
@@ -158,6 +161,7 @@ impl UsageEvent {
             estimated: false,
             units: 0.0,
             unit_kind: None,
+            calls: 1,
         }
     }
 

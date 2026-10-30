@@ -5,7 +5,7 @@ use chrono::{Local, TimeZone};
 
 const HEADER: &str = "time,day,model,model_id,region,service,feature,agent_id,session_id,\
 input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,units,unit,estimated_cost_usd,\
-tokens_estimated,source";
+tokens_estimated,source,calls";
 
 /// Quote a field when it contains a comma, quote or line break (RFC 4180).
 fn field(value: &str) -> String {
@@ -47,6 +47,7 @@ pub fn events_csv<'a>(rows: impl Iterator<Item = &'a EventRow>) -> String {
             r.cost_usd.map(|c| format!("{c:.6}")).unwrap_or_default(),
             r.estimated.to_string(),
             r.source.clone(),
+            r.calls.to_string(),
         ];
         out.push_str(&cells.iter().map(|c| field(c)).collect::<Vec<_>>().join(","));
         out.push('\n');

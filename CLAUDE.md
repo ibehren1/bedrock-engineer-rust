@@ -34,6 +34,8 @@ cargo clippy --workspace --all-targets
 cargo build -p app                         # Debug build of the app binary
 
 make test                 # cargo test --workspace + npm test (what CI runs)
+make clean-rust           # Delete src-tauri/target/debug (Cargo never prunes it; it reaches 100+ GB)
+make clean-rust-all       # Delete all of src-tauri/target except the help-kb model download
 make notices              # Regenerate notices/rust.md + notices/frontend.md (needs cargo-about: cargo install cargo-about --locked --features cli)
 ```
 

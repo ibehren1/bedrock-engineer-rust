@@ -53,6 +53,8 @@ export const accounting = {
       noPrice: 'no price',
       estimatedTokens: 'Estimated from text length',
       importedBadge: 'imported',
+      batchBadge: '×{{count}}',
+      batchTitle: '{{count}} calls recorded together',
       importedNote:
         'Includes {{count}} call(s) imported from chat history. Before {{date}} only chats saved their usage, so earlier months show chat cost only.',
       footnote:
@@ -155,6 +157,8 @@ export const accounting = {
       noPrice: '価格不明',
       estimatedTokens: 'テキストの長さから推定',
       importedBadge: '取り込み',
+      batchBadge: '×{{count}}',
+      batchTitle: '{{count}} 回の呼び出しをまとめて記録',
       importedNote:
         'チャット履歴から取り込んだ {{count}} 件の呼び出しを含みます。{{date}} より前はチャットのみが使用量を保存していたため、それ以前の月はチャットのコストのみです。',
       footnote:

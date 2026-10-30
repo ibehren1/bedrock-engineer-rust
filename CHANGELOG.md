@@ -25,6 +25,10 @@ overview of the fork with screenshots.
   updates now come at most once a second, run in the background, and the month's total is
   much quicker to work out. Indexing also reuses one connection to Bedrock instead of opening a
   new one for every batch of passages.
+- Knowledge base indexing with Amazon Titan embeddings now records its Bedrock calls on the Accounting
+  page one entry per batch of passages instead of one per passage, so a large folder no longer adds
+  tens of thousands of entries. Call counts and costs are unchanged; a batched entry shows how many
+  calls it stands for (for example **×32**), and the CSV export has a new `calls` column.
 
 ### 2026-10-27
 

@@ -1,4 +1,4 @@
-.PHONY: version dev build-mac build build-native install sign test notices clean help-kb
+.PHONY: version dev build-mac build build-native install sign test notices clean clean-rust clean-rust-all help-kb
 
 # Version format: YYYY.MMDD.N (semver-compatible)
 # e.g., 2026.601.0 = first change committed on June 1, 2026
@@ -69,3 +69,18 @@ notices:
 # build/ or local files like .env / node_modules)
 clean:
 	rm -rf dist out coverage test-outputs ash_output
+
+# Cargo never deletes old build output, so src-tauri/target grows with every rebuild (100+ GB
+# after a busy day). clean-rust removes the debug builds (cargo test / npm run dev / rust-analyzer;
+# the bulk of it); the next debug build starts from scratch. Release builds are kept.
+clean-rust:
+	@du -sh src-tauri/target 2>/dev/null || true
+	cd src-tauri && cargo clean --profile dev
+	@du -sh src-tauri/target 2>/dev/null || true
+
+# Everything under src-tauri/target, release and universal builds included, except the on-device
+# embedding model `make help-kb` downloads (about 465 MB).
+clean-rust-all:
+	@du -sh src-tauri/target 2>/dev/null || true
+	find src-tauri/target -mindepth 1 -maxdepth 1 ! -name help-kb-models -exec rm -rf {} +
+	@du -sh src-tauri/target 2>/dev/null || true

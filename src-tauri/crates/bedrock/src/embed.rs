@@ -95,6 +95,7 @@ fn record_usage(
     input: InputType,
     tokens: u64,
     estimated: bool,
+    calls: u32,
 ) {
     let region = client
         .config()
@@ -113,6 +114,7 @@ fn record_usage(
     );
     event.input_tokens = tokens;
     event.estimated = estimated;
+    event.calls = calls;
     usage::record(event);
 }
 
@@ -183,27 +185,46 @@ pub async fn embedding_client(
     Ok(aws_sdk_bedrockruntime::Client::new(&conf))
 }
 
-/// Embed one text with Titan Text Embeddings V2 (normalized). `input` only labels the usage.
+/// Embed texts with Titan Text Embeddings V2 (normalized), which takes one text per call:
+/// up to `concurrency` calls at a time, in order. The calls are recorded as one usage event
+/// (`calls` = how many succeeded, tokens summed), so a large ingest doesn't write a usage row
+/// per passage. `input` only labels the usage.
 pub async fn embed_titan(
     client: &aws_sdk_bedrockruntime::Client,
     model_id: &str,
-    text: &str,
+    texts: &[String],
     input: InputType,
     dimensions: usize,
-) -> Result<Vec<f32>> {
-    let body = invoke(client, model_id, &titan_request(text, dimensions)).await?;
-    let (vector, tokens) = parse_titan_response_counted(&body)?;
-    match tokens {
-        Some(n) => record_usage(client, model_id, input, n, false),
-        None => record_usage(
-            client,
-            model_id,
-            input,
-            estimate_tokens(&[text.to_string()]),
-            true,
-        ),
+    concurrency: usize,
+) -> Result<Vec<Vec<f32>>> {
+    use futures_util::StreamExt;
+    let results: Vec<Result<(Vec<f32>, u64, bool)>> =
+        // Owned texts: a closure over `&String` makes the future not `Send` for every lifetime.
+        futures_util::stream::iter(texts.iter().cloned().map(move |text| async move {
+            let body = invoke(client, model_id, &titan_request(&text, dimensions)).await?;
+            let (vector, tokens) = parse_titan_response_counted(&body)?;
+            Ok(match tokens {
+                Some(n) => (vector, n, false),
+                None => (vector, estimate_tokens(std::slice::from_ref(&text)), true),
+            })
+        }))
+        .buffered(concurrency.max(1))
+        .collect()
+        .await;
+    // Bill what succeeded even when a later call failed.
+    let (mut tokens, mut estimated, mut calls) = (0, false, 0u32);
+    for (_, n, est) in results.iter().flatten() {
+        tokens += n;
+        estimated |= est;
+        calls += 1;
     }
-    Ok(vector)
+    if calls > 0 {
+        record_usage(client, model_id, input, tokens, estimated, calls);
+    }
+    results
+        .into_iter()
+        .map(|r| r.map(|(vector, _, _)| vector))
+        .collect()
 }
 
 /// Embed up to [`COHERE_MAX_BATCH`] texts with Cohere Embed.
@@ -222,7 +243,7 @@ pub async fn embed_cohere(
     .await?;
     let out = parse_cohere_response(&body)?;
     // Cohere's response body carries no token count.
-    record_usage(client, model_id, input, estimate_tokens(texts), true);
+    record_usage(client, model_id, input, estimate_tokens(texts), true, 1);
     if out.len() != texts.len() {
         return Err(Error::plain(format!(
             "Expected {} embeddings, got {}",

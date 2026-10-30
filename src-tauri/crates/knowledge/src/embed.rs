@@ -4,7 +4,6 @@ use crate::types::{EmbeddingSpec, Provider};
 use async_trait::async_trait;
 use bedrock::embed::{self as bedrock_embed, EmbeddingFamily, InputType};
 use bedrock::{AwsSettings, SdkConfigSource};
-use futures_util::{StreamExt, TryStreamExt};
 use std::sync::Arc;
 
 pub use bedrock_embed::InputType as EmbedInput;
@@ -87,18 +86,16 @@ impl Embedder for BedrockEmbedder {
             .await
             .map_err(describe)?;
         match self.family {
-            EmbeddingFamily::Titan => {
-                let model_id = self.model_id.as_str();
-                let dims = self.dimensions;
-                futures_util::stream::iter(texts.iter().cloned().map(move |t| async move {
-                    bedrock_embed::embed_titan(client, model_id, &t, input, dims)
-                        .await
-                        .map_err(describe)
-                }))
-                .buffered(TITAN_CONCURRENCY)
-                .try_collect()
-                .await
-            }
+            EmbeddingFamily::Titan => bedrock_embed::embed_titan(
+                client,
+                &self.model_id,
+                texts,
+                input,
+                self.dimensions,
+                TITAN_CONCURRENCY,
+            )
+            .await
+            .map_err(describe),
             EmbeddingFamily::Cohere => {
                 let mut out = Vec::with_capacity(texts.len());
                 for batch in texts.chunks(bedrock_embed::COHERE_MAX_BATCH) {
