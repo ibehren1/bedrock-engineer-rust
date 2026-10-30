@@ -473,6 +473,7 @@ Notes on the file commands (`src-tauri/app/src/commands/{file,agent_files}.rs`):
 | `api.knowledge.rebuild` | `knowledge_rebuild` | `{ agentId, kbId }` → job id (re-embed with the current model) |
 | `api.knowledge.listSources` | `knowledge_list_sources` | `{ agentId, kbId }` → `SourceInfo[]` |
 | `api.knowledge.pickFiles` | `knowledge_pick_files` | `{ agentId, kbId }` → `SourceInfo[]` (native multi-file picker; `[]` when canceled) |
+| `api.knowledge.pickFolder` | `knowledge_pick_folder` | `{ agentId, kbId }` → `SourceInfo \| null` (native folder picker; adds the folder as one `kind: 'folder'` source whose documents are the supported files under it, re-scanned on each sync; `null` when canceled) |
 | `api.knowledge.addUrl` | `knowledge_add_url` | `{ agentId, kbId, url, options? }` → `SourceInfo` (`options`: `{ maxDepth, maxPages, pathPrefixOnly }`, default from the crawler settings) |
 | `api.knowledge.updateSourceOptions` | `knowledge_update_source_options` | `{ agentId, kbId, sourceId, options }` → `SourceInfo` (website sources; used from the next sync) |
 | `api.knowledge.resyncSource` | `knowledge_resync_source` | `{ agentId, kbId, sourceId }` → job id |

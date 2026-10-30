@@ -146,6 +146,50 @@ pub fn supported_extensions() -> Vec<&'static str> {
     v
 }
 
+/// Most files one folder pick may add.
+pub const MAX_FOLDER_FILES: usize = 1000;
+
+/// Directories never descended into when adding a folder (besides hidden ones).
+const SKIPPED_DIRS: &[&str] = &["node_modules", "target", "__pycache__", "venv"];
+
+/// Every supported file under `dir`, recursively and sorted. Hidden entries, dependency and
+/// build directories, symlinks and files over [`MAX_FILE_BYTES`] are skipped. Errors when
+/// there are more than [`MAX_FOLDER_FILES`].
+pub fn supported_files_in(dir: &Path) -> Result<Vec<std::path::PathBuf>, String> {
+    let mut out = Vec::new();
+    let mut stack = vec![dir.to_path_buf()];
+    while let Some(d) = stack.pop() {
+        let entries =
+            std::fs::read_dir(&d).map_err(|e| format!("Cannot read {}: {e}", d.display()))?;
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if name.starts_with('.') {
+                continue;
+            }
+            // `DirEntry::file_type` does not follow symlinks, so symlinked folders can't loop.
+            let Ok(ft) = entry.file_type() else { continue };
+            let path = entry.path();
+            if ft.is_dir() {
+                if !SKIPPED_DIRS.contains(&name.as_str()) {
+                    stack.push(path);
+                }
+            } else if ft.is_file()
+                && format_for_path(&path).is_some()
+                && entry.metadata().is_ok_and(|m| m.len() <= MAX_FILE_BYTES)
+            {
+                out.push(path);
+                if out.len() > MAX_FOLDER_FILES {
+                    return Err(format!(
+                        "The folder has more than {MAX_FOLDER_FILES} supported files; pick a smaller folder"
+                    ));
+                }
+            }
+        }
+    }
+    out.sort();
+    Ok(out)
+}
+
 fn file_title(path: &Path) -> String {
     path.file_name()
         .map(|n| n.to_string_lossy().into_owned())
@@ -323,6 +367,36 @@ fn drawingml_text(xml: &str) -> Result<String, String> {
 mod tests {
     use super::*;
     use std::io::Write;
+
+    #[test]
+    fn folder_walk_keeps_supported_files_only() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        for (p, body) in [
+            ("a.md", "a"),
+            ("sub/b.pdf", "b"),
+            ("sub/deep/c.txt", "c"),
+            ("photo.png", "x"),
+            (".hidden.md", "x"),
+            (".git/config.md", "x"),
+            ("node_modules/pkg/readme.md", "x"),
+        ] {
+            let path = root.join(p);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, body).unwrap();
+        }
+        let found: Vec<String> = supported_files_in(root)
+            .unwrap()
+            .iter()
+            .map(|p| {
+                p.strip_prefix(root)
+                    .unwrap()
+                    .to_string_lossy()
+                    .replace('\\', "/")
+            })
+            .collect();
+        assert_eq!(found, ["a.md", "sub/b.pdf", "sub/deep/c.txt"]);
+    }
 
     #[test]
     fn formats_by_extension() {

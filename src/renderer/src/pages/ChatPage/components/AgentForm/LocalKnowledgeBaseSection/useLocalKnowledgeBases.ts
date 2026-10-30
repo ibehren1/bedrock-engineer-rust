@@ -165,6 +165,12 @@ export function useLocalKnowledgeBases(
         if (added.length) await refreshSources(kbId)
         return added
       }),
+    pickFolder: (kbId: string) =>
+      run(async () => {
+        const added = await k.pickFolder(agentId, kbId)
+        if (added) await refreshSources(kbId)
+        return added
+      }),
     addUrl: (kbId: string, url: string, options: Parameters<typeof k.addUrl>[3]) =>
       run(async () => {
         const added = await k.addUrl(agentId, kbId, url, options)

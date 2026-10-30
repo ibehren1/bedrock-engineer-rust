@@ -9,11 +9,13 @@
 
 use crate::types::{EmbeddingSpec, Provider, SourceInfo, SourceKind, SourceStatus, UrlOptions};
 use rusqlite::{params, Connection, OptionalExtension};
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, Once};
 
 /// 1: the knowledgebase itself. 2: adds `search_log` and `job_log` (usage and maintenance).
-const SCHEMA_VERSION: i64 = 2;
+/// 3: adds `documents.mtime` (file and folder sources skip unmodified files).
+const SCHEMA_VERSION: i64 = 3;
 
 /// Search log rows older than this are pruned.
 const SEARCH_LOG_DAYS: i64 = 90;
@@ -212,6 +214,14 @@ impl KbStore {
                 status TEXT NOT NULL, message TEXT NOT NULL);",
         )
         .map_err(err)?;
+        let has_mtime = c
+            .prepare("SELECT 1 FROM pragma_table_info('documents') WHERE name = 'mtime'")
+            .and_then(|mut st| st.exists([]))
+            .map_err(err)?;
+        if !has_mtime {
+            c.execute_batch("ALTER TABLE documents ADD COLUMN mtime INTEGER")
+                .map_err(err)?;
+        }
         c.execute(
             "INSERT INTO meta(key, value) VALUES ('schema_version', ?1)
              ON CONFLICT(key) DO UPDATE SET value = excluded.value",
@@ -373,11 +383,10 @@ impl KbStore {
     }
 
     fn source_from_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<SourceInfo> {
-        let kind: String = r.get("kind")?;
-        let kind = if kind == "url" {
-            SourceKind::Url
-        } else {
-            SourceKind::File
+        let kind = match r.get::<_, String>("kind")?.as_str() {
+            "url" => SourceKind::Url,
+            "folder" => SourceKind::Folder,
+            _ => SourceKind::File,
         };
         let options: Option<String> = r.get("options_json")?;
         Ok(SourceInfo {
@@ -457,7 +466,7 @@ impl KbStore {
         c.execute(
             "UPDATE sources SET status = 'ready', error = NULL, synced_at = ?2,
                 title = COALESCE(?3, title),
-                doc_count = (SELECT COUNT(*) FROM documents WHERE source_id = ?1),
+                doc_count = (SELECT COUNT(*) FROM documents WHERE source_id = ?1 AND content_hash != ''),
                 chunk_count = (SELECT COUNT(*) FROM chunks WHERE source_id = ?1),
                 bytes = (SELECT COALESCE(SUM(bytes), 0) FROM documents WHERE source_id = ?1)
              WHERE id = ?1",
@@ -535,6 +544,32 @@ impl KbStore {
             .collect::<rusqlite::Result<Vec<String>>>()
             .map_err(err)?;
         Ok(v)
+    }
+
+    /// Per document URI of the source: its file's modification time (ms since the epoch;
+    /// `None` for documents indexed before it was recorded) and whether it is a placeholder
+    /// for a file that failed to extract (`content_hash` empty).
+    pub fn document_stamps(&self, source_id: &str) -> Result<HashMap<String, (Option<i64>, bool)>> {
+        let c = self.lock();
+        let mut st = c
+            .prepare("SELECT uri, mtime, content_hash = '' FROM documents WHERE source_id = ?1")
+            .map_err(err)?;
+        let v = st
+            .query_map([source_id], |r| Ok((r.get(0)?, (r.get(1)?, r.get(2)?))))
+            .map_err(err)?
+            .collect::<rusqlite::Result<HashMap<_, _>>>()
+            .map_err(err)?;
+        Ok(v)
+    }
+
+    pub fn set_document_mtime(&self, source_id: &str, uri: &str, mtime: i64) -> Result<()> {
+        self.lock()
+            .execute(
+                "UPDATE documents SET mtime = ?3 WHERE source_id = ?1 AND uri = ?2",
+                params![source_id, uri, mtime],
+            )
+            .map_err(err)?;
+        Ok(())
     }
 
     /// Replace (or insert) one document and its chunks atomically.
@@ -1234,12 +1269,14 @@ pub(crate) mod tests {
         s.lock()
             .execute_batch(
                 "DROP TABLE search_log; DROP TABLE job_log;
+                 ALTER TABLE documents DROP COLUMN mtime;
                  UPDATE meta SET value = '1' WHERE key = 'schema_version';",
             )
             .unwrap();
         drop(s);
         let s = KbStore::open(&path).unwrap();
         s.log_search(1_000, 5, 2, "agent").unwrap();
+        assert!(s.document_stamps("none").unwrap().is_empty());
         let u = s.usage(2_000, 7).unwrap();
         assert_eq!(u.searches_total, 1);
         assert_eq!(u.daily_searches, vec![0, 0, 0, 0, 0, 0, 1]);

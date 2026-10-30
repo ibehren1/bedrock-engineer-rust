@@ -10,7 +10,7 @@
 use crate::chunk::{chunk_text, TextKind};
 use crate::crawl::{crawl, CrawlOptions};
 use crate::embed::{batch_size, embed_checked, EmbedInput, Embedder, EmbedderProvider};
-use crate::extract::{extract_file, format_for_path};
+use crate::extract::{extract_file, format_for_path, supported_files_in};
 use crate::search::hybrid_search;
 use crate::store::{db_files, db_size, embed_text, KbMeta, KbStore, NewChunk};
 use crate::types::*;
@@ -35,6 +35,16 @@ const RECLAIM_FLAG_BYTES: u64 = 1024 * 1024;
 /// After a job, optimize automatically past this share and size of free space.
 const AUTO_OPTIMIZE_SHARE: f64 = 0.25;
 const AUTO_OPTIMIZE_BYTES: u64 = 4 * 1024 * 1024;
+/// The first automatic re-sync of file and folder sources runs about this long after launch.
+const AUTO_SYNC_FIRST_DELAY: Duration = Duration::from_secs(30);
+/// How often the auto-sync loop checks whether a pass is due (and re-reads the settings).
+const AUTO_SYNC_TICK: Duration = Duration::from_secs(30);
+
+/// Modification time in ms since the epoch; `None` when the file can't be read.
+fn file_mtime(path: &Path) -> Option<i64> {
+    let t = std::fs::metadata(path).ok()?.modified().ok()?;
+    Some(t.duration_since(std::time::UNIX_EPOCH).ok()?.as_millis() as i64)
+}
 
 fn now_ms() -> i64 {
     chrono::Utc::now().timestamp_millis()
@@ -72,6 +82,8 @@ pub struct KnowledgeService {
     handles: Mutex<HashMap<Key, Arc<KbStore>>>,
     locks: Mutex<HashMap<Key, Arc<tokio::sync::Mutex<()>>>>,
     jobs: Mutex<HashMap<String, ActiveJob>>,
+    /// Stops the auto-sync loop (app quit).
+    auto_sync_stop: CancellationToken,
 }
 
 fn validate_id(kind: &str, id: &str) -> Result<(), String> {
@@ -160,6 +172,7 @@ impl KnowledgeService {
             handles: Mutex::new(HashMap::new()),
             locks: Mutex::new(HashMap::new()),
             jobs: Mutex::new(HashMap::new()),
+            auto_sync_stop: CancellationToken::new(),
         })
     }
 
@@ -454,6 +467,41 @@ impl KnowledgeService {
         Ok(out)
     }
 
+    /// Add a folder and queue its ingestion: every supported file under it becomes a document
+    /// of the one source, re-scanned on each sync. Errors when it has no supported files or
+    /// too many (the walk runs here, so call it from a blocking thread).
+    pub fn add_folder(
+        self: &Arc<Self>,
+        agent_id: &str,
+        kb_id: &str,
+        path: &str,
+    ) -> Result<SourceInfo, String> {
+        let store = self.store(agent_id, kb_id)?;
+        let dir = PathBuf::from(path);
+        if !dir.is_absolute() {
+            return Err(format!("Not an absolute path: {path}"));
+        }
+        if !dir.is_dir() {
+            return Err(format!("Folder not found: {path}"));
+        }
+        let uri = dir.to_string_lossy().into_owned();
+        if store.list_sources()?.iter().any(|s| s.uri == uri) {
+            return Err("This folder is already a source of the knowledge base".into());
+        }
+        if supported_files_in(&dir)?.is_empty() {
+            return Err("The folder has no supported files".into());
+        }
+        let title = dir
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| uri.clone());
+        let id = new_id("src");
+        store.add_source(&id, SourceKind::Folder, &uri, &title, None, &now())?;
+        self.spawn(agent_id, kb_id, JobKind::Source(id.clone()));
+        self.emit_changed(agent_id, kb_id);
+        store.source(&id)?.ok_or_else(|| "Source not found".into())
+    }
+
     /// Add a website and queue its crawl.
     pub fn add_url(
         self: &Arc<Self>,
@@ -583,9 +631,115 @@ impl KnowledgeService {
         }
     }
 
-    /// Cancel every job (app quit).
+    /// Cancel every job and stop the auto-sync loop (app quit).
     pub fn cancel_all(&self) {
+        self.auto_sync_stop.cancel();
         self.cancel_where(|_| true);
+    }
+
+    /// Re-sync file and folder sources in the background: first shortly after launch, then
+    /// every `knowledgebase.autoSync.intervalMinutes`. Only sources whose files changed get a
+    /// job, so an idle knowledge base costs a directory scan and nothing else.
+    pub fn start_auto_sync(self: &Arc<Self>) {
+        let svc = self.clone();
+        self.runtime.spawn(async move {
+            let stop = svc.auto_sync_stop.clone();
+            let first = tokio::time::Instant::now() + AUTO_SYNC_FIRST_DELAY;
+            let mut last: Option<tokio::time::Instant> = None;
+            loop {
+                tokio::select! {
+                    _ = stop.cancelled() => return,
+                    _ = tokio::time::sleep(AUTO_SYNC_TICK) => {}
+                }
+                // Due time from the current settings, so a new interval applies at once.
+                let auto = svc.host.settings().auto_sync;
+                let due = last.map_or(first, |l| {
+                    l + Duration::from_secs(auto.interval_minutes * 60)
+                });
+                if !auto.enabled || tokio::time::Instant::now() < due {
+                    continue;
+                }
+                let s = svc.clone();
+                let queued = blocking(move || Ok(s.auto_sync_pass()))
+                    .await
+                    .unwrap_or_default();
+                if queued > 0 {
+                    tracing::info!(queued, "Knowledge base auto-sync queued changed sources");
+                }
+                last = Some(tokio::time::Instant::now());
+            }
+        });
+    }
+
+    /// Queue a re-sync of every file and folder source whose files changed; returns how many.
+    pub fn auto_sync_pass(self: &Arc<Self>) -> usize {
+        let mut queued = 0;
+        for agent in self.agent_ids() {
+            for kb in self.kb_ids(&agent).unwrap_or_default() {
+                let Ok(store) = self.store(&agent, &kb) else {
+                    continue;
+                };
+                for src in store.list_sources().unwrap_or_default() {
+                    if matches!(src.status, SourceStatus::Queued | SourceStatus::Processing) {
+                        continue;
+                    }
+                    if self.source_changed(&store, &src)
+                        && self.resync_source(&agent, &kb, &src.id).is_ok()
+                    {
+                        queued += 1;
+                    }
+                }
+            }
+        }
+        queued
+    }
+
+    /// Whether a file or folder source's files differ from what was indexed (always `false`
+    /// for websites). A source that is missing on disk counts once: after its sync has
+    /// recorded the error, it is left alone until it reappears.
+    fn source_changed(&self, store: &KbStore, src: &SourceInfo) -> bool {
+        let path = Path::new(&src.uri);
+        let Ok(known) = store.document_stamps(&src.id) else {
+            return false;
+        };
+        let known: HashMap<String, Option<i64>> =
+            known.into_iter().map(|(uri, (m, _))| (uri, m)).collect();
+        let current: HashMap<String, Option<i64>> = match src.kind {
+            SourceKind::Url => return false,
+            SourceKind::File => match file_mtime(path) {
+                Some(m) => HashMap::from([(src.uri.clone(), Some(m))]),
+                None => return src.status != SourceStatus::Error,
+            },
+            SourceKind::Folder => match supported_files_in(path) {
+                Ok(files) => files
+                    .into_iter()
+                    .map(|f| {
+                        let m = file_mtime(&f);
+                        (f.to_string_lossy().into_owned(), m)
+                    })
+                    .collect(),
+                Err(_) => return src.status != SourceStatus::Error,
+            },
+        };
+        current != known
+    }
+
+    /// Agent folders under the root (not the user guide's index).
+    fn agent_ids(&self) -> Vec<String> {
+        let Ok(rd) = std::fs::read_dir(&self.root) else {
+            return Vec::new();
+        };
+        let mut agents: Vec<String> = rd
+            .flatten()
+            .filter(|e| e.path().is_dir())
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .filter(|n| common::json_file::is_safe_file_id(n))
+            // The user guide's index belongs to the app (restored from the bundle), not to
+            // the user: never listed, never purged.
+            .filter(|n| n != crate::help::HELP_OWNER)
+            .collect();
+        agents.sort();
+        agents
     }
 
     fn spawn(self: &Arc<Self>, agent_id: &str, kb_id: &str, kind: JobKind) -> String {
@@ -758,9 +912,25 @@ impl KnowledgeService {
         };
         match source.kind {
             SourceKind::File => {
-                rep.update(JobPhase::Extracting, 0, 1, source.title.clone());
                 let path = PathBuf::from(&source.uri);
-                let extracted = blocking(move || extract_file(&path)).await?;
+                let mtime = file_mtime(&path);
+                // Unmodified since it was indexed. A manual re-sync of a file that failed to
+                // extract still tries again.
+                let known = store.document_stamps(source_id)?;
+                if mtime.is_some() && known.get(&source.uri) == Some(&(mtime, false)) {
+                    store.finish_source(source_id, None, &now())?;
+                    return Ok("Unchanged".into());
+                }
+                rep.update(JobPhase::Extracting, 0, 1, source.title.clone());
+                let extracted = match blocking(move || extract_file(&path)).await {
+                    Ok(x) => x,
+                    Err(e) => {
+                        if let Some(m) = mtime {
+                            ctx.mark_failed(source_id, &source.uri, m).await?;
+                        }
+                        return Err(e);
+                    }
+                };
                 rep.check()?;
                 let title = extracted.title.clone();
                 let changed = ctx
@@ -770,6 +940,7 @@ impl KnowledgeService {
                         &title,
                         &extracted.text,
                         extracted.kind,
+                        mtime,
                         0,
                         1,
                     )
@@ -780,6 +951,73 @@ impl KnowledgeService {
                 } else {
                     "Unchanged".into()
                 })
+            }
+            SourceKind::Folder => {
+                rep.update(JobPhase::Fetching, 0, 0, source.title.clone());
+                let dir = PathBuf::from(&source.uri);
+                let files = blocking(move || supported_files_in(&dir)).await?;
+                rep.check()?;
+                let known = store.document_stamps(source_id)?;
+                let total = files.len();
+                let (mut changed, mut skipped) = (0, 0);
+                let mut keep = HashSet::new();
+                for (i, file) in files.into_iter().enumerate() {
+                    rep.check()?;
+                    let uri = file.to_string_lossy().into_owned();
+                    keep.insert(uri.clone());
+                    let mtime = file_mtime(&file);
+                    if mtime.is_some() && known.get(&uri) == Some(&(mtime, false)) {
+                        continue;
+                    }
+                    let name = file
+                        .file_name()
+                        .map(|n| n.to_string_lossy().into_owned())
+                        .unwrap_or_else(|| uri.clone());
+                    rep.update(JobPhase::Extracting, i, total, name);
+                    let extracted = match blocking(move || extract_file(&file)).await {
+                        Ok(x) => x,
+                        Err(e) => {
+                            tracing::info!(uri = %uri, error = %e, "Skipping folder file");
+                            if let Some(m) = mtime {
+                                ctx.mark_failed(source_id, &uri, m).await?;
+                            }
+                            skipped += 1;
+                            continue;
+                        }
+                    };
+                    if ctx
+                        .ingest(
+                            source_id,
+                            &uri,
+                            &extracted.title,
+                            &extracted.text,
+                            extracted.kind,
+                            mtime,
+                            i,
+                            total,
+                        )
+                        .await?
+                    {
+                        changed += 1;
+                    }
+                }
+                // Files deleted (or no longer supported) since the last sync.
+                let mut removed = 0;
+                for uri in known.keys() {
+                    if !keep.contains(uri) {
+                        store.remove_document(source_id, uri)?;
+                        removed += 1;
+                    }
+                }
+                store.finish_source(source_id, None, &now())?;
+                let mut msg = format!("{total} files, {changed} updated");
+                if removed > 0 {
+                    msg.push_str(&format!(", {removed} removed"));
+                }
+                if skipped > 0 {
+                    msg.push_str(&format!(", {skipped} skipped"));
+                }
+                Ok(msg)
             }
             SourceKind::Url => {
                 let opts = source.options.clone().unwrap_or_default().clamped();
@@ -812,6 +1050,7 @@ impl KnowledgeService {
                             &page.title,
                             &page.text,
                             page.kind,
+                            None,
                             i,
                             total,
                         )
@@ -956,42 +1195,30 @@ impl KnowledgeService {
     /// Every knowledgebase on disk; `known_agents` are the ids in `customAgents`.
     pub fn storage_overview(&self, known_agents: &HashSet<String>) -> StorageOverview {
         let mut entries = Vec::new();
-        if let Ok(rd) = std::fs::read_dir(&self.root) {
-            let mut agents: Vec<String> = rd
-                .flatten()
-                .filter(|e| e.path().is_dir())
-                .map(|e| e.file_name().to_string_lossy().into_owned())
-                .filter(|n| common::json_file::is_safe_file_id(n))
-                // The user guide's index belongs to the app (restored from the bundle), not to
-                // the user: never listed, never purged.
-                .filter(|n| n != crate::help::HELP_OWNER)
-                .collect();
-            agents.sort();
-            for agent in agents {
-                for kb in self.kb_ids(&agent).unwrap_or_default() {
-                    let path = self.kb_path(&agent, &kb);
-                    let stats = self.stats(&agent, &kb).ok();
-                    let (name, sources, chunks, embedding) = match &stats {
-                        Some(st) => (
-                            st.info.name.clone(),
-                            st.info.source_count,
-                            st.info.chunk_count,
-                            Some(st.info.embedding.clone()),
-                        ),
-                        None => (kb.clone(), 0, 0, None),
-                    };
-                    entries.push(StorageEntry {
-                        orphan: !known_agents.contains(&agent),
-                        agent_id: agent.clone(),
-                        kb_id: kb,
-                        name,
-                        bytes: db_size(&path),
-                        source_count: sources,
-                        chunk_count: chunks,
-                        embedding,
-                        stats,
-                    });
-                }
+        for agent in self.agent_ids() {
+            for kb in self.kb_ids(&agent).unwrap_or_default() {
+                let path = self.kb_path(&agent, &kb);
+                let stats = self.stats(&agent, &kb).ok();
+                let (name, sources, chunks, embedding) = match &stats {
+                    Some(st) => (
+                        st.info.name.clone(),
+                        st.info.source_count,
+                        st.info.chunk_count,
+                        Some(st.info.embedding.clone()),
+                    ),
+                    None => (kb.clone(), 0, 0, None),
+                };
+                entries.push(StorageEntry {
+                    orphan: !known_agents.contains(&agent),
+                    agent_id: agent.clone(),
+                    kb_id: kb,
+                    name,
+                    bytes: db_size(&path),
+                    source_count: sources,
+                    chunk_count: chunks,
+                    embedding,
+                    stats,
+                });
             }
         }
         StorageOverview {
@@ -1134,6 +1361,9 @@ fn optimize_store(store: &KbStore) -> Result<OptimizeResult, String> {
     })
 }
 
+/// `content_hash` of a placeholder document for a file that could not be extracted.
+pub const FAILED_HASH: &str = "";
+
 /// Chunk, embed and store one document.
 struct IngestCtx {
     store: Arc<KbStore>,
@@ -1152,12 +1382,16 @@ impl IngestCtx {
         title: &str,
         text: &str,
         kind: TextKind,
+        mtime: Option<i64>,
         doc_index: usize,
         doc_total: usize,
     ) -> Result<bool, String> {
         self.rep.check()?;
         let content_hash = hash(&format!("{title}\n{text}"));
         if self.store.document_hash(source_id, uri)?.as_deref() == Some(content_hash.as_str()) {
+            if let Some(m) = mtime {
+                self.store.set_document_mtime(source_id, uri, m)?;
+            }
             return Ok(false);
         }
         let chunks = chunk_text(text, kind, self.meta.chunk_size, self.meta.chunk_overlap);
@@ -1198,10 +1432,28 @@ impl IngestCtx {
         );
         let bytes = text.len() as u64;
         blocking(move || {
-            store.replace_document(&source_id, &uri, &title, &content_hash, bytes, &new_chunks)
+            store.replace_document(&source_id, &uri, &title, &content_hash, bytes, &new_chunks)?;
+            match mtime {
+                Some(m) => store.set_document_mtime(&source_id, &uri, m),
+                None => Ok(()),
+            }
         })
         .await?;
         Ok(true)
+    }
+
+    /// Remember the modification time of a file that failed to extract, so it isn't retried
+    /// until it changes. A document indexed from an earlier version keeps its passages; a
+    /// new file gets an empty placeholder document (no passages, not counted).
+    async fn mark_failed(&self, source_id: &str, uri: &str, mtime: i64) -> Result<(), String> {
+        let (store, source_id, uri) = (self.store.clone(), source_id.to_string(), uri.to_string());
+        blocking(move || {
+            if store.document_hash(&source_id, &uri)?.is_none() {
+                store.replace_document(&source_id, &uri, &uri, FAILED_HASH, 0, &[])?;
+            }
+            store.set_document_mtime(&source_id, &uri, mtime)
+        })
+        .await
     }
 }
 
@@ -1356,6 +1608,131 @@ mod tests {
         assert!(svc.list("agent1").unwrap().is_empty());
         assert!(!dir.path().join("knowledgebases").join("agent1").exists());
         assert!(lock(&host.events).iter().any(|(e, _)| e == CHANGED_EVENT));
+    }
+
+    /// Write `body` to `path` and give it a modification time `secs` after the epoch, so
+    /// tests don't depend on the filesystem's timestamp resolution.
+    fn write_at(path: &Path, body: &str, secs: u64) {
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, body).unwrap();
+        std::fs::File::options()
+            .write(true)
+            .open(path)
+            .unwrap()
+            .set_modified(std::time::UNIX_EPOCH + Duration::from_secs(secs))
+            .unwrap();
+    }
+
+    fn last_done_message(host: &TestHost) -> String {
+        lock(&host.events)
+            .iter()
+            .rev()
+            .find(|(e, p)| e == PROGRESS_EVENT && p["phase"] == "done")
+            .map(|(_, p)| p["message"].as_str().unwrap_or_default().to_string())
+            .unwrap()
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn folder_source_follows_the_folder() {
+        let dir = tempfile::tempdir().unwrap();
+        let (svc, host) = service(dir.path());
+        let kb = svc.create("agent1", "Docs", "").unwrap();
+        let folder = dir.path().join("docs");
+        write_at(
+            &folder.join("a.md"),
+            "# A\nAlpha widgets are blue.\n",
+            1_000,
+        );
+        write_at(
+            &folder.join("sub/b.md"),
+            "# B\nBeta gadgets are green.\n",
+            1_000,
+        );
+        write_at(&folder.join("broken.pdf"), "not a pdf", 1_000);
+        write_at(&folder.join("image.png"), "x", 1_000);
+        let uri = folder.to_string_lossy().into_owned();
+
+        assert!(svc.add_folder("agent1", &kb.id, "relative").is_err());
+        let empty = dir.path().join("empty");
+        std::fs::create_dir_all(&empty).unwrap();
+        assert!(svc
+            .add_folder("agent1", &kb.id, &empty.to_string_lossy())
+            .unwrap_err()
+            .contains("no supported files"));
+        let src = svc.add_folder("agent1", &kb.id, &uri).unwrap();
+        assert_eq!(src.kind, SourceKind::Folder);
+        assert_eq!(src.title, "docs");
+        assert!(svc.add_folder("agent1", &kb.id, &uri).is_err());
+        wait_idle(&svc).await;
+        let s = svc.list_sources("agent1", &kb.id).unwrap().remove(0);
+        assert_eq!(s.status, SourceStatus::Ready, "{s:?}");
+        // The unreadable PDF is a placeholder: not counted, no passages.
+        assert_eq!(s.document_count, 2);
+        assert_eq!(last_done_message(&host), "3 files, 2 updated, 1 skipped");
+
+        // Nothing changed on disk: the auto-sync pass queues nothing.
+        assert_eq!(svc.auto_sync_pass(), 0);
+
+        // Edit one file, add one, delete one.
+        write_at(
+            &folder.join("a.md"),
+            "# A\nAlpha widgets are now red.\n",
+            2_000,
+        );
+        write_at(&folder.join("c.txt"), "Gamma gizmos hum quietly.", 2_000);
+        std::fs::remove_file(folder.join("sub/b.md")).unwrap();
+        assert_eq!(svc.auto_sync_pass(), 1);
+        wait_idle(&svc).await;
+        assert_eq!(
+            last_done_message(&host),
+            "3 files, 2 updated, 1 removed, 1 skipped"
+        );
+        let s = svc.list_sources("agent1", &kb.id).unwrap().remove(0);
+        assert_eq!(s.document_count, 2);
+        let hits = svc
+            .search("agent1", None, "gizmos hum", Some(1), SearchOrigin::Test)
+            .await
+            .unwrap();
+        assert!(hits[0].text.contains("Gamma"), "{hits:?}");
+        assert_eq!(svc.auto_sync_pass(), 0);
+
+        // A manual re-sync skips unmodified files but retries the one that failed.
+        svc.resync_source("agent1", &kb.id, &s.id).unwrap();
+        wait_idle(&svc).await;
+        assert_eq!(last_done_message(&host), "3 files, 0 updated, 1 skipped");
+
+        // A deleted folder errors once and is then left alone.
+        std::fs::remove_dir_all(&folder).unwrap();
+        assert_eq!(svc.auto_sync_pass(), 1);
+        wait_idle(&svc).await;
+        let s = svc.list_sources("agent1", &kb.id).unwrap().remove(0);
+        assert_eq!(s.status, SourceStatus::Error);
+        assert_eq!(svc.auto_sync_pass(), 0);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn file_source_skips_unmodified_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let (svc, host) = service(dir.path());
+        let kb = svc.create("agent1", "Docs", "").unwrap();
+        let f = dir.path().join("notes.md");
+        write_at(&f, "# Notes\nOne fish.\n", 1_000);
+        svc.add_files("agent1", &kb.id, &[f.to_string_lossy().into_owned()])
+            .unwrap();
+        wait_idle(&svc).await;
+        assert_eq!(svc.auto_sync_pass(), 0);
+        // Touched but not edited: re-read, unchanged, no new embedding.
+        write_at(&f, "# Notes\nOne fish.\n", 2_000);
+        assert_eq!(svc.auto_sync_pass(), 1);
+        wait_idle(&svc).await;
+        assert_eq!(last_done_message(&host), "Unchanged");
+        assert_eq!(svc.auto_sync_pass(), 0);
+        write_at(&f, "# Notes\nTwo fish.\n", 3_000);
+        assert_eq!(svc.auto_sync_pass(), 1);
+        wait_idle(&svc).await;
+        assert_eq!(last_done_message(&host), "Indexed");
+        let src = svc.list_sources("agent1", &kb.id).unwrap().remove(0);
+        assert_eq!(src.status, SourceStatus::Ready);
     }
 
     #[tokio::test(flavor = "multi_thread")]

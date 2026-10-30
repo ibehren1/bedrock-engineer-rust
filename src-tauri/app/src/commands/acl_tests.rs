@@ -175,6 +175,7 @@ fn local_terminals_updates_and_knowledge_are_main_window_only() {
         .filter(|c| c.starts_with("knowledge_"))
         .collect();
     assert!(knowledge.contains(&"knowledge_pick_files".to_string()));
+    assert!(knowledge.contains(&"knowledge_pick_folder".to_string()));
     for c in &knowledge {
         assert!(is_main_window_only(c));
         assert!(

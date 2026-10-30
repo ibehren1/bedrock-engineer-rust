@@ -697,7 +697,7 @@ settings with an **Open sandbox settings** button that brings you here.
 ### 5.7 Knowledge Base tab
 
 Settings for [local knowledge bases](#24-local-knowledge-bases-letting-an-agent-search-your-documents),
-the documents and websites an agent can search. The tab has four sections:
+the documents and websites an agent can search. The tab has five sections:
 
 - **Overview** — every knowledge base on this computer, with totals, health, **Optimize all** and a way
   to delete knowledge bases whose agent no longer exists.
@@ -706,6 +706,7 @@ the documents and websites an agent can search. The tab has four sections:
   with its download button.
 - **Chunking and retrieval** — passage size, results per search, and the balance between meaning and
   keyword matches.
+- **Automatic re-sync** — whether file and folder sources pick up changes on their own, and how often.
 - **Website crawler** — defaults for new website sources.
 
 Each section is explained in [Section 24.6](#246-the-knowledge-base-settings-tab).
@@ -1186,7 +1187,7 @@ You cannot edit or remove it here; it goes away when the agent has no knowledge 
 #### Tab 3 — Knowledge Base
 
 The agent's own searchable library of documents and websites, stored on your computer. Create a
-knowledge base, add files or a website to it, and the agent gets a tool to search it. This tab is
+knowledge base, add files, a folder or a website to it, and the agent gets a tool to search it. This tab is
 explained step by step in [Section 24.3](#243-the-knowledge-base-tab-in-the-agent-editor).
 
 #### Tab 4 — Tools
@@ -1510,7 +1511,7 @@ and go away when it has none.
 | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `searchKnowledgeBase`      | Searches the agent's knowledge bases and returns the most relevant passages, ranked by both meaning and keyword matches, each with its title, section heading, the knowledge base it came from and its source (file path or page URL). It takes a question or key terms, and optionally one knowledge base (by name) and how many passages to return (1–20; the default comes from **Settings → Knowledge Base → Results per search**). |
 | `listKnowledgeBases`       | Lists the agent's knowledge bases with their descriptions and sizes.                                                                                                                                                                                                                                                                                                                                                                    |
-| `listKnowledgeBaseSources` | Lists the files and websites in the agent's knowledge bases, or in one of them.                                                                                                                                                                                                                                                                                                                                                         |
+| `listKnowledgeBaseSources` | Lists the files, folders and websites in the agent's knowledge bases, or in one of them.                                                                                                                                                                                                                                                                                                                                                |
 
 **How to tell they are being used.** Each search shows up in the chat as a `searchKnowledgeBase` tool
 call. Expand it to see the query the agent used and the passages it got back. The agent is asked to
@@ -2359,7 +2360,7 @@ so passages about the same thing can be found even when they use different words
 bases use an embedding model for this. See [Section 24.2](#242-how-it-works).
 
 **Knowledge base** — a searchable collection of documents. This app has two kinds. A **local knowledge
-base** is built and stored on your computer from files and websites you add, and searched with
+base** is built and stored on your computer from files, folders and websites you add, and searched with
 `searchKnowledgeBase` ([Section 24](#24-local-knowledge-bases-letting-an-agent-search-your-documents)).
 An **Amazon Bedrock Knowledge Base** is one AWS has indexed in your account, searched with `retrieve`
 ([Section 9.4](#94-ai-services-tools)).
@@ -2688,9 +2689,9 @@ flowchart LR
   S -->|"best passages,<br/>with their sources"| A["The agent"]
 ```
 
-1. **Adding a source.** When you add files or a website, the app reads the text out of each document
-   and splits it into **passages** of a few hundred words (the chunk size in Settings), overlapping a
-   little so nothing is cut in half.
+1. **Adding a source.** When you add files, a folder or a website, the app reads the text out of each
+   document and splits it into **passages** of a few hundred words (the chunk size in Settings),
+   overlapping a little so nothing is cut in half.
 2. **Embedding.** Each passage is turned into a **vector** — a list of numbers that captures what it
    means — by an **embedding model**. That is either a model on Amazon Bedrock (Amazon Titan Text
    Embeddings V2 or Cohere Embed) or a small model that runs on your own computer
@@ -2706,8 +2707,10 @@ one shown in **Settings → Workspace → Config Directory**. The on-device embe
 downloaded, is kept in `knowledgebases/.models/`.
 
 Files you add are **read where they are, not copied**. The knowledge base stores the passages it took
-from them; the original files are never changed. If you move or delete a file, the knowledge base
-keeps what it already has until you re-sync that source, which then reports the file as missing.
+from them; the original files are never changed. Edits to files and folders are picked up by the
+automatic re-sync (hourly by default, see [24.6](#246-the-knowledge-base-settings-tab)) or when you
+re-sync the source yourself. If you move or delete a file, its source reports it as missing at the next
+sync and keeps the passages it already has until you remove it.
 
 What happens to knowledge bases when you change the agent:
 
@@ -2735,7 +2738,7 @@ Servers and Tools). The tab works for a new agent too, before you save it.
 Each knowledge base is a card. Its header shows the name, a health badge, the description and the
 embedding model; collapsed, it also shows the number of passages and its size. The pencil button
 **renames** it (name and description), and the red trash button **deletes** it after asking. Deleting
-removes only the knowledge base's indexed content from your computer; the original files and websites
+removes only the knowledge base's indexed content from your computer; the original files, folders and websites
 are not touched.
 
 **Adding files**
@@ -2750,9 +2753,19 @@ are not touched.
 - Excel and other spreadsheets (`.xlsx`, `.xlsm`, `.xlsb`, `.xls`, `.ods`) — one section per sheet
 - PowerPoint (`.pptx`) — one section per slide
 
-Older `.doc` and `.ppt` files, folders, and files over 100 MB are not supported. A PDF that is only
+Older `.doc` and `.ppt` files, and files over 100 MB, are not supported. A PDF that is only
 scanned images, with no text in it, adds nothing searchable. Adding a file that is already in the
 knowledge base is skipped.
+
+**Add folder** opens a folder picker and adds the folder as one source that follows its contents:
+every supported file in it and its subfolders is a document of that source. Each sync, automatic or
+manual, looks at the folder again: new files are added, edited ones re-read, and files deleted from the
+folder are removed from the knowledge base. Files whose modification time has not changed are not read
+again. A folder source leaves out hidden files and folders (names starting with `.`, such as `.git`),
+dependency and build folders (`node_modules`, `target`, `venv`, `__pycache__`), shortcuts and symbolic
+links, unsupported file types and files over 100 MB. A file that cannot be read (a damaged PDF, say)
+is counted as skipped and tried again when it changes or when you re-sync the folder. A folder with more
+than 1,000 supported files is refused; pick a smaller folder instead.
 
 **Adding a website**
 
@@ -2772,19 +2785,20 @@ How the crawler behaves is in [24.5](#245-how-the-website-crawler-behaves).
 Sources are processed in the background, so you can keep working. While a job runs, the card shows a
 progress bar with what it is doing — **Crawling 12/50**, **Reading…**, **Embedding 80/240**,
 **Saving…** — and a **Stop** button. When a job finishes, a short message says what happened: for a
-website, how many pages were read, updated, removed or skipped; for a file, **Indexed** or
-**Unchanged**.
+website, how many pages were read, updated, removed or skipped; for a folder, the same for its files;
+for a file, **Indexed** or **Unchanged**.
 
 **The sources list**
 
-Every file and website appears under **Sources** with its status (**Queued**, **Processing**,
+Every file, folder and website appears under **Sources** with its status (**Queued**, **Processing**,
 **Ready**, **Error** or **Stopped**), how many documents and passages it produced, and when it was last
 synced. A website also shows its link depth and page limit. Errors are shown in red under the source.
 Each source has buttons to:
 
 - **Re-sync** — read it again and pick up changes. Documents that have not changed are skipped, so
   re-syncing a large source is quick and, with Bedrock embeddings, cheap. On a website, pages that have
-  disappeared are removed from the knowledge base.
+  disappeared are removed from the knowledge base; on a folder, files that were deleted. Files and
+  folders are also re-synced automatically when their files change.
 - **Crawl settings** (websites only) — change the link depth, page limit and stay-under-path option.
   **Save and re-sync** applies them straight away; **Save** applies them at the next re-sync.
 - **Remove** — take the source and its passages out of the knowledge base, after asking.
@@ -2803,7 +2817,7 @@ These test searches do not count towards the agent's search statistics.
 
 | Tile                        | What it shows                                                                                                                                                                                                   |
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Passages**                | How many passages it holds, from how many documents, files and websites.                                                                                                                                        |
+| **Passages**                | How many passages it holds, from how many documents, files, folders and websites.                                                                                                                               |
 | **Storage**                 | The size of the file on disk, with a meter of how much of it is free space that **Optimize** would give back (or **Compact** if there is none to speak of). The meter turns to a warning colour at 20% or more. |
 | **Agent searches, 30 days** | How many times the agent searched it over the last 30 days, with a small per-day chart (hover over a day for its count), and when it was last used — or "Not used by the agent yet".                            |
 | **Typical search time**     | The median time to embed the question and search, over the last 30 days, and the time 95% of searches came in under.                                                                                            |
@@ -2881,8 +2895,8 @@ The crawler does not log in and does not run a page's scripts, so pages behind a
 whose content only appears after JavaScript runs, come out empty or nearly so. If the start page itself
 cannot be fetched, the whole crawl fails.
 
-Websites change, so **re-sync** them now and then. A website not synced for 30 days is flagged in the
-health checks.
+Websites change, so **re-sync** them now and then: unlike files and folders, they are never re-synced
+automatically. A website not synced for 30 days is flagged in the health checks.
 
 ### 24.6 The Knowledge Base settings tab
 
@@ -2936,6 +2950,15 @@ on Apple Silicon and Intel Macs, Windows and Linux.
 | **Chunk overlap (tokens)**      | 60      | How much consecutive passages share, so a sentence on a boundary is not lost. Up to half the chunk size. New knowledge bases only.                                                        |
 | **Results per search**          | 6       | How many passages a search returns when the agent does not ask for a number (1–50). Applies to every search.                                                                              |
 | **Semantic vs. keyword weight** | 0.60    | 1.0 ranks by meaning only, 0.0 by keyword matches only; values in between combine both. Lower it if exact terms (part numbers, function names) are being missed. Applies to every search. |
+
+**Automatic re-sync**
+
+| Setting                                             | Default | What it does                                                                                                                                                                                                                                                          |
+| --------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Re-sync changed files and folders automatically** | On      | Checks every file and folder source in the background, about 30 seconds after the app starts and then at the interval below, and re-syncs those whose files were added, edited or deleted. Checking reads only file dates; nothing is embedded unless a file changed. |
+| **Check every (minutes)**                           | 60      | 5–1,440. Changes made while the app is closed are picked up by the check after it starts.                                                                                                                                                                             |
+
+Websites are not part of it; re-sync them yourself.
 
 **Website crawler**
 
@@ -3023,6 +3046,16 @@ sibling folder. Read the source's error and the job message for which it was.
 
 **"File not found (moved or deleted?)"** on re-sync — the file is no longer where it was added from.
 Remove the source and add the file again from its new place.
+
+**"Cannot read …"** on a folder source — the folder was moved, renamed or deleted, or is on a drive
+that is not connected. Reconnect the drive and **Re-sync**, or remove the source and add the folder
+from its new place.
+
+**"The folder has more than 1000 supported files"** — pick a subfolder, or add several smaller folders.
+
+**Edits to a file don't show up in answers yet** — automatic re-sync checks every hour by default.
+**Re-sync** the source to pick them up now, or shorten the interval in **Settings → Knowledge Base →
+Automatic re-sync**. Websites are never re-synced automatically.
 
 **The agent answers without searching** — check that you are in **Act** mode (the knowledge base tools
 are off in Plan mode), that the knowledge base has passages and a description that matches the

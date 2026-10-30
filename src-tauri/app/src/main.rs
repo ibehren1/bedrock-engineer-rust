@@ -178,6 +178,8 @@ fn main() {
             let backend = backend::Backend::build(app.handle(), &user_data)?;
             // initializeBackgroundAgentScheduler(): only when tasks are saved.
             backend.background.initialize_scheduler();
+            // Re-sync knowledge base files and folders that changed on disk.
+            backend.knowledge.start_auto_sync();
             app.manage(backend);
 
             // The main window is declared in tauri.conf.json with `create: false` so it can be

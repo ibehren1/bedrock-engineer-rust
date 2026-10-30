@@ -25,6 +25,7 @@ permissions = [
   "allow-knowledge-rebuild",
   "allow-knowledge-list-sources",
   "allow-knowledge-pick-files",
+  "allow-knowledge-pick-folder",
   "allow-knowledge-add-url",
   "allow-knowledge-update-source-options",
   "allow-knowledge-resync-source",

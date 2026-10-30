@@ -5,6 +5,8 @@ import {
   FiChevronRight,
   FiEdit2,
   FiFile,
+  FiFolder,
+  FiFolderPlus,
   FiGlobe,
   FiRefreshCw,
   FiSearch,
@@ -182,7 +184,7 @@ const SourceRow: React.FC<{
   onSaveOptions: (options: UrlOptions, resync: boolean) => Promise<void>
 }> = ({ source, job, onResync, onRemove, onCancel, onSaveOptions }) => {
   const { t } = useTranslation()
-  const Icon = source.kind === 'url' ? FiGlobe : FiFile
+  const Icon = source.kind === 'url' ? FiGlobe : source.kind === 'folder' ? FiFolder : FiFile
   const status = job ? 'processing' : source.status
   const [editing, setEditing] = useState<UrlOptions | null>(null)
   const save = async (resync: boolean) => {
@@ -566,14 +568,24 @@ export const KnowledgeBaseCard: React.FC<{
             />
           )}
           <div className="space-y-2">
-            <button
-              type="button"
-              className={accentButtonClass}
-              onClick={() => actions.pickFiles(kb.id)}
-            >
-              <FiUpload className="w-3 h-3" />
-              {t('knowledgeBase.addFiles')}
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className={accentButtonClass}
+                onClick={() => actions.pickFiles(kb.id)}
+              >
+                <FiUpload className="w-3 h-3" />
+                {t('knowledgeBase.addFiles')}
+              </button>
+              <button
+                type="button"
+                className={accentButtonClass}
+                onClick={() => actions.pickFolder(kb.id)}
+              >
+                <FiFolderPlus className="w-3 h-3" />
+                {t('knowledgeBase.addFolder')}
+              </button>
+            </div>
             <AddWebsite
               defaults={crawlerDefaults}
               onAdd={async (url, options) =>

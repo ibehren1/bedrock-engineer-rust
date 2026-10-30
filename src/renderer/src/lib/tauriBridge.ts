@@ -1051,6 +1051,10 @@ function createApi(): Window['api'] {
         agentId,
         kbId
       })),
+      pickFolder: cmd(`${KB}.pickFolder`, 'knowledge_pick_folder', (agentId, kbId) => ({
+        agentId,
+        kbId
+      })),
       addUrl: cmd(`${KB}.addUrl`, 'knowledge_add_url', (agentId, kbId, url, options) => ({
         agentId,
         kbId,

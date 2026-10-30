@@ -7,7 +7,7 @@
 //! * `searchKnowledgeBase` — hybrid search over the agent's knowledgebases, results with their
 //!   source (file path or page URL) so the model can cite them.
 //! * `listKnowledgeBases` — names, descriptions and sizes.
-//! * `listKnowledgeBaseSources` — the files and websites in a knowledgebase.
+//! * `listKnowledgeBaseSources` — the files, folders and websites in a knowledgebase.
 
 use crate::service::KnowledgeService;
 use crate::types::{SearchHit, SourceKind};
@@ -159,6 +159,7 @@ impl KbMcpServer {
                     for s in sources {
                         let kind = match s.kind {
                             SourceKind::File => "file",
+                            SourceKind::Folder => "folder",
                             SourceKind::Url => "website",
                         };
                         out.push_str(&format!(

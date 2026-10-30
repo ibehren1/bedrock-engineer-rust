@@ -1,6 +1,7 @@
 import React from 'react'
 import { useKnowledgeSettings } from '@renderer/components/KnowledgeBase/knowledgeSettings'
 import {
+  KnowledgeAutoSyncSection,
   KnowledgeCrawlerSection,
   KnowledgeEmbeddingSection,
   KnowledgeRetrievalSection,
@@ -15,6 +16,7 @@ export const KnowledgeBaseTab: React.FC = () => {
       <KnowledgeStorageSection />
       <KnowledgeEmbeddingSection settings={settings} onChange={setSettings} />
       <KnowledgeRetrievalSection settings={settings} onChange={setSettings} />
+      <KnowledgeAutoSyncSection settings={settings} onChange={setSettings} />
       <KnowledgeCrawlerSection settings={settings} onChange={setSettings} />
     </div>
   )

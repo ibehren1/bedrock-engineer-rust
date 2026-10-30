@@ -4,7 +4,7 @@ import { SettingSection } from '../SettingSection'
 import { SettingNumberInput } from '../SettingNumberInput'
 import { KnowledgeSettings } from '@/types/knowledge'
 
-const Checkbox: React.FC<{
+export const KnowledgeCheckbox: React.FC<{
   id: string
   label: string
   checked: boolean
@@ -61,13 +61,13 @@ export const KnowledgeCrawlerSection: React.FC<{
           onChange={(delayMs) => set({ delayMs })}
         />
       </div>
-      <Checkbox
+      <KnowledgeCheckbox
         id="kb-respect-robots"
         label={t('knowledgeBase.settings.respectRobots')}
         checked={c.respectRobots}
         onChange={(v) => set({ respectRobots: v })}
       />
-      <Checkbox
+      <KnowledgeCheckbox
         id="kb-use-sitemap"
         label={t('knowledgeBase.settings.useSitemap')}
         checked={c.useSitemap}

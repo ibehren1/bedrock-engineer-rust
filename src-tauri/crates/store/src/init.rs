@@ -158,6 +158,10 @@ pub fn init(data: &mut Map<String, Value>, env: &Env) {
                 "delayMs": 500,
                 "respectRobots": true,
                 "useSitemap": true
+            },
+            "autoSync": {
+                "enabled": true,
+                "intervalMinutes": 60
             }
         }),
     );

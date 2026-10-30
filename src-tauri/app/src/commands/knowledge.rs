@@ -129,6 +129,33 @@ pub async fn knowledge_pick_files(
     backend.knowledge.add_files(&agent_id, &kb_id, &paths)
 }
 
+/// Pick a folder in the native dialog and add it as one source that follows the folder's
+/// contents; `None` when canceled.
+#[tauri::command]
+pub async fn knowledge_pick_folder(
+    window: WebviewWindow,
+    backend: State<'_, Backend>,
+    agent_id: String,
+    kb_id: String,
+) -> Result<Option<SourceInfo>, String> {
+    let Some(dir) = window
+        .dialog()
+        .file()
+        .set_parent(&window)
+        .set_title("Add a folder to the knowledge base")
+        .blocking_pick_folder()
+        .and_then(crate::commands::file::file_path_string)
+    else {
+        return Ok(None);
+    };
+    let svc = backend.knowledge.clone();
+    // `add_folder` walks the folder to check it has supported files.
+    tauri::async_runtime::spawn_blocking(move || svc.add_folder(&agent_id, &kb_id, &dir))
+        .await
+        .map_err(|e| e.to_string())?
+        .map(Some)
+}
+
 #[tauri::command]
 pub async fn knowledge_add_url(
     backend: State<'_, Backend>,

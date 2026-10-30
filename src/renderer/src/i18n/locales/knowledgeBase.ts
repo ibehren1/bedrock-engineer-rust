@@ -23,7 +23,7 @@ export const knowledgeBase = {
       rename: 'Rename',
       delete: 'Delete',
       deleteConfirm:
-        'Delete the knowledge base "{{name}}"? Its indexed content is removed from this computer. The original files and websites are not touched.',
+        'Delete the knowledge base "{{name}}"? Its indexed content is removed from this computer. The original files, folders and websites are not touched.',
       deleted: 'Knowledge base deleted',
       rebuild: 'Rebuild',
       rebuildHint: 'Re-embed everything with the model now set in Settings ({{model}})',
@@ -32,6 +32,7 @@ export const knowledgeBase = {
       rebuilding: 'Rebuilding…',
       modelMismatch: 'Built with {{model}}; Settings now use {{current}}.',
       addFiles: 'Add files',
+      addFolder: 'Add folder',
       addWebsite: 'Add website',
       urlPlaceholder: 'https://docs.example.com/guide/',
       depth: 'Link depth',
@@ -97,7 +98,7 @@ export const knowledgeBase = {
         connected: 'Connected: {{count}} tools available'
       },
       sources: 'Sources',
-      noSources: 'Add files or a website to fill this knowledge base.',
+      noSources: 'Add files, a folder or a website to fill this knowledge base.',
       resync: 'Re-sync',
       remove: 'Remove',
       removeConfirm: 'Remove "{{name}}" and its indexed content from the knowledge base?',
@@ -165,6 +166,11 @@ export const knowledgeBase = {
         hybridWeight: 'Semantic vs. keyword weight',
         hybridWeightHint:
           '1.0 ranks by meaning only, 0.0 by keyword matches only. Values in between combine both.',
+        autoSyncTitle: 'Automatic re-sync',
+        autoSyncDescription:
+          'Checks file and folder sources in the background and re-syncs the ones whose files changed: new and edited files are indexed, deleted ones removed. Unchanged files are not read again. Websites are only re-synced when you ask.',
+        autoSyncEnabled: 'Re-sync changed files and folders automatically',
+        autoSyncInterval: 'Check every (minutes)',
         crawlerTitle: 'Website crawler',
         crawlerDescription:
           'Defaults for new website sources. The crawler stays on the start URL’s site.',
@@ -227,7 +233,7 @@ export const knowledgeBase = {
       rename: '名前を変更',
       delete: '削除',
       deleteConfirm:
-        'ナレッジベース「{{name}}」を削除しますか？インデックス化された内容がこのコンピューターから削除されます。元のファイルやウェブサイトには影響しません。',
+        'ナレッジベース「{{name}}」を削除しますか？インデックス化された内容がこのコンピューターから削除されます。元のファイル、フォルダ、ウェブサイトには影響しません。',
       deleted: 'ナレッジベースを削除しました',
       rebuild: '再構築',
       rebuildHint: '設定で現在指定しているモデル（{{model}}）ですべて埋め込み直します',
@@ -236,6 +242,7 @@ export const knowledgeBase = {
       rebuilding: '再構築中…',
       modelMismatch: '{{model}} で構築されています。現在の設定は {{current}} です。',
       addFiles: 'ファイルを追加',
+      addFolder: 'フォルダを追加',
       addWebsite: 'ウェブサイトを追加',
       urlPlaceholder: 'https://docs.example.com/guide/',
       depth: 'リンクの深さ',
@@ -304,7 +311,7 @@ export const knowledgeBase = {
         connected: '接続しました: {{count}} 個のツールが利用可能'
       },
       sources: 'ソース',
-      noSources: 'ファイルまたはウェブサイトを追加してください。',
+      noSources: 'ファイル、フォルダ、またはウェブサイトを追加してください。',
       resync: '再同期',
       remove: '削除',
       removeConfirm: '「{{name}}」とそのインデックス化された内容をナレッジベースから削除しますか？',
@@ -372,6 +379,11 @@ export const knowledgeBase = {
         hybridWeight: '意味検索とキーワード検索の重み',
         hybridWeightHint:
           '1.0 は意味だけ、0.0 はキーワード一致だけで順位付けします。中間の値は両方を組み合わせます。',
+        autoSyncTitle: '自動再同期',
+        autoSyncDescription:
+          'ファイルとフォルダのソースをバックグラウンドで確認し、ファイルが変わったものを再同期します。新しいファイルや編集されたファイルは取り込まれ、削除されたファイルは取り除かれます。変わっていないファイルは読み直しません。ウェブサイトは指示したときだけ再同期します。',
+        autoSyncEnabled: '変更されたファイルとフォルダを自動で再同期する',
+        autoSyncInterval: '確認の間隔（分）',
         crawlerTitle: 'ウェブサイトのクローラー',
         crawlerDescription:
           '新しいウェブサイトソースの既定値です。クローラーは開始 URL のサイト内にとどまります。',

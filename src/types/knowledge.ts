@@ -28,6 +28,11 @@ export type KnowledgeSettings = {
     respectRobots: boolean
     useSitemap: boolean
   }
+  /** Background re-sync of file and folder sources whose files changed on disk. */
+  autoSync: {
+    enabled: boolean
+    intervalMinutes: number
+  }
 }
 
 export const DEFAULT_KNOWLEDGE_SETTINGS: KnowledgeSettings = {
@@ -47,6 +52,10 @@ export const DEFAULT_KNOWLEDGE_SETTINGS: KnowledgeSettings = {
     delayMs: 500,
     respectRobots: true,
     useSitemap: true
+  },
+  autoSync: {
+    enabled: true,
+    intervalMinutes: 60
   }
 }
 
@@ -98,7 +107,7 @@ export type SourceStatus = 'queued' | 'processing' | 'ready' | 'error' | 'cancel
 
 export type SourceInfo = {
   id: string
-  kind: 'file' | 'url'
+  kind: 'file' | 'folder' | 'url'
   uri: string
   title: string
   options?: UrlOptions
@@ -244,6 +253,8 @@ export type KnowledgeApi = {
   listSources: (agentId: string, kbId: string) => Promise<SourceInfo[]>
   /** Pick files in the native dialog and add them; `[]` when canceled. */
   pickFiles: (agentId: string, kbId: string) => Promise<SourceInfo[]>
+  /** Pick a folder and add it as one source that follows its files; `null` when canceled. */
+  pickFolder: (agentId: string, kbId: string) => Promise<SourceInfo | null>
   addUrl: (agentId: string, kbId: string, url: string, options?: UrlOptions) => Promise<SourceInfo>
   /** New crawl options for a website source; they apply from its next sync. */
   updateSourceOptions: (

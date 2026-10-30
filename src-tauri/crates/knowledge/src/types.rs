@@ -145,6 +145,23 @@ impl Default for CrawlerSettings {
     }
 }
 
+/// `knowledgebase.autoSync`: re-sync file and folder sources in the background.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct AutoSyncSettings {
+    pub enabled: bool,
+    pub interval_minutes: u64,
+}
+
+impl Default for AutoSyncSettings {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            interval_minutes: 60,
+        }
+    }
+}
+
 /// The `knowledgebase` store key.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
@@ -155,6 +172,7 @@ pub struct KnowledgeSettings {
     pub top_k: usize,
     pub hybrid_weight: f64,
     pub crawler: CrawlerSettings,
+    pub auto_sync: AutoSyncSettings,
 }
 
 impl Default for KnowledgeSettings {
@@ -166,6 +184,7 @@ impl Default for KnowledgeSettings {
             top_k: 6,
             hybrid_weight: 0.6,
             crawler: CrawlerSettings::default(),
+            auto_sync: AutoSyncSettings::default(),
         }
     }
 }
@@ -176,6 +195,8 @@ pub const MIN_CHUNK_SIZE: usize = 50;
 pub const MAX_TOP_K: usize = 50;
 pub const MAX_CRAWL_PAGES: u32 = 1000;
 pub const MAX_CRAWL_DEPTH: u32 = 10;
+pub const MIN_AUTO_SYNC_MINUTES: u64 = 5;
+pub const MAX_AUTO_SYNC_MINUTES: u64 = 24 * 60;
 
 impl KnowledgeSettings {
     /// From `store.knowledgebase`; a malformed key falls back to the defaults.
@@ -199,6 +220,10 @@ impl KnowledgeSettings {
         self.crawler.max_pages = self.crawler.max_pages.clamp(1, MAX_CRAWL_PAGES);
         self.crawler.max_depth = self.crawler.max_depth.min(MAX_CRAWL_DEPTH);
         self.crawler.delay_ms = self.crawler.delay_ms.min(60_000);
+        self.auto_sync.interval_minutes = self
+            .auto_sync
+            .interval_minutes
+            .clamp(MIN_AUTO_SYNC_MINUTES, MAX_AUTO_SYNC_MINUTES);
         self
     }
 }
@@ -226,6 +251,8 @@ pub struct KbInfo {
 #[serde(rename_all = "camelCase")]
 pub enum SourceKind {
     File,
+    /// A folder on disk: one document per supported file under it, re-scanned on every sync.
+    Folder,
     Url,
 }
 
@@ -233,6 +260,7 @@ impl SourceKind {
     pub fn as_str(self) -> &'static str {
         match self {
             SourceKind::File => "file",
+            SourceKind::Folder => "folder",
             SourceKind::Url => "url",
         }
     }
@@ -298,13 +326,13 @@ impl UrlOptions {
     }
 }
 
-/// A file or URL added to a knowledgebase.
+/// A file, folder or URL added to a knowledgebase.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SourceInfo {
     pub id: String,
     pub kind: SourceKind,
-    /// File path or start URL.
+    /// File or folder path, or start URL.
     pub uri: String,
     pub title: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -478,7 +506,7 @@ mod tests {
         assert_eq!(s, KnowledgeSettings::default());
         let s = KnowledgeSettings::from_store(&json!({
             "knowledgebase": { "chunkSize": 10, "chunkOverlap": 999, "topK": 0, "hybridWeight": 3.0,
-                               "crawler": { "maxPages": 0 } }
+                               "crawler": { "maxPages": 0 }, "autoSync": { "intervalMinutes": 1 } }
         }));
         assert_eq!(s.chunk_size, MIN_CHUNK_SIZE);
         assert_eq!(s.chunk_overlap, MIN_CHUNK_SIZE / 2);
@@ -486,6 +514,9 @@ mod tests {
         assert_eq!(s.hybrid_weight, 1.0);
         assert_eq!(s.crawler.max_pages, 1);
         assert_eq!(s.crawler.max_depth, 2);
+        assert!(s.auto_sync.enabled);
+        assert_eq!(s.auto_sync.interval_minutes, MIN_AUTO_SYNC_MINUTES);
+        assert_eq!(KnowledgeSettings::default().auto_sync.interval_minutes, 60);
         // Malformed key: defaults.
         let s = KnowledgeSettings::from_store(&json!({ "knowledgebase": "nope" }));
         assert_eq!(s, KnowledgeSettings::default());

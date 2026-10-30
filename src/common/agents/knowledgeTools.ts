@@ -38,7 +38,7 @@ export const KNOWLEDGE_BASE_TOOL_DEFINITIONS = [
   },
   {
     name: 'listKnowledgeBaseSources',
-    description: "List the files and websites in this agent's local knowledge bases.",
+    description: "List the files, folders and websites in this agent's local knowledge bases.",
     inputSchema: {
       type: 'object',
       properties: {

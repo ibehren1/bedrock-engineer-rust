@@ -275,6 +275,7 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         knowledge::knowledge_rebuild,
         knowledge::knowledge_list_sources,
         knowledge::knowledge_pick_files,
+        knowledge::knowledge_pick_folder,
         knowledge::knowledge_add_url,
         knowledge::knowledge_update_source_options,
         knowledge::knowledge_resync_source,

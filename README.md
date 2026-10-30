@@ -373,11 +373,15 @@ An agent can search documents and websites you give it, all stored on your compu
   bases. Create one with a name and a short description; the description tells the model what it
   covers.
 - **Add files** takes text, Markdown and code files, PDF, Word, HTML, Excel and PowerPoint. **Add
+  folder** adds a folder as one source that follows it: files added, edited or deleted in it are
+  picked up at the next sync (hidden, dependency and build folders are left out). **Add
   website** crawls a site with the app's own crawler. It starts at the URL you give, stays on that
   site (and under that folder, unless you turn that off), follows links up to the depth and page
   limit you set, reads sitemap.xml, honors robots.txt and waits between requests.
 - Sources are processed in the background with a progress bar, and can be stopped. **Re-sync**
-  picks up changes and skips documents that are unchanged; **Remove** takes a source and its
+  picks up changes and skips documents that are unchanged. File and folder sources also re-sync
+  on their own when their files change, checked at startup and then hourly (the interval is a
+  setting); websites only when you ask. **Remove** takes a source and its
   passages out again. A search box on the tab shows what the agent would find for a question.
 - An agent with a knowledge base gets a built-in MCP server, `local-knowledgebase`. Its
   `searchKnowledgeBase` tool returns the most relevant passages, ranked by both meaning and

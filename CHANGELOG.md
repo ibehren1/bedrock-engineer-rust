@@ -7,6 +7,18 @@ dated section here for anything user-visible.
 See the [README](./README.md#whats-different-in-this-fork) for a feature-by-feature
 overview of the fork with screenshots.
 
+### 2026-10-30
+
+- Local knowledge bases have an **Add folder** button next to **Add files**. The folder becomes one
+  source that follows its contents: files added to the folder later are indexed, edited files are
+  re-read, and files deleted from it are removed from the knowledge base. Hidden files, dependency and
+  build folders such as `node_modules`, and files over 100 MB are left out.
+- File and folder sources now stay up to date on their own. The app checks them about 30 seconds after
+  it starts and then every hour, and re-syncs only those whose files changed, so an unchanged
+  knowledge base costs nothing to check. Turn it off or change the interval under **Settings →
+  Knowledge Base → Automatic re-sync**. Re-syncing also skips files whose modification date hasn't
+  changed, so it no longer re-reads every file. Websites are still re-synced only when you ask.
+
 ### 2026-10-27
 
 - **OpenAI GPT-6.1 Terra** is now in the model dropdown, as **(US)** and **(Global)**, in US East

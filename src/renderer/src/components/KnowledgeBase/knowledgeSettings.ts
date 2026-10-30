@@ -15,7 +15,8 @@ export function readKnowledgeSettings(): KnowledgeSettings {
     ...DEFAULT_KNOWLEDGE_SETTINGS,
     ...stored,
     embedding: { ...DEFAULT_KNOWLEDGE_SETTINGS.embedding, ...(stored.embedding ?? {}) },
-    crawler: { ...DEFAULT_KNOWLEDGE_SETTINGS.crawler, ...(stored.crawler ?? {}) }
+    crawler: { ...DEFAULT_KNOWLEDGE_SETTINGS.crawler, ...(stored.crawler ?? {}) },
+    autoSync: { ...DEFAULT_KNOWLEDGE_SETTINGS.autoSync, ...(stored.autoSync ?? {}) }
   }
 }
 
