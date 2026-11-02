@@ -179,12 +179,16 @@ pub fn camera_capture_response(
     camera.frames.resolve(&request_id, result)
 }
 
-/// `camera:save-captured-image` (to `os.tmpdir()` unless `outputPath`); rejects like the
-/// handler threw.
+/// `camera:save-captured-image`, always to `os.tmpdir()`: a caller-chosen `outputPath` would let
+/// any page write any bytes to any path (APP-2), so it is ignored. Rejects like the handler threw.
 #[tauri::command]
 pub async fn camera_save_captured_image(
     request: CameraCaptureRequest,
 ) -> Result<CameraCaptureResult, String> {
+    let request = CameraCaptureRequest {
+        output_path: None,
+        ..request
+    };
     tauri::async_runtime::spawn_blocking(move || {
         save_captured_image(&request, &std::env::temp_dir())
     })

@@ -1,6 +1,8 @@
 //! Port of the `save-website-content` IPC handler (`src/main/handlers/file-handlers.ts`).
 
+use crate::context::ToolSettings;
 use crate::util::node_io::NodeIoError;
+use crate::util::path_guard::Access;
 use std::path::{Path, PathBuf};
 
 /// `format: 'html' | 'txt'`.
@@ -35,15 +37,6 @@ fn timestamp() -> String {
         .collect()
 }
 
-fn resolve(dir: &str) -> PathBuf {
-    let p = Path::new(dir);
-    if p.is_absolute() {
-        p.to_path_buf()
-    } else {
-        std::env::current_dir().unwrap_or_default().join(p)
-    }
-}
-
 /// Save fetched content under `directory` (or `<projectPath>/downloads`), never
 /// overwriting: `name.ext`, then `name_1.ext`, `name_2.ext`, ...
 pub async fn save_website_content(
@@ -52,18 +45,21 @@ pub async fn save_website_content(
     filename: Option<&str>,
     directory: Option<&str>,
     format: SaveFormat,
-    project_path: Option<&str>,
+    settings: &ToolSettings,
 ) -> SaveResult {
     let result: Result<String, String> = async {
-        let target_dir = match directory.filter(|d| !d.is_empty()) {
-            Some(d) => resolve(d),
-            None => {
-                let project = project_path
-                    .map(PathBuf::from)
-                    .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
-                project.join("downloads")
+        // Confined like the file tools (TOOLS-8): relative directories land in the project.
+        let target_dir: PathBuf = settings.confine(
+            directory.filter(|d| !d.is_empty()).unwrap_or("downloads"),
+            Access::Write,
+        )?;
+        if let Some(name) = filename.filter(|f| !f.is_empty()) {
+            if name.contains(['/', '\\', '\0']) || name == "." || name == ".." {
+                return Err(format!(
+                    "Invalid filename \"{name}\": use a plain file name, and the directory option for the folder."
+                ));
             }
-        };
+        }
         let dir_str = target_dir.to_string_lossy().into_owned();
         tokio::fs::create_dir_all(&target_dir)
             .await
@@ -98,15 +94,35 @@ pub async fn save_website_content(
                 .to_string();
             (stem, extension)
         };
+        // `create_new`, so a file that appears between the check and the write is never
+        // overwritten: each taken name moves on to the next counter.
         let mut counter = 1;
-        while tokio::fs::try_exists(&final_path).await.unwrap_or(false) {
-            final_path = target_dir.join(format!("{stem}_{counter}{extension}"));
-            counter += 1;
+        loop {
+            let opened = tokio::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&final_path)
+                .await;
+            match opened {
+                Ok(mut file) => {
+                    use tokio::io::AsyncWriteExt;
+                    let path_str = final_path.to_string_lossy().into_owned();
+                    file.write_all(content.as_bytes())
+                        .await
+                        .map_err(|e| NodeIoError::new(&e, "write", &path_str, None).message)?;
+                    break;
+                }
+                Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists && counter < 10_000 => {
+                    final_path = target_dir.join(format!("{stem}_{counter}{extension}"));
+                    counter += 1;
+                }
+                Err(e) => {
+                    let path_str = final_path.to_string_lossy().into_owned();
+                    return Err(NodeIoError::new(&e, "open", &path_str, None).message);
+                }
+            }
         }
         let path_str = final_path.to_string_lossy().into_owned();
-        tokio::fs::write(&final_path, content)
-            .await
-            .map_err(|e| NodeIoError::new(&e, "open", &path_str, None).message)?;
         Ok(path_str)
     }
     .await;
@@ -120,6 +136,42 @@ pub async fn save_website_content(
 mod tests {
     use super::*;
 
+    fn open_settings() -> ToolSettings {
+        ToolSettings {
+            agent_file_folders: vec![std::env::temp_dir().to_string_lossy().into_owned()],
+            ..Default::default()
+        }
+    }
+
+    #[tokio::test]
+    async fn refuses_traversal_and_outside_directories() {
+        let project = tempfile::tempdir().unwrap();
+        let settings = ToolSettings {
+            project_path: Some(project.path().to_string_lossy().into_owned()),
+            ..Default::default()
+        };
+        for (filename, directory) in [
+            (Some("../../escape"), None),
+            (Some("a/b"), None),
+            (None, Some("/etc")),
+            (None, Some("../outside")),
+        ] {
+            let r = save_website_content(
+                "x",
+                "https://x.com",
+                filename,
+                directory,
+                SaveFormat::Html,
+                &settings,
+            )
+            .await;
+            assert!(
+                matches!(r, SaveResult::Failed(_)),
+                "{filename:?} {directory:?}: {r:?}"
+            );
+        }
+    }
+
     #[tokio::test]
     async fn saves_without_overwriting() {
         let dir = tempfile::tempdir().unwrap();
@@ -130,7 +182,7 @@ mod tests {
             Some("page"),
             Some(&d),
             SaveFormat::Html,
-            None,
+            &open_settings(),
         )
         .await;
         let b = save_website_content(
@@ -139,7 +191,7 @@ mod tests {
             Some("page.html"),
             Some(&d),
             SaveFormat::Html,
-            None,
+            &open_settings(),
         )
         .await;
         let SaveResult::Saved(a) = a else { panic!() };
@@ -159,7 +211,10 @@ mod tests {
             None,
             None,
             SaveFormat::Txt,
-            Some(&p),
+            &ToolSettings {
+                project_path: Some(p.clone()),
+                ..Default::default()
+            },
         )
         .await;
         let SaveResult::Saved(path) = r else { panic!() };

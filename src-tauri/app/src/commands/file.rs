@@ -7,7 +7,7 @@
 //! system webview ([`crate::pdf`]).
 
 use crate::files::{self, AgentList, ExportImage, ExportResult};
-use crate::state::{lock_store, project_path, project_path_or_cwd, StoreMutex};
+use crate::state::{lock_store, project_path, project_path_or_cwd, store_all, StoreMutex};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager, State, WebviewWindow};
@@ -64,25 +64,36 @@ pub async fn open_directory(
 }
 
 /// `get-local-image`: a data URL for a local image file; rejects when it can't be read.
+///
+/// Only image files, and only in the folders the agents' file tools may use or the temp folder
+/// screen and camera captures are saved to (APP-2 / UI-2): model-written markdown can name any
+/// path, and the renderer reads it on render.
 #[tauri::command]
-pub async fn get_local_image(path: String) -> Result<String, String> {
-    files::local_image_data_url(&path).map_err(|e| {
-        tracing::error!(category = CATEGORY, path = %path, error = %e, "Failed to read image");
-        e.to_string()
-    })
+pub async fn get_local_image(store: State<'_, StoreMutex>, path: String) -> Result<String, String> {
+    let settings = tools::ToolSettings::from_store(&store_all(&store));
+    files::confined_image_path(&settings, &path)
+        .and_then(|p| files::local_image_data_url(&p.to_string_lossy()).map_err(|e| e.to_string()))
+        .map_err(|e| {
+            tracing::error!(category = CATEGORY, path = %path, error = %e, "Failed to read image");
+            e
+        })
+}
+
+/// The project's `.bedrock-engineer/.ignore`. The project folder comes from settings, not from
+/// the caller, so the command can't read or write that file anywhere else.
+#[tauri::command]
+pub async fn read_project_ignore(store: State<'_, StoreMutex>) -> Result<Value, String> {
+    let project = project_path(&store).ok_or("No project folder is set")?;
+    files::read_project_ignore(&project).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub async fn read_project_ignore(project_path: String) -> Result<Value, String> {
-    files::read_project_ignore(Path::new(&project_path)).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub async fn write_project_ignore(project_path: String, content: String) -> Result<Value, String> {
-    Ok(files::write_project_ignore(
-        Path::new(&project_path),
-        &content,
-    ))
+pub async fn write_project_ignore(
+    store: State<'_, StoreMutex>,
+    content: String,
+) -> Result<Value, String> {
+    let project = project_path(&store).ok_or("No project folder is set")?;
+    Ok(files::write_project_ignore(&project, &content))
 }
 
 /// `save-chat-to-markdown` (`window.file.exportChatMarkdown`).

@@ -206,6 +206,10 @@ async fn docker_executor_integration() {
             path: inputs.path().join(name).to_string_lossy().into_owned(),
         })
         .collect();
+    executor.set_input_roots(docker::interpreter::executor::InputRoots {
+        allowed: vec![inputs.path().to_path_buf()],
+        refused: Vec::new(),
+    });
     let result = executor
         .execute_code(
             "\nimport os, json\nprint(f\"Files in /data: {sorted(os.listdir('/data'))}\")\nwith open('/data/input1.txt') as f:\n    lines = f.read().strip().split('\\n')\nprint(f\"Lines in input1.txt: {len(lines)}\")\nwith open('/data/input2.csv') as f:\n    rows = f.read().strip().split('\\n')\nprint(f\"CSV rows: {len(rows)}\")\nwith open('/data/config.json') as f:\n    config = json.load(f)\nprint(f\"Config version: {config['version']}\")\n",
@@ -216,6 +220,22 @@ async fn docker_executor_integration() {
         )
         .await;
     assert_eq!(result.exit_code, 0, "{}", result.stderr);
+    // SBX-2: input files are mounted read-only.
+    let readonly = executor
+        .execute_code(
+            "open('/data/input1.txt', 'a').write('x')\n",
+            SupportedLanguage::Python,
+            ws.path(),
+            None,
+            Some(&files),
+        )
+        .await;
+    assert_ne!(readonly.exit_code, 0);
+    assert!(
+        readonly.stderr.contains("Read-only file system"),
+        "{}",
+        readonly.stderr
+    );
     assert!(
         result.stdout.contains("input1.txt")
             && result.stdout.contains("input2.csv")
@@ -229,6 +249,10 @@ async fn docker_executor_integration() {
     let ws = tempfile::tempdir().unwrap();
     let valid = ws.path().join("valid.txt");
     std::fs::write(&valid, "This is a valid file").unwrap();
+    executor.set_input_roots(docker::interpreter::executor::InputRoots {
+        allowed: vec![ws.path().to_path_buf()],
+        refused: Vec::new(),
+    });
     let result = executor
         .execute_code(
             "\nimport os\nprint(f\"Files in /data: {sorted(os.listdir('/data'))}\")\nfor name in os.listdir('/data'):\n    path = f'/data/{name}'\n    if os.path.isfile(path):\n        print(open(path).read()[:50])\nprint(\"File mount error handling test completed\")\n",

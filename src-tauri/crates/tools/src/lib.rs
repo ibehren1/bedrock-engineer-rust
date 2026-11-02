@@ -84,6 +84,7 @@ pub use base::{run_tool, Tool};
 pub use bedrock_tools::{BedrockBackend, SdkBedrockBackend};
 pub use context::{
     converse_settings_from_store, AgentResolver, AgentToolConfig, CallerMetadata,
+    HostCommandApprover, HostCommandRequest,
     CommandPatternConfig, ToolContext, ToolSettings,
 };
 pub use deps::{all_tools, full_registry, ContextServices, ToolDeps};

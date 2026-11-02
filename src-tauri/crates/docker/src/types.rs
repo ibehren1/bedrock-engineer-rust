@@ -151,6 +151,19 @@ pub struct SandboxPortMapping {
     pub container: u16,
 }
 
+/// Host address every sandbox port is published on. Docker's default for a
+/// bare `host:container` mapping is every interface, which would put the
+/// sandbox (with the project mounted read-write) on the LAN.
+pub const PUBLISH_HOST_IP: &str = "127.0.0.1";
+
+impl SandboxPortMapping {
+    /// The `ip:host:container` form passed to compose `ports` and `docker run -p`,
+    /// always bound to loopback whatever address the agent asked for.
+    pub fn publish_spec(&self) -> String {
+        format!("{PUBLISH_HOST_IP}:{}:{}", self.host, self.container)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DataVolumeSpec {

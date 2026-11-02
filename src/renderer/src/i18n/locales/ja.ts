@@ -95,6 +95,34 @@ const SettingPage = {
     'プロキシ設定はすべてのAWS SDK接続に適用されます。設定後は接続テストを行って接続性を確認してください。',
   'Proxy changes apply to AWS and tool connections right away. Images and embedded pages in the app (website previews, diagrams) use them after you restart the app.':
     'プロキシ設定の変更はAWS接続とツールの通信にすぐ反映されます。アプリ内の画像や埋め込みページ（Webサイトのプレビュー、ダイアグラム）には、アプリの再起動後に反映されます。',
+  allowedCommandsSettings: {
+    title: '許可コマンド',
+    description:
+      '各エージェントがこのコンピューターで実行できるコマンド（許可コマンド）です。エージェントの Command ツール設定からも編集できます。',
+    summary: '全エージェントで {{count}} 件のパターン',
+    manage: '管理…',
+    modalHelp:
+      '各パターンに一致するコマンドを、エージェントはこのコンピューターで実行できます。末尾の * は残りの引数すべて、途中の * はちょうど 1 つの引数を表します。エージェントがパターンを初めて使うときは、引き続き確認ダイアログが表示されます。',
+    sharedReadOnly:
+      'このプロジェクトの .bedrock-engineer/agents フォルダで共有されているエージェントです。そのファイルで変更してください。',
+    none: '許可コマンドはありません。',
+    remove: '削除',
+    add: '追加',
+    patternPlaceholder: 'パターン（例: git status）',
+    descriptionPlaceholder: '説明（任意）',
+    done: '完了'
+  },
+  agentFolders: {
+    title: 'エージェントが使えるフォルダ',
+    description:
+      'エージェントのファイルツール（読み取り、書き込み、編集、移動、一覧）が使えるフォルダです。プロジェクトフォルダは常に含まれます。ほかのフォルダはここで追加してください。それ以外の場所は拒否されます。',
+    noProject: 'プロジェクトフォルダが選択されていません',
+    projectFolder: 'プロジェクトフォルダ（常に含まれます）',
+    add: 'フォルダを追加…',
+    remove: '削除',
+    alwaysRefused:
+      'これらのフォルダ内であっても、アプリ自身のデータフォルダや ~/.ssh、~/.aws、~/.gnupg などの認証情報フォルダはエージェントから使えません。'
+  },
   'Config Directory': 'アプリの設定',
   'Config Directory Description': 'アプリの設定が保存されるディレクトリです。',
   'Project Setting': 'プロジェクト設定',

@@ -686,6 +686,8 @@ impl AgentEngine {
                     .unwrap_or_default(),
             ),
             model_id: Some(config.model_id.clone()),
+            // Background agents and sub-agents: no one is there to answer an approval dialog.
+            unattended: true,
         };
         if ctx.agents.is_none() {
             ctx.agents = Some(self.catalog.clone() as Arc<dyn AgentResolver>);

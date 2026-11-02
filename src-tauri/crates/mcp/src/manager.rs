@@ -6,6 +6,7 @@
 
 use crate::client::McpClient;
 use crate::env_placeholders::{expand_server_env, AwsEnvSource, ExpandedServer};
+use crate::launch_approval::{LaunchApprover, LaunchRequest};
 use crate::schemas::mcp_server_config_schema;
 use crate::utils::infer_connection_type;
 use crate::{Error, Result};
@@ -205,14 +206,45 @@ fn config_data(servers: &[McpServerConfig]) -> Value {
     json!({ "mcpServers": map })
 }
 
-/// Connects to an MCP server according to its config. `forced` as in
-/// [`crate::client::stdio_environment`].
+/// Ask `approver` whether the stdio server `target` may start. Without an approver (tests,
+/// tools that host no user servers) every launch is allowed.
+async fn approve_launch(
+    target: &ExpandedServer,
+    approver: Option<&Arc<dyn LaunchApprover>>,
+) -> Result<()> {
+    let Some(approver) = approver else {
+        return Ok(());
+    };
+    let server = &target.config;
+    let mut env_names: Vec<String> = server.env.iter().flatten().map(|(k, _)| k.clone()).collect();
+    env_names.sort();
+    let request = LaunchRequest {
+        server_name: server.name.clone(),
+        command: server.command.clone().unwrap_or_default(),
+        args: server.args.clone().unwrap_or_default(),
+        env_names,
+        receives_aws_keys: target.receives_aws_keys(),
+        fingerprint: target.fingerprint.clone(),
+    };
+    if approver.approve(&request).await {
+        Ok(())
+    } else {
+        Err(Error::Mcp(format!(
+            "Starting the MCP server \"{}\" was not approved, so its tools are unavailable.",
+            server.name
+        )))
+    }
+}
+
+/// Connects to an MCP server according to its config. `target.forced` as in
+/// [`crate::client::stdio_environment`]. Stdio servers start only once `approver` allows it.
 async fn connect(
-    server: &McpServerConfig,
-    forced: &[String],
+    target: &ExpandedServer,
     http: &reqwest::Client,
     builtin: Option<&Arc<dyn BuiltinServers>>,
+    approver: Option<&Arc<dyn LaunchApprover>>,
 ) -> Result<McpClient> {
+    let server = &target.config;
     match infer_connection_type(server) {
         ConnectionType::Builtin => {
             let builtin = builtin
@@ -220,9 +252,10 @@ async fn connect(
             McpClient::from_stream(builtin.connect(server)?).await
         }
         ConnectionType::Command => {
+            approve_launch(target, approver).await?;
             let command = server.command.as_deref().unwrap_or_default();
             let args = server.args.clone().unwrap_or_default();
-            McpClient::from_command(command, &args, server.env.as_ref(), forced).await
+            McpClient::from_command(command, &args, server.env.as_ref(), &target.forced).await
         }
         ConnectionType::Url => {
             McpClient::from_url(
@@ -241,6 +274,7 @@ pub struct McpManager {
     http: reqwest::Client,
     builtin: OnceLock<Arc<dyn BuiltinServers>>,
     aws_env: OnceLock<Arc<dyn AwsEnvSource>>,
+    approver: OnceLock<Arc<dyn LaunchApprover>>,
 }
 
 impl Default for McpManager {
@@ -257,6 +291,15 @@ impl McpManager {
             http,
             builtin: OnceLock::new(),
             aws_env: OnceLock::new(),
+            approver: OnceLock::new(),
+        }
+    }
+
+    /// Install what approves stdio server launches (once, at startup). See
+    /// [`crate::launch_approval`].
+    pub fn set_launch_approver(&self, approver: Arc<dyn LaunchApprover>) {
+        if self.approver.set(approver).is_err() {
+            tracing::warn!(category = CATEGORY, "MCP launch approver already set");
         }
     }
 
@@ -282,10 +325,7 @@ impl McpManager {
             .iter()
             .map(|server| match &aws {
                 Some(aws) => expand_server_env(server, aws),
-                None => ExpandedServer {
-                    config: server.clone(),
-                    forced: Vec::new(),
-                },
+                None => ExpandedServer::unexpanded(server),
             })
             .collect()
     }
@@ -332,10 +372,11 @@ impl McpManager {
             .chain(expanded.iter().filter(|s| is_builtin_server(&s.config)))
             .collect();
         let builtin = self.builtin.get();
+        let approver = self.approver.get();
         let connections = futures_util::future::join_all(targets.iter().map(|target| async {
             let server = &target.config;
             tracing::info!(category = CATEGORY, server = %server.name, "Connecting to MCP server");
-            match connect(server, &target.forced, &self.http, builtin).await {
+            match connect(target, &self.http, builtin, approver).await {
                 Ok(client) => {
                     tracing::info!(category = CATEGORY, server = %server.name, "Successfully connected to MCP server");
                     Some((server.name.clone(), client))
@@ -456,13 +497,8 @@ impl McpManager {
     /// `testMcpServerConnection`: connect, list tools, disconnect.
     pub async fn test_connection(&self, server: &McpServerConfig) -> McpTestResult {
         let expanded = self.expand(std::slice::from_ref(server)).remove(0);
-        test_server_connection(
-            &expanded.config,
-            &expanded.forced,
-            &self.http,
-            self.builtin.get(),
-        )
-        .await
+        test_server_connection(&expanded, &self.http, self.builtin.get(), self.approver.get())
+            .await
     }
 
     /// `testAllMcpServerConnections`: sequentially, keyed by server name.
@@ -510,15 +546,16 @@ pub async fn test_mcp_server_connection(
     server: &McpServerConfig,
     http: &reqwest::Client,
 ) -> McpTestResult {
-    test_server_connection(server, &[], http, None).await
+    test_server_connection(&ExpandedServer::unexpanded(server), http, None, None).await
 }
 
 async fn test_server_connection(
-    server: &McpServerConfig,
-    forced: &[String],
+    target: &ExpandedServer,
     http: &reqwest::Client,
     builtin: Option<&Arc<dyn BuiltinServers>>,
+    approver: Option<&Arc<dyn LaunchApprover>>,
 ) -> McpTestResult {
+    let server = &target.config;
     let start = Instant::now();
     let invalid = |message: String, details: &str| McpTestResult {
         success: false,
@@ -543,7 +580,13 @@ async fn test_server_connection(
                     "Command and args fields are required for command-type servers",
                 );
             };
-            McpClient::from_command(command, args, server.env.as_ref(), forced).await
+            match approve_launch(target, approver).await {
+                Ok(()) => {
+                    McpClient::from_command(command, args, server.env.as_ref(), &target.forced)
+                        .await
+                }
+                Err(e) => Err(e),
+            }
         }
         ConnectionType::Url => {
             let Some(url) = server.url.as_deref().filter(|u| !u.is_empty()) else {
@@ -554,7 +597,7 @@ async fn test_server_connection(
             };
             McpClient::from_url(url, server.headers.as_ref(), http.clone()).await
         }
-        ConnectionType::Builtin => connect(server, forced, http, builtin).await,
+        ConnectionType::Builtin => connect(target, http, builtin, approver).await,
     };
 
     match client {
@@ -668,6 +711,54 @@ mod tests {
         let r = m.test_connection(&server).await;
         assert!(!r.success);
         assert_eq!(r.message, "MCP server \"u\" is missing required URL");
+    }
+
+    /// Records each launch request and answers with `allow`.
+    struct Approver {
+        allow: bool,
+        seen: std::sync::Mutex<Vec<LaunchRequest>>,
+    }
+
+    impl LaunchApprover for Approver {
+        fn approve<'a>(
+            &'a self,
+            request: &'a LaunchRequest,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + Send + 'a>> {
+            self.seen.lock().unwrap().push(request.clone());
+            Box::pin(async move { self.allow })
+        }
+    }
+
+    // AGENT-1: a stdio server never starts without the approver's yes, and the request shows
+    // what would run.
+    #[tokio::test]
+    async fn stdio_servers_wait_for_launch_approval() {
+        let approver = Arc::new(Approver {
+            allow: false,
+            seen: Default::default(),
+        });
+        let m = McpManager::default();
+        m.set_launch_approver(approver.clone());
+        let mut server = cmd("planted", "definitely-not-a-real-mcp-server-xyz");
+        server.env = Some(indexmap::IndexMap::from([("TOKEN".to_string(), "secret".to_string())]));
+        let servers = vec![server.clone()];
+
+        assert!(m.get_tool_specs(Some(&servers)).await.unwrap().is_empty());
+        let r = m.test_connection(&server).await;
+        assert!(!r.success);
+        let error = r.details.unwrap().error.unwrap();
+        assert!(error.contains("was not approved"), "{error}");
+        // Refused before spawning: no ENOENT from trying to run it.
+        assert!(!error.contains("ENOENT"), "{error}");
+
+        let seen = approver.seen.lock().unwrap().clone();
+        assert_eq!(seen.len(), 2);
+        assert_eq!(seen[0].server_name, "planted");
+        assert_eq!(seen[0].command, "definitely-not-a-real-mcp-server-xyz");
+        assert_eq!(seen[0].env_names, ["TOKEN"]);
+        assert!(!seen[0].receives_aws_keys);
+        assert_eq!(seen[0].fingerprint, crate::launch_approval::fingerprint(&server));
+        assert_eq!(seen[0], seen[1]);
     }
 
     #[tokio::test]

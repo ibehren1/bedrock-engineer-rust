@@ -16,8 +16,10 @@ jest.mock('@tauri-apps/api/event', () => ({
   })
 }))
 let mockCloseHandler: ((event: { preventDefault: () => void }) => Promise<void>) | undefined
+let mockWindowLabel = 'main'
 jest.mock('@tauri-apps/api/window', () => ({
   getCurrentWindow: () => ({
+    label: mockWindowLabel,
     isFocused: async () => true,
     onCloseRequested: async (handler: typeof mockCloseHandler) => {
       mockCloseHandler = handler
@@ -233,6 +235,19 @@ describe('installTauriBridge', () => {
     await tick()
     expect(invokeMock).toHaveBeenCalledWith('store_set', { key: 'language', value: 'en' })
     expect(invokeMock).toHaveBeenCalledWith('store_delete', { key: 'language' })
+
+    // Other windows keep their own cache but never write settings (main-window-only in Rust).
+    invokeMock.mockClear()
+    mockWindowLabel = 'task-history'
+    try {
+      g.window.store.set('language', 'de')
+      expect(g.window.store.get('language')).toBe('de')
+      await tick()
+      await tick()
+      expect(invokeMock).not.toHaveBeenCalledWith('store_set', expect.anything())
+    } finally {
+      mockWindowLabel = 'main'
+    }
 
     // Unported startup-time sync reads degrade to empty values instead of throwing.
     expect(g.window.chatHistory.getAllSessionMetadata()).toEqual([])

@@ -1,5 +1,7 @@
 export * from './AdvancedSection'
 export * from './AgentChatSection'
+export * from './AgentFoldersSection'
+export * from './AllowedCommandsSection'
 export * from './AppearanceSection'
 export * from './AwsCredentialsSection'
 export * from './BedrockModelsSection'

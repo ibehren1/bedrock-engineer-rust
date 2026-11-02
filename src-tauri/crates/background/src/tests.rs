@@ -831,6 +831,20 @@ fn pubsub_routes_to_subscribers_and_tracks_stats() {
 }
 
 #[test]
+fn publish_only_to_skips_every_other_subscriber() {
+    let sink = Arc::new(Sink::default());
+    let ps = PubSubManager::new(sink.clone());
+    ps.subscribe("c", "file-viewer-1");
+    ps.publish_only_to("main", "c", json!(1)); // main not subscribed: nothing sent
+    ps.subscribe("c", "main");
+    ps.publish_only_to("main", "c", json!(2));
+    assert_eq!(
+        sink.events.lock().unwrap().clone(),
+        vec![(Some("main".into()), "pubsub:c".into(), json!(2))]
+    );
+}
+
+#[test]
 fn os_notifications_follow_settings_and_focus() {
     let n = RecordingNotifier::default();
     let on = MemoryConfigStore::new(json!({}));

@@ -25,7 +25,11 @@ pub async fn screen_capture(
     options: Option<ScreenCaptureOptions>,
 ) -> Result<ScreenCaptureResult, String> {
     let screen = backend.screen.clone();
-    let options = options.unwrap_or_default();
+    // Always the default temp location: a caller-chosen path would be an arbitrary write (APP-2).
+    let options = ScreenCaptureOptions {
+        output_path: None,
+        ..options.unwrap_or_default()
+    };
     tauri::async_runtime::spawn_blocking(move || screen.capture(&options))
         .await
         .map_err(|e| e.to_string())?

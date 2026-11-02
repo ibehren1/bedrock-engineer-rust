@@ -1,9 +1,9 @@
 //! Port of `src/preload/tools/handlers/command/ExecuteCommandTool.ts`.
 
-use super::service::{CommandConfig, CommandExecutionResult, CommandService};
+use super::service::{matching_pattern, CommandConfig, CommandExecutionResult, CommandService};
 use super::{CommandSandbox, SandboxExecOptions};
 use crate::base::{default_handle_error, Tool};
-use crate::context::{CommandPatternConfig, ToolContext};
+use crate::context::{CommandPatternConfig, HostCommandRequest, ToolContext};
 use crate::error::{Result, ToolError};
 use crate::types::{ToolCategory, ToolOutput, ToolSpec};
 use crate::util::js::truthy;
@@ -12,7 +12,7 @@ use serde_json::{json, Map, Value};
 use std::sync::{Arc, Mutex};
 
 const NAME: &str = "executeCommand";
-const DESCRIPTION: &str = "Execute a command or send input to a running process. First execute the command to get a PID, then use that PID to send input if needed. Usage: 1) First call with command and cwd to start process, 2) If input is required, call again with pid and stdin.\n\nWhen the dockerSandbox tool is enabled, commands run inside this chat's isolated Docker container by default and any command is permitted there — the sandbox is created automatically on first use. The project directory ({{projectPath}}) is mounted at /workspace, so use /workspace paths for cwd. The sandbox is a bare image of the OS the user chose (Debian by default); check /etc/os-release, then use apt-get (after \"apt-get update\") on Ubuntu or Debian and dnf on Amazon Linux or RHEL-family images.\n\nSet target: \"host\" to run on the user's own machine instead. Host commands require the user to approve them, and only commands from this allowed list may be used: {{allowedCommands}}. Prefer the sandbox unless the task genuinely needs the host (for example git operations on the real repository).\n\nSet detach: true to start a long-running process in the background and return immediately; read its output later with the dockerSandbox logs operation.";
+const DESCRIPTION: &str = "Execute a command or send input to a running process. First execute the command to get a PID, then use that PID to send input if needed. Usage: 1) First call with command and cwd to start process, 2) If input is required, call again with pid and stdin.\n\nWhen the dockerSandbox tool is enabled, commands run inside this chat's isolated Docker container by default and any command is permitted there — the sandbox is created automatically on first use. The project directory ({{projectPath}}) is mounted at /workspace, so use /workspace paths for cwd. The sandbox is a bare image of the OS the user chose (Debian by default); check /etc/os-release, then use apt-get (after \"apt-get update\") on Ubuntu or Debian and dnf on Amazon Linux or RHEL-family images.\n\nSet target: \"host\" to run on the user's own machine instead. Host commands require the user to approve them, and only commands from this allowed list may be used: {{allowedCommands}}. A host command must be one program with its arguments: chaining (;, &&, ||), pipes, redirection (>, <), backgrounding (&) and command substitution ($(...), backticks) are refused, so run each step as its own command. Prefer the sandbox unless the task genuinely needs the host (for example git operations on the real repository).\n\nSet detach: true to start a long-running process in the background and return immediately; read its output later with the dockerSandbox logs operation.";
 
 /// `ExecuteCommandTool`. Holds the host [`CommandService`], recreated whenever the
 /// resolved config (shell + agent allowlist) changes, like the TS module-level state.
@@ -69,6 +69,46 @@ impl ExecuteCommandTool {
             allowed_commands,
             shell,
         }
+    }
+
+    /// The user's confirmation of the allowlist pattern `command` matches, for this agent
+    /// (asked once per agent and pattern, see [`HostCommandApprover`]). An allowlist entry
+    /// alone is not enough: the list lives in settings, which the renderer and shared agent
+    /// files can write. Commands that match nothing are left to the allowlist check, which
+    /// refuses them with its own message.
+    async fn confirm_pattern(
+        ctx: &ToolContext,
+        allowed: &[CommandPatternConfig],
+        command: &str,
+        cwd: &str,
+    ) -> std::result::Result<(), String> {
+        let Some(approver) = &ctx.host_approver else {
+            return Ok(());
+        };
+        let Some(pattern) = matching_pattern(allowed, command) else {
+            return Ok(());
+        };
+        let agent_id = ctx.agent_id().unwrap_or_default();
+        let request = HostCommandRequest {
+            agent_name: ctx.find_agent(&agent_id).and_then(|a| a.name),
+            agent_id,
+            pattern: pattern.clone(),
+            command: command.to_string(),
+            cwd: cwd.to_string(),
+            may_ask: !ctx.caller.unattended,
+        };
+        if approver.approve(&request).await {
+            return Ok(());
+        }
+        Err(if ctx.caller.unattended {
+            format!(
+                "Command not approved: {command}\nThe user has not yet allowed this agent to run commands matching \"{pattern}\" on their computer, and this run can't ask (it is a background or sub-agent run). Use the Docker sandbox, or ask the user to run the agent in a chat once to approve it."
+            )
+        } else {
+            format!(
+                "Command not approved: {command}\nThe user declined to let this agent run commands matching \"{pattern}\" on their computer. Use the Docker sandbox instead, or continue without it."
+            )
+        })
     }
 
     /// `resolveSandboxSession`.
@@ -273,6 +313,7 @@ impl Tool for ExecuteCommandTool {
         }
 
         let config = Self::command_config(ctx);
+        let config_allowed = config.allowed_commands.clone();
         let service = self.command_service(config);
         let result: std::result::Result<CommandExecutionResult, String> = if is_stdin {
             if pid.fract() == 0.0 && pid >= 0.0 && pid <= u32::MAX as f64 {
@@ -286,6 +327,9 @@ impl Tool for ExecuteCommandTool {
                 .and_then(Value::as_str)
                 .unwrap_or_default();
             let cwd = input.get("cwd").and_then(Value::as_str).unwrap_or_default();
+            if let Err(denied) = Self::confirm_pattern(ctx, &config_allowed, command, cwd).await {
+                return Err(ToolError::permission_denied(denied, NAME, Some(command)));
+            }
             service.execute_command(command, cwd).await
         };
 
@@ -394,6 +438,83 @@ mod tests {
         assert_eq!(inner["error"], "Command not allowed: rm -rf /");
         assert_eq!(inner["type"], "PERMISSION_DENIED");
         assert_eq!(inner["operation"], "rm -rf /");
+    }
+
+    /// Answers `allow` and records what it was asked.
+    struct Approver {
+        allow: bool,
+        seen: Mutex<Vec<HostCommandRequest>>,
+    }
+
+    impl crate::context::HostCommandApprover for Approver {
+        fn approve<'a>(
+            &'a self,
+            request: &'a HostCommandRequest,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + Send + 'a>> {
+            self.seen.lock().unwrap().push(request.clone());
+            Box::pin(async move { self.allow })
+        }
+    }
+
+    fn approver(allow: bool) -> Arc<Approver> {
+        Arc::new(Approver {
+            allow,
+            seen: Mutex::new(Vec::new()),
+        })
+    }
+
+    // APP-1 / AGENT-1: an allowlist entry alone doesn't run anything; the user confirms each
+    // (agent, pattern), and unattended runs can't ask.
+    #[tokio::test]
+    async fn allowlisted_host_commands_need_the_patterns_approval() {
+        let tool = ExecuteCommandTool::new();
+        let input = json!({"type": "executeCommand", "command": "echo hi", "cwd": "/tmp"});
+
+        let yes = approver(true);
+        let mut c = ctx(&["echo *"], &[]);
+        c.host_approver = Some(yes.clone());
+        run_tool(&tool, input.clone(), &c).await.unwrap();
+        let seen = yes.seen.lock().unwrap().clone();
+        assert_eq!(seen.len(), 1);
+        assert_eq!(seen[0].agent_id, "dev");
+        assert_eq!(seen[0].pattern, "echo *");
+        assert_eq!(seen[0].command, "echo hi");
+        assert!(seen[0].may_ask);
+
+        let no = approver(false);
+        let mut c = ctx(&["echo *"], &[]);
+        c.host_approver = Some(no.clone());
+        let err = run_tool(&tool, input.clone(), &c).await.unwrap_err();
+        assert!(
+            err.message.contains("Command not approved: echo hi"),
+            "{}",
+            err.message
+        );
+        assert!(err.message.contains("declined"), "{}", err.message);
+
+        let mut c = ctx(&["echo *"], &[]);
+        c.host_approver = Some(no.clone());
+        c.caller.unattended = true;
+        let err = run_tool(&tool, input.clone(), &c).await.unwrap_err();
+        assert!(
+            err.message.contains("background or sub-agent run"),
+            "{}",
+            err.message
+        );
+        assert!(!no.seen.lock().unwrap().last().unwrap().may_ask);
+
+        // A command no pattern matches is refused by the allowlist without asking anyone.
+        let asked = approver(true);
+        let mut c = ctx(&["echo *"], &[]);
+        c.host_approver = Some(asked.clone());
+        let input = json!({"type": "executeCommand", "command": "rm -rf /", "cwd": "/tmp"});
+        let err = run_tool(&tool, input, &c).await.unwrap_err();
+        assert!(
+            err.message.contains("Command not allowed"),
+            "{}",
+            err.message
+        );
+        assert!(asked.seen.lock().unwrap().is_empty());
     }
 
     #[test]

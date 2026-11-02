@@ -3,8 +3,36 @@
 
 [[set]]
 identifier = "main-window-commands"
-description = "App commands only the main window may call (local terminals)."
+description = "App commands only the main window may call (see MAIN_WINDOW_ONLY_PREFIXES / MAIN_WINDOW_ONLY_COMMANDS in src/command_list.rs)."
 permissions = [
+  "allow-store-set",
+  "allow-store-delete",
+  "allow-bedrock-execute-tool",
+  "allow-tools-execute",
+  "allow-docker-sandbox-availability",
+  "allow-docker-sandbox-create",
+  "allow-docker-sandbox-status",
+  "allow-docker-sandbox-start",
+  "allow-docker-sandbox-stop",
+  "allow-docker-sandbox-remove",
+  "allow-docker-sandbox-rename",
+  "allow-docker-sandbox-logs",
+  "allow-docker-sandbox-exec",
+  "allow-docker-sandbox-send-input",
+  "allow-docker-sandbox-has-pid",
+  "allow-docker-sandbox-list",
+  "allow-docker-sandbox-open-folder",
+  "allow-docker-sandbox-open-port",
+  "allow-docker-sandbox-insights",
+  "allow-docker-sandbox-compose",
+  "allow-docker-sandbox-activity",
+  "allow-docker-sandbox-terminal-capability",
+  "allow-docker-sandbox-terminal-open",
+  "allow-docker-sandbox-terminal-attach",
+  "allow-docker-sandbox-terminal-input",
+  "allow-docker-sandbox-terminal-resize",
+  "allow-docker-sandbox-terminal-backlog",
+  "allow-docker-sandbox-terminal-close",
   "allow-local-terminal-open",
   "allow-local-terminal-attach",
   "allow-local-terminal-input",

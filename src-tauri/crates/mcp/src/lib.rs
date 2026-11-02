@@ -17,6 +17,7 @@ pub mod adapter;
 pub mod client;
 pub mod command_resolver;
 pub mod env_placeholders;
+pub mod launch_approval;
 pub mod manager;
 pub mod registry;
 pub mod schemas;
@@ -24,6 +25,7 @@ pub mod sse;
 pub mod utils;
 
 pub use client::McpClient;
+pub use launch_approval::{LaunchApprover, LaunchRequest};
 pub use manager::{BuiltinServers, McpManager};
 
 #[derive(Debug, thiserror::Error)]

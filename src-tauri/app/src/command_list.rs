@@ -51,14 +51,42 @@ pub fn allow_permission(command: &str) -> String {
 /// machine, and only the chat page in the main window opens one; app updates download and
 /// install a new version of the app, which only the main window's Settings and banner drive;
 /// knowledgebase commands read files from any path the caller names (agent editor and
-/// Settings only); usage commands read the whole spending history (Accounting page only).
-pub const MAIN_WINDOW_ONLY_PREFIXES: &[&str] =
-    &["local_terminal_", "app_update_", "knowledge_", "usage_"];
+/// Settings only); usage commands read the whole spending history (Accounting page only);
+/// Docker sandbox commands run commands (and open a root shell) in a container that has the
+/// project folder mounted, which only the chat page and Settings drive.
+pub const MAIN_WINDOW_ONLY_PREFIXES: &[&str] = &[
+    "local_terminal_",
+    "app_update_",
+    "knowledge_",
+    "usage_",
+    "docker_sandbox_",
+];
+
+/// Single commands only the main window may call, on top of the prefixes: tool execution runs
+/// host commands and every other built-in tool, and settings writes can rewrite agents (their
+/// command allowlists, MCP servers) and credentials. The task history and file viewer windows
+/// only read settings.
+pub const MAIN_WINDOW_ONLY_COMMANDS: &[&str] = &[
+    "tools_execute",
+    "bedrock_execute_tool",
+    "store_set",
+    "store_delete",
+];
+
+/// Commands that live in a main-window-only module but are deliberately granted to every
+/// full-UI window. Anything else defined in those modules must match a main-window-only
+/// prefix, so a command named off-prefix can't slip into `app-commands` unnoticed.
+#[allow(dead_code)] // read by commands/acl_tests.rs, not build.rs
+pub const MAIN_WINDOW_MODULE_EXCEPTIONS: &[&str] = &[
+    // Per-chat cost badge, shown in the task history window too.
+    "session_usage_costs",
+];
 
 pub fn is_main_window_only(command: &str) -> bool {
-    MAIN_WINDOW_ONLY_PREFIXES
-        .iter()
-        .any(|prefix| command.starts_with(prefix))
+    MAIN_WINDOW_ONLY_COMMANDS.contains(&command)
+        || MAIN_WINDOW_ONLY_PREFIXES
+            .iter()
+            .any(|prefix| command.starts_with(prefix))
 }
 
 /// `permissions/app-commands.toml`: one set, `app-commands`, allowing every command except the
@@ -87,7 +115,7 @@ pub fn main_window_commands_set(commands: &[String]) -> String {
          # Do not edit: add commands to that list instead.\n\n\
          [[set]]\n\
          identifier = \"main-window-commands\"\n\
-         description = \"App commands only the main window may call (local terminals).\"\n\
+         description = \"App commands only the main window may call (see MAIN_WINDOW_ONLY_PREFIXES / MAIN_WINDOW_ONLY_COMMANDS in src/command_list.rs).\"\n\
          permissions = [\n",
     );
     for command in commands.iter().filter(|c| is_main_window_only(c)) {

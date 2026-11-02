@@ -224,6 +224,20 @@ export function storeFlush(): Promise<void> {
   return storeWrites.then(() => undefined)
 }
 
+/**
+ * Only the main window writes settings (`store_set`/`store_delete` are main-window-only commands
+ * in Rust). Other windows (task history, file viewers) render the same providers, which re-derive
+ * and save a few settings on load; there the write updates only this window's cache, and the
+ * main window's copy, which it saved itself, stays the source of truth.
+ */
+function isSettingsWriter(): boolean {
+  try {
+    return getCurrentWindow().label === 'main'
+  } catch {
+    return false
+  }
+}
+
 function createStore(): Window['store'] {
   return {
     // electron-store reads from disk on every get, so callers always receive a fresh object;
@@ -239,6 +253,7 @@ function createStore(): Window['store'] {
       const sent = clone(value)
       if (removing) delete storeCache[key]
       else storeCache[key] = clone(value)
+      if (!isSettingsWriter()) return
       const k = String(key)
       pendingStoreKeys.set(k, (pendingStoreKeys.get(k) ?? 0) + 1)
       // Serialize writes so the file ends up in call order.

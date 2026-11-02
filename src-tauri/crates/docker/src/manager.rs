@@ -16,7 +16,7 @@ use crate::activity::ActivityLog;
 use crate::availability::{assert_sandbox_usable, check_docker_availability};
 use crate::compose_writer::{
     assert_ports_available, build_compose, resolve_sandbox_os, service_environment,
-    write_sandbox_files, DEFAULT_SERVICE_ENV,
+    verify_sandbox_files, write_sandbox_files, DEFAULT_SERVICE_ENV,
 };
 use crate::engine::{cpu_percent_between, rates_between, ContainerSample, DockerEngine};
 use crate::events::{EventSink, SandboxEvent, StateEvent};
@@ -82,14 +82,52 @@ pub fn read_chat_title(settings: &dyn Settings, session_id: &str) -> Option<Stri
     parsed.get("title")?.as_str().map(str::to_string)
 }
 
-fn sandbox_root(project_path: &str) -> PathBuf {
-    Path::new(project_path).join(SANDBOX_ROOT_DIRNAME)
+/// `<userData>/docker-sandboxes/<project folder>-<hash>`: one root per project directory, kept
+/// out of the project itself. The project is mounted read-write into every container, so a
+/// sandbox folder inside it would let the container rewrite its own compose file, `.env` and
+/// `sandbox.json`, which the next start would run.
+fn sandbox_root(settings: &dyn Settings, project_path: &str) -> Result<PathBuf> {
+    let user_data = settings
+        .get("userDataPath")
+        .and_then(|v| v.as_str().map(str::to_string))
+        .filter(|p| !p.is_empty())
+        .ok_or_else(|| {
+            Error::msg("The app data folder is unknown, so the Docker sandbox can't be used.")
+        })?;
+    Ok(Path::new(&user_data)
+        .join(SANDBOX_ROOT_DIRNAME)
+        .join(project_key(project_path)))
+}
+
+/// Readable, stable folder name for a project directory: its name plus a hash of the path.
+fn project_key(project_path: &str) -> String {
+    use sha1::{Digest, Sha1};
+    let resolved = resolve_one(Path::new(project_path));
+    let digest = Sha1::digest(resolved.to_string_lossy().as_bytes());
+    let hex: String = digest.iter().take(5).map(|b| format!("{b:02x}")).collect();
+    let name = resolved
+        .file_name()
+        .map(|n| crate::naming::slugify_title(&n.to_string_lossy()))
+        .unwrap_or_default();
+    if name.is_empty() {
+        format!("project-{hex}")
+    } else {
+        format!("{name}-{hex}")
+    }
+}
+
+/// Only plain image references reach `docker run` (no leading `-`, no spaces).
+fn is_valid_image_ref(image: &str) -> bool {
+    static IMAGE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+    IMAGE
+        .get_or_init(|| regex::Regex::new(r"^[A-Za-z0-9][A-Za-z0-9._/:@-]*$").unwrap())
+        .is_match(image)
 }
 
 /// Locate an existing sandbox folder by scanning for the metadata file that claims this
 /// session. Folders follow the chat title, so the name cannot be derived from the id.
 fn find_sandbox_dir(settings: &dyn Settings, session_id: &str) -> Option<PathBuf> {
-    let root = sandbox_root(&project_path(settings).ok()?);
+    let root = sandbox_root(settings, &project_path(settings).ok()?).ok()?;
     let entries = std::fs::read_dir(&root).ok()?;
     for entry in entries.flatten() {
         if !entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
@@ -313,26 +351,27 @@ impl SandboxManager {
         value
     }
 
-    /// `<projectPath>/docker-sandboxes`.
+    /// `<userData>/docker-sandboxes/<project>-<hash>` (see [`sandbox_root`]).
     pub fn get_sandbox_root(&self, project_path_override: Option<&str>) -> Result<PathBuf> {
         match project_path_override {
-            Some(path) => Ok(sandbox_root(path)),
-            None => Ok(sandbox_root(&project_path(self.settings())?)),
+            Some(path) => sandbox_root(self.settings(), path),
+            None => sandbox_root(self.settings(), &project_path(self.settings())?),
         }
     }
 
     /// The session's existing sandbox folder, or the readable name its title implies.
     pub fn get_sandbox_dir(&self, session_id: &str) -> Result<PathBuf> {
         let project = project_path(self.settings())?;
-        Ok(self.sandbox_dir_in(session_id, &project))
+        self.sandbox_dir_in(session_id, &project)
     }
 
-    fn sandbox_dir_in(&self, session_id: &str, project: &str) -> PathBuf {
+    fn sandbox_dir_in(&self, session_id: &str, project: &str) -> Result<PathBuf> {
         if let Some(existing) = find_sandbox_dir(self.settings(), session_id) {
-            return existing;
+            return Ok(existing);
         }
         let title = read_chat_title(self.settings(), session_id);
-        sandbox_root(project).join(to_folder_name(session_id, title.as_deref()))
+        Ok(sandbox_root(self.settings(), project)?
+            .join(to_folder_name(session_id, title.as_deref())))
     }
 
     fn config(&self) -> DockerSandboxConfig {
@@ -348,17 +387,9 @@ impl SandboxManager {
         serde_json::from_value(merged).unwrap_or_default()
     }
 
-    /// Keep generated sandboxes out of the user's repository.
-    fn ensure_sandbox_root(project: &str) -> Result<PathBuf> {
-        let root = sandbox_root(project);
+    fn ensure_sandbox_root(&self, project: &str) -> Result<PathBuf> {
+        let root = sandbox_root(self.settings(), project)?;
         std::fs::create_dir_all(&root)?;
-        let gitignore = root.join(".gitignore");
-        if !gitignore.exists() {
-            std::fs::write(
-                &gitignore,
-                "# Chat-scoped Docker sandboxes generated by Bedrock Engineer.\n*\n",
-            )?;
-        }
         Ok(root)
     }
 
@@ -449,6 +480,7 @@ impl SandboxManager {
     async fn run_composeless(
         &self,
         metadata: &SandboxMetadata,
+        project: &str,
         config: &DockerSandboxConfig,
     ) -> Result<()> {
         if metadata.services.len() > 1 {
@@ -462,6 +494,12 @@ impl SandboxManager {
                 metadata.session_id
             ))
         })?;
+        if !is_valid_image_ref(&service.image) {
+            return Err(Error::msg(format!(
+                "Sandbox image \"{}\" is not a valid image reference. Recreate the sandbox.",
+                service.image
+            )));
+        }
         let name = container_name_for(&metadata.project_name, &service.name);
         let runner = self.inner.runner.as_ref();
 
@@ -509,7 +547,7 @@ impl SandboxManager {
             "--workdir".into(),
             WORKSPACE_MOUNT.into(),
             "-v".into(),
-            format!("{}:{WORKSPACE_MOUNT}", metadata.project_path),
+            format!("{project}:{WORKSPACE_MOUNT}"),
             "-v".into(),
             format!("{}:/data", data_dir.to_string_lossy()),
             "--memory".into(),
@@ -529,9 +567,15 @@ impl SandboxManager {
         }
         for port in &service.ports {
             args.push("-p".into());
-            args.push(format!("{}:{}", port.host, port.container));
+            args.push(port.publish_spec());
         }
-        args.extend([service.image.clone(), "sleep".into(), "infinity".into()]);
+        // `--` so the image can never be read as a flag.
+        args.extend([
+            "--".into(),
+            service.image.clone(),
+            "sleep".into(),
+            "infinity".into(),
+        ]);
 
         let result = runner
             .run("docker", &args, RunOptions::timeout_ms(180_000))
@@ -549,12 +593,32 @@ impl SandboxManager {
         Ok(())
     }
 
+    /// Bring a sandbox up. Its files are re-checked first, every time: the mounts must still
+    /// resolve inside the project after following symlinks (the container writes to the
+    /// project), and `.env` is rewritten with the project path from settings rather than the
+    /// one `sandbox.json` recorded.
     async fn up_sandbox(&self, metadata: &SandboxMetadata) -> Result<()> {
         let availability = self.get_availability(false).await;
         assert_sandbox_usable(&availability)?;
 
+        let project = project_path(self.settings())?;
+        if resolve_one(Path::new(&metadata.project_path)) != resolve_one(Path::new(&project)) {
+            return Err(Error::msg(format!(
+                "This sandbox was created for the project folder {}, not the current one. Recreate it.",
+                metadata.project_path
+            )));
+        }
+        verify_sandbox_files(
+            Path::new(&metadata.directory),
+            Path::new(&metadata.compose_file),
+            &metadata.project_name,
+            &project,
+        )?;
+
         let Some(ctx) = Self::to_compose_context(metadata, &availability) else {
-            return self.run_composeless(metadata, &self.config()).await;
+            return self
+                .run_composeless(metadata, &project, &self.config())
+                .await;
         };
 
         // Pulling can be slow on a cold cache, so this gets a longer budget.
@@ -585,9 +649,9 @@ impl SandboxManager {
         assert_sandbox_usable(&availability)?;
 
         let project = project_path(self.settings())?;
-        Self::ensure_sandbox_root(&project)?;
+        self.ensure_sandbox_root(&project)?;
 
-        let sandbox_dir = self.sandbox_dir_in(session_id, &project);
+        let sandbox_dir = self.sandbox_dir_in(session_id, &project)?;
         let project_name = to_project_name(session_id);
         let config = self.config();
 
@@ -678,8 +742,16 @@ impl SandboxManager {
 
         // The chat session file is the single source of truth for the title.
         let title = read_chat_title(self.settings(), session_id);
-        let desired =
-            sandbox_root(&metadata.project_path).join(to_folder_name(session_id, title.as_deref()));
+        let Some(root) = Path::new(&metadata.directory)
+            .parent()
+            .map(Path::to_path_buf)
+        else {
+            return RenameResult {
+                renamed: false,
+                directory: Some(metadata.directory.clone()),
+            };
+        };
+        let desired = root.join(to_folder_name(session_id, title.as_deref()));
 
         let unchanged = RenameResult {
             renamed: false,
@@ -1101,7 +1173,10 @@ impl SandboxManager {
         let Ok(project) = project_path(self.settings()) else {
             return Vec::new();
         };
-        let Ok(entries) = std::fs::read_dir(sandbox_root(&project)) else {
+        let Ok(root) = sandbox_root(self.settings(), &project) else {
+            return Vec::new();
+        };
+        let Ok(entries) = std::fs::read_dir(root) else {
             return Vec::new();
         };
         entries
@@ -1242,10 +1317,15 @@ mod tests {
         assert!(dir.join("docker-compose.yml").exists());
         assert!(dir.join(".env").exists());
         assert!(dir.join("sandbox.json").exists());
-        let gitignore =
-            std::fs::read_to_string(Path::new(&f.project).join("docker-sandboxes/.gitignore"))
-                .unwrap();
-        assert!(gitignore.contains('*'));
+        // SBX-1: the sandbox's files live under the app data folder, never in the project the
+        // container mounts.
+        assert!(
+            dir.starts_with(f.user_data.join("docker-sandboxes")),
+            "{}",
+            dir.display()
+        );
+        assert!(!dir.starts_with(&f.project));
+        assert!(!Path::new(&f.project).join("docker-sandboxes").exists());
 
         // The configured limits (merged over the defaults) land in the compose file.
         let compose_text = std::fs::read_to_string(dir.join("docker-compose.yml")).unwrap();
@@ -1334,11 +1414,150 @@ mod tests {
                 "1".into(),
                 "-e".into(),
                 "DEBIAN_FRONTEND=noninteractive".into(),
+                "--".into(),
                 DEFAULT_SANDBOX_IMAGE.into(),
                 "sleep".into(),
                 "infinity".into()
             ]
         );
+    }
+
+    /// Sandboxes from before SBX-1 sit in `<project>/docker-sandboxes`; they are left alone and
+    /// a fresh one is created under the app data folder.
+    #[tokio::test]
+    async fn ignores_sandboxes_left_in_the_project_folder() {
+        let f = fixture();
+        let old_dir = Path::new(&f.project)
+            .join("docker-sandboxes")
+            .join("session-abc123");
+        std::fs::create_dir_all(&old_dir).unwrap();
+        std::fs::write(
+            old_dir.join("sandbox.json"),
+            serde_json::json!({
+                "sessionId": "session_old",
+                "projectName": "bedrock-sandbox-session-old",
+                "directory": old_dir,
+                "composeFile": old_dir.join("docker-compose.yml"),
+                "projectPath": f.project,
+                "services": [{ "name": "main", "image": "ubuntu:26.04", "ports": [] }],
+                "composeless": false,
+                "createdAt": "2026-09-03T14:22:15.000Z",
+                "updatedAt": "2026-09-03T14:22:15.000Z"
+            })
+            .to_string(),
+        )
+        .unwrap();
+        assert!(!f.manager.get_status("session_old").await.exists);
+        let created = f
+            .manager
+            .create_sandbox("session_old", CreateSandboxOptions::default())
+            .await
+            .unwrap();
+        assert!(Path::new(&created.metadata.directory).starts_with(&f.user_data));
+        assert!(old_dir.join("sandbox.json").exists());
+    }
+
+    /// Before every start the compose file is re-checked and `.env` rewritten, and a sandbox
+    /// recorded for another project folder is refused.
+    #[tokio::test]
+    async fn every_start_reverifies_the_sandbox_files() {
+        let f = fixture();
+        let created = f
+            .manager
+            .create_sandbox("session_v", CreateSandboxOptions::default())
+            .await
+            .unwrap();
+        let dir = PathBuf::from(&created.metadata.directory);
+
+        std::fs::write(dir.join(".env"), "PROJECT_PATH=/\n").unwrap();
+        f.manager.start_sandbox("session_v").await.unwrap();
+        let env_text = std::fs::read_to_string(dir.join(".env")).unwrap();
+        assert!(
+            env_text.contains(&format!("PROJECT_PATH={}", f.project)),
+            "{env_text}"
+        );
+
+        let compose = std::fs::read_to_string(dir.join("docker-compose.yml")).unwrap();
+        std::fs::write(
+            dir.join("docker-compose.yml"),
+            compose.replace("./data/main:/data", "/:/host"),
+        )
+        .unwrap();
+        let error = f
+            .manager
+            .start_sandbox("session_v")
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("outside the project directory"), "{error}");
+        std::fs::write(dir.join("docker-compose.yml"), compose).unwrap();
+
+        let mut metadata: Value =
+            serde_json::from_str(&std::fs::read_to_string(dir.join("sandbox.json")).unwrap())
+                .unwrap();
+        metadata["projectPath"] = Value::String("/".into());
+        std::fs::write(dir.join("sandbox.json"), metadata.to_string()).unwrap();
+        let error = f
+            .manager
+            .start_sandbox("session_v")
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("Recreate it"), "{error}");
+    }
+
+    #[test]
+    fn image_references_must_be_plain() {
+        for ok in [
+            "ubuntu:26.04",
+            "ghcr.io/org/img@sha256:abc",
+            "debian:13-slim",
+        ] {
+            assert!(is_valid_image_ref(ok), "{ok}");
+        }
+        for bad in ["--privileged", "-v", "a b", "", "x;y"] {
+            assert!(!is_valid_image_ref(bad), "{bad}");
+        }
+    }
+
+    #[tokio::test]
+    async fn composeless_publishes_ports_on_loopback_only() {
+        let f = fixture();
+        f.runner.respond_with(
+            |command, args| match (command, args.first().map(String::as_str)) {
+                ("docker", Some("compose")) => RunResult::failed(1, "unknown command"),
+                ("docker-compose", _) => RunResult {
+                    exit_code: 127,
+                    spawn_error: Some("spawn docker-compose ENOENT".into()),
+                    ..Default::default()
+                },
+                _ => docker_ok(command, args),
+            },
+        );
+        f.manager
+            .create_sandbox(
+                "session_ports",
+                CreateSandboxOptions {
+                    services: Some(vec![crate::types::SandboxServiceSpec {
+                        ports: Some(vec![crate::types::SandboxPortMapping {
+                            host: 18080,
+                            container: 80,
+                        }]),
+                        ..crate::types::SandboxServiceSpec::named("main")
+                    }]),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        let run = f
+            .runner
+            .calls()
+            .into_iter()
+            .find(|(_, args)| args.first().map(String::as_str) == Some("run"))
+            .unwrap();
+        let at = run.1.iter().position(|a| a == "-p").expect("a -p flag");
+        assert_eq!(run.1[at + 1], "127.0.0.1:18080:80");
     }
 
     // The composeless path used to drop service `environment` and the agent's `env`.
@@ -1401,9 +1620,11 @@ mod tests {
     #[tokio::test]
     async fn reads_electron_written_metadata_and_follows_renames() {
         let f = fixture();
-        // A sandbox folder exactly as the Electron build leaves it.
-        let old_dir = Path::new(&f.project)
-            .join("docker-sandboxes")
+        // A sandbox folder with metadata exactly as the Electron build wrote it.
+        let old_dir = f
+            .manager
+            .get_sandbox_root(None)
+            .unwrap()
             .join("session-abc123");
         std::fs::create_dir_all(&old_dir).unwrap();
         std::fs::write(

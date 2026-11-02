@@ -11,8 +11,18 @@ fn p(dir: &tempfile::TempDir, rel: &str) -> String {
     dir.path().join(rel).to_string_lossy().into_owned()
 }
 
+/// `ctx` with the system temp folder (where every test's files live) and `/x` (the document
+/// reader tests' fake paths) as agent folders, so the path guard lets the tools reach them.
+fn open(mut ctx: ToolContext) -> ToolContext {
+    ctx.settings.agent_file_folders = vec![
+        std::env::temp_dir().to_string_lossy().into_owned(),
+        "/x".into(),
+    ];
+    ctx
+}
+
 async fn run(tool: &dyn Tool, input: Value) -> crate::Result<ToolOutput> {
-    run_tool(tool, input, &ToolContext::default()).await
+    run_tool(tool, input, &open(ToolContext::default())).await
 }
 
 fn text(out: ToolOutput) -> String {
@@ -249,7 +259,7 @@ impl DocumentReader for FakeDocs {
 
 #[tokio::test]
 async fn pdf_and_docx_go_through_the_document_reader() {
-    let mut ctx = ToolContext::default();
+    let mut ctx = open(ToolContext::default());
     let err = run_tool(
         &ReadFilesTool,
         json!({"type": "readFiles", "paths": ["/x/a.PDF"]}),
@@ -347,7 +357,7 @@ async fn list_files_ignore_depth_and_lines() {
     assert!(out.contains("deep.txt"));
 
     // Store defaults (agentChatConfig.ignoreFiles) apply when the input has none.
-    let ctx = ToolContext::from_store(&json!({"agentChatConfig": {"ignoreFiles": ["src"]}}), None);
+    let ctx = open(ToolContext::from_store(&json!({"agentChatConfig": {"ignoreFiles": ["src"]}}), None));
     let out = text(
         run_tool(
             &ListFilesTool,
@@ -526,7 +536,7 @@ async fn oversized_results_are_chunked() {
     let dir = tempfile::tempdir().unwrap();
     let f = p(&dir, "big.txt");
     std::fs::write(&f, "y".repeat(1000)).unwrap();
-    let ctx = ToolContext::from_store(&json!({"inferenceParams": {"maxTokens": 50}}), None);
+    let ctx = open(ToolContext::from_store(&json!({"inferenceParams": {"maxTokens": 50}}), None));
     let out = text(
         run_tool(
             &ReadFilesTool,
@@ -540,4 +550,52 @@ async fn oversized_results_are_chunked() {
     let (head, tail) = out.split_once("\n\n[Content truncated").unwrap();
     assert_eq!(head.chars().count(), 160);
     assert!(tail.contains("configured 50 token limit"));
+}
+
+// TOOLS-2: outside the project and agent folders, every file tool refuses.
+#[tokio::test]
+async fn file_tools_refuse_paths_outside_the_agent_folders() {
+    let project = tempfile::tempdir().unwrap();
+    let ctx = ToolContext::from_store(
+        &json!({"projectPath": project.path().to_string_lossy()}),
+        None,
+    );
+    let outside = "/etc/passwd";
+    let cases: Vec<(Box<dyn Tool>, Value)> = vec![
+        (Box::new(ReadFilesTool), json!({"type": "readFiles", "paths": [outside]})),
+        (
+            Box::new(WriteToFileTool),
+            json!({"type": "writeToFile", "path": "/tmp/../etc/x", "content": "x"}),
+        ),
+        (
+            Box::new(ApplyDiffEditTool),
+            json!({"type": "applyDiffEdit", "path": outside, "originalText": "a", "updatedText": "b"}),
+        ),
+        (Box::new(CreateFolderTool), json!({"type": "createFolder", "path": "../escape"})),
+        (Box::new(ListFilesTool), json!({"type": "listFiles", "path": "/"})),
+        (
+            Box::new(CopyFileTool),
+            json!({"type": "copyFile", "source": outside, "destination": "copied"}),
+        ),
+        (
+            Box::new(MoveFileTool),
+            json!({"type": "moveFile", "source": "a", "destination": "/tmp/moved"}),
+        ),
+    ];
+    for (tool, input) in cases {
+        let err = run_tool(tool.as_ref(), input.clone(), &ctx).await.unwrap_err();
+        assert!(err.message.contains("Access denied"), "{input}: {}", err.message);
+    }
+    // Relative paths land in the project.
+    run_tool(
+        &WriteToFileTool,
+        json!({"type": "writeToFile", "path": "notes/a.txt", "content": "hi"}),
+        &ctx,
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        std::fs::read_to_string(project.path().join("notes/a.txt")).unwrap(),
+        "hi"
+    );
 }

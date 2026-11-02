@@ -233,6 +233,29 @@ impl CodeInterpreter {
         &self.executor
     }
 
+    /// The project folder and the agent folders from settings (`agentFileFolders`), with the
+    /// app's data folder refused.
+    fn input_roots(&self) -> super::executor::InputRoots {
+        let text = |key: &str| {
+            self.settings
+                .get(key)
+                .and_then(|v| v.as_str().map(str::to_string))
+                .filter(|s| !s.is_empty())
+        };
+        let mut allowed: Vec<PathBuf> =
+            text("projectPath").into_iter().map(PathBuf::from).collect();
+        if let Some(Value::Array(extra)) = self.settings.get("agentFileFolders") {
+            allowed.extend(extra.iter().filter_map(Value::as_str).map(PathBuf::from));
+        }
+        super::executor::InputRoots {
+            allowed,
+            refused: text("userDataPath")
+                .into_iter()
+                .map(PathBuf::from)
+                .collect(),
+        }
+    }
+
     /// The workspace of the last run, for the UI (`getCurrentWorkspacePath`).
     pub fn current_workspace_path(&self) -> Option<PathBuf> {
         self.current_workspace.lock().unwrap().clone()
@@ -455,6 +478,7 @@ impl CodeInterpreter {
         let files = self.files.clone();
         std::thread::spawn(move || files.cleanup_old_workspaces(24));
 
+        self.executor.set_input_roots(self.input_roots());
         let processed = add_matplotlib_japanese_font_support(&input.code);
         let config = self.get_execution_config(input.environment.as_deref());
         let execution = self

@@ -156,7 +156,7 @@ impl McpClient {
         env: Option<&IndexMap<String, String>>,
         forced: &[String],
     ) -> Result<Self> {
-        let resolved = resolve_command(command);
+        let resolved = resolve_command(command).map_err(Error::Mcp)?;
         if resolved != command {
             tracing::info!(category = "mcp", resolved = %resolved, original = %command, "Using resolved command path");
         }

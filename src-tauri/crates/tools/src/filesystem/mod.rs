@@ -57,6 +57,20 @@ pub(crate) fn is_str(v: Option<&Value>) -> bool {
     matches!(v, Some(Value::String(_)))
 }
 
+/// `path` confined to the agent folders ([`crate::util::path_guard`]), as the absolute path to
+/// operate on, or a permission-denied tool error.
+pub(crate) fn guarded(
+    ctx: &crate::context::ToolContext,
+    path: &str,
+    access: crate::util::path_guard::Access,
+    tool: &str,
+) -> crate::error::Result<String> {
+    ctx.settings
+        .confine(path, access)
+        .map(|p| p.to_string_lossy().into_owned())
+        .map_err(|m| crate::error::ToolError::permission_denied(m, tool, Some(path)))
+}
+
 pub(crate) fn str_of<'a>(input: &'a Value, key: &str) -> &'a str {
     input.get(key).and_then(Value::as_str).unwrap_or_default()
 }

@@ -57,8 +57,8 @@ impl Tool for WriteToFileTool {
         errors
     }
 
-    async fn execute_internal(&self, input: Value, _ctx: &ToolContext) -> Result<ToolOutput> {
-        let path = str_of(&input, "path");
+    async fn execute_internal(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
+        let path = &super::guarded(ctx, str_of(&input, "path"), crate::util::path_guard::Access::Write, NAME)?;
         let content = str_of(&input, "content");
         tracing::debug!(content_length = content.len(), "Writing to file: {path}");
         let result = async {

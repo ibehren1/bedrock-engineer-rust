@@ -40,6 +40,24 @@ pub trait AwsEnvSource: Send + Sync {
 pub struct ExpandedServer {
     pub config: McpServerConfig,
     pub forced: Vec<String>,
+    /// [`crate::launch_approval::fingerprint`] of the config before expansion.
+    pub fingerprint: String,
+}
+
+impl ExpandedServer {
+    /// `server` as it is, with nothing filled in.
+    pub fn unexpanded(server: &McpServerConfig) -> Self {
+        Self {
+            config: server.clone(),
+            forced: Vec::new(),
+            fingerprint: crate::launch_approval::fingerprint(server),
+        }
+    }
+
+    /// Whether the app's static AWS keys were put into the server's `env`.
+    pub fn receives_aws_keys(&self) -> bool {
+        self.forced.iter().any(|k| k == "AWS_SECRET_ACCESS_KEY")
+    }
 }
 
 fn has_placeholder(server: &McpServerConfig) -> bool {
@@ -53,10 +71,7 @@ fn has_placeholder(server: &McpServerConfig) -> bool {
 /// Fill in `server`'s AWS placeholders from `aws`. Servers without any are returned unchanged.
 pub fn expand_server_env(server: &McpServerConfig, aws: &AppAwsEnv) -> ExpandedServer {
     let Some(env) = server.env.as_ref().filter(|_| has_placeholder(server)) else {
-        return ExpandedServer {
-            config: server.clone(),
-            forced: Vec::new(),
-        };
+        return ExpandedServer::unexpanded(server);
     };
     let mut out = IndexMap::new();
     let mut forced = Vec::new();
@@ -89,7 +104,11 @@ pub fn expand_server_env(server: &McpServerConfig, aws: &AppAwsEnv) -> ExpandedS
     }
     let mut config = server.clone();
     config.env = Some(out);
-    ExpandedServer { config, forced }
+    ExpandedServer {
+        config,
+        forced,
+        fingerprint: crate::launch_approval::fingerprint(server),
+    }
 }
 
 #[cfg(test)]

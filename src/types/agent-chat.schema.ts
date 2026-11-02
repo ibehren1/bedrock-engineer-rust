@@ -320,10 +320,10 @@ export const McpServerConfigSchema = z.object({
   // Command format fields
   command: z.string().optional(),
   args: z.array(z.string()).optional(),
-  env: z.record(z.string()).optional(),
+  env: z.record(z.string(), z.string()).optional(),
   // URL format fields
   url: z.string().optional(),
-  headers: z.record(z.string()).optional(),
+  headers: z.record(z.string(), z.string()).optional(),
   // Built-in server fields
   agentId: z.string().optional()
 })

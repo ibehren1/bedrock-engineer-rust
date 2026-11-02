@@ -56,11 +56,15 @@ fn relative(from: &Path, to: &Path) -> String {
     parts.join("/")
 }
 
+/// Entries listed before the walk stops, so listing a huge tree can't fill memory (TOOLS-10).
+const MAX_ENTRIES: usize = 10_000;
+
 struct TreeBuilder {
     matcher: GitignoreLikeMatcher,
     has_patterns: bool,
     max_depth: i64,
     cwd: PathBuf,
+    listed: std::sync::atomic::AtomicUsize,
 }
 
 impl TreeBuilder {
@@ -105,6 +109,17 @@ impl TreeBuilder {
                         if self.matcher.is_ignored(&rel) {
                             continue;
                         }
+                    }
+                    let n = self
+                        .listed
+                        .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    if n == MAX_ENTRIES {
+                        result.push_str(&format!(
+                            "{prefix}... (listing stopped after {MAX_ENTRIES} entries; list a subfolder or set maxDepth)\n"
+                        ));
+                    }
+                    if n >= MAX_ENTRIES {
+                        break;
                     }
                     if is_dir {
                         result.push_str(&format!("{current_prefix}📁 {name}\n"));
@@ -197,7 +212,7 @@ impl Tool for ListFilesTool {
     }
 
     async fn execute_internal(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
-        let dir = str_of(&input, "path");
+        let dir = &super::guarded(ctx, str_of(&input, "path"), crate::util::path_guard::Access::Read, NAME)?;
         let options = input.get("options");
         let ignore_files: Vec<String> = match options.and_then(|o| o.get("ignoreFiles")) {
             Some(Value::Array(a)) => a
@@ -218,6 +233,7 @@ impl Tool for ListFilesTool {
             has_patterns: !ignore_files.is_empty(),
             max_depth,
             cwd: std::env::current_dir().unwrap_or_else(|_| PathBuf::from("/")),
+            listed: Default::default(),
         };
         match builder.build(Path::new(dir), String::new(), 0).await {
             Ok(tree) => {

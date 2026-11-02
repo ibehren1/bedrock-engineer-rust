@@ -272,7 +272,6 @@ impl Tool for FetchWebsiteTool {
             let format = save.get("format").and_then(Value::as_str);
             let filename = save.get("filename").and_then(Value::as_str);
             let directory = save.get("directory").and_then(Value::as_str);
-            let project = ctx.settings.project_path.as_deref();
             let mut results = Vec::new();
             if matches!(format, Some("original") | Some("both") | None)
                 || format.is_some_and(str::is_empty)
@@ -284,7 +283,7 @@ impl Tool for FetchWebsiteTool {
                         filename,
                         directory,
                         SaveFormat::Html,
-                        project,
+                        &ctx.settings,
                     )
                     .await,
                 );
@@ -303,7 +302,7 @@ impl Tool for FetchWebsiteTool {
                         cleaned_name.as_deref(),
                         directory,
                         SaveFormat::Txt,
-                        project,
+                        &ctx.settings,
                     )
                     .await,
                 );
@@ -393,7 +392,13 @@ mod tests {
                 "cleaning": true,
                 "saveToFile": {"filename": "p", "directory": d, "format": "both"}
             }}),
-            &ToolContext::default(),
+            &{
+                // Saving is confined like the file tools; the test saves into a temp folder.
+                let mut ctx = ToolContext::default();
+                ctx.settings.agent_file_folders =
+                    vec![std::env::temp_dir().to_string_lossy().into_owned()];
+                ctx
+            },
         )
         .await
         .unwrap();

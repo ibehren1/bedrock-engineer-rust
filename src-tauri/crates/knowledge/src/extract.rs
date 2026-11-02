@@ -306,6 +306,8 @@ fn pptx_text(bytes: &[u8]) -> Result<String, String> {
     let mut slides: Vec<(u32, String)> = zip
         .file_names()
         .filter_map(|n| {
+            // zip 9 yields `Result<Cow<str>>`; names that aren't valid text are no slide.
+            let n = n.ok()?;
             let num = n
                 .strip_prefix("ppt/slides/slide")?
                 .strip_suffix(".xml")?

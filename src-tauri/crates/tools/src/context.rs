@@ -146,6 +146,9 @@ pub trait AgentResolver: Send + Sync {
 pub struct ToolSettings {
     /// `projectPath`.
     pub project_path: Option<String>,
+    /// `agentFileFolders`: folders outside the project the file tools may also use (see
+    /// [`crate::util::path_guard`]).
+    pub agent_file_folders: Vec<String>,
     /// `userDataPath` (todo storage root).
     pub user_data_path: Option<String>,
     /// `shell`.
@@ -254,6 +257,15 @@ impl ToolSettings {
         };
         ToolSettings {
             project_path: str_at("/projectPath"),
+            agent_file_folders: store
+                .get("agentFileFolders")
+                .and_then(Value::as_array)
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|s| s.as_str().filter(|s| !s.is_empty()).map(str::to_string))
+                        .collect()
+                })
+                .unwrap_or_default(),
             user_data_path: str_at("/userDataPath"),
             shell: str_at("/shell"),
             selected_agent_id: str_at("/selectedAgentId"),
@@ -342,6 +354,32 @@ pub struct CallerMetadata {
     pub allowed_agent_ids: Option<Vec<String>>,
     /// The calling agent's model, inherited by sub-agents.
     pub model_id: Option<String>,
+    /// The call comes from a loop nobody is watching (background agents, sub-agents run by the
+    /// agent engine): nothing may stop to ask the user, so anything not approved earlier is
+    /// refused.
+    pub unattended: bool,
+}
+
+/// A host command about to run because it matched `pattern` in the agent's Allowed Commands.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HostCommandRequest {
+    pub agent_id: String,
+    pub agent_name: Option<String>,
+    pub pattern: String,
+    pub command: String,
+    pub cwd: String,
+    /// False for [`CallerMetadata::unattended`] calls: decide without asking.
+    pub may_ask: bool,
+}
+
+/// Decides whether an allowlisted host command may run. The allowlist itself lives in settings,
+/// which the renderer and shared agent files can write, so the app confirms each (agent,
+/// pattern) with the user once before trusting it.
+pub trait HostCommandApprover: Send + Sync {
+    fn approve<'a>(
+        &'a self,
+        request: &'a HostCommandRequest,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + Send + 'a>>;
 }
 
 impl std::fmt::Debug for CallerMetadata {
@@ -354,6 +392,7 @@ impl std::fmt::Debug for CallerMetadata {
             .field("delegation_lineage", &self.delegation_lineage)
             .field("allowed_agent_ids", &self.allowed_agent_ids)
             .field("model_id", &self.model_id)
+            .field("unattended", &self.unattended)
             .finish()
     }
 }
@@ -374,6 +413,9 @@ pub struct ToolContext {
     pub documents: Option<Arc<dyn DocumentReader>>,
     /// `api.subAgent.invoke` (the `invokeAgent` tool), implemented by the `agents` crate.
     pub sub_agents: Option<Arc<dyn SubAgentInvoker>>,
+    /// Confirms allowlisted host commands with the user. Without one (tests), the allowlist
+    /// alone decides.
+    pub host_approver: Option<Arc<dyn HostCommandApprover>>,
 }
 
 impl std::fmt::Debug for ToolContext {
@@ -386,6 +428,7 @@ impl std::fmt::Debug for ToolContext {
             .field("sandbox", &self.sandbox.is_some())
             .field("documents", &self.documents.is_some())
             .field("sub_agents", &self.sub_agents.is_some())
+            .field("host_approver", &self.host_approver.is_some())
             .finish()
     }
 }

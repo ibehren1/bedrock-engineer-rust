@@ -671,7 +671,9 @@ Guardrails** and enter its **Guardrail Identifier** and **Guardrail Version** (d
 
 | Setting              | What it does                                                                                                                                                                                                                                                                                |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Project Setting**  | The project directory: the folder the agent works in. Click the path or **Select Project Directory** to choose it. All file tools are anchored here, and attachments and Docker sandboxes are stored inside it. Choose a real project folder, or a scratch folder if you are experimenting. |
+| **Project Setting**  | The project directory: the folder the agent works in. Click the path or **Select Project Directory** to choose it. All file tools are anchored here (relative paths resolve against it), and attachments are stored inside it. Choose a real project folder, or a scratch folder if you are experimenting. |
+| **Agent folders**    | Other folders the agents' file tools may read and write besides the project folder. **Add folder…** picks one, **Remove** takes it off the list. Anywhere else is refused, and the app's own data folder and credential folders (`~/.ssh`, `~/.aws`, `~/.gnupg` and the like) are refused even inside a listed folder. |
+| **Allowed commands** | Every agent's **Allowed Commands** in one place. **Manage…** opens a dialog listing each agent's patterns, where you can remove a pattern or add one (pattern and optional description). This is the same list as the agent's Command tool settings ([Section 8.3](#83-the-agent-editor)). Agents shared through a project's `.bedrock-engineer/agents/` folder are shown read-only. |
 | **Config Directory** | Where the app keeps its own settings and chat history. Shown, read-only, so you can find it; see [Section 19](#19-where-the-app-keeps-your-files).                                                                                                                                          |
 
 You can also switch the project folder for the current chat from the folder button below the message
@@ -1214,11 +1216,25 @@ configured; they cannot be switched off one by one. Every tool is documented in
 - **Flow Settings** (for `invokeFlow`) — Amazon Bedrock Flows this agent may run.
 
 **Allowed Commands** are a safety list for the `executeCommand` tool. Only commands matching a pattern
-here can be run on your computer. `*` is a wildcard, so `npm *` allows every `npm` command and nothing
-else. If this list is empty, the agent cannot run anything on your machine at all.
+here can be run on your computer. A `*` at the end of a pattern stands for any further arguments, so
+`npm *` allows every `npm` command and nothing else, and `npm run *` allows `npm run dev` but not
+`npm install`; a `*` in the middle stands for exactly one argument. A command must be a single
+program with its arguments: anything joined with `;`, `&&`, `|` or redirected with `>` or `<`, and
+anything using `$(...)` or backticks, is refused whatever the patterns say, because it would run more
+than the program the pattern names. Quoted text (`git commit -m "a; b"`) is fine. If this list is
+empty, the agent cannot run anything on your machine at all.
 
-> **Safety note:** every pattern you add here is a command the AI can run on your computer without
-> asking you first. Add specific patterns (`git status`, `npm test`) rather than broad ones. Never
+**The first time an agent uses a pattern, the app asks you.** A dialog shows the agent, the command
+and the pattern that allows it. If you allow it, that agent may run anything matching that pattern
+from then on without asking; the app remembers this per agent and per pattern, so a new pattern, or
+the same pattern on another agent, asks again. This matters most for agents you didn't write, whose
+Allowed Commands came with the agent. Background agents and sub-agents never ask: they can use only
+patterns you have already allowed for that agent, so run a scheduled agent in a chat once to approve
+the commands it needs. If you choose **Don't allow**, the app won't ask about that pattern again
+until you restart it.
+
+> **Safety note:** every pattern you allow is a command the AI can run on your computer without
+> asking you again. Add specific patterns (`git status`, `npm test`) rather than broad ones. Never
 > add a bare `*`. If you want the agent to be able to install packages and run anything it likes,
 > use the [Docker sandbox](#10-the-docker-sandbox) instead — that keeps it away from your machine
 > entirely.
@@ -1345,7 +1361,11 @@ flowchart TD
 
 ### 9.2 File System tools
 
-These all operate inside your **project folder**.
+These all operate inside your **project folder**, plus any extra folders you list under
+**Settings → Workspace → Agent folders** ([Section 5.5](#55-workspace-tab)). A path anywhere else is
+refused, and so is the app's own data folder and any credential folder (`~/.ssh`, `~/.aws`,
+`~/.gnupg` and the like), even inside a listed folder. Relative paths resolve against the project
+folder. `readFiles` won't load a file over 50 MB, and `listFiles` stops after 10,000 entries.
 
 | Tool            | What it does                                                                                                            | When it is the right choice                                                      |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
@@ -1428,7 +1448,10 @@ Runs Python code in a locked-down Docker container with data science libraries a
 - **No internet access** from inside, on purpose.
 - Two environments: **basic** (numpy, pandas, matplotlib, requests) and **datascience** (the full
   stack — scikit-learn, scipy, seaborn and more). Defaults to datascience.
-- Your input files can be mounted read-only at `/data/` for the code to analyze.
+- Your input files can be mounted read-only at `/data/` for the code to analyze. They must be in the
+  project folder or one of your agent folders ([Section 5.5](#55-workspace-tab)).
+- The code runs as an unprivileged user, with no network, no extra Linux capabilities and a limit on
+  how many processes it can start.
 - Files the code produces — charts, CSVs — are detected automatically and reported back.
 
 **When to use it:** analyzing a spreadsheet, making a chart, doing statistics, trying out a
@@ -1568,7 +1591,7 @@ when it creates a sandbox.
 flowchart LR
   subgraph Your["Your computer"]
     P["Project folder"]
-    D["docker-sandboxes/&lt;chat&gt;/"]
+    D["App data folder:<br/>docker-sandboxes/&lt;project&gt;/&lt;chat&gt;/"]
     H["Everything else on<br/>your machine"]
   end
   subgraph C["The chat's container (Debian 13 by default)"]
@@ -1595,6 +1618,10 @@ The agent can still ask to run a command on your machine, but it has to say so e
 does, **you get a dialog showing the exact command before anything runs.** You can allow it once, or
 allow that pattern for the rest of the chat.
 
+The command must still match the agent's **Allowed Commands**, and the first time it uses a given
+pattern the app also asks you to confirm that pattern for the agent
+([Section 8.3](#83-the-agent-editor)).
+
 ### 10.4 Managing sandboxes
 
 A **whale icon** appears above the message box whenever the current chat has a container. Its menu
@@ -1613,8 +1640,13 @@ installed packages intact when you return.
 ### 10.5 Where the files live
 
 ```
-<your project folder>/docker-sandboxes/<chat-title>-<id>/
+<app data folder>/docker-sandboxes/<project folder name>-<id>/<chat-title>-<id>/
 ```
+
+The app data folder is the one in [Section 19.1](#191-app-settings-and-chat-history); **Open sandbox
+folder** in the whale menu takes you straight there. The sandbox's files are kept out of your
+project folder on purpose: the container can write anywhere in the project, and it must not be able
+to change its own compose file. Each project folder gets its own set of sandboxes.
 
 Ordinary mapped folders and a plain Docker Compose file, not hidden Docker volumes, so you can just
 look at them. The folder is named after the chat and is renamed automatically when the chat title
@@ -1627,6 +1659,11 @@ that never moves.
 Deleting a chat removes its container. The delete dialog also offers to delete the sandbox's data
 folder — **unchecked by default**, so anything the agent wrote is kept unless you deliberately say
 otherwise.
+
+Builds from before November 2026 kept sandboxes in a `docker-sandboxes` folder inside your project.
+The app no longer uses that folder: a chat that had a sandbox there gets a fresh one the next time
+the agent needs it (packages it installed have to be installed again), and the old folder, with its
+data, is left where it was for you to copy from or delete.
 
 ### 10.7 Requirements and limits
 
@@ -1743,6 +1780,15 @@ MCP servers are configured **per agent**, on the **MCP Servers** tab of the agen
 of connection are supported: a **command** the app starts on your computer (called stdio), or a
 **URL** for a server running elsewhere (SSE or streamable HTTP).
 
+**Before a command server starts for the first time, the app asks you.** A dialog shows the server's
+name, the exact program and arguments, and the names of the environment variables it gets, and
+warns you if it will receive your AWS keys. A command server runs on your computer as you, and an
+agent you didn't write (one shared in a project you cloned, imported from a file, or loaded from your
+organization's agents) can name any program, so only allow ones you trust. The app remembers what you
+allow and asks again if the program, its arguments or its environment change. If you choose
+**Don't allow**, the server's tools are unavailable until you restart the app, which asks again.
+URL servers start nothing on your computer and don't ask.
+
 For the exact configuration format, see the
 [MCP Server Configuration Guide](./mcp-server/MCP_SERVER_CONFIGURATION.md).
 
@@ -1811,6 +1857,7 @@ placeholders produce take priority over any AWS variables already in the app's e
 Changing your AWS settings reconnects the servers that use them the next time you send a message.
 
 Only servers whose `env` uses a placeholder get your credentials. No other MCP server is given them.
+When a server would receive your access keys, the dialog that asks before it first starts says so.
 
 ### 11.5 The AWS Solutions Architect agent
 
@@ -2113,6 +2160,7 @@ On a Mac:
   window-state.json        ← the window's size and position, so it reopens where you left it
   memory.json              ← your memory items (rules and facts)
   usage/usage.db           ← the cost ledger behind the Accounting page (every Bedrock call)
+  docker-sandboxes/<project>-<id>/<chat>-<id>/  ← compose file and mapped data for a chat's container
   knowledgebases/
     <agent id>/<kb id>.db  ← one file per local knowledge base
     .models/               ← the on-device embedding model, once downloaded
@@ -2132,7 +2180,6 @@ folder name; the app moves that folder here the first time it starts.
 ```
 <your project folder>/
   attachments/<chat>-<id>/       ← files you attached to a chat
-  docker-sandboxes/<chat>-<id>/  ← compose file and mapped data for a chat's container
   .bedrock-engineer/
     agents/                      ← agents shared with this project
     rules/                       ← project-specific rules for agents to follow
@@ -2477,7 +2524,8 @@ long, tighten it.
 ### The agent will not run a command
 
 Either the command does not match anything in the agent's **Allowed Commands** list
-([Section 8.3](#83-the-agent-editor)), or you are in **Plan mode**
+([Section 8.3](#83-the-agent-editor)) or chains several commands together (`;`, `&&`, `|`, `>`,
+`$(...)`), which is always refused on your machine, or you are in **Plan mode**
 ([Section 6.3](#63-plan-mode-and-act-mode)), or the `executeCommand` tool is not enabled for this
 agent at all.
 
@@ -2551,7 +2599,8 @@ two biggest wins.
 
 ### An MCP server will not connect
 
-Most often a missing environment variable — an API key or token the server needs, which has to be
+If you chose **Don't allow** when the app asked before starting it, restart the app to be asked
+again. Otherwise, most often a missing environment variable — an API key or token the server needs, which has to be
 listed in the server's configuration. Also check the package name and version are right (use **Load
 config** from the registry search rather than typing it by hand), and that a URL-based server does
 not need authentication you have not supplied. Use the connection test on the MCP Servers tab to see

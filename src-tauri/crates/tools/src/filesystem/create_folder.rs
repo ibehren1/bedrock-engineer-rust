@@ -49,8 +49,8 @@ impl Tool for CreateFolderTool {
         errors
     }
 
-    async fn execute_internal(&self, input: Value, _ctx: &ToolContext) -> Result<ToolOutput> {
-        let path = str_of(&input, "path");
+    async fn execute_internal(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
+        let path = &super::guarded(ctx, str_of(&input, "path"), crate::util::path_guard::Access::Write, NAME)?;
         tracing::debug!("Creating folder: {path}");
         match mkdir_recursive(path).await {
             Ok(()) => Ok(ToolOutput::Text(format!("Folder created: {path}"))),

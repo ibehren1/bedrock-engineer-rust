@@ -85,9 +85,26 @@ fn base64_encode(bytes: &[u8], url: bool) -> String {
     out
 }
 
+/// Largest file `readFiles` loads as text.
+const MAX_READ_BYTES: u64 = 50 * 1024 * 1024;
+
 impl ReadFilesTool {
     async fn read_text(path: &str, encoding: &str) -> std::result::Result<String, ReadError> {
-        if tokio::fs::metadata(path).await.is_ok_and(|m| m.is_dir()) {
+        let meta = tokio::fs::metadata(path).await;
+        // The whole file is read into memory, so huge files are refused up front (TOOLS-10).
+        if let Ok(m) = &meta {
+            if m.is_file() && m.len() > MAX_READ_BYTES {
+                return Err((
+                    format!(
+                        "File is too large to read ({} MB; the limit is {} MB). Read part of it with a command such as head or sed instead.",
+                        m.len() / (1024 * 1024),
+                        MAX_READ_BYTES / (1024 * 1024)
+                    ),
+                    json!({"code": "EFBIG"}),
+                ));
+            }
+        }
+        if meta.is_ok_and(|m| m.is_dir()) {
             // Node reports EISDIR from read(2), without a path.
             return Err((
                 "EISDIR: illegal operation on a directory, read".to_string(),
@@ -109,6 +126,11 @@ impl ReadFilesTool {
         lines: Option<LineRange>,
         ctx: &ToolContext,
     ) -> std::result::Result<String, ReadError> {
+        let confined = ctx
+            .settings
+            .confine(path, crate::util::path_guard::Access::Read)
+            .map_err(|m| (m, json!({"code": "EACCES"})))?;
+        let path = &*confined.to_string_lossy();
         let ext = ext_lower(path);
         if ext == "pdf" || ext == "docx" {
             let Some(reader) = &ctx.documents else {

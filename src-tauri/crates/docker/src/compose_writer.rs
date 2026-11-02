@@ -13,7 +13,7 @@ use crate::types::{
     SandboxServiceSpec, SandboxServiceSummary, DEFAULT_SERVICE_NAME, SANDBOX_OS_CATALOG,
     WORKSPACE_MOUNT,
 };
-use crate::util::{is_inside, relative, resolve, resolve_one};
+use crate::util::{is_inside, resolve, resolve_one};
 use crate::{Error, Result};
 
 /// Top-level keys agent-authored compose YAML may use. `volumes` declarations are converted
@@ -208,7 +208,8 @@ fn parse_port_mapping(raw: &Value) -> Option<SandboxPortMapping> {
             })
         }
         Value::String(text) => {
-            // Accept "3000", "3000:3000", "127.0.0.1:3000:3000". Reject ranges.
+            // Accept "3000", "3000:3000", "127.0.0.1:3000:3000". Reject ranges. Any
+            // address prefix is dropped: ports are always published on loopback.
             let parts: Vec<&str> = text.split(':').collect();
             if parts.len() == 1 {
                 let port = to_port(js_string_to_number(parts[0]))?;
@@ -366,7 +367,7 @@ fn build_generated_compose(
         if !ports.is_empty() {
             service.insert(
                 key("ports"),
-                string_seq(ports.iter().map(|p| format!("{}:{}", p.host, p.container))),
+                string_seq(ports.iter().map(SandboxPortMapping::publish_spec)),
             );
         }
         if let Some(environment) = spec.environment.as_ref().filter(|env| !env.is_empty()) {
@@ -396,11 +397,11 @@ fn build_generated_compose(
 }
 
 /// Validate and normalize agent-authored compose YAML: named volumes become mapped folders
-/// under `data/`, bind mounts are confined to projectPath and the sandbox folder, and keys
+/// under `data/`, bind mounts are confined to projectPath, and keys
 /// that would break out of the container are rejected.
 fn build_from_agent_yaml(
     compose_yaml: &str,
-    sandbox_dir: &Path,
+    _sandbox_dir: &Path,
     project_path: &Path,
     config: &DockerSandboxConfig,
     default_image: &str,
@@ -466,7 +467,6 @@ fn build_from_agent_yaml(
     }
 
     let resolved_project = resolve_one(project_path);
-    let resolved_sandbox = resolve_one(sandbox_dir);
     static EXPLICIT_PATH: OnceLock<Regex> = OnceLock::new();
     let explicit_path = EXPLICIT_PATH.get_or_init(|| Regex::new(r"^[./~]|^[A-Za-z]:").unwrap());
 
@@ -583,24 +583,21 @@ fn build_from_agent_yaml(
 
             let outside = || {
                 Error::msg(format!(
-                    "Service \"{service_name}\" bind-mounts \"{source}\", which is outside the project directory. Sandbox mounts are limited to the project directory and the sandbox's own folder."
+                    "Service \"{service_name}\" bind-mounts \"{source}\", which is outside the project directory. Sandbox mounts are limited to the project directory (relative paths resolve against it)."
                 ))
             };
             if source.contains('$') {
                 // Compose would substitute variables into the host path.
                 return Err(outside());
             }
-            let absolute: PathBuf = resolve(sandbox_dir, Path::new(&source));
-            if !is_contained(&absolute, &[&resolved_project, &resolved_sandbox]) {
+            // Relative sources resolve against the project directory: the sandbox folder is
+            // kept outside the project (and out of every mount), so only the project is
+            // reachable, and the host path is written out absolute.
+            let absolute: PathBuf = resolve(&resolved_project, Path::new(&source));
+            if !is_contained(&absolute, &[&resolved_project]) {
                 return Err(outside());
             }
-            let rel = to_compose_path(&relative(&resolved_sandbox, &absolute));
-            let host = if rel.starts_with('.') {
-                rel
-            } else {
-                format!("./{rel}")
-            };
-            rewritten.push(serialize_volume(&host, &target));
+            rewritten.push(serialize_volume(&to_compose_path(&absolute), &target));
             saw_data_mount = true;
         }
 
@@ -638,7 +635,7 @@ fn build_from_agent_yaml(
         if !ports.is_empty() {
             service.insert(
                 key("ports"),
-                string_seq(ports.iter().map(|p| format!("{}:{}", p.host, p.container))),
+                string_seq(ports.iter().map(SandboxPortMapping::publish_spec)),
             );
         }
 
@@ -903,6 +900,146 @@ pub struct WrittenFiles {
     pub env_file: PathBuf,
 }
 
+/// Every host source the compose `document` mounts, checked against where the sandbox may
+/// reach: the `${PROJECT_PATH}` workspace mount, `./data/...` folders inside `sandbox_dir`, and
+/// absolute paths inside `project_root`. Symlinks are resolved, since a container can plant
+/// them in the project mount (`ln -s / /workspace/escape`) and Docker follows them on the host.
+/// Returns the `./data` folders to create.
+///
+/// Run on every write *and* before every start, because the project can change between the
+/// two (the container writes to it).
+pub fn check_bind_sources(
+    sandbox_dir: &Path,
+    project_root: &Path,
+    document: &Value,
+) -> Result<Vec<PathBuf>> {
+    if is_contained(sandbox_dir, &[project_root]) {
+        return Err(Error::msg(format!(
+            "The sandbox folder {} is inside the project directory, where the container could rewrite it. Remove the sandbox and try again.",
+            sandbox_dir.display()
+        )));
+    }
+    let data_root = sandbox_dir.join("data");
+    let mut to_create = Vec::new();
+    let Some(services) = document.get("services").and_then(Value::as_mapping) else {
+        return Ok(to_create);
+    };
+    for (service_name, service) in services {
+        let volumes = service
+            .get("volumes")
+            .and_then(Value::as_sequence)
+            .cloned()
+            .unwrap_or_default();
+        for volume in &volumes {
+            let Some(volume) = volume.as_str() else {
+                return Err(Error::msg(format!(
+                    "Service \"{}\" has a volume entry that is not a string.",
+                    key_name(service_name)
+                )));
+            };
+            let source = volume_source(volume);
+            if source == "${PROJECT_PATH}" {
+                continue;
+            }
+            let outside = || {
+                Error::msg(format!(
+                    "Service \"{}\" mounts \"{source}\", which resolves outside the project directory and the sandbox's data folder.",
+                    key_name(service_name)
+                ))
+            };
+            if source.contains('$') {
+                return Err(outside());
+            }
+            if let Some(rest) = source.strip_prefix("./") {
+                let resolved = resolve(sandbox_dir, Path::new(rest));
+                // Lexically under data/, and still inside the real sandbox folder once symlinks
+                // are followed (a symlinked data/ resolves somewhere else).
+                if !is_inside(&resolved, &resolve_one(&data_root))
+                    || !is_contained(&resolved, &[sandbox_dir])
+                {
+                    return Err(outside());
+                }
+                // Create every mapped data directory up front. Docker would create them as
+                // root otherwise, which leaves folders the user can't delete.
+                to_create.push(resolved);
+                continue;
+            }
+            let path = Path::new(source);
+            if !path.is_absolute() || !is_contained(path, &[project_root]) {
+                return Err(outside());
+            }
+        }
+    }
+    Ok(to_create)
+}
+
+/// The host side of a short-syntax volume (`source:target[:mode]`). A Windows drive letter
+/// (`C:/x:/y`) is part of the source.
+fn volume_source(volume: &str) -> &str {
+    let bytes = volume.as_bytes();
+    let skip = if bytes.len() > 2 && bytes[1] == b':' && bytes[0].is_ascii_alphabetic() {
+        2
+    } else {
+        0
+    };
+    match volume[skip..].find(':') {
+        Some(i) => &volume[..skip + i],
+        None => volume,
+    }
+}
+
+/// Write `.env`: only the writer's own variables, with the project path from settings.
+/// Rewritten before every start, so whatever sandbox.json or an older `.env` says never decides
+/// what is mounted at /workspace.
+pub fn write_env_file(
+    sandbox_dir: &Path,
+    project_name: &str,
+    project_path: &str,
+) -> Result<PathBuf> {
+    if project_path.contains(['\n', '\r', '$']) {
+        return Err(Error::msg(
+            "The project directory path contains a newline or \"$\", which the Docker sandbox can't mount safely.",
+        ));
+    }
+    let env_file = sandbox_dir.join(".env");
+    let lines = [
+        format!("COMPOSE_PROJECT_NAME={project_name}"),
+        format!("PROJECT_PATH={project_path}"),
+        // Kept for older tooling; containers get it from each service's `environment`
+        // (see [`DEFAULT_SERVICE_ENV`]), since Compose never passes `.env` to them.
+        "DEBIAN_FRONTEND=noninteractive".to_string(),
+    ];
+    std::fs::write(&env_file, format!("{}\n", lines.join("\n")))?;
+    Ok(env_file)
+}
+
+/// Re-check a sandbox's compose file before it is started, and rewrite its `.env` from the
+/// current project path.
+pub fn verify_sandbox_files(
+    sandbox_dir: &Path,
+    compose_file: &Path,
+    project_name: &str,
+    project_path: &str,
+) -> Result<()> {
+    let text = std::fs::read_to_string(compose_file).map_err(|error| {
+        Error::msg(format!(
+            "Could not read the sandbox compose file {}: {error}",
+            compose_file.display()
+        ))
+    })?;
+    let document: Value = yaml_serde::from_str(&text).map_err(|error| {
+        Error::msg(format!(
+            "The sandbox compose file {} is not valid YAML ({error}). Recreate the sandbox.",
+            compose_file.display()
+        ))
+    })?;
+    for dir in check_bind_sources(sandbox_dir, Path::new(project_path), &document)? {
+        std::fs::create_dir_all(dir)?;
+    }
+    write_env_file(sandbox_dir, project_name, project_path)?;
+    Ok(())
+}
+
 /// Write the compose file, the .env file, and the data directories for a sandbox.
 ///
 /// The `.env` file holds only the writer's own variables; agent-supplied variables are
@@ -913,55 +1050,9 @@ pub fn write_sandbox_files(
     project_path: &str,
     built: &BuiltCompose,
 ) -> Result<WrittenFiles> {
-    let project_root = Path::new(project_path);
-    if !is_contained(sandbox_dir, &[project_root]) {
-        return Err(Error::msg(format!(
-            "The sandbox folder {} resolves outside the project directory. Remove the sandbox and try again.",
-            sandbox_dir.display()
-        )));
-    }
-    std::fs::create_dir_all(sandbox_dir)?;
-
-    // Every host source must stay inside the project (the sandbox folder lives there too),
-    // even after following symlinks the container may have planted in the project mount.
     // Checked before anything is created, since `create_dir_all` follows symlinks too.
-    let mut to_create = Vec::new();
-    if let Some(services) = built.services_mapping() {
-        for (service_name, service) in services {
-            let volumes = service
-                .get("volumes")
-                .and_then(Value::as_sequence)
-                .cloned()
-                .unwrap_or_default();
-            for volume in volumes.iter().filter_map(Value::as_str) {
-                let source = volume.split(':').next().unwrap_or("");
-                if source == "${PROJECT_PATH}" {
-                    continue;
-                }
-                let resolved = resolve(sandbox_dir, Path::new(source));
-                let relative_source = source.starts_with("./") || source.starts_with("../");
-                if !relative_source
-                    || source.contains('$')
-                    || !is_contained(&resolved, &[project_root])
-                {
-                    return Err(Error::msg(format!(
-                        "Service \"{}\" mounts \"{source}\", which resolves outside the project directory.",
-                        key_name(service_name)
-                    )));
-                }
-                // Create every mapped data directory up front. Docker would create them as
-                // root otherwise, which leaves folders the user can't delete.
-                if source.starts_with("./") {
-                    to_create.push(resolved);
-                }
-            }
-            log::debug!(
-                target: "docker:compose-writer",
-                "Prepared service directories service={}",
-                key_name(service_name)
-            );
-        }
-    }
+    let to_create = check_bind_sources(sandbox_dir, Path::new(project_path), &built.document)?;
+    std::fs::create_dir_all(sandbox_dir)?;
     for dir in to_create {
         std::fs::create_dir_all(dir)?;
     }
@@ -979,15 +1070,7 @@ pub fn write_sandbox_files(
         .join("\n"),
     )?;
 
-    let env_file = sandbox_dir.join(".env");
-    let lines = [
-        format!("COMPOSE_PROJECT_NAME={project_name}"),
-        format!("PROJECT_PATH={project_path}"),
-        // Kept for older tooling; containers get it from each service's `environment`
-        // (see [`DEFAULT_SERVICE_ENV`]), since Compose never passes `.env` to them.
-        "DEBIAN_FRONTEND=noninteractive".to_string(),
-    ];
-    std::fs::write(&env_file, format!("{}\n", lines.join("\n")))?;
+    let env_file = write_env_file(sandbox_dir, project_name, project_path)?;
 
     Ok(WrittenFiles {
         compose_file,
@@ -1005,8 +1088,9 @@ mod tests {
     const PROJECT_PATH: &str = "/tmp/example-project";
 
     fn sandbox_dir() -> PathBuf {
-        Path::new(PROJECT_PATH)
+        Path::new("/tmp/example-user-data")
             .join("docker-sandboxes")
+            .join("example-project-0123456789")
             .join("session_1")
     }
 
@@ -1121,7 +1205,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             strings(service(&built, "web").get("ports").unwrap()),
-            ["3000:3000"]
+            ["127.0.0.1:3000:3000"]
         );
         assert_eq!(
             built.services[0].ports,
@@ -1275,7 +1359,21 @@ services:
         ))
         .unwrap();
         assert!(strings(service(&built, "app").get("volumes").unwrap())
-            .contains(&"../../assets:/assets".to_string()));
+            .contains(&format!("{PROJECT_PATH}/assets:/assets")));
+        // Relative sources resolve against the project, not the sandbox folder.
+        let built = yaml(
+            "services:\n  app:\n    image: ubuntu:26.04\n    volumes:\n      - ./assets:/assets\n",
+        )
+        .unwrap();
+        assert!(strings(service(&built, "app").get("volumes").unwrap())
+            .contains(&format!("{PROJECT_PATH}/assets:/assets")));
+        let message = err(yaml(
+            "services:\n  app:\n    image: ubuntu:26.04\n    volumes:\n      - ../elsewhere:/x\n",
+        ));
+        assert!(
+            message.contains("outside the project directory"),
+            "{message}"
+        );
     }
 
     #[test]
@@ -1338,7 +1436,23 @@ services:
         );
         assert_eq!(
             strings(service(&built, "app").get("ports").unwrap()),
-            ["8080:80"]
+            ["127.0.0.1:8080:80"]
+        );
+    }
+
+    #[test]
+    fn never_publishes_on_all_interfaces_even_when_asked() {
+        let built = yaml(
+            "services:\n  app:\n    image: ubuntu:26.04\n    ports:\n      - \"0.0.0.0:8080:80\"\n      - 9000\n      - published: 7000\n        target: 70\n",
+        )
+        .unwrap();
+        assert_eq!(
+            strings(service(&built, "app").get("ports").unwrap()),
+            [
+                "127.0.0.1:8080:80",
+                "127.0.0.1:9000:9000",
+                "127.0.0.1:7000:70"
+            ]
         );
     }
 
@@ -1359,10 +1473,8 @@ services:
     #[test]
     fn writes_the_compose_file_env_file_and_data_directories() {
         let tmp_project = tempfile::tempdir().unwrap();
-        let tmp_sandbox = tmp_project
-            .path()
-            .join("docker-sandboxes")
-            .join("session_1");
+        let tmp_user_data = tempfile::tempdir().unwrap();
+        let tmp_sandbox = tmp_user_data.path().join("session_1");
         let mut env = JsonMap::new();
         env.insert("EXTRA".into(), JsonValue::String("value".into()));
         let built = build_compose(
@@ -1432,7 +1544,8 @@ services:
     #[test]
     fn agent_env_cannot_repoint_the_workspace_mount() {
         let tmp_project = tempfile::tempdir().unwrap();
-        let tmp_sandbox = tmp_project.path().join("docker-sandboxes").join("s");
+        let tmp_user_data = tempfile::tempdir().unwrap();
+        let tmp_sandbox = tmp_user_data.path().join("s");
         let project = tmp_project.path().to_string_lossy().to_string();
         let options = with_env(
             CreateSandboxOptions::default(),
@@ -1566,7 +1679,8 @@ services:
     #[test]
     fn reads_service_environment_back_from_the_written_compose_file() {
         let tmp_project = tempfile::tempdir().unwrap();
-        let tmp_sandbox = tmp_project.path().join("docker-sandboxes").join("s");
+        let tmp_user_data = tempfile::tempdir().unwrap();
+        let tmp_sandbox = tmp_user_data.path().join("s");
         let project = tmp_project.path().to_string_lossy().to_string();
         let mut environment = JsonMap::new();
         environment.insert("OWN".into(), json!("a $b"));
@@ -1827,7 +1941,8 @@ services:
     fn rejects_bind_mounts_through_symlinks_that_leave_the_project() {
         let outside = tempfile::tempdir().unwrap();
         let project = tempfile::tempdir().unwrap();
-        let sandbox = project.path().join("docker-sandboxes").join("s");
+        let user_data = tempfile::tempdir().unwrap();
+        let sandbox = user_data.path().join("s");
         std::fs::create_dir_all(&sandbox).unwrap();
         std::os::unix::fs::symlink(outside.path(), project.path().join("escape")).unwrap();
         std::fs::create_dir(project.path().join("assets")).unwrap();
@@ -1844,36 +1959,36 @@ services:
             )
         };
         let message = err(build_with(
-            "services:\n  app:\n    image: x\n    volumes:\n      - ../../escape:/host\n",
+            "services:\n  app:\n    image: x\n    volumes:\n      - ./escape:/host\n",
         ));
         assert!(
             message.contains("outside the project directory"),
             "{message}"
         );
         let message = err(build_with(
-            "services:\n  app:\n    image: x\n    volumes:\n      - ../../escape/sub/dir:/host\n",
+            "services:\n  app:\n    image: x\n    volumes:\n      - ./escape/sub/dir:/host\n",
         ));
         assert!(
             message.contains("outside the project directory"),
             "{message}"
         );
         // A real directory inside the project is still fine.
-        let built = build_with(
-            "services:\n  app:\n    image: x\n    volumes:\n      - ../../assets:/assets\n",
-        )
-        .unwrap();
-        assert!(strings(service(&built, "app").get("volumes").unwrap())
-            .contains(&"../../assets:/assets".to_string()));
+        let built =
+            build_with("services:\n  app:\n    image: x\n    volumes:\n      - ./assets:/assets\n")
+                .unwrap();
+        let expected = format!("{}/assets:/assets", project.path().to_string_lossy());
+        assert!(strings(service(&built, "app").get("volumes").unwrap()).contains(&expected));
     }
 
-    /// `data/` lives inside the project mount too, so the container can swap it for a symlink.
-    /// Writing must refuse instead of creating directories wherever it points.
+    /// A symlinked `data/` must never send the data folders somewhere else: writing refuses
+    /// instead of creating directories wherever it points.
     #[cfg(unix)]
     #[test]
     fn write_refuses_data_folders_redirected_by_symlinks() {
         let outside = tempfile::tempdir().unwrap();
         let project = tempfile::tempdir().unwrap();
-        let sandbox = project.path().join("docker-sandboxes").join("s");
+        let user_data = tempfile::tempdir().unwrap();
+        let sandbox = user_data.path().join("s");
         std::fs::create_dir_all(&sandbox).unwrap();
         std::os::unix::fs::symlink(outside.path(), sandbox.join("data")).unwrap();
 
@@ -1897,7 +2012,8 @@ services:
     #[test]
     fn write_rejects_sources_the_builder_never_emits() {
         let project = tempfile::tempdir().unwrap();
-        let sandbox = project.path().join("docker-sandboxes").join("s");
+        let user_data = tempfile::tempdir().unwrap();
+        let sandbox = user_data.path().join("s");
         let mut built = build(CreateSandboxOptions::default()).unwrap();
         let services = built
             .document
@@ -1913,6 +2029,95 @@ services:
             message.contains("outside the project directory"),
             "{message}"
         );
+    }
+
+    #[test]
+    fn refuses_a_sandbox_folder_inside_the_project() {
+        let project = tempfile::tempdir().unwrap();
+        let sandbox = project.path().join("docker-sandboxes").join("s");
+        let built = build_compose(
+            &CreateSandboxOptions::default(),
+            &sandbox,
+            project.path(),
+            &config(),
+        )
+        .unwrap();
+        let message = write_sandbox_files(&sandbox, "p", &project.path().to_string_lossy(), &built)
+            .unwrap_err()
+            .to_string();
+        assert!(
+            message.contains("inside the project directory"),
+            "{message}"
+        );
+        assert!(!sandbox.exists());
+    }
+
+    /// SBX-1: the project can change after the sandbox is written (the container writes to
+    /// it), so every start re-checks the mounts and rewrites `.env`.
+    #[cfg(unix)]
+    #[test]
+    fn verify_before_start_catches_a_symlink_planted_after_creation() {
+        let outside = tempfile::tempdir().unwrap();
+        let project = tempfile::tempdir().unwrap();
+        let user_data = tempfile::tempdir().unwrap();
+        let sandbox = user_data.path().join("s");
+        std::fs::create_dir(project.path().join("assets")).unwrap();
+        let project_text = project.path().to_string_lossy().into_owned();
+        let built = build_compose(
+            &CreateSandboxOptions {
+                compose_yaml: Some(
+                    "services:\n  app:\n    image: x\n    volumes:\n      - ./assets:/assets\n"
+                        .into(),
+                ),
+                ..Default::default()
+            },
+            &sandbox,
+            project.path(),
+            &config(),
+        )
+        .unwrap();
+        let written = write_sandbox_files(&sandbox, "p", &project_text, &built).unwrap();
+
+        // A tampered .env is rewritten from the real project path.
+        std::fs::write(&written.env_file, "PROJECT_PATH=/\n").unwrap();
+        verify_sandbox_files(&sandbox, &written.compose_file, "p", &project_text).unwrap();
+        let env_text = std::fs::read_to_string(&written.env_file).unwrap();
+        assert!(
+            env_text.contains(&format!("PROJECT_PATH={project_text}")),
+            "{env_text}"
+        );
+
+        // The container swaps the mounted folder for a symlink to somewhere outside.
+        std::fs::remove_dir(project.path().join("assets")).unwrap();
+        std::os::unix::fs::symlink(outside.path(), project.path().join("assets")).unwrap();
+        let message = verify_sandbox_files(&sandbox, &written.compose_file, "p", &project_text)
+            .unwrap_err()
+            .to_string();
+        assert!(
+            message.contains("outside the project directory"),
+            "{message}"
+        );
+    }
+
+    #[test]
+    fn volume_source_keeps_windows_drive_letters() {
+        assert_eq!(volume_source("./data/main:/data"), "./data/main");
+        assert_eq!(volume_source("C:/proj/assets:/assets:ro"), "C:/proj/assets");
+        assert_eq!(
+            volume_source("${PROJECT_PATH}:/workspace"),
+            "${PROJECT_PATH}"
+        );
+    }
+
+    #[test]
+    fn env_file_refuses_project_paths_that_would_inject_variables() {
+        let user_data = tempfile::tempdir().unwrap();
+        for bad in ["/p\nCOMPOSE_FILE=/x", "/p$HOME"] {
+            assert!(
+                write_env_file(user_data.path(), "p", bad).is_err(),
+                "{bad:?}"
+            );
+        }
     }
 
     #[test]

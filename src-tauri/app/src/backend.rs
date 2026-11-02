@@ -161,14 +161,19 @@ impl background::EventSink for TauriEvents {
     }
 }
 
-/// Docker sandbox events go through pub/sub, as `pubSubManager.publish(channel, data)` did:
-/// only windows subscribed to the channel receive them.
+/// Docker sandbox events go through pub/sub, as `pubSubManager.publish(channel, data)` did, but
+/// only to the main window: they carry command output and the sandbox's root terminal, and the
+/// `docker_sandbox_*` commands are main-window-only, so no other window may read them whatever
+/// it subscribes to.
 struct DockerToPubSub(Arc<PubSubManager>);
+
+/// The only window the Docker sandbox commands and events are for.
+const DOCKER_SANDBOX_WINDOW: &str = "main";
 
 impl docker::EventSink for DockerToPubSub {
     fn publish(&self, channel: &str, event: docker::SandboxEvent) {
         match serde_json::to_value(&event) {
-            Ok(data) => self.0.publish(channel, data),
+            Ok(data) => self.0.publish_only_to(DOCKER_SANDBOX_WINDOW, channel, data),
             Err(e) => tracing::warn!(channel, error = %e, "Failed to serialize sandbox event"),
         }
     }
@@ -351,6 +356,11 @@ impl Backend {
             runtime.clone(),
         );
         mcp.set_aws_env(Arc::new(McpAwsEnv(app.clone())));
+        // No stdio server starts until the user has approved that exact launch (AGENT-1).
+        mcp.set_launch_approver(Arc::new(crate::mcp_approval::McpLaunchApprover::new(
+            app.clone(),
+            user_data,
+        )));
         mcp.set_builtin(Arc::new(knowledge::mcp_server::KnowledgeMcp {
             svc: knowledge.clone(),
             runtime: runtime.clone(),
@@ -374,6 +384,10 @@ impl Backend {
 
         let base_services = ContextServices {
             sandbox: Some(sandbox.clone()),
+            // Each (agent, allowlist pattern) is confirmed by the user once before it is used.
+            host_approver: Some(Arc::new(
+                crate::host_command_approval::HostCommandApprovals::new(app.clone(), user_data),
+            )),
             ..Default::default()
         };
 

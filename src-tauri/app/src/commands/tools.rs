@@ -51,6 +51,8 @@ fn caller_metadata(context: Option<&Value>) -> CallerMetadata {
         delegation_lineage: list("delegationLineage"),
         allowed_agent_ids: list("allowedAgentIds"),
         model_id: text("modelId"),
+        // The chat page's own loop: the user is there to answer approval dialogs.
+        unattended: false,
     }
 }
 

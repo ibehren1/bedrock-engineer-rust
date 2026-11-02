@@ -22,7 +22,7 @@ mcp = { path = "../mcp" }
 rusqlite.workspace = true
 sqlite-vec = "=0.1.9"
 rmcp = { version = "=3.6.0", default-features = false, features = ["server"] }
-tokio = { version = "=1.54.0", features = ["sync", "rt", "macros", "time", "fs", "io-util"] }
+tokio = { version = "=1.54.1", features = ["sync", "rt", "macros", "time", "fs", "io-util"] }
 tokio-util = "=0.7.20"
 async-trait = "=0.1.92"
 futures-util = "=0.3.34"
@@ -32,16 +32,16 @@ dom_smoothie = "=0.18.2"
 dom_query = "=0.28.0"
 texting_robots = "=0.2.2"
 calamine = { version = "=0.37.0", default-features = false }
-zip = { version = "=8.6.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+zip = { version = "=9.2.1", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 quick-xml = "=0.42.0"
 sha2 = "=0.10.9"
 uuid = { version = "=1.28.0", features = ["v4"] }
 chrono = { version = "=0.4.45", default-features = false, features = ["clock", "std"] }
 tracing = "=0.1.44"
 dirs.workspace = true
-candle-core = { version = "=0.11.0", optional = true }
-candle-nn = { version = "=0.11.0", optional = true }
-candle-transformers = { version = "=0.11.0", optional = true }
+candle-core = { version = "=0.11.1", optional = true }
+candle-nn = { version = "=0.11.1", optional = true }
+candle-transformers = { version = "=0.11.1", optional = true }
 tokenizers = { version = "=0.23.2", default-features = false, features = ["onig"], optional = true }
 
 [[bin]]
@@ -52,4 +52,4 @@ required-features = ["local-embeddings"]
 
 [dev-dependencies]
 tempfile.workspace = true
-tokio = { version = "=1.54.0", features = ["sync", "rt", "rt-multi-thread", "macros", "time", "fs", "io-util", "net"] }
+tokio = { version = "=1.54.1", features = ["sync", "rt", "rt-multi-thread", "macros", "time", "fs", "io-util", "net"] }

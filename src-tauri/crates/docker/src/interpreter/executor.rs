@@ -37,6 +37,48 @@ pub struct DockerExecutor {
     runner: Arc<dyn CommandRunner>,
     running_containers: Mutex<HashMap<String, Arc<dyn Killable>>>,
     built_images: Mutex<HashSet<String>>,
+    /// Where `inputFiles` may come from (SBX-2); `None` allows nothing.
+    input_roots: Mutex<Option<InputRoots>>,
+}
+
+/// Folders input files must resolve inside (the project and the user's agent folders), and
+/// folders they must never come from (the app's data folder).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct InputRoots {
+    pub allowed: Vec<PathBuf>,
+    pub refused: Vec<PathBuf>,
+}
+
+impl InputRoots {
+    /// Why `path` may not be mounted, if it may not. Symlinks are followed, so a link in the
+    /// project pointing at ~/.ssh is refused.
+    fn problem(&self, path: &str) -> Option<String> {
+        if path.contains(':') && !cfg!(windows) {
+            return Some(format!("{path}: paths containing ':' can't be mounted"));
+        }
+        let Ok(real) = Path::new(path).canonicalize() else {
+            // Missing files are skipped with a warning further on, as before.
+            return None;
+        };
+        let canon = |p: &PathBuf| p.canonicalize().unwrap_or_else(|_| p.clone());
+        if !self
+            .allowed
+            .iter()
+            .any(|root| real.starts_with(canon(root)))
+        {
+            return Some(format!(
+                "{path} is outside the project folder and the agent folders in Settings → Workspace"
+            ));
+        }
+        if self
+            .refused
+            .iter()
+            .any(|root| real.starts_with(canon(root)))
+        {
+            return Some(format!("{path} is in the app's data folder"));
+        }
+        None
+    }
 }
 
 /// `YYYYMMDD_HHMMSS` in local time, for code file names.
@@ -195,6 +237,39 @@ impl DockerExecutor {
             runner,
             running_containers: Mutex::new(HashMap::new()),
             built_images: Mutex::new(HashSet::new()),
+            input_roots: Mutex::new(None),
+        }
+    }
+
+    /// Set where input files may come from (refreshed from settings before each run).
+    pub fn set_input_roots(&self, roots: InputRoots) {
+        *self.input_roots.lock().unwrap() = Some(roots);
+    }
+
+    /// An error naming every input file that may not be mounted, if any.
+    fn check_input_files(&self, input_files: &[InputFile]) -> Result<()> {
+        let roots = self.input_roots.lock().unwrap().clone().unwrap_or_default();
+        let problems: Vec<String> = input_files
+            .iter()
+            .filter_map(|f| roots.problem(&f.path))
+            .collect();
+        let mut names = HashSet::new();
+        let duplicate = input_files
+            .iter()
+            .map(|f| basename(&f.path))
+            .find(|name| !names.insert(name.clone()));
+        if let Some(name) = duplicate {
+            return Err(Error::msg(format!(
+                "Two input files are both named {name}; they would mount at the same /data path."
+            )));
+        }
+        if problems.is_empty() {
+            Ok(())
+        } else {
+            Err(Error::msg(format!(
+                "Input files refused: {}",
+                problems.join("; ")
+            )))
         }
     }
 
@@ -229,7 +304,10 @@ impl DockerExecutor {
             }
 
             let validated = match input_files {
-                Some(files) => self.validate_and_prepare_input_files(files),
+                Some(files) => {
+                    self.check_input_files(files)?;
+                    self.validate_and_prepare_input_files(files)
+                }
                 None => Vec::new(),
             };
 
@@ -670,7 +748,8 @@ impl DockerExecutor {
             let filename = basename(&input.path);
             let container_path = format!("/data/{filename}");
             args.push("-v".to_string());
-            args.push(format!("{}:{container_path}", input.path));
+            // Read-only, as the tool description promises (SBX-2).
+            args.push(format!("{}:{container_path}:ro", input.path));
             self.logger.debug(
                 "Added file volume mount",
                 json!({ "hostPath": input.path, "containerPath": container_path, "index": index }),
@@ -878,7 +957,7 @@ mod tests {
     fn generates_correct_volume_mount_commands_for_a_single_file() {
         let (executor, _, logger) = executor();
         let args = executor.generate_file_volume_mounts(&files(&["/home/user/data.csv"]));
-        assert_eq!(args, ["-v", "/home/user/data.csv:/data/data.csv"]);
+        assert_eq!(args, ["-v", "/home/user/data.csv:/data/data.csv:ro"]);
         assert!(logger.was_called_with(
             Level::Debug,
             "Added file volume mount",
@@ -903,11 +982,11 @@ mod tests {
             args,
             [
                 "-v",
-                "/home/user/data1.csv:/data/data1.csv",
+                "/home/user/data1.csv:/data/data1.csv:ro",
                 "-v",
-                "/home/user/data2.json:/data/data2.json",
+                "/home/user/data2.json:/data/data2.json:ro",
                 "-v",
-                "/home/user/script.py:/data/script.py"
+                "/home/user/script.py:/data/script.py:ro"
             ]
         );
         for (index, (host, container)) in [
@@ -954,9 +1033,9 @@ mod tests {
             args,
             [
                 "-v",
-                "/home/user/folder1/data.csv:/data/data.csv",
+                "/home/user/folder1/data.csv:/data/data.csv:ro",
                 "-v",
-                "/home/user/folder2/data.csv:/data/data.csv"
+                "/home/user/folder2/data.csv:/data/data.csv:ro"
             ]
         );
         assert!(logger.was_called_with(
@@ -977,6 +1056,10 @@ mod tests {
         let workspace = tempfile::tempdir().unwrap();
         let input = workspace.path().join("in.csv");
         std::fs::write(&input, "a,b").unwrap();
+        executor.set_input_roots(InputRoots {
+            allowed: vec![workspace.path().to_path_buf()],
+            refused: Vec::new(),
+        });
         runner.respond_with(|_, args| match args.first().map(String::as_str) {
             Some("images") => RunResult::ok("sha256:abc\n"),
             Some("run") => RunResult::ok("hello\n"),
@@ -1010,17 +1093,22 @@ mod tests {
             .1;
         let ws = workspace.path().to_string_lossy();
         assert_eq!(
-            run[..7],
+            run[..11],
             [
                 "run",
                 "--rm",
                 "--network=none",
                 "--tmpfs=/tmp:rw,size=100m",
                 "--tmpfs=/var/tmp:rw,size=50m",
+                "--cap-drop=ALL",
+                "--security-opt=no-new-privileges",
+                "--pids-limit=256",
+                "--user=1000:1000",
                 "--memory=128m",
                 "--cpus=0.5"
             ]
         );
+        let run = [&run[..1], &run[5..]].concat();
         assert_eq!(
             run[7..11],
             [
@@ -1041,13 +1129,58 @@ mod tests {
             run[13..15],
             [
                 "-v".to_string(),
-                format!("{}:/data/in.csv", input.to_string_lossy())
+                format!("{}:/data/in.csv:ro", input.to_string_lossy())
             ]
         );
         assert_eq!(run[15], "bedrock-python-basic:latest");
         assert_eq!(run[16], "python");
         assert!(run[17].starts_with("temp_") && run[17].ends_with(".py"));
         assert!(workspace.path().join(&run[17]).exists());
+    }
+
+    // SBX-2: input files outside the project / agent folders, or from the app data folder, are
+    // refused before anything runs.
+    #[tokio::test]
+    async fn refuses_input_files_outside_the_allowed_folders() {
+        let (executor, runner, _) = executor();
+        runner.respond_with(|_, _| RunResult::ok("sha256:abc\n"));
+        let project = tempfile::tempdir().unwrap();
+        let elsewhere = tempfile::tempdir().unwrap();
+        let app_data = project.path().join("appdata");
+        std::fs::create_dir(&app_data).unwrap();
+        std::fs::write(app_data.join("config.json"), "{}").unwrap();
+        std::fs::write(elsewhere.path().join("credentials"), "secret").unwrap();
+        std::fs::write(project.path().join("ok.csv"), "a").unwrap();
+        executor.set_input_roots(InputRoots {
+            allowed: vec![project.path().to_path_buf()],
+            refused: vec![app_data.clone()],
+        });
+        for path in [
+            elsewhere.path().join("credentials"),
+            app_data.join("config.json"),
+        ] {
+            let result = executor
+                .execute_code(
+                    "print(1)",
+                    SupportedLanguage::Python,
+                    project.path(),
+                    None,
+                    Some(&[InputFile {
+                        path: path.to_string_lossy().into_owned(),
+                    }]),
+                )
+                .await;
+            assert_ne!(result.exit_code, 0);
+            assert!(
+                result.stderr.contains("Input files refused"),
+                "{}",
+                result.stderr
+            );
+        }
+        assert!(!runner
+            .calls()
+            .iter()
+            .any(|(_, args)| args.first().map(String::as_str) == Some("run")));
     }
 
     #[tokio::test]

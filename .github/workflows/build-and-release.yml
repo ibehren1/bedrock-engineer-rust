@@ -10,11 +10,15 @@ on:
   # Manual runs build and test only; the release job is gated on a push to main.
   workflow_dispatch:
 
-permissions:
-  contents: write
+# Third-party actions are pinned to full commit SHAs (tag in the trailing comment) because the
+# release job holds the updater signing key and a write token; Dependabot keeps the pins current.
+# No workflow-wide permissions: each job asks for what it needs.
+permissions: {}
 
 jobs:
   build:
+    permissions:
+      contents: read
     name: Build (${{ matrix.os }})
     strategy:
       fail-fast: false
@@ -37,7 +41,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       # WebKitGTK and friends for Tauri on Linux, plus xcap's screen-capture deps (X11 / Wayland
       # / PipeWire; pipewire-sys needs libclang for bindgen). Ubuntu 24.04 because xcap's PipeWire
@@ -53,24 +57,26 @@ jobs:
             libegl-dev libgbm-dev
 
       - name: Set up Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 24
 
       - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
+          # Pinned by SHA, so the toolchain can't come from the ref name (@stable) any more.
+          toolchain: stable
           targets: ${{ matrix.rust_targets }}
 
       - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: src-tauri -> target
           # Share one cache per OS between the test and bundle builds.
           key: ${{ matrix.os }}
 
       - name: Install cargo-about
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-about
 
@@ -191,7 +197,7 @@ jobs:
 
       - name: Upload artifacts
         if: github.event.repository.private == false && github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: ${{ matrix.os }}-artifacts
           path: dist-installers/*
@@ -211,10 +217,13 @@ jobs:
     # published.
     if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-24.04
+    # Creates the GitHub release and uploads its assets.
+    permissions:
+      contents: write
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           fetch-depth: 0
 
@@ -239,7 +248,7 @@ jobs:
         # Don't fail the release if a build produced no artifacts to download.
         if: steps.check-tag.outputs.skip != 'true'
         continue-on-error: true
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           path: artifacts
 
@@ -303,7 +312,7 @@ jobs:
 
       - name: Create GitHub Release
         if: steps.check-tag.outputs.skip != 'true'
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: v${{ env.VERSION }}
           name: v${{ env.VERSION }}

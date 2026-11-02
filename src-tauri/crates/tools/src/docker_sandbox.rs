@@ -30,7 +30,7 @@ Key facts:
 - To make a port reachable from the user's browser, declare it with \"create\" before starting the server.
 
 Operations:
-- create: create or rebuild the sandbox. Optionally pass \"os\" to use a different OS than the user's setting, and \"services\" (structured) or \"composeYaml\" (raw compose). Named volumes are converted to mapped folders; host mounts outside the project directory, \"privileged\", \"cap_add\", and host networking are rejected.
+- create: create or rebuild the sandbox. Optionally pass \"os\" to use a different OS than the user's setting, and \"services\" (structured) or \"composeYaml\" (raw compose). Named volumes are converted to mapped folders; relative host mount paths resolve against the project directory; host mounts outside the project directory, \"privileged\", \"cap_add\", and host networking are rejected.
 - status: report whether the sandbox exists, whether it is running, and its services and published ports.
 - start / stop: bring the sandbox up or halt it without discarding installed packages.
 - remove: tear the sandbox down. Pass deleteData: true to also delete its data folder.

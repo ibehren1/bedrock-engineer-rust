@@ -7,7 +7,7 @@ mod command_list;
 
 use command_list::{
     all_commands_set, allow_permission, handler_commands, is_main_window_only,
-    main_window_commands_set,
+    main_window_commands_set, MAIN_WINDOW_MODULE_EXCEPTIONS, MAIN_WINDOW_ONLY_COMMANDS,
 };
 use serde_json::Value;
 use std::collections::BTreeSet;
@@ -208,13 +208,85 @@ fn local_terminals_updates_and_knowledge_are_main_window_only() {
         );
         assert!(main_only.contains(&allow_permission(c)), "{c}");
     }
+    let sandbox: Vec<String> = commands()
+        .into_iter()
+        .filter(|c| c.starts_with("docker_sandbox_"))
+        .collect();
+    for c in [
+        "docker_sandbox_exec",
+        "docker_sandbox_send_input",
+        "docker_sandbox_create",
+        "docker_sandbox_terminal_open",
+        "docker_sandbox_terminal_input",
+    ] {
+        assert!(sandbox.iter().any(|s| s == c), "{c}");
+    }
+    for c in sandbox.iter().chain(
+        MAIN_WINDOW_ONLY_COMMANDS
+            .iter()
+            .map(|c| c.to_string())
+            .collect::<Vec<_>>()
+            .iter(),
+    ) {
+        assert!(is_main_window_only(c));
+        assert!(
+            !all.contains(&allow_permission(c)),
+            "{c} is in app-commands"
+        );
+        assert!(main_only.contains(&allow_permission(c)), "{c}");
+    }
     assert_eq!(
         main_only.len(),
-        local.len() + updates.len() + knowledge.len() + usage.len()
+        local.len()
+            + updates.len()
+            + knowledge.len()
+            + usage.len()
+            + sandbox.len()
+            + MAIN_WINDOW_ONLY_COMMANDS.len()
     );
     assert_eq!(all.len() + main_only.len(), commands().len());
-    // The sandbox terminal stays available to every full-UI window.
-    assert!(all.contains("allow-docker-sandbox-terminal-open"));
+    // Settings stay readable everywhere; only writes are main-window-only.
+    assert!(all.contains("allow-store-get"));
+    assert!(all.contains("allow-store-all"));
+}
+
+/// `(module, command)` for every item in the `generate_handler!` list.
+fn handler_items() -> Vec<(String, String)> {
+    let body = HANDLER_SOURCE.split("generate_handler![").nth(1).unwrap();
+    let body = body.split(']').next().unwrap();
+    body.lines()
+        .map(|l| l.split("//").next().unwrap().trim().trim_end_matches(','))
+        .filter_map(|l| {
+            let (module, command) = l.rsplit_once("::")?;
+            Some((module.to_string(), command.to_string()))
+        })
+        .collect()
+}
+
+#[test]
+fn main_window_modules_have_no_off_prefix_commands() {
+    let items = handler_items();
+    assert_eq!(items.len(), commands().len());
+    for module in ["local_terminal", "app_update", "knowledge", "usage", "docker"] {
+        let mut found = 0;
+        for (m, c) in items.iter().filter(|(m, _)| m == module) {
+            found += 1;
+            // `docker::check_docker_availability` only probes for the Docker CLI.
+            if MAIN_WINDOW_MODULE_EXCEPTIONS.contains(&c.as_str()) || c == "check_docker_availability"
+            {
+                continue;
+            }
+            assert!(
+                is_main_window_only(c),
+                "{m}::{c} is not main-window-only: rename it to a main-window prefix or add it to MAIN_WINDOW_MODULE_EXCEPTIONS"
+            );
+        }
+        assert!(found > 0, "no commands in module {module}");
+    }
+    for c in MAIN_WINDOW_MODULE_EXCEPTIONS {
+        assert!(!is_main_window_only(c), "{c} is listed as an exception");
+        assert!(items.iter().any(|(_, x)| x == c), "{c} is not registered");
+    }
 }
 
 #[test]

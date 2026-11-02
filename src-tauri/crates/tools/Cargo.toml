@@ -10,7 +10,7 @@ serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 async-trait = "=0.1.92"
-tokio = { version = "=1.54.0", features = ["process", "fs", "io-util", "time", "sync", "macros", "rt"] }
+tokio = { version = "=1.54.1", features = ["process", "fs", "io-util", "time", "sync", "macros", "rt"] }
 regex = "=1.13.1"
 reqwest = "=0.13.5"
 url = "=2.5.8"
@@ -23,7 +23,7 @@ docker = { path = "../docker" }
 common = { path = "../common" }
 base64 = "=0.22.1"
 futures-util = "=0.3.34"
-zip = { version = "=8.6.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+zip = { version = "=9.2.1", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 quick-xml = "=0.42.0"
 pdf-extract = "=0.12.1"
 image = { version = "=0.25.10", default-features = false, features = ["png", "jpeg"] }
@@ -34,4 +34,4 @@ libc = "=0.2.191"
 
 [dev-dependencies]
 tempfile.workspace = true
-tokio = { version = "=1.54.0", features = ["process", "fs", "io-util", "time", "sync", "macros", "rt", "rt-multi-thread", "net"] }
+tokio = { version = "=1.54.1", features = ["process", "fs", "io-util", "time", "sync", "macros", "rt", "rt-multi-thread", "net"] }

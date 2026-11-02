@@ -218,6 +218,28 @@ pub fn save_chat_document(
     }
 }
 
+/// Extensions `get_local_image` serves.
+const IMAGE_EXTENSIONS: &[&str] = &[
+    "png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "ico", "avif",
+];
+
+/// `path` if it is an image file in the agent folders (see `tools::util::path_guard`) or the
+/// system temp folder (where screen and camera captures go).
+pub fn confined_image_path(
+    settings: &tools::ToolSettings,
+    path: &str,
+) -> Result<std::path::PathBuf, String> {
+    let ext = path.rsplit('.').next().unwrap_or("").to_lowercase();
+    if !path.contains('.') || !IMAGE_EXTENSIONS.contains(&ext.as_str()) {
+        return Err(format!("Not an image file: {path}"));
+    }
+    let mut with_temp = settings.clone();
+    with_temp
+        .agent_file_folders
+        .push(std::env::temp_dir().to_string_lossy().into_owned());
+    with_temp.confine(path, tools::util::path_guard::Access::Read)
+}
+
 /// `get-local-image`: the file as a `data:image/<ext>;base64,…` URL. The extension is whatever
 /// follows the last `.` of the path, lowercased (`png` if the path ends with a dot).
 pub fn local_image_data_url(path: &str) -> std::io::Result<String> {
@@ -373,6 +395,30 @@ pub fn read_directory_agents(dir: &Path) -> AgentList {
 
 #[cfg(test)]
 mod tests {
+    // APP-2 / UI-2: get_local_image reads only images, only in the agent folders or temp.
+    #[test]
+    fn local_images_are_confined() {
+        let project = tempfile::tempdir_in(std::env::current_dir().unwrap()).unwrap();
+        let settings = tools::ToolSettings {
+            project_path: Some(project.path().to_string_lossy().into_owned()),
+            ..Default::default()
+        };
+        let in_project = project.path().join("a.png").to_string_lossy().into_owned();
+        assert!(super::confined_image_path(&settings, &in_project).is_ok());
+        assert!(super::confined_image_path(&settings, "shot.PNG").is_ok());
+        let temp = std::env::temp_dir().join("capture.jpg");
+        assert!(super::confined_image_path(&settings, &temp.to_string_lossy()).is_ok());
+        for bad in ["/etc/passwd", "/Users/x/.aws/credentials", "/etc/hosts.png"] {
+            assert!(super::confined_image_path(&settings, bad).is_err(), "{bad}");
+        }
+        let not_image = project
+            .path()
+            .join("notes.txt")
+            .to_string_lossy()
+            .into_owned();
+        assert!(super::confined_image_path(&settings, &not_image).is_err());
+    }
+
     use super::*;
     use tempfile::TempDir;
 

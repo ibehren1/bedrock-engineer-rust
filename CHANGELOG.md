@@ -7,6 +7,85 @@ dated section here for anything user-visible.
 See the [README](./README.md#whats-different-in-this-fork) for a feature-by-feature
 overview of the fork with screenshots.
 
+### 2026-11-01
+
+- Ports the Docker sandbox publishes are now reachable only from this computer. They used to be
+  open on every network interface, so anyone on the same Wi-Fi or office network could reach a
+  dev server, database or file listing the agent started in the sandbox, which has your project
+  folder mounted.
+- MCP servers started from a command no longer pick up a `node_modules/.bin` program from whatever
+  folder the app was launched in, which let a program planted there stand in for `npx` or `uvx`.
+  A server command given as a relative path such as `./server` is now refused with a message asking
+  for an absolute path or a command name on your PATH, and only executable files count when the app
+  looks a command name up in the usual install folders.
+- The task history window and pop-out file viewers can no longer run tools, reach the Docker
+  sandbox or its terminal, or change settings; only the main window can. Neither window offered
+  any of these, so nothing you use there changes, but a problem in one of those windows can no
+  longer be used to run commands or rewrite your agents and credentials. Sandbox output and the
+  sandbox terminal are now sent to the main window only.
+- On Windows, commands the agent runs on your computer no longer search `C:\Users\Public\chocolatey\bin`
+  for programs. Every account on the machine can write to that folder, so another user could have
+  left a program there that the agent would run as you. Chocolatey's real install folder,
+  `C:\ProgramData\chocolatey\bin`, is still searched.
+- Docker sandboxes now keep their compose file, settings and data folders in the app's data folder
+  instead of a `docker-sandboxes` folder inside your project. The container can write anywhere in
+  your project, so it could rewrite its own compose file there, for example to run privileged or to
+  mount your whole disk, and the next start would have used it. The app also re-checks a sandbox's
+  mounts every time it starts one. Existing sandboxes are not carried over: a chat that had one gets
+  a fresh sandbox the next time the agent needs it, so anything installed in it has to be installed
+  again. The old `docker-sandboxes` folder in your project, with its data, is left in place for you
+  to copy from or delete. Folder paths in a sandbox's compose file now resolve against your project
+  folder.
+- Commands the agent runs on your computer must now be a single program with its arguments.
+  Anything chained with `;`, `&&` or `||`, piped with `|`, redirected with `>` or `<`, sent to the
+  background with `&`, or using `$(...)` or backticks is refused, whatever your allowed commands
+  say. Before, an allowed pattern such as `ls *` let through `ls && curl … | sh`, because only the
+  first word was checked and the whole line went to the shell. Quoted text such as
+  `git commit -m "a; b"` still works. Patterns are also stricter: a `*` at the end stands for any
+  further arguments, so `npm run *` still allows `npm run dev` but no longer allows `npm install`,
+  and a `*` in the middle stands for exactly one argument.
+- The app now asks before it starts an MCP server that runs as a command on your computer. The
+  dialog shows the program, its arguments and the names of its environment variables, and warns you
+  when the server will receive your AWS access keys. Until now, an agent shared in a project you
+  cloned, imported from a file or loaded from your organization could start any program as soon as
+  you selected it. The app remembers each server you allow, and asks again if its program, arguments
+  or environment change. Servers you already use ask once after this update. If you choose
+  **Don't allow**, its tools stay unavailable until you restart the app. Servers reached by URL
+  don't ask.
+- The first time an agent runs a command on your computer through one of its Allowed Commands
+  patterns, the app asks you to confirm that pattern for that agent. After you allow it, matching
+  commands run without asking, as before. Until now the Allowed Commands list was the only check,
+  and an agent shared in a project or imported from a file brings its own list. Background agents
+  and sub-agents never ask: they can only use patterns you have already allowed for that agent, so
+  run a scheduled agent in a chat once to approve the commands it needs. Patterns you already use
+  ask once after this update.
+- A command the agent runs on your computer is now stopped when it times out, unless it is a server
+  that has started or a program waiting for input. Before, it kept running in the background with
+  nothing tracking it. Each running command also keeps only its most recent output (1 MB) in memory.
+- Updated libraries with published security fixes: the ZIP reader used for PowerPoint, Word and
+  Excel files (one advisory was critical), the TLS library behind every network connection, the
+  async runtime, and the library that validates agent files and MCP server settings.
+- The agent's file tools (reading, writing, editing, moving, copying, listing and saving web pages)
+  now work only inside your project folder and any folders you add under the new **Settings →
+  Workspace → Agent folders**. Before, they could read and write anywhere on your computer, so a
+  prompt hidden in a web page or file could have the agent read your SSH keys or change your shell
+  startup files. The app's own data folder and credential folders such as `~/.ssh` and `~/.aws` are
+  refused even inside an allowed folder. Relative paths now resolve against the project folder.
+  Reading a file over 50 MB is refused, and folder listings stop after 10,000 entries. A web page
+  saved with a file name containing a folder is refused, and saving never replaces an existing file.
+- Images shown in chat from files on your computer now load only from your project folder, your
+  agent folders and the folder screenshots and camera photos are saved to, and only if the file is
+  an image. Before, a reply could name any file on your computer as an image and the app would read
+  it. Screenshots and camera photos are always saved to the temporary folder.
+- The Code Interpreter only mounts input files from your project folder and agent folders, and now
+  really mounts them read-only, as it always said. Before, the agent could mount any file on your
+  computer, such as your AWS credentials, and the code could change it. The code also runs as an
+  unprivileged user with no extra Linux capabilities and a cap on the number of processes, even when
+  the app falls back to the stock Python image.
+- **Settings → Workspace → Allowed commands** shows how many command patterns your agents allow,
+  and **Manage…** opens a dialog listing every agent's Allowed Commands in one place, where you can
+  add and remove patterns. Agents shared through a project folder are shown read-only.
+
 ### 2026-10-30
 
 - Local knowledge bases have an **Add folder** button next to **Add files**. The folder becomes one

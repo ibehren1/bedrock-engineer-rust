@@ -473,8 +473,9 @@ cannot reach your machine, the command allowlist doesn't have to hold it back in
   nothing you type is filtered or approved — the app says so once, before the first time you open it.
   The model cannot reach this shell: there is no tool for it.
 - Containers survive switching chats, are stopped when you quit, and come back with their installed
-  packages intact. Compose and data files live in `docker-sandboxes/<chat-title>-<id>/` in your
-  project directory as ordinary mapped folders, and the folder is renamed to follow the chat's title.
+  packages intact. Compose and data files live in `docker-sandboxes/<project>-<id>/<chat-title>-<id>/`
+  in the app's data folder as ordinary mapped folders, outside the project the container can write
+  to, and the folder is renamed to follow the chat's title.
 - Deleting a chat removes its container; the delete dialog offers to delete the sandbox's data folder
   too, unchecked by default, so anything the agent wrote is kept unless you say otherwise.
 

@@ -28412,7 +28412,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-## vite 6.4.4
+## vite 6.4.5
 
 License: MIT  
 Source: git+https://github.com/vitejs/vite.git
@@ -31146,7 +31146,7 @@ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 ```
 
-## zod 3.25.76
+## zod 4.6.7
 
 License: MIT  
 Source: git+https://github.com/colinhacks/zod.git

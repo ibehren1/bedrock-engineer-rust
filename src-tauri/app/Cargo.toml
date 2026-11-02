@@ -25,6 +25,7 @@ models = { path = "../crates/models" }
 tools = { path = "../crates/tools" }
 agents = { path = "../crates/agents" }
 mcp = { path = "../crates/mcp" }
+sha2 = "=0.10.9"
 attachments = { path = "../crates/attachments" }
 docker = { path = "../crates/docker" }
 background = { path = "../crates/background" }
@@ -34,7 +35,7 @@ local_terminal = { path = "../crates/local_terminal" }
 knowledge = { path = "../crates/knowledge" }
 usage = { path = "../crates/usage" }
 chrono = { version = "=0.4.45", default-features = false, features = ["clock", "std"] }
-tokio = { version = "=1.54.0", features = ["rt", "sync", "macros", "time", "process"] }
+tokio = { version = "=1.54.1", features = ["rt", "sync", "macros", "time", "process"] }
 reqwest = "=0.13.5"
 async-trait = "=0.1.92"
 tauri-plugin-notification = "=2.7.0"

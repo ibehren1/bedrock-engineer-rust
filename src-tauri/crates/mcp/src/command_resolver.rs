@@ -3,13 +3,12 @@
 use std::path::{Path, PathBuf};
 
 /// Candidate locations checked for a bare command name, in order.
-pub fn command_candidates(command: &str, cwd: &Path, home: &str) -> Vec<PathBuf> {
-    let bin = cwd.join("node_modules").join(".bin");
+///
+/// There is deliberately no `<cwd>/node_modules/.bin` entry (the upstream TS checked one): the
+/// app's working directory is whatever it was launched from, so a planted `npx` there would
+/// hijack every stdio server.
+pub fn command_candidates(command: &str, home: &str) -> Vec<PathBuf> {
     vec![
-        // Node.js
-        bin.join(command),
-        bin.join(format!("{command}.cmd")),
-        bin.join(format!("{command}.ps1")),
         // system
         PathBuf::from(format!("/usr/local/bin/{command}")),
         PathBuf::from(format!("/opt/homebrew/bin/{command}")),
@@ -23,19 +22,44 @@ pub fn command_candidates(command: &str, cwd: &Path, home: &str) -> Vec<PathBuf>
     ]
 }
 
-/// `resolveCommand`: paths are returned unchanged; bare names resolve to the first existing
-/// well-known location, else stay as-is for a `PATH` lookup.
-pub fn resolve_command(command: &str) -> String {
-    if command.contains('/') || command.contains('\\') {
-        return command.to_string();
+/// A regular file the current user may execute (on Windows: any regular file).
+fn is_executable_file(path: &Path) -> bool {
+    let Ok(meta) = path.metadata() else {
+        return false;
+    };
+    if !meta.is_file() {
+        return false;
     }
-    let cwd = std::env::current_dir().unwrap_or_default();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        meta.permissions().mode() & 0o111 != 0
+    }
+    #[cfg(not(unix))]
+    {
+        true
+    }
+}
+
+/// `resolveCommand`: absolute paths are returned unchanged; bare names resolve to the first
+/// executable file in a well-known location, else stay as-is for a `PATH` lookup. Relative paths
+/// (`./server`, `bin/server`) are refused: they would resolve against the app's own working
+/// directory, which the user doesn't choose.
+pub fn resolve_command(command: &str) -> Result<String, String> {
+    if command.contains('/') || command.contains('\\') {
+        if !Path::new(command).is_absolute() {
+            return Err(format!(
+                "MCP server command \"{command}\" is a relative path; use an absolute path or a command name found on PATH"
+            ));
+        }
+        return Ok(command.to_string());
+    }
     let home = std::env::var("HOME").unwrap_or_default();
-    command_candidates(command, &cwd, &home)
+    Ok(command_candidates(command, &home)
         .into_iter()
-        .find(|p| p.exists())
+        .find(|p| is_executable_file(p))
         .map(|p| p.to_string_lossy().into_owned())
-        .unwrap_or_else(|| command.to_string())
+        .unwrap_or_else(|| command.to_string()))
 }
 
 /// Where `command` would be found by a `PATH` search: `path` split on `sep`, trying the bare name
@@ -114,29 +138,46 @@ mod tests {
     }
 
     #[test]
-    fn paths_are_left_alone() {
-        assert_eq!(resolve_command("./server.js"), "./server.js");
-        assert_eq!(resolve_command("C:\\x\\y.exe"), "C:\\x\\y.exe");
+    fn absolute_paths_are_left_alone() {
+        let abs = if cfg!(windows) { "C:\\x\\y.exe" } else { "/opt/x/server" };
+        assert_eq!(resolve_command(abs).unwrap(), abs);
+    }
+
+    #[test]
+    fn relative_paths_are_refused() {
+        for command in ["./server.js", "bin/server", "..\\x\\y.exe"] {
+            let err = resolve_command(command).unwrap_err();
+            assert!(err.contains("relative path"), "{command}: {err}");
+        }
     }
 
     #[test]
     fn unknown_commands_fall_back_to_path_lookup() {
         assert_eq!(
-            resolve_command("definitely-not-a-real-command-xyz"),
+            resolve_command("definitely-not-a-real-command-xyz").unwrap(),
             "definitely-not-a-real-command-xyz"
         );
     }
 
+    // A `node_modules/.bin` in the app's working directory must never be picked up.
     #[test]
-    fn prefers_local_node_modules_bin() {
-        let dir = tempfile::TempDir::new().unwrap();
-        let bin = dir.path().join("node_modules").join(".bin");
-        std::fs::create_dir_all(&bin).unwrap();
-        std::fs::write(bin.join("tool"), "").unwrap();
-        let first = command_candidates("tool", dir.path(), "/home/x")
-            .into_iter()
-            .find(|p| p.exists())
-            .unwrap();
-        assert_eq!(first, bin.join("tool"));
+    fn ignores_node_modules_bin_in_the_working_directory() {
+        let candidates = command_candidates("tool", "/home/x");
+        assert!(candidates
+            .iter()
+            .all(|p| !p.to_string_lossy().contains("node_modules")));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn only_executable_regular_files_match() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let plain = dir.path().join("plain");
+        std::fs::write(&plain, "").unwrap();
+        assert!(!is_executable_file(&plain));
+        std::fs::set_permissions(&plain, std::fs::Permissions::from_mode(0o755)).unwrap();
+        assert!(is_executable_file(&plain));
+        assert!(!is_executable_file(dir.path()));
     }
 }

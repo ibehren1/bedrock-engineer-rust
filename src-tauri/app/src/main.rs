@@ -4,12 +4,15 @@
 //! renderer namespace; startup mirrors `app.whenReady()` in `src/main/index.ts`.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod approvals;
 mod backend;
 mod budget;
 mod commands;
 mod errors;
 mod files;
+mod host_command_approval;
 mod html_preview;
+mod mcp_approval;
 mod menu;
 mod notify;
 mod pdf;

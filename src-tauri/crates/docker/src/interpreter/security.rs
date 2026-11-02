@@ -8,11 +8,18 @@ use super::logger::ToolLogger;
 use super::types::{ExecutionConfig, PartialExecutionConfig};
 
 /// Base constraints; memory and CPU are added from the user's configuration.
-const BASE_DOCKER_SECURITY_ARGS: [&str; 4] = [
+/// Hardening (SBX-7): no Linux capabilities, no privilege gain through setuid binaries, a cap
+/// on processes (fork bombs), and always the unprivileged `coderunner` uid, also when the
+/// fallback image (which would run as root) is used.
+const BASE_DOCKER_SECURITY_ARGS: [&str; 8] = [
     "--rm",
     "--network=none",
     "--tmpfs=/tmp:rw,size=100m",
     "--tmpfs=/var/tmp:rw,size=50m",
+    "--cap-drop=ALL",
+    "--security-opt=no-new-privileges",
+    "--pids-limit=256",
+    "--user=1000:1000",
 ];
 
 pub const VALID_MEMORY_LIMITS: [&str; 5] = ["128m", "256m", "512m", "1g", "2g"];
@@ -184,12 +191,16 @@ mod tests {
                 "--network=none",
                 "--tmpfs=/tmp:rw,size=100m",
                 "--tmpfs=/var/tmp:rw,size=50m",
+                "--cap-drop=ALL",
+                "--security-opt=no-new-privileges",
+                "--pids-limit=256",
+                "--user=1000:1000",
                 "--memory=128m",
                 "--cpus=2"
             ]
         );
         assert_eq!(
-            manager().generate_docker_security_args(None)[5],
+            manager().generate_docker_security_args(None)[9],
             "--cpus=0.5"
         );
     }

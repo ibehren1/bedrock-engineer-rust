@@ -175,13 +175,12 @@ async fn sandbox_lifecycle() {
     assert_eq!(metadata.project_name, to_project_name(&id));
     assert_eq!(metadata.services[0].image, DEFAULT_SANDBOX_IMAGE);
 
-    // writes compose, env, and gitignore files under the project directory
+    // writes compose, env and metadata files outside the project directory the container mounts
     let dir = m.get_sandbox_dir(&id).unwrap();
     assert!(dir.join("docker-compose.yml").exists());
     assert!(dir.join(".env").exists());
     assert!(dir.join("sandbox.json").exists());
-    let gitignore = m.get_sandbox_root(None).unwrap().join(".gitignore");
-    assert!(std::fs::read_to_string(gitignore).unwrap().contains('*'));
+    assert!(!dir.starts_with(&env.project));
 
     // mounts the project directory at /workspace, read-write both ways
     std::fs::write(env.project.join("from-host.txt"), "host-content").unwrap();

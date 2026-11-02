@@ -93,10 +93,25 @@ impl PubSubManager {
 
     /// `pubsub:publish { channel, data }`.
     pub fn publish(&self, channel: &str, data: Value) {
+        self.publish_where(channel, data, |_| true)
+    }
+
+    /// [`Self::publish`], but only to `window` (when it is subscribed): for channels whose data
+    /// no other window may read, whatever it subscribes to.
+    pub fn publish_only_to(&self, window: &str, channel: &str, data: Value) {
+        self.publish_where(channel, data, |s| s == window)
+    }
+
+    fn publish_where(&self, channel: &str, data: Value, allowed: impl Fn(&str) -> bool) {
         let targets: Vec<String> = {
             let subs = self.subscribers.lock().unwrap();
-            match subs.iter().find(|(c, _)| c == channel) {
-                Some((_, list)) if !list.is_empty() => list.clone(),
+            let list: Vec<String> = subs
+                .iter()
+                .find(|(c, _)| c == channel)
+                .map(|(_, list)| list.iter().filter(|s| allowed(s)).cloned().collect())
+                .unwrap_or_default();
+            match list {
+                list if !list.is_empty() => list,
                 _ => {
                     tracing::debug!(channel, "No subscribers for channel");
                     return;

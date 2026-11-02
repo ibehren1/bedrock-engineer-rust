@@ -95,6 +95,34 @@ const SettingPage = {
     'Proxy settings will be applied to all AWS SDK connections. Please test your configuration to ensure connectivity.',
   'Proxy changes apply to AWS and tool connections right away. Images and embedded pages in the app (website previews, diagrams) use them after you restart the app.':
     'Proxy changes apply to AWS and tool connections right away. Images and embedded pages in the app (website previews, diagrams) use them after you restart the app.',
+  allowedCommandsSettings: {
+    title: 'Allowed commands',
+    description:
+      "The commands each agent may run on your computer (its Allowed Commands, also editable in the agent's Command tool settings).",
+    summary: '{{count}} patterns across all agents',
+    manage: 'Manage…',
+    modalHelp:
+      'Each pattern lets the agent run matching commands on your computer. A * at the end stands for any further arguments; a * in the middle for exactly one. The first time an agent uses a pattern, the app still asks you to confirm it.',
+    sharedReadOnly:
+      "Shared in this project's .bedrock-engineer/agents folder: change it in that file.",
+    none: 'No allowed commands.',
+    remove: 'Remove',
+    add: 'Add',
+    patternPlaceholder: 'Pattern, e.g. git status',
+    descriptionPlaceholder: 'Description (optional)',
+    done: 'Done'
+  },
+  agentFolders: {
+    title: 'Agent folders',
+    description:
+      "Folders the agents' file tools (read, write, edit, move, list) can use. The project folder is always included; add other folders here. Paths anywhere else are refused.",
+    noProject: 'No project folder selected',
+    projectFolder: 'Project folder (always included)',
+    add: 'Add folder…',
+    remove: 'Remove',
+    alwaysRefused:
+      "Even inside these folders, agents can never use the app's own data folder or credential folders such as ~/.ssh, ~/.aws and ~/.gnupg."
+  },
   'Config Directory': 'Config Directory',
   'Config Directory Description':
     'This is the directory where the application settings are stored.',

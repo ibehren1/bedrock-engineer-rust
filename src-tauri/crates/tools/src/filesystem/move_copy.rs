@@ -46,9 +46,13 @@ enum Op {
     Copy,
 }
 
-async fn transfer(op: Op, tool: &str, input: &Value) -> Result<ToolOutput> {
-    let source = str_of(input, "source");
-    let destination = str_of(input, "destination");
+async fn transfer(op: Op, tool: &str, input: &Value, ctx: &ToolContext) -> Result<ToolOutput> {
+    let source_access = match op {
+        Op::Move => crate::util::path_guard::Access::Write,
+        Op::Copy => crate::util::path_guard::Access::Read,
+    };
+    let source = &super::guarded(ctx, str_of(input, "source"), source_access, tool)?;
+    let destination = &super::guarded(ctx, str_of(input, "destination"), crate::util::path_guard::Access::Write, tool)?;
     let result = async {
         mkdir_recursive(&parent_dir(destination)).await?;
         match op {
@@ -112,8 +116,8 @@ impl Tool for MoveFileTool {
     fn validate_input(&self, input: &Value) -> Vec<String> {
         validate(input)
     }
-    async fn execute_internal(&self, input: Value, _ctx: &ToolContext) -> Result<ToolOutput> {
-        transfer(Op::Move, MOVE_NAME, &input).await
+    async fn execute_internal(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
+        transfer(Op::Move, MOVE_NAME, &input, ctx).await
     }
 }
 
@@ -145,7 +149,7 @@ impl Tool for CopyFileTool {
     fn validate_input(&self, input: &Value) -> Vec<String> {
         validate(input)
     }
-    async fn execute_internal(&self, input: Value, _ctx: &ToolContext) -> Result<ToolOutput> {
-        transfer(Op::Copy, COPY_NAME, &input).await
+    async fn execute_internal(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
+        transfer(Op::Copy, COPY_NAME, &input, ctx).await
     }
 }

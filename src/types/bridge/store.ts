@@ -22,6 +22,12 @@ export type StoreScheme = {
   /** 現在選択されているプロジェクト（作業ディレクトリ）のパス */
   projectPath?: string
 
+  /**
+   * Folders outside the project that the agents' file tools may also use. The project folder
+   * itself is always allowed; the app's data folder and credential folders never are.
+   */
+  agentFileFolders?: string[]
+
   /** Plan/Act モードの設定 (true: Plan, false: Act) */
   planMode?: boolean
 
