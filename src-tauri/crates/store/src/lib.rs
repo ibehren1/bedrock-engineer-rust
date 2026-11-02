@@ -155,6 +155,12 @@ impl Store {
         if store.cache.borrow().data != before || !store.path.exists() {
             store.persist()?;
         }
+        // Existing installs wrote config.json with the umask's mode (often 0644), and the app
+        // data folder holds chat history and approvals too: owner-only (DATA-3).
+        let _ = common::json_file::restrict_file(&store.path);
+        if let Some(dir) = store.path.parent() {
+            let _ = common::json_file::restrict_dir(dir);
+        }
         Ok(store)
     }
 

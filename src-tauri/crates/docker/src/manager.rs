@@ -565,9 +565,26 @@ impl SandboxManager {
                 args.push(format!("{env_name}={value}"));
             }
         }
-        for port in &service.ports {
-            args.push("-p".into());
-            args.push(port.publish_spec());
+        // The same lock-down the compose writer adds when the switch is on (SBX-6).
+        if config.lock_down {
+            args.extend(["--cap-drop".into(), "ALL".into()]);
+            for cap in crate::compose_writer::SANDBOX_CAPABILITIES {
+                args.extend(["--cap-add".into(), (*cap).into()]);
+            }
+            args.extend([
+                "--security-opt".into(),
+                "no-new-privileges".into(),
+                "--pids-limit".into(),
+                crate::compose_writer::SANDBOX_PIDS_LIMIT.to_string(),
+            ]);
+        }
+        if config.disable_network {
+            args.extend(["--network".into(), "none".into()]);
+        } else {
+            for port in &service.ports {
+                args.push("-p".into());
+                args.push(port.publish_spec());
+            }
         }
         // `--` so the image can never be read as a flag.
         args.extend([

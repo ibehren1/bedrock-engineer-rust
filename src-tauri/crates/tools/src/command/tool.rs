@@ -620,8 +620,8 @@ mod tests {
             "shell": "/bin/sh",
             "selectedAgentId": "dev",
             "customAgents": [
-                {"id": "dev", "allowedCommands": [{"pattern": "echo *"}], "tools": []},
-                {"id": "admin", "allowedCommands": [{"pattern": "id"}], "tools": []}
+                {"id": "dev", "allowedCommands": [{"pattern": "echo *"}], "tools": ["executeCommand"]},
+                {"id": "admin", "allowedCommands": [{"pattern": "id"}], "tools": ["executeCommand"]}
             ]
         });
         ToolContext::from_store(&store, Some("session_1".into()))

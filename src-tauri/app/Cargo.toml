@@ -26,6 +26,7 @@ tools = { path = "../crates/tools" }
 agents = { path = "../crates/agents" }
 mcp = { path = "../crates/mcp" }
 sha2 = "=0.10.9"
+uuid = { version = "=1.28.0", features = ["v4"] }
 attachments = { path = "../crates/attachments" }
 docker = { path = "../crates/docker" }
 background = { path = "../crates/background" }

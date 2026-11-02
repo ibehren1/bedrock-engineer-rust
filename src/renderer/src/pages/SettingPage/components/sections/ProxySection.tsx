@@ -1,13 +1,14 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSettings } from '@renderer/contexts/SettingsContext'
+import { SavedSecretNote } from '../SavedSecretNote'
 import { SettingSection } from '../SettingSection'
 import { SettingInput } from '../SettingInput'
 import { SettingSelect } from '../SettingSelect'
 
 export const ProxySection: React.FC = () => {
   const { t } = useTranslation()
-  const { proxySettings, setProxySettings } = useSettings()
+  const { proxySettings, setProxySettings, savedAwsSecrets, clearSavedAwsSecret } = useSettings()
 
   return (
     <SettingSection title={t('Proxy Settings')}>
@@ -67,9 +68,15 @@ export const ProxySection: React.FC = () => {
               <SettingInput
                 label={t('Password (optional)')}
                 type="password"
-                placeholder={t('Enter password')}
+                placeholder={
+                  savedAwsSecrets.proxyPassword ? t('savedSecret.placeholder') : t('Enter password')
+                }
                 value={proxySettings.password}
                 onChange={(e) => setProxySettings({ password: e.target.value })}
+              />
+              <SavedSecretNote
+                saved={savedAwsSecrets.proxyPassword && !proxySettings.password}
+                onClear={() => clearSavedAwsSecret('proxyPassword')}
               />
             </div>
 

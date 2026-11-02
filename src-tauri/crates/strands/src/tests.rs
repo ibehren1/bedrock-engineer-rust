@@ -1,7 +1,9 @@
-//! The TS converter has no test file, so parity is checked against its actual output:
-//! `testdata/golden.json` holds `CodeGenerator.generateStrandsAgent()` results for the fixture
-//! agents in that file, generated from `src/main/services/strandsAgentsConverter` with
-//! `new Date()` pinned to [`FIXED_NOW`].
+//! `testdata/golden.json` holds the generator's output for the fixture agents in that file, with
+//! `new Date()` pinned to [`FIXED_NOW`]. It started as the TS `CodeGenerator.generateStrandsAgent()`
+//! output; since 2026-11-02 it deliberately differs where the TS leaked secrets or allowed code
+//! injection (MCP `env` values read from the environment, header values left out, names escaped
+//! in the docstring; AGENT-B3 / B4). Regenerate with
+//! `STRANDS_REGENERATE_GOLDEN=1 cargo test -p strands regenerate_golden -- --ignored`.
 
 use super::*;
 use chrono::TimeZone;
@@ -238,4 +240,64 @@ fn bad_save_options_are_directory_errors() {
     );
     assert_eq!(r.errors[0].error, "Agent file name must end with .py");
     assert!(!r.success);
+}
+
+/// Rewrites `testdata/golden.json` from the current generator (see the module docs).
+#[test]
+#[ignore]
+fn regenerate_golden() {
+    if std::env::var_os("STRANDS_REGENERATE_GOLDEN").is_none() {
+        return;
+    }
+    let cases: Vec<Value> = golden()
+        .into_iter()
+        .map(|case| {
+            let out = generate_strands_agent(&case["agent"], now()).unwrap();
+            json!({
+                "agent": case["agent"],
+                "pythonCode": out.python_code,
+                "requirementsText": out.requirements_text,
+                "readmeText": out.readme_text,
+                "configYamlText": out.config_yaml_text,
+            })
+        })
+        .collect();
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/testdata/golden.json");
+    std::fs::write(path, serde_json::to_string_pretty(&cases).unwrap() + "\n").unwrap();
+}
+
+// AGENT-B4: agent text can't break out of the docstring or a comment.
+#[test]
+fn agent_names_cannot_inject_python() {
+    let agent = json!({
+        "name": "X\"\"\"\nimport os; os.system('id')\n\"\"\"",
+        "description": "line\nbreak",
+        "system": "s",
+        "tools": [],
+        "mcpServers": [{
+            "name": "srv", "description": "evil\nimport os", "command": "uv\"x",
+            "args": [], "env": { "TOKEN": "secret-value" },
+            "headers": { "Authorization": "Bearer abc" }
+        }]
+    });
+    let out = generate_strands_agent(&agent, now()).unwrap();
+    assert!(
+        !out.python_code.contains("\nimport os; os.system"),
+        "{}",
+        out.python_code
+    );
+    assert!(
+        !out.python_code.contains("# evil\nimport os"),
+        "{}",
+        out.python_code
+    );
+    assert!(
+        out.python_code.contains("command=\"uv\\\"x\""),
+        "{}",
+        out.python_code
+    );
+    // AGENT-B3: secrets aren't copied into the export.
+    assert!(!out.python_code.contains("secret-value"));
+    assert!(out.python_code.contains("os.environ.get(\"TOKEN\", \"\")"));
+    assert!(!out.config_yaml_text.contains("Bearer abc"));
 }

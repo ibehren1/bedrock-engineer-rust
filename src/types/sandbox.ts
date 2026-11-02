@@ -30,6 +30,16 @@ export interface DockerSandboxConfig {
    * shell with their project folder mounted read-write, subject to no allowlist.
    */
   terminalAcknowledged?: boolean
+  /**
+   * New sandboxes start with no network at all (no internet, local network, this computer or
+   * cloud metadata). Off by default, since installing packages needs the network.
+   */
+  disableNetwork?: boolean
+  /**
+   * Lock new sandbox containers down: no Linux capabilities beyond what package managers need,
+   * no privilege gain through setuid programs (`sudo`), at most 1,024 processes. Off by default.
+   */
+  lockDown?: boolean
 }
 
 export const DEFAULT_SANDBOX_CONFIG: DockerSandboxConfig = {

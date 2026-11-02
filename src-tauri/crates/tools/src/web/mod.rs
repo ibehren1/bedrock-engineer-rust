@@ -3,6 +3,8 @@
 
 mod fetch_website;
 mod http;
+pub mod net_guard;
+pub mod proxy;
 mod save;
 mod tavily;
 

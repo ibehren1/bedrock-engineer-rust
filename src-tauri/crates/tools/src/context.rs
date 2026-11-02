@@ -52,7 +52,15 @@ impl ProxyConfig {
         if !self.enabled {
             return None;
         }
-        let host = self.host.as_deref()?;
+        let host = self.host.as_deref()?.trim();
+        // An IPv6 address needs brackets in a URL.
+        let bracketed;
+        let host = if host.contains(':') && !host.starts_with('[') {
+            bracketed = format!("[{host}]");
+            bracketed.as_str()
+        } else {
+            host
+        };
         let mut url = url::Url::parse(&format!(
             "{}://{}:{}",
             self.protocol.as_deref().unwrap_or("http"),
@@ -165,6 +173,9 @@ pub struct ToolSettings {
     pub tavily_api_key: Option<String>,
     /// `aws.proxyConfig`.
     pub proxy: Option<ProxyConfig>,
+    /// `blockLocalNetworkAccess`: web tools may not reach this computer or private networks
+    /// (see [`crate::web::net_guard`]). Off by default.
+    pub block_local_network: bool,
     /// `customAgents`, raw.
     pub custom_agents: Vec<Value>,
     /// What the Bedrock services read from the store (`aws`, `inferenceParams`,
@@ -286,6 +297,10 @@ impl ToolSettings {
             proxy: store
                 .pointer("/aws/proxyConfig")
                 .and_then(ProxyConfig::from_value),
+            block_local_network: store
+                .get("blockLocalNetworkAccess")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
             custom_agents: store
                 .get("customAgents")
                 .and_then(Value::as_array)
@@ -382,6 +397,30 @@ pub trait HostCommandApprover: Send + Sync {
     ) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + Send + 'a>>;
 }
 
+/// What a capture tool is about to record.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CaptureKind {
+    Screen,
+    Camera,
+}
+
+/// A capture tool about to run for an agent (TOOLS-6).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CaptureRequest {
+    pub agent_id: String,
+    pub agent_name: Option<String>,
+    pub kind: CaptureKind,
+}
+
+/// Decides whether an agent may capture the screen or the camera. The OS permission is granted
+/// to the whole app once, so the app also asks the user once per agent and kind.
+pub trait CaptureApprover: Send + Sync {
+    fn approve<'a>(
+        &'a self,
+        request: &'a CaptureRequest,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + Send + 'a>>;
+}
+
 impl std::fmt::Debug for CallerMetadata {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // Server configs can hold secrets in `env`/`headers`, so only count them.
@@ -416,6 +455,8 @@ pub struct ToolContext {
     /// Confirms allowlisted host commands with the user. Without one (tests), the allowlist
     /// alone decides.
     pub host_approver: Option<Arc<dyn HostCommandApprover>>,
+    /// Confirms screen and camera captures with the user. Without one (tests), captures run.
+    pub capture_approver: Option<Arc<dyn CaptureApprover>>,
 }
 
 impl std::fmt::Debug for ToolContext {
@@ -429,6 +470,7 @@ impl std::fmt::Debug for ToolContext {
             .field("documents", &self.documents.is_some())
             .field("sub_agents", &self.sub_agents.is_some())
             .field("host_approver", &self.host_approver.is_some())
+            .field("capture_approver", &self.capture_approver.is_some())
             .finish()
     }
 }

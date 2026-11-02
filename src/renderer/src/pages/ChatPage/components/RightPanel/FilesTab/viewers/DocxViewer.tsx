@@ -5,10 +5,12 @@
  * CSP: docx-preview injects <style> elements (style-src allows 'unsafe-inline'); images and
  * embedded fonts become data: URLs (`useBase64URL`), which img-src and font-src allow.
  * altChunks (embedded HTML documents) are not rendered: they would become srcdoc iframes.
+ * Links other than web, mail and in-document ones are removed after rendering.
  */
 import React, { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { renderAsync } from 'docx-preview'
+import { stripUnsafeLinks } from '@renderer/lib/safeLinks'
 
 const DocxViewer: React.FC<{ url: string }> = ({ url }) => {
   const { t } = useTranslation()
@@ -37,6 +39,8 @@ const DocxViewer: React.FC<{ url: string }> = ({ url }) => {
           renderChanges: false,
           experimental: false
         })
+        // docx-preview copies hyperlink targets as they are, javascript: included (UI-5).
+        stripUnsafeLinks(container)
         if (!cancelled) setState('ready')
       } catch (e) {
         if (cancelled) return

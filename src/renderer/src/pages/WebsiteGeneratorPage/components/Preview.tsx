@@ -1,6 +1,8 @@
 import React from 'react'
 import { SandpackPreview } from '@codesandbox/sandpack-react'
 import { FiMaximize } from 'react-icons/fi'
+import { useWebContentStatus } from '@renderer/lib/webContent'
+import { WebContentBlocked } from '@renderer/components/WebContentBlocked'
 
 interface PreviewProps {
   isDark: boolean
@@ -8,6 +10,9 @@ interface PreviewProps {
 }
 
 export const Preview: React.FC<PreviewProps> = ({ isDark, code }) => {
+  // The preview runs on codesandbox.io; not while a proxy it wouldn't use is on.
+  const web = useWebContentStatus()
+  if (!web.allowed) return <WebContentBlocked reason={web.reason} />
   return (
     <SandpackPreview
       id="sandpack-preview"

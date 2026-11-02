@@ -221,16 +221,21 @@ impl Tool for TavilySearchTool {
             body: Some(Value::Object(body).to_string()),
         };
 
-        let response = fetch_website(&self.endpoint, &request, ctx.settings.proxy.as_ref())
-            .await
-            .map_err(|msg| {
-                ToolError::execution(
-                    format!("Error searching: {msg}"),
-                    NAME,
-                    Some(json!({})),
-                    query_meta(),
-                )
-            })?;
+        let response = fetch_website(
+            &self.endpoint,
+            &request,
+            ctx.settings.proxy.as_ref(),
+            ctx.settings.block_local_network,
+        )
+        .await
+        .map_err(|msg| {
+            ToolError::execution(
+                format!("Error searching: {msg}"),
+                NAME,
+                Some(json!({})),
+                query_meta(),
+            )
+        })?;
 
         if response.status != 200 {
             return Err(ToolError::network(

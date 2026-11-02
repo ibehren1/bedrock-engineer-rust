@@ -1,6 +1,7 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSettings } from '@renderer/contexts/SettingsContext'
+import { SavedSecretNote } from '../SavedSecretNote'
 import { SettingSection } from '../SettingSection'
 import { SettingInput } from '../SettingInput'
 
@@ -8,6 +9,8 @@ export const AgentChatSection: React.FC = () => {
   const { t } = useTranslation()
   const {
     tavilySearchApiKey,
+    savedTavilyApiKey,
+    clearSavedTavilyApiKey,
     setTavilySearchApiKey,
     contextLength,
     updateContextLength,
@@ -37,9 +40,17 @@ export const AgentChatSection: React.FC = () => {
         <SettingInput
           label={t('Tavily Search API Key')}
           type="password"
-          placeholder={t('tavilySearchApiKeyPlaceholder', 'tvly-xxxxxxxxxxxxxxx')}
+          placeholder={
+            savedTavilyApiKey
+              ? t('savedSecret.placeholder')
+              : t('tavilySearchApiKeyPlaceholder', 'tvly-xxxxxxxxxxxxxxx')
+          }
           value={tavilySearchApiKey}
           onChange={(e) => setTavilySearchApiKey(e.target.value)}
+        />
+        <SavedSecretNote
+          saved={savedTavilyApiKey && !tavilySearchApiKey}
+          onClear={clearSavedTavilyApiKey}
         />
         <div className="flex gap-1 text-xs text-ink">
           <span>{t('Learn more about Tavily Search, go to')}</span>

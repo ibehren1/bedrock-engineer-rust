@@ -147,6 +147,19 @@ async fn manager_routes_tool_calls_and_reuses_clients() {
     assert!(manager.connected_servers().await.is_empty());
 }
 
+// AGENT-M2: two servers listing the same tool names publish one spec per name.
+#[tokio::test(flavor = "multi_thread")]
+async fn duplicate_tool_names_across_servers_are_published_once() {
+    let Some(py) = python() else { return };
+    let manager = McpManager::default();
+    let mut second = stdio_server(&py);
+    second.name = "fake-2".into();
+    let servers = vec![stdio_server(&py), second];
+    let specs = manager.get_tool_specs(Some(&servers)).await.unwrap();
+    assert_eq!(specs.len(), 3, "{specs:?}");
+    manager.cleanup().await;
+}
+
 struct HttpServer {
     child: Child,
     port: u16,

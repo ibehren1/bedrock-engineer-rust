@@ -510,6 +510,12 @@ Fill in:
 The app stores these on your own machine in its settings file. Nothing is sent anywhere except to
 AWS.
 
+Once saved, the secret key and session token aren't shown again: the field says **Saved (type to
+replace)**. Type a new value to replace one, or click **Remove saved value** to delete it; leaving
+the field empty keeps the saved one. The proxy password in **Proxy Settings** works the same way.
+These values stay in the app's background process and are never handed to its windows, so a fault
+in the app's pages can't reveal them.
+
 **Option B — use an AWS profile (better if you have one)**
 
 Turn on **Use AWS Profile** and type the name into **AWS Profile Name** — `default`, or `bedrock` if
@@ -578,11 +584,17 @@ for text, images, video and embeddings, plus a few read-only permissions to list
 ### 4.11 If your office uses a proxy
 
 **Settings → AWS → Proxy Settings**. Turn on **Enable Proxy** and fill in the host, port and protocol
-(HTTP or HTTPS). Username and password are optional. Calls to AWS and the web tools use a changed
-proxy straight away; pages shown inside the app (images in chats, the Website Generator preview,
-the Diagram Generator) pick it up the next time the app starts. For that in-app content: on macOS it
-needs macOS 14 or later, and on Windows a proxy that asks for a username and password is not
-supported.
+(HTTP or HTTPS). Username and password are optional. While the proxy is on, the app never
+connects directly: calls to AWS, the web tools, MCP servers reached by URL, knowledge base website
+sources, the on-device model download and update checks all go through the proxy, and if the proxy
+settings can't be used (for example the host is empty, or the protocol isn't HTTP or HTTPS) they
+fail with a message saying so instead of connecting without it. They use a changed proxy straight
+away. Pages and images shown inside the app (images in chats, the Website Generator preview, the
+Diagram Generator and draw.io diagrams, HTML previews, avatars) only pick up the proxy when the app
+starts, and on macOS that needs macOS 14 or later; on Windows a proxy that asks for a username and
+password is not supported. Whenever a proxy is on that this content isn't actually using (you
+changed the proxy since the app started, or an older macOS), it is blocked with a notice instead of
+connecting without the proxy. Restart the app after changing the proxy.
 
 ---
 
@@ -665,6 +677,8 @@ Guardrails** and enter its **Guardrail Identifier** and **Guardrail Version** (d
 | **Context Length**                         | How many past messages get sent along with each new one. Higher means the agent remembers more of the conversation, but every message costs money to send, so long context costs more. The default is 60; lower it if long chats get expensive, raise it if the agent keeps forgetting things you said earlier. |
 | **Request Timeout (minutes)**              | How long to wait before giving up on a reply (default 15). Raise it if you ask for long, tool-heavy jobs that legitimately take a while.                                                                                                                                                                        |
 | **Enable Prompt Cache**                    | Lets AWS remember the unchanging front part of your conversation so it does not have to be re-processed every turn. This makes replies faster and cheaper. On by default; leave it on.                                                                                                                          |
+| **Remote images in chat**                 | Off by default: an image a reply links to on another website shows a placeholder naming the site, with a **Load** button. Loading an image sends a request to that site, and a reply steered by a web page, file or tool result can hide parts of your conversation in the image's address. Turn on **Load remote images in replies automatically** to load them straight away. Images from your project and attachments always load. |
+| **Background agents → Most tool calls per scheduled run** | How many tool calls one scheduled background agent run may make before it stops: 1 to 1,000, default 100. Raise it for long jobs; keep it low so a run that goes wrong, or is steered by something it reads, can only do so much. |
 | **Advanced Setting → Enter key behaviour** | "When writing a message, press [Enter] to" **Send the message** (the default; `Shift+Enter` makes a new line), or **Start a new line** (then `Cmd`/`Ctrl` + `Enter` sends). Pick whichever matches the other apps you use.                                                                                      |
 
 ### 5.5 Workspace tab
@@ -674,6 +688,7 @@ Guardrails** and enter its **Guardrail Identifier** and **Guardrail Version** (d
 | **Project Setting**  | The project directory: the folder the agent works in. Click the path or **Select Project Directory** to choose it. All file tools are anchored here (relative paths resolve against it), and attachments are stored inside it. Choose a real project folder, or a scratch folder if you are experimenting. |
 | **Agent folders**    | Other folders the agents' file tools may read and write besides the project folder. **Add folder…** picks one, **Remove** takes it off the list. Anywhere else is refused, and the app's own data folder and credential folders (`~/.ssh`, `~/.aws`, `~/.gnupg` and the like) are refused even inside a listed folder. |
 | **Allowed commands** | Every agent's **Allowed Commands** in one place. **Manage…** opens a dialog listing each agent's patterns, where you can remove a pattern or add one (pattern and optional description). This is the same list as the agent's Command tool settings ([Section 8.3](#83-the-agent-editor)). Agents shared through a project's `.bedrock-engineer/agents/` folder are shown read-only. |
+| **Local network access for web tools** | Off by default. When on, the agent's web tools (`fetchWebsite` and the knowledge base website crawler) can't reach this computer (`localhost`) or private networks (`10.x`, `172.16–31.x`, `192.168.x`, `100.64–127.x` and the IPv6 equivalents), even through redirects or host names that point there. Text the agent reads can try to steer it into fetching such addresses, which are only reachable from your computer, and passing on what it finds. Leave it off to let the agent fetch a dev server it started or intranet pages. Cloud metadata addresses (`169.254.x.x`) are blocked either way. |
 | **Config Directory** | Where the app keeps its own settings and chat history. Shown, read-only, so you can find it; see [Section 19](#19-where-the-app-keeps-your-files).                                                                                                                                          |
 
 You can also switch the project folder for the current chat from the folder button below the message
@@ -691,6 +706,8 @@ in.
 | **Container limits → Memory limit**            | 256 MB to 8 GB. Default 2 GB.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | **Container limits → CPU limit**               | 0.5 to 4 CPUs. Default 2.0 CPUs.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | **Container limits → Command timeout**         | 60 seconds to 30 minutes. Default 5 minutes. How long the agent waits for a command before getting control back. The command itself keeps running past this, so a long build is not killed.                                                                                                                                                                                                                                                                                                                                                           |
+| **Sandbox restrictions → Lock down sandbox containers** | Off by default. When on, new sandboxes keep only the Linux capabilities package managers need, can't gain privileges through setuid programs, and are limited to 1,024 processes. Turns off: `sudo`, `su` and other setuid programs; `ping`, `traceroute` and other raw-socket tools; `mknod` and `chroot`; writing to the kernel audit log; more than 1,024 processes at once; and any other capability package installs don't need. Commands still run as root and `apt`/`dnf` still work. |
+| **Sandbox restrictions → Start sandboxes with no network access** | Off by default. When on, new sandboxes have no network at all. Turns off: internet access; installing or updating packages; `git clone` and downloads; reaching services on this computer or your local network (and, on a cloud machine, its credentials); published ports; and services of a multi-service stack talking to each other. Files still move through your project folder. |
 
 The limits apply to every service in every sandbox. Existing sandboxes pick up new limits when they are
 recreated. The **Docker Sandbox** entry in the chat's **Tools** button shows a one-line summary of these
@@ -1400,6 +1417,13 @@ Use `tavilySearch` when the agent needs to _find_ something ("what is the curren
 Both send data out of your computer: your search words go to Tavily, and your request goes to
 whichever site you name.
 
+`fetchWebsite` gives up after 60 seconds and reads at most 20 MB of a response. It never contacts
+cloud metadata or other link-local addresses (`169.254.x.x`, `fe80::`), which on a cloud machine
+hand out its temporary credentials. By default it can reach this computer and your local networks,
+for example a dev server the agent started or an intranet page. To stop that, turn on **Block web
+tools from reaching this computer and local networks** in
+[Settings → Workspace](#55-workspace-tab).
+
 ### 9.4 AI Services tools
 
 These call Amazon Bedrock services and cost money per use, separate from the conversation itself.
@@ -1478,12 +1502,18 @@ from, documenting a user interface.
 **Needs:** on macOS, Screen Recording permission in **System Settings → Privacy & Security**. The
 agent config can also list specific windows it is allowed to capture.
 
+The first time an agent tries to capture the screen, the app asks you whether that agent may do so;
+your answer is remembered per agent. Background agents and sub-agents can never capture the screen.
+
 #### `cameraCapture`
 
 Takes a photo with your computer's camera and saves it, optionally having a model describe it.
 Quality settings low/medium/high, formats JPG or PNG.
 
 **Needs:** camera permission. The agent config can list which cameras are allowed.
+
+As with screenshots, the app asks you once per agent before it first uses the camera, and
+background agents and sub-agents can never use it.
 
 ### 9.6 Thinking tools
 
@@ -1667,6 +1697,9 @@ data, is left where it was for you to copy from or delete.
 
 ### 10.7 Requirements and limits
 
+- **Containers never restart on their own**, so a sandbox doesn't come back by itself after you quit
+  the app. To lock containers down further or take them off the network, see **Sandbox
+  restrictions** in [Section 5.6](#56-sandbox-tab); both are off by default.
 - **Docker must be installed and running.** If it is missing, the agent tells you how to install it
   for your platform. **Settings → Sandbox** shows whether the app can see Docker.
 - **Each container is limited** to the memory and CPU set in **Settings → Sandbox** (2 GB and 2 CPUs
@@ -1962,6 +1995,10 @@ Open **Background Agent** in the sidebar and click **Create Task**.
 | **Enable task immediately**     | Start the schedule as soon as the task is saved. You can enable or disable it later without deleting it.                                                                      |
 
 Name, schedule, agent, model and wake word are required.
+
+Each scheduled run stops after **100 tool calls** by default, so a run that goes wrong can only do so
+much while nobody is watching. Change the limit (1 to 1,000) under **Settings → Chat → Background
+agents → Most tool calls per scheduled run**.
 
 ### 14.2 Cron expressions, briefly
 

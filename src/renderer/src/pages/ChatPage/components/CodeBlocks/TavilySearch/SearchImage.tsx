@@ -1,13 +1,17 @@
 import React from 'react'
+import { useWebContentStatus } from '@renderer/lib/webContent'
+import { WebContentBlocked } from '@renderer/components/WebContentBlocked'
 
 interface Props {
   url: string
 }
 
 export const SearchImage: React.FC<Props> = ({ url }) => {
+  const web = useWebContentStatus()
   const handleImageClick = () => {
     open(url)
   }
+  if (!web.allowed) return <WebContentBlocked reason={web.reason} compact />
 
   return (
     <div

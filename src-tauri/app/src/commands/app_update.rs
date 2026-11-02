@@ -37,6 +37,22 @@ pub struct UpdateCheck {
     pub notes: Option<String>,
 }
 
+/// The updater, through the configured proxy when one is on. A proxy that is on but unusable is
+/// an error rather than a direct connection (AGENT-B5). The `Update` it returns downloads
+/// through the same proxy.
+fn updater(app: &AppHandle) -> Result<tauri_plugin_updater::Updater, String> {
+    let proxy = tools::ToolSettings::from_store(&crate::backend::store_snapshot(app)).proxy;
+    let builder = app.updater_builder();
+    let builder = match proxy.map(|p| p.setting()) {
+        Some(tools::web::proxy::ProxySetting::On(url)) => {
+            builder.proxy(url.parse().map_err(errors::plain)?)
+        }
+        Some(tools::web::proxy::ProxySetting::Broken(reason)) => return Err(reason),
+        _ => builder,
+    };
+    builder.build().map_err(errors::plain)
+}
+
 /// The running version (from tauri.conf.json, so it matches the release tags).
 #[tauri::command]
 pub fn app_update_current_version(app: AppHandle) -> String {
@@ -50,12 +66,7 @@ pub async fn app_update_check(
     state: State<'_, UpdateState>,
 ) -> Result<UpdateCheck, String> {
     let current_version = app.package_info().version.to_string();
-    let update = app
-        .updater()
-        .map_err(errors::plain)?
-        .check()
-        .await
-        .map_err(errors::plain)?;
+    let update = updater(&app)?.check().await.map_err(errors::plain)?;
     let result = UpdateCheck {
         current_version,
         available: update.is_some(),

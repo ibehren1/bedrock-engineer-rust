@@ -132,12 +132,15 @@ fn validate_save_options(options: &SaveOptions) -> Result<(), String> {
     if template::js_trim(&options.output_directory).is_empty() {
         return Err("Output directory is required".into());
     }
-    if options
-        .agent_file_name
-        .as_deref()
-        .is_some_and(|f| !f.is_empty() && !f.ends_with(".py"))
-    {
-        return Err("Agent file name must end with .py".into());
+    if let Some(f) = options.agent_file_name.as_deref().filter(|f| !f.is_empty()) {
+        if !f.ends_with(".py") {
+            return Err("Agent file name must end with .py".into());
+        }
+        // A plain file name: no folder parts that could write outside the output directory
+        // (AGENT-B2).
+        if f.contains(['/', '\\']) || f.split('.').next().is_none_or(str::is_empty) || f == ".py" {
+            return Err("Agent file name must be a plain file name".into());
+        }
     }
     Ok(())
 }
@@ -231,3 +234,22 @@ pub fn save_agent_to_directory(output: &StrandsAgentOutput, options: &SaveOption
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod save_option_tests {
+    use super::*;
+
+    // AGENT-B2: the agent file name is a plain name inside the output directory.
+    #[test]
+    fn agent_file_names_must_be_plain() {
+        let opts = |name: &str| SaveOptions {
+            output_directory: "/tmp/out".into(),
+            agent_file_name: Some(name.into()),
+            ..Default::default()
+        };
+        assert!(validate_save_options(&opts("agent.py")).is_ok());
+        for bad in ["../../x.py", "/abs/x.py", "sub\\x.py", ".py", "x.txt"] {
+            assert!(validate_save_options(&opts(bad)).is_err(), "{bad}");
+        }
+    }
+}

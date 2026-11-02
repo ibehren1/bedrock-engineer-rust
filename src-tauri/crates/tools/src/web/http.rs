@@ -6,6 +6,17 @@ use crate::context::ProxyConfig;
 use serde_json::Value;
 use std::collections::BTreeMap;
 
+/// Whole request, connect included; a hostile server could otherwise hold it open forever.
+const REQUEST_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
+const CONNECT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(15);
+/// Largest response body read; the rest would only be cut for the model anyway (TOOLS-5).
+pub const MAX_RESPONSE_BYTES: usize = 20 * 1024 * 1024;
+/// Request headers the model may not set: the IMDSv2 session token pair.
+const DROPPED_HEADERS: &[&str] = &[
+    "x-aws-ec2-metadata-token",
+    "x-aws-ec2-metadata-token-ttl-seconds",
+];
+
 const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36";
 
 /// Request options (`RequestInit` subset forwarded by the tools).
@@ -27,16 +38,34 @@ pub struct FetchResponse {
 
 /// Perform the request. Non-2xx statuses are errors, as with axios'
 /// `validateStatus`: `Request failed with status code N`.
+///
+/// Destinations are checked by [`super::net_guard`]; `block_local` is the user's **Block local
+/// network access** setting.
 pub async fn fetch_website(
     url: &str,
     options: &FetchOptions,
     proxy: Option<&ProxyConfig>,
+    block_local: bool,
 ) -> Result<FetchResponse, String> {
-    let mut builder = reqwest::Client::builder();
-    if let Some(proxy_url) = proxy.and_then(ProxyConfig::proxy_url) {
-        let p = reqwest::Proxy::all(&proxy_url).map_err(|e| e.to_string())?;
-        builder = builder.proxy(p);
+    let parsed = url::Url::parse(url).map_err(|e| e.to_string())?;
+    if let Some(problem) = super::net_guard::url_problem(&parsed, block_local) {
+        return Err(problem);
     }
+    // A proxy that is on but unusable fails the request; nothing connects directly (AGENT-B5).
+    if let Some(reason) = super::proxy::broken_reason(proxy) {
+        return Err(reason);
+    }
+    let proxied = matches!(
+        proxy.map(ProxyConfig::setting),
+        Some(super::proxy::ProxySetting::On(_))
+    );
+    let builder = super::proxy::proxied(
+        reqwest::Client::builder()
+            .timeout(REQUEST_TIMEOUT)
+            .connect_timeout(CONNECT_TIMEOUT),
+        proxy,
+    );
+    let builder = super::net_guard::guard(builder, block_local, proxied);
     let client = builder.build().map_err(|e| e.to_string())?;
     let method = options
         .method
@@ -47,7 +76,9 @@ pub async fn fetch_website(
     let method = reqwest::Method::from_bytes(method.as_bytes()).map_err(|e| e.to_string())?;
     let mut req = client.request(method, url);
     for (k, v) in &options.headers {
-        if k.eq_ignore_ascii_case("user-agent") {
+        if k.eq_ignore_ascii_case("user-agent")
+            || DROPPED_HEADERS.iter().any(|d| k.eq_ignore_ascii_case(d))
+        {
             continue;
         }
         req = req.header(k, v);
@@ -56,7 +87,16 @@ pub async fn fetch_website(
     if let Some(body) = options.body.as_ref().filter(|b| !b.is_empty()) {
         req = req.body(body.clone());
     }
-    let resp = req.send().await.map_err(|e| e.to_string())?;
+    let mut resp = req.send().await.map_err(|e| {
+        // Name the refusal rather than reqwest's generic wrapper.
+        let mut msg = e.to_string();
+        let mut source = std::error::Error::source(&e);
+        while let Some(inner) = source {
+            msg = inner.to_string();
+            source = inner.source();
+        }
+        msg
+    })?;
     let status = resp.status().as_u16();
     let headers = resp
         .headers()
@@ -68,7 +108,24 @@ pub async fn fetch_website(
             )
         })
         .collect();
-    let bytes = resp.bytes().await.map_err(|e| e.to_string())?;
+    let mut bytes: Vec<u8> = Vec::new();
+    let mut truncated = false;
+    while let Some(chunk) = resp.chunk().await.map_err(|e| e.to_string())? {
+        let room = MAX_RESPONSE_BYTES - bytes.len();
+        if chunk.len() > room {
+            bytes.extend_from_slice(&chunk[..room]);
+            truncated = true;
+            break;
+        }
+        bytes.extend_from_slice(&chunk);
+    }
+    if truncated {
+        tracing::warn!(
+            url,
+            limit = MAX_RESPONSE_BYTES,
+            "Response truncated at the size limit"
+        );
+    }
     if !(200..300).contains(&status) {
         return Err(format!("Request failed with status code {status}"));
     }
@@ -141,6 +198,38 @@ pub(crate) mod test_server {
 
 #[cfg(test)]
 mod tests {
+
+    // TOOLS-4 / TOOLS-5: metadata always refused (also via redirect), local refused with the
+    // switch, oversized bodies cut.
+    #[tokio::test]
+    async fn destinations_are_checked_and_bodies_capped() {
+        let e = fetch_website(
+            "http://169.254.169.254/latest/meta-data/",
+            &FetchOptions::default(),
+            None,
+            false,
+        )
+        .await
+        .unwrap_err();
+        assert!(e.contains("may not reach"), "{e}");
+
+        let (base, _h) = super::test_server::serve(vec![(200, "text/plain", "hi".into())]).await;
+        let e = fetch_website(&base, &FetchOptions::default(), None, true)
+            .await
+            .unwrap_err();
+        assert!(e.contains("may not reach"), "{e}");
+        let r = fetch_website(&base, &FetchOptions::default(), None, false)
+            .await
+            .unwrap();
+        assert_eq!(r.data, serde_json::json!("hi"));
+
+        let big = "x".repeat(MAX_RESPONSE_BYTES + 1000);
+        let (base, _h) = super::test_server::serve(vec![(200, "text/plain", big)]).await;
+        let r = fetch_website(&base, &FetchOptions::default(), None, false)
+            .await
+            .unwrap();
+        assert_eq!(r.data.as_str().unwrap().len(), MAX_RESPONSE_BYTES);
+    }
     use super::*;
 
     #[tokio::test]
@@ -151,16 +240,16 @@ mod tests {
             (404, "text/plain", "nope".to_string()),
         ])
         .await;
-        let r = fetch_website(&format!("{base}/x"), &FetchOptions::default(), None)
+        let r = fetch_website(&format!("{base}/x"), &FetchOptions::default(), None, false)
             .await
             .unwrap();
         assert_eq!(r.status, 200);
         assert_eq!(r.data, serde_json::json!({"a": 1}));
-        let r = fetch_website(&base, &FetchOptions::default(), None)
+        let r = fetch_website(&base, &FetchOptions::default(), None, false)
             .await
             .unwrap();
         assert_eq!(r.data, Value::String("<p>hi</p>".into()));
-        let e = fetch_website(&base, &FetchOptions::default(), None)
+        let e = fetch_website(&base, &FetchOptions::default(), None, false)
             .await
             .unwrap_err();
         assert_eq!(e, "Request failed with status code 404");

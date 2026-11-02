@@ -42,19 +42,44 @@ pub struct ProxyTarget {
     pub basic_auth: Option<(String, String)>,
 }
 
-/// `resolveProxyConfig` + URL construction from `createProxyAgents`. `None` when the proxy is
-/// disabled or has no host.
-pub fn resolve_proxy(cfg: Option<&ProxyConfiguration>) -> Option<ProxyTarget> {
-    let cfg = cfg?;
-    let host = cfg.host.as_deref().filter(|h| !h.is_empty())?;
-    if !cfg.enabled {
-        return None;
-    }
+/// `resolveProxyConfig` + URL construction from `createProxyAgents`. `Ok(None)` when the proxy
+/// is off. A proxy that is on but unusable (no host, a protocol other than http/https, a host
+/// that isn't a host name) is an error: the SDK must not quietly connect directly while a proxy
+/// is turned on (AGENT-B1 / B5).
+pub fn resolve_proxy(
+    cfg: Option<&ProxyConfiguration>,
+) -> std::result::Result<Option<ProxyTarget>, String> {
+    let Some(cfg) = cfg.filter(|c| c.enabled) else {
+        return Ok(None);
+    };
+    let broken = |why: String| {
+        Err(format!(
+            "A proxy is turned on but {why}, so the app won't connect to AWS (it never connects directly while a proxy is on). Fix it in Settings → AWS → Proxy Settings, or turn the proxy off."
+        ))
+    };
+    let Some(host) = cfg.host.as_deref().map(str::trim).filter(|h| !h.is_empty()) else {
+        return broken("has no host".into());
+    };
     let protocol = cfg
         .protocol
         .as_deref()
         .filter(|p| !p.is_empty())
         .unwrap_or("http");
+    if !matches!(protocol, "http" | "https") {
+        return broken(format!("its protocol \"{protocol}\" isn't http or https"));
+    }
+    let bare = host.trim_start_matches('[').trim_end_matches(']');
+    let ipv6 = bare.parse::<std::net::Ipv6Addr>().is_ok();
+    if host.contains(['/', '@', '#', '?', '\\', ' ', '\t', '\n', '\r'])
+        || (!ipv6 && host.contains(':'))
+    {
+        return broken(format!("its host \"{host}\" isn't a valid host name"));
+    }
+    let host = if ipv6 {
+        format!("[{bare}]")
+    } else {
+        host.to_string()
+    };
     let port = cfg.port.filter(|p| *p != 0).unwrap_or(8080);
     let basic_auth = match (cfg.username.as_deref(), cfg.password.as_deref()) {
         (Some(u), Some(p)) if !u.is_empty() && !p.is_empty() => {
@@ -62,10 +87,10 @@ pub fn resolve_proxy(cfg: Option<&ProxyConfiguration>) -> Option<ProxyTarget> {
         }
         _ => None,
     };
-    Some(ProxyTarget {
+    Ok(Some(ProxyTarget {
         url: format!("{protocol}://{host}:{port}"),
         basic_auth,
-    })
+    }))
 }
 
 fn proxied_http_client(
@@ -122,7 +147,7 @@ pub async fn load_sdk_config(aws: &AwsSettings) -> Result<SdkConfig> {
                 .read_timeout(READ_TIMEOUT)
                 .build(),
         );
-    if let Some(target) = resolve_proxy(aws.proxy_config.as_ref()) {
+    if let Some(target) = resolve_proxy(aws.proxy_config.as_ref()).map_err(Error::Config)? {
         tracing::debug!(
             has_auth = target.basic_auth.is_some(),
             "Using manual proxy configuration"
@@ -153,17 +178,35 @@ mod tests {
     }
 
     #[test]
-    fn proxy_disabled_or_hostless_is_none() {
-        assert_eq!(resolve_proxy(None), None);
-        assert_eq!(resolve_proxy(Some(&proxy(false, Some("p")))), None);
-        assert_eq!(resolve_proxy(Some(&proxy(true, None))), None);
-        assert_eq!(resolve_proxy(Some(&proxy(true, Some("")))), None);
+    fn proxy_off_is_none_and_unusable_is_an_error() {
+        assert_eq!(resolve_proxy(None), Ok(None));
+        assert_eq!(resolve_proxy(Some(&proxy(false, Some("p")))), Ok(None));
+        // AGENT-B5: on but unusable never means "connect directly".
+        assert!(resolve_proxy(Some(&proxy(true, None))).is_err());
+        assert!(resolve_proxy(Some(&proxy(true, Some("")))).is_err());
+        // AGENT-B1: only http/https and real host names.
+        let mut socks = proxy(true, Some("p"));
+        socks.protocol = Some("socks5".into());
+        assert!(resolve_proxy(Some(&socks)).is_err());
+        for bad in ["evil.com/@x", "a b", "host:99"] {
+            assert!(
+                resolve_proxy(Some(&proxy(true, Some(bad)))).is_err(),
+                "{bad}"
+            );
+        }
+        assert_eq!(
+            resolve_proxy(Some(&proxy(true, Some("::1"))))
+                .unwrap()
+                .unwrap()
+                .url,
+            "http://[::1]:8080"
+        );
     }
 
     #[test]
     fn proxy_defaults_protocol_and_port() {
         assert_eq!(
-            resolve_proxy(Some(&proxy(true, Some("proxy.corp")))),
+            resolve_proxy(Some(&proxy(true, Some("proxy.corp")))).unwrap(),
             Some(ProxyTarget {
                 url: "http://proxy.corp:8080".into(),
                 basic_auth: None
@@ -177,10 +220,10 @@ mod tests {
         cfg.protocol = Some("https".into());
         cfg.port = Some(3128);
         cfg.username = Some("u".into());
-        assert_eq!(resolve_proxy(Some(&cfg)).unwrap().basic_auth, None);
+        assert_eq!(resolve_proxy(Some(&cfg)).unwrap().unwrap().basic_auth, None);
         cfg.password = Some("pw".into());
         assert_eq!(
-            resolve_proxy(Some(&cfg)),
+            resolve_proxy(Some(&cfg)).unwrap(),
             Some(ProxyTarget {
                 url: "https://p:3128".into(),
                 basic_auth: Some(("u".into(), "pw".into()))

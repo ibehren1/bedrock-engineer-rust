@@ -197,6 +197,7 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         // window.api.window
         window::window_open_task_history,
         window::window_open_file_viewer,
+        window::window_web_content_status,
         // app menu / context menu (src/main/index.ts createMenu, context-menu)
         crate::menu::context_menu_popup,
         crate::menu::app_menu_action,

@@ -14,7 +14,6 @@ use serde_json::{json, Value};
 use std::path::Path;
 use tauri::webview::NewWindowResponse;
 use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
-use tauri_plugin_opener::OpenerExt;
 
 use crate::state::StoreMutex;
 use crate::window_startup::{fit_to_screen, ShowWhenLoaded};
@@ -99,9 +98,7 @@ fn build_app_window(
         .attach(crate::webview_proxy::configure(app, builder))
         // Links open in the default browser, as in the main window.
         .on_new_window(move |url, _features| {
-            if let Err(e) = handle.opener().open_url(url.as_str(), None::<&str>) {
-                tracing::error!(url = %url, error = %e, "Failed to open external URL");
-            }
+            crate::security::open_new_window_url(&handle, &url);
             NewWindowResponse::Deny
         })
         .on_navigation(crate::security::navigation_guard(app))
@@ -270,5 +267,19 @@ mod tests {
             "main.rs — project"
         );
         assert_eq!(file_viewer_title(Path::new("/"), "a.txt"), "a.txt");
+    }
+}
+
+/// Whether web content in the app windows may load remote resources (see
+/// `webview_proxy::WebContentStatus`).
+#[tauri::command]
+pub fn window_web_content_status(app: AppHandle) -> crate::webview_proxy::WebContentStatus {
+    let store = crate::backend::store_snapshot(&app);
+    match app.try_state::<crate::webview_proxy::WebviewProxyState>() {
+        Some(state) => state.content_status(&store),
+        None => crate::webview_proxy::WebContentStatus {
+            allowed: true,
+            reason: None,
+        },
     }
 }

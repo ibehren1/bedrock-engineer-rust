@@ -110,13 +110,64 @@ impl WebviewProxy {
 pub struct WebviewProxyState {
     startup: Option<WebviewProxy>,
     last_seen: Mutex<Option<WebviewProxy>>,
+    /// Whether the startup proxy is actually in effect for web content (on macOS it can fail:
+    /// before macOS 14 there is no way to set one).
+    applied: std::sync::atomic::AtomicBool,
 }
+
+/// Whether web content in the app windows may load remote resources right now (AGENT-B5): not
+/// while a proxy is on that web content isn't going through, since it would connect directly.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WebContentStatus {
+    pub allowed: bool,
+    pub reason: Option<String>,
+}
+
+/// Event the renderer listens on for [`WebContentStatus`] changes.
+pub const WEB_CONTENT_STATUS_EVENT: &str = "web-content-status";
 
 impl WebviewProxyState {
     pub fn new(startup: Option<WebviewProxy>) -> Self {
         Self {
             last_seen: Mutex::new(startup.clone()),
+            applied: std::sync::atomic::AtomicBool::new(cfg!(not(target_os = "macos"))),
             startup,
+        }
+    }
+
+    /// [`WebContentStatus`] for the stored settings `store` (the whole store).
+    pub fn content_status(&self, store: &Value) -> WebContentStatus {
+        use tools::web::proxy::ProxySetting;
+        let blocked = |reason: String| WebContentStatus {
+            allowed: false,
+            reason: Some(reason),
+        };
+        let setting = tools::ToolSettings::from_store(store)
+            .proxy
+            .map(|p| p.setting())
+            .unwrap_or(ProxySetting::Off);
+        match setting {
+            // Turned off after startup: web content still uses the old proxy until a restart,
+            // which is a proxy, not a direct connection.
+            ProxySetting::Off => WebContentStatus {
+                allowed: true,
+                reason: None,
+            },
+            ProxySetting::Broken(reason) => blocked(reason),
+            ProxySetting::On(_) => {
+                let current = WebviewProxy::from_store(store);
+                if current != self.startup {
+                    blocked("The proxy setting changed after the app started. Pages and images shown inside the app only pick up a proxy at startup, so they are blocked until you restart the app (they would otherwise connect without the proxy).".into())
+                } else if !self.applied.load(std::sync::atomic::Ordering::Relaxed) {
+                    blocked("A proxy is on, but pages and images shown inside the app can't use it on this system (it needs macOS 14 or later), so they are blocked instead of connecting without the proxy.".into())
+                } else {
+                    WebContentStatus {
+                        allowed: true,
+                        reason: None,
+                    }
+                }
+            }
         }
     }
 
@@ -148,17 +199,24 @@ pub fn install<R: Runtime>(app: &AppHandle<R>) {
     };
     #[cfg(target_os = "macos")]
     match macos::set_default_data_store_proxy(&proxy) {
-        Ok(()) => tracing::info!(
+        Ok(()) => {
+            if let Some(state) = app.try_state::<WebviewProxyState>() {
+                state
+                    .applied
+                    .store(true, std::sync::atomic::Ordering::Relaxed);
+            }
+            tracing::info!(
             host = %proxy.host,
             port = proxy.port,
             has_auth = proxy.credentials.is_some(),
             "Webview proxy configured"
-        ),
+            )
+        }
         Err(e) => tracing::warn!(
             host = %proxy.host,
             port = proxy.port,
             error = %e,
-            "Webview proxy not applied; web content in the app connects directly"
+            "Webview proxy not applied; remote web content in the app is blocked while the proxy is on"
         ),
     }
     #[cfg(not(target_os = "macos"))]
@@ -219,6 +277,13 @@ pub fn on_store_change<R: Runtime>(app: &AppHandle<R>, key: &str, value: Option<
     let Some(state) = app.try_state::<WebviewProxyState>() else {
         return;
     };
+    if key == "aws" {
+        use tauri::Emitter;
+        let status = state.content_status(&json!({ "aws": value }));
+        if let Err(e) = app.emit(WEB_CONTENT_STATUS_EVENT, status) {
+            tracing::warn!(error = %e, "Failed to emit web-content-status");
+        }
+    }
     match state.note_change(key, value) {
         Some(true) => tracing::info!(
             "Proxy settings changed; AWS and tool connections use them now, web content in the \
@@ -392,6 +457,44 @@ mod linux {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // AGENT-B5: web content is blocked whenever a proxy is on that it isn't going through.
+    #[test]
+    fn web_content_is_blocked_unless_it_uses_the_proxy() {
+        let on = store(json!({ "enabled": true, "host": "proxy.corp", "port": 3128 }));
+        let other = store(json!({ "enabled": true, "host": "other.corp", "port": 3128 }));
+        let off = store(json!({ "enabled": false }));
+        let broken = store(json!({ "enabled": true, "host": "" }));
+
+        let no_startup = WebviewProxyState::new(None);
+        no_startup
+            .applied
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+        assert!(no_startup.content_status(&off).allowed);
+        assert!(
+            !no_startup.content_status(&on).allowed,
+            "turned on after startup"
+        );
+        assert!(!no_startup.content_status(&broken).allowed);
+
+        let started = WebviewProxyState::new(WebviewProxy::from_store(&on));
+        started
+            .applied
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+        assert!(started.content_status(&on).allowed);
+        assert!(
+            !started.content_status(&other).allowed,
+            "changed after startup"
+        );
+        assert!(started.content_status(&off).allowed);
+
+        started
+            .applied
+            .store(false, std::sync::atomic::Ordering::Relaxed);
+        let status = started.content_status(&on);
+        assert!(!status.allowed);
+        assert!(status.reason.unwrap().contains("macOS 14"));
+    }
 
     fn store(proxy: Value) -> Value {
         json!({ "aws": { "region": "us-west-2", "proxyConfig": proxy } })

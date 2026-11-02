@@ -121,6 +121,7 @@ permissions = [
   "allow-camera-capture-response",
   "allow-window-open-task-history",
   "allow-window-open-file-viewer",
+  "allow-window-web-content-status",
   "allow-context-menu-popup",
   "allow-app-menu-action",
   "allow-background-agent-chat",

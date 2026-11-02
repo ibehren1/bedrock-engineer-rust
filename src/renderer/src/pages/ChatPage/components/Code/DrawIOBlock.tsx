@@ -9,7 +9,8 @@ import {
   VscCloudDownload
 } from 'react-icons/vsc'
 import { SourceView } from './SourceView'
-import { DrawIoEmbed, DrawIoEmbedRef } from 'react-drawio'
+import { DrawIoEmbedRef } from 'react-drawio'
+import { GatedDrawIoEmbed } from '@renderer/components/GatedDrawIoEmbed'
 import { ResizableContainer } from './ResizableContainer'
 
 type DrawIOBlockProps = {
@@ -159,7 +160,7 @@ export const DrawIOBlock: React.FC<DrawIOBlockProps> = ({ xml, className = '' })
             }}
             className="transition-transform duration-200"
           >
-            <DrawIoEmbed
+            <GatedDrawIoEmbed
               ref={drawioRef}
               xml={xml}
               configuration={{

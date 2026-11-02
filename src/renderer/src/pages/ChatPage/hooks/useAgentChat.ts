@@ -249,8 +249,9 @@ export const useAgentChat = (
         // Tavilyツールの場合は、API Keyが設定されていることを確認
         if (toolName === 'tavilySearch') {
           // API Keyが設定されていない場合は除外
-          const tavilyApiKey = window.store.get('tavilySearch')?.apikey
-          return !!tavilyApiKey && tavilyApiKey.length > 0
+          // The key itself stays in Rust; the renderer only sees whether one is saved.
+          const tavily = window.store.get('tavilySearch')
+          return !!tavily?.hasApikey || !!tavily?.apikey
         }
 
         // MCPツールの場合は、MCPサーバーが設定されていることを確認
@@ -999,11 +1000,31 @@ export const useAgentChat = (
     )
 
     // 全てのツール実行をPromiseとして準備
+    // Only tools offered this turn may run: the model can name any tool in a tool_use
+    // (TOOLS-3; Rust checks the agent's enabled tools too).
+    const offeredTools = new Set(
+      turnCtx.tools.map((tool) => tool.toolSpec?.name).filter((name): name is string => !!name)
+    )
+
     const toolExecutionPromises = toolUseBlocks.map(async (contentBlock) => {
       const toolUse = contentBlock.toolUse!
       const toolInput = {
         type: toolUse.name!,
         ...(toolUse.input as any)
+      }
+
+      if (!offeredTools.has(toolUse.name!)) {
+        return {
+          toolResult: {
+            toolUseId: toolUse.toolUseId,
+            content: [
+              {
+                text: `Tool "${toolUse.name}" is not available in this chat. Use only the tools you were given.`
+              }
+            ],
+            status: 'error'
+          }
+        } as ContentBlock
       }
 
       // 委譲メタデータはモデル入力の後ろに注入し、上書きを防ぐ

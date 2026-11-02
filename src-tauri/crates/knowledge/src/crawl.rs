@@ -382,6 +382,15 @@ pub async fn crawl(
                 continue;
             }
         };
+        // The start page may redirect within its own site (http -> https, a trailing slash, a
+        // language path), never to another site: what is indexed must come from the site the
+        // user added (DATA-1).
+        if is_start && fetched.url.host_str() != start.host_str() {
+            return Err(format!(
+                "{url} redirects to another site ({}). Add that address instead.",
+                fetched.url
+            ));
+        }
         if !scope.contains(&fetched.url) && !is_start {
             out.skipped.push((
                 url.to_string(),
@@ -648,6 +657,29 @@ pub(crate) mod tests {
             .skipped
             .iter()
             .any(|(u, why)| u.ends_with("/docs/private") && why.contains("robots")));
+    }
+
+    // DATA-1: the start page may redirect within its site, never to another site.
+    #[tokio::test]
+    async fn start_page_redirects_to_another_site_are_refused() {
+        let srv = serve(|base| {
+            let other = base.replace("127.0.0.1", "localhost");
+            vec![
+                route("/docs/moved", 301, "", format!("{base}/docs/start")),
+                route("/docs/away", 301, "", format!("{other}/docs/start")),
+                route(
+                    "/docs/start",
+                    200,
+                    "text/html",
+                    page("Start", "start page", &[]),
+                ),
+            ]
+        })
+        .await;
+        let out = run(&srv, "/docs/moved", opts(0, 1)).await.unwrap();
+        assert_eq!(out.pages[0].title, "Start");
+        let err = run(&srv, "/docs/away", opts(0, 1)).await.unwrap_err();
+        assert!(err.contains("redirects to another site"), "{err}");
     }
 
     #[tokio::test]

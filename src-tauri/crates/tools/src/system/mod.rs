@@ -138,3 +138,88 @@ mod tests {
         assert_eq!(e.name, "Error");
     }
 }
+
+/// The user's go-ahead for `kind` for the calling agent (TOOLS-6), or the tool error to return.
+/// Background and sub-agent runs never capture: nobody is watching what ends up on screen.
+pub(crate) async fn confirm_capture(
+    ctx: &crate::context::ToolContext,
+    kind: crate::context::CaptureKind,
+    tool: &str,
+) -> crate::error::Result<()> {
+    use crate::error::ToolError;
+    if ctx.caller.unattended {
+        return Err(ToolError::permission_denied(
+            "Screen and camera capture aren't available in background or sub-agent runs.",
+            tool,
+            None,
+        ));
+    }
+    let Some(approver) = &ctx.capture_approver else {
+        return Ok(());
+    };
+    let agent_id = ctx.agent_id().unwrap_or_default();
+    let request = crate::context::CaptureRequest {
+        agent_name: ctx.find_agent(&agent_id).and_then(|a| a.name),
+        agent_id,
+        kind,
+    };
+    if approver.approve(&request).await {
+        Ok(())
+    } else {
+        Err(ToolError::permission_denied(
+            "The user declined to let this agent capture. Continue without it.",
+            tool,
+            None,
+        ))
+    }
+}
+
+#[cfg(test)]
+mod capture_consent_tests {
+    use super::*;
+    use crate::context::{CaptureApprover, CaptureKind, CaptureRequest, ToolContext};
+    use std::sync::{Arc, Mutex};
+
+    struct Approver(bool, Mutex<Vec<CaptureRequest>>);
+    impl CaptureApprover for Approver {
+        fn approve<'a>(
+            &'a self,
+            request: &'a CaptureRequest,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + Send + 'a>> {
+            self.1.lock().unwrap().push(request.clone());
+            Box::pin(async move { self.0 })
+        }
+    }
+
+    // TOOLS-6: captures need the agent's grant, and never run unattended.
+    #[tokio::test]
+    async fn captures_need_consent_and_never_run_unattended() {
+        let mut ctx = ToolContext::default();
+        ctx.caller.agent_id = Some("a".into());
+        assert!(confirm_capture(&ctx, CaptureKind::Screen, "screenCapture")
+            .await
+            .is_ok());
+
+        let yes = Arc::new(Approver(true, Mutex::new(Vec::new())));
+        ctx.capture_approver = Some(yes.clone());
+        assert!(confirm_capture(&ctx, CaptureKind::Camera, "cameraCapture")
+            .await
+            .is_ok());
+        assert_eq!(yes.1.lock().unwrap()[0].kind, CaptureKind::Camera);
+        assert_eq!(yes.1.lock().unwrap()[0].agent_id, "a");
+
+        ctx.capture_approver = Some(Arc::new(Approver(false, Mutex::new(Vec::new()))));
+        let err = confirm_capture(&ctx, CaptureKind::Screen, "screenCapture")
+            .await
+            .unwrap_err();
+        assert!(err.message.contains("declined"), "{}", err.message);
+
+        ctx.capture_approver = Some(yes.clone());
+        ctx.caller.unattended = true;
+        let err = confirm_capture(&ctx, CaptureKind::Screen, "screenCapture")
+            .await
+            .unwrap_err();
+        assert!(err.message.contains("background"), "{}", err.message);
+        assert_eq!(yes.1.lock().unwrap().len(), 1);
+    }
+}

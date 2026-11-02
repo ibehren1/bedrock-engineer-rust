@@ -5,6 +5,8 @@ import { VscCode, VscEye } from 'react-icons/vsc'
 import { SourceView } from './SourceView'
 import { ResizableContainer } from './ResizableContainer'
 import { HTML_PREVIEW_SANDBOX, HTML_PREVIEW_SCHEME, previewReply } from './htmlPreview'
+import { useWebContentStatus } from '@renderer/lib/webContent'
+import { WebContentBlocked } from '@renderer/components/WebContentBlocked'
 
 type HtmlBlockProps = {
   code: string
@@ -30,6 +32,10 @@ export const SandboxedHtmlPreview: React.FC<{ html: string }> = ({ html }) => {
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
   }, [])
+
+  // A model-written page can load anything from the web.
+  const web = useWebContentStatus()
+  if (!web.allowed) return <WebContentBlocked reason={web.reason} />
 
   return (
     // Reload the shell whenever the page changes; it renders one document per load.

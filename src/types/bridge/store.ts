@@ -28,6 +28,18 @@ export type StoreScheme = {
    */
   agentFileFolders?: string[]
 
+  /**
+   * When true, the agent's web tools may not reach this computer (localhost) or private
+   * networks. Cloud metadata addresses are always refused. Off by default.
+   */
+  blockLocalNetworkAccess?: boolean
+
+  /** Load remote images in model-written content without a click. Off by default. */
+  autoLoadRemoteImages?: boolean
+
+  /** Most tool calls one scheduled background agent run may make (1-1000, default 100). */
+  backgroundAgentMaxToolCalls?: number
+
   /** Plan/Act モードの設定 (true: Plan, false: Act) */
   planMode?: boolean
 
@@ -105,8 +117,12 @@ export type StoreScheme = {
 
   /** Tavily検索APIの設定 */
   tavilySearch: {
-    /** Tavily検索APIのAPIキー */
+    /** Tavily検索APIのAPIキー。Always blank in the renderer: Rust keeps the saved key. */
     apikey: string
+    /** Set by Rust in what it sends the renderer: a key is saved. */
+    hasApikey?: boolean
+    /** In a write: remove the saved key (a blank one keeps it). */
+    clearApikey?: boolean
   }
 
   /** 高度な設定オプション */

@@ -84,8 +84,8 @@ pub use base::{run_tool, Tool};
 pub use bedrock_tools::{BedrockBackend, SdkBedrockBackend};
 pub use context::{
     converse_settings_from_store, AgentResolver, AgentToolConfig, CallerMetadata,
-    HostCommandApprover, HostCommandRequest,
-    CommandPatternConfig, ToolContext, ToolSettings,
+    CaptureApprover, CaptureKind, CaptureRequest, HostCommandApprover, HostCommandRequest,
+    CommandPatternConfig, ProxyConfig, ToolContext, ToolSettings,
 };
 pub use deps::{all_tools, full_registry, ContextServices, ToolDeps};
 pub use docker_sandbox::{DockerSandboxTool, SandboxOps};

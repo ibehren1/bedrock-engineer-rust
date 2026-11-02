@@ -80,7 +80,7 @@ export const UpdatesSection = () => {
               {t('appUpdate.pendingNotesTitle', { version: pending.version })}
             </h3>
             <div className="text-sm text-ink">
-              <MD>{pending.notes}</MD>
+              <MD trustedImages>{pending.notes}</MD>
             </div>
           </article>
         )}

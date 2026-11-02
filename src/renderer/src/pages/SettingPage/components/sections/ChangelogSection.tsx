@@ -50,7 +50,7 @@ const ChangelogEntry = ({ date, body }: { date: string; body: string }) => (
   <article className="rounded-control border border-subtle bg-surface px-4 py-3">
     <h3 className="m-0 mb-2 text-sm font-semibold text-ink">{date}</h3>
     <div className="text-sm text-ink">
-      <MD>{body}</MD>
+      <MD trustedImages>{body}</MD>
     </div>
   </article>
 )

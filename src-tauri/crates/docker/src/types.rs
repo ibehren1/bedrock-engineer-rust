@@ -345,6 +345,16 @@ pub struct DockerSandboxConfig {
     /// Catalog id of the OS new sandboxes use. Unset or unknown means the default OS.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub os: Option<String>,
+    /// Start sandboxes with no network at all (`network_mode: none`), so nothing in them can
+    /// reach this computer, the local network, cloud metadata or the internet (SBX-5). Off by
+    /// default: installing packages needs the network.
+    #[serde(default)]
+    pub disable_network: bool,
+    /// Lock new sandbox containers down (SBX-6): drop the Linux capabilities package managers
+    /// don't need, block privilege gain through setuid programs (`sudo`), and cap processes. Off
+    /// by default, since it gets in the way of ordinary work (`sudo`, `ping`, some tools).
+    #[serde(default)]
+    pub lock_down: bool,
 }
 
 impl DockerSandboxConfig {
@@ -366,6 +376,8 @@ impl Default for DockerSandboxConfig {
             timeout: 300.0,
             terminal_acknowledged: None,
             os: None,
+            disable_network: false,
+            lock_down: false,
         }
     }
 }

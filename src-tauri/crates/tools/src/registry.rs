@@ -35,6 +35,25 @@ pub struct ToolRegistry {
     tools: Vec<(String, Arc<dyn Tool>)>,
 }
 
+/// The error for a built-in tool the calling agent hasn't enabled, if that's the case. Calls
+/// with no agent, or an agent the catalog doesn't know (pages that run a built-in agent the user
+/// hid), are left to the caller, which only offers the agent's tools.
+fn not_enabled_for_agent(tool_name: &str, ctx: &ToolContext) -> Option<ToolError> {
+    let agent_id = ctx.agent_id()?;
+    let agent = ctx.find_agent(&agent_id)?;
+    if agent.tools.iter().any(|t| t == tool_name) {
+        return None;
+    }
+    tracing::warn!(agent = %agent_id, tool = tool_name, "Refused a tool the agent has not enabled");
+    Some(ToolError::permission_denied(
+        format!(
+            "Tool \"{tool_name}\" is not enabled for this agent. Use only the tools you were given."
+        ),
+        tool_name,
+        Some(tool_name),
+    ))
+}
+
 impl ToolRegistry {
     pub fn new() -> Self {
         Self::default()
@@ -157,6 +176,10 @@ impl ToolRegistry {
 
     /// `ToolRegistry.execute(input, context)`.
     ///
+    /// A built-in tool runs only if the calling agent has it enabled (TOOLS-3 / AGENT-D1): the
+    /// model can name any tool in a `tool_use`, not only the ones it was offered. MCP tools are
+    /// routed through the agent's own servers, so they need no list.
+    ///
     /// `input` is the tool input object including its `type`. MCP tools (any name that is
     /// not built in, or legacy `mcp_`-prefixed names) route to the tool registered as
     /// `mcp` with `mcpToolName` added, and without the context, like the TS registry.
@@ -203,6 +226,9 @@ impl ToolRegistry {
             let Some(tool) = self.get_tool(tool_name) else {
                 return Err(ToolError::not_found(tool_name));
             };
+            if let Some(denied) = not_enabled_for_agent(tool_name, ctx) {
+                return Err(denied);
+            }
             run_tool(tool.as_ref(), input, ctx).await
         };
 
@@ -293,6 +319,38 @@ fn json_parse_error_message(input: &Value) -> String {
 
 #[cfg(test)]
 mod tests {
+
+    // TOOLS-3 / AGENT-D1: a built-in tool the agent hasn't enabled is refused, whatever the
+    // model writes in its tool_use; agents the catalog doesn't know are left to the caller.
+    #[tokio::test]
+    async fn refuses_built_in_tools_the_agent_has_not_enabled() {
+        let mut registry = ToolRegistry::new();
+        registry.register(std::sync::Arc::new(crate::thinking::ThinkTool));
+        let store = serde_json::json!({
+            "selectedAgentId": "reviewer",
+            "customAgents": [
+                {"id": "reviewer", "tools": ["readFiles"]},
+                {"id": "thinker", "tools": ["think"]}
+            ]
+        });
+        let input = serde_json::json!({"type": "think", "thought": "x"});
+
+        let ctx = ToolContext::from_store(&store, None);
+        let err = registry.execute(input.clone(), &ctx).await.unwrap_err();
+        assert!(
+            err.message.contains("not enabled for this agent"),
+            "{}",
+            err.message
+        );
+
+        let mut ctx = ToolContext::from_store(&store, None);
+        ctx.caller.agent_id = Some("thinker".into());
+        registry.execute(input.clone(), &ctx).await.unwrap();
+
+        let mut ctx = ToolContext::from_store(&store, None);
+        ctx.caller.agent_id = Some("not-in-the-catalog".into());
+        registry.execute(input, &ctx).await.unwrap();
+    }
     use super::*;
     use crate::types::ToolSpec;
     use async_trait::async_trait;

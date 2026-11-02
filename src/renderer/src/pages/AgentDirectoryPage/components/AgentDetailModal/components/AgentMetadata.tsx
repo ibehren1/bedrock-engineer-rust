@@ -1,5 +1,6 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
+import { useWebContentStatus } from '@renderer/lib/webContent'
 
 interface AgentMetadataProps {
   author?: string
@@ -8,6 +9,8 @@ interface AgentMetadataProps {
 
 export const AgentMetadata: React.FC<AgentMetadataProps> = ({ author, tags }) => {
   const { t } = useTranslation()
+  // The GitHub avatar is a remote image: not while the proxy rule blocks remote content.
+  const web = useWebContentStatus()
 
   if (!author && (!tags || tags.length === 0)) {
     return null
@@ -22,21 +25,23 @@ export const AgentMetadata: React.FC<AgentMetadataProps> = ({ author, tags }) =>
             className="flex items-center cursor-pointer"
             onClick={() => open(`https://github.com/${author}`)}
           >
-            <img
-              src={`https://github.com/${author}.png`}
-              alt={`${author} avatar`}
-              className="w-8 h-8 rounded-full object-cover mr-2 flex-shrink-0 border border-subtle"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none'
-                const sibling = e.currentTarget.nextElementSibling
-                if (sibling && sibling instanceof HTMLElement) {
-                  sibling.style.display = 'flex'
-                }
-              }}
-            />
+            {web.allowed && (
+              <img
+                src={`https://github.com/${author}.png`}
+                alt={`${author} avatar`}
+                className="w-8 h-8 rounded-full object-cover mr-2 flex-shrink-0 border border-subtle"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                  const sibling = e.currentTarget.nextElementSibling
+                  if (sibling && sibling instanceof HTMLElement) {
+                    sibling.style.display = 'flex'
+                  }
+                }}
+              />
+            )}
             <div
               className="w-8 h-8 rounded-full bg-raised flex items-center justify-center mr-2"
-              style={{ display: 'none' }}
+              style={{ display: web.allowed ? 'none' : 'flex' }}
             >
               <span className="text-sm font-medium text-ink-muted">
                 {author.charAt(0).toUpperCase()}

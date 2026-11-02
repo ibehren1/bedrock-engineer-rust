@@ -136,20 +136,81 @@ pub fn docx_xml_raw_text(xml: &str) -> Result<String, String> {
     Ok(out)
 }
 
+/// Largest decompressed size of one entry read from an Office (zip) file. Deflate can expand
+/// ~1000:1, so a few MB on disk could otherwise become tens of GB in memory (DATA-2).
+pub const MAX_ZIP_ENTRY_BYTES: u64 = 256 * 1024 * 1024;
+/// Largest total decompressed size of an Office (zip) file handed to a parser that reads it whole.
+pub const MAX_ZIP_TOTAL_BYTES: u64 = 1024 * 1024 * 1024;
+
+/// `entry` read as UTF-8 text, refusing entries over [`MAX_ZIP_ENTRY_BYTES`] decompressed. The
+/// size in the zip header can lie, so the read itself is capped too.
+pub fn read_zip_entry_text<R: Read>(
+    entry: &mut zip::read::ZipFile<'_, R>,
+) -> Result<String, String> {
+    read_zip_entry_limited(entry, MAX_ZIP_ENTRY_BYTES)
+}
+
+fn read_zip_entry_limited<R: Read>(
+    entry: &mut zip::read::ZipFile<'_, R>,
+    limit: u64,
+) -> Result<String, String> {
+    let name = entry_name(entry);
+    let too_big = || {
+        format!(
+            "{name} is larger than {} MB uncompressed; not reading it",
+            (limit / (1024 * 1024)).max(1)
+        )
+    };
+    if entry.size() > limit {
+        return Err(too_big());
+    }
+    let mut bytes = Vec::new();
+    entry
+        .take(limit + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|e| e.to_string())?;
+    if bytes.len() as u64 > limit {
+        return Err(too_big());
+    }
+    String::from_utf8(bytes).map_err(|e| e.to_string())
+}
+
+fn entry_name<R: Read>(entry: &zip::read::ZipFile<'_, R>) -> String {
+    entry
+        .name()
+        .map(|n| n.to_string())
+        .unwrap_or_else(|_| "A part of the file".into())
+}
+
+/// Refuse a zip whose entries add up to more than [`MAX_ZIP_TOTAL_BYTES`] decompressed, before a
+/// parser that reads every part (calamine) gets it. Not a zip: nothing to check.
+pub fn check_zip_total(bytes: &[u8]) -> Result<(), String> {
+    let Ok(mut archive) = zip::ZipArchive::new(std::io::Cursor::new(bytes)) else {
+        return Ok(());
+    };
+    let mut total: u64 = 0;
+    for i in 0..archive.len() {
+        let size = archive.by_index_raw(i).map(|e| e.size()).unwrap_or(0);
+        total = total.saturating_add(size);
+        if size > MAX_ZIP_ENTRY_BYTES || total > MAX_ZIP_TOTAL_BYTES {
+            return Err(format!(
+                "The file expands to more than {} MB; not reading it",
+                MAX_ZIP_TOTAL_BYTES / (1024 * 1024)
+            ));
+        }
+    }
+    Ok(())
+}
+
 /// Raw text of a `.docx` held in memory (no cleanup).
 pub fn docx_raw_text(bytes: &[u8]) -> Result<String, String> {
     let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes)).map_err(|_| {
         "Could not find file in options: end of central directory record not found".to_string()
     })?;
-    let mut xml = String::new();
-    archive
-        .by_name("word/document.xml")
-        .map_err(|_| {
-            "Could not find main document part. Are you sure this is a valid .docx file?"
-                .to_string()
-        })?
-        .read_to_string(&mut xml)
-        .map_err(|e| e.to_string())?;
+    let mut entry = archive.by_name("word/document.xml").map_err(|_| {
+        "Could not find main document part. Are you sure this is a valid .docx file?".to_string()
+    })?;
+    let xml = read_zip_entry_text(&mut entry)?;
     docx_xml_raw_text(&xml)
 }
 
@@ -269,6 +330,31 @@ pub(crate) mod test_files {
 
 #[cfg(test)]
 mod tests {
+
+    // DATA-2: a zip entry that expands past the cap is refused, whatever its header says.
+    #[test]
+    fn oversized_zip_entries_are_refused() {
+        use std::io::Write;
+        let mut buf = std::io::Cursor::new(Vec::new());
+        {
+            let mut w = zip::ZipWriter::new(&mut buf);
+            let opts = zip::write::SimpleFileOptions::default();
+            w.start_file("big.xml", opts).unwrap();
+            std::io::copy(&mut std::io::repeat(b'a').take(4096), &mut w).unwrap();
+            w.start_file("small.xml", opts).unwrap();
+            w.write_all(b"<x/>").unwrap();
+            w.finish().unwrap();
+        }
+        let bytes = buf.into_inner();
+        let mut archive = zip::ZipArchive::new(std::io::Cursor::new(&bytes)).unwrap();
+        let err =
+            read_zip_entry_limited(&mut archive.by_name("big.xml").unwrap(), 1024).unwrap_err();
+        assert!(err.contains("larger than"), "{err}");
+        let ok = read_zip_entry_limited(&mut archive.by_name("small.xml").unwrap(), 1024).unwrap();
+        assert_eq!(ok, "<x/>");
+        assert!(check_zip_total(&bytes).is_ok());
+        assert!(check_zip_total(b"not a zip").is_ok());
+    }
     use super::*;
 
     #[test]

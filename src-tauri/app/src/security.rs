@@ -141,6 +141,43 @@ pub fn allow_permission(
         && url.is_some_and(|u| is_app_url(u, dev_url))
 }
 
+/// `on_new_window` (`window.open`, `target=_blank`) for the full-UI windows: web and mail links
+/// open in the default browser or mail app as before; any other scheme (`file:`, `smb:`, an app's
+/// custom handler) is shown in a native dialog first and opens only if the user agrees (UI-4).
+/// Such links can come from search results or knowledge base sources the app doesn't control.
+pub fn open_new_window_url<R: Runtime>(app: &tauri::AppHandle<R>, url: &Url) {
+    use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+    use tauri_plugin_opener::OpenerExt;
+    let open = |app: &tauri::AppHandle<R>, url: &str| {
+        if let Err(e) = app.opener().open_url(url, None::<&str>) {
+            tracing::error!(url, error = %e, "Failed to open external URL");
+        }
+    };
+    if matches!(url.scheme(), "http" | "https" | "mailto") {
+        open(app, url.as_str());
+        return;
+    }
+    let target = url.to_string();
+    let app2 = app.clone();
+    app.dialog()
+        .message(format!(
+            "A link wants to open this address with another program on your computer:\n\n{target}\n\nOnly open it if you expected this link and trust where it came from."
+        ))
+        .title("Open this link?")
+        .kind(MessageDialogKind::Warning)
+        .buttons(MessageDialogButtons::OkCancelCustom(
+            "Open".into(),
+            "Don't open".into(),
+        ))
+        .show(move |ok| {
+            if ok {
+                open(&app2, &target);
+            } else {
+                tracing::info!(url = %target, "Declined to open a non-web link");
+            }
+        });
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

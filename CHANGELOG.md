@@ -7,6 +7,105 @@ dated section here for anything user-visible.
 See the [README](./README.md#whats-different-in-this-fork) for a feature-by-feature
 overview of the fork with screenshots.
 
+### 2026-11-02
+
+- Fixed web pages saved by the agent sometimes ending up as empty files: the save could finish
+  before the page's contents were actually written.
+- An agent can only use the tools enabled for it. Before, a reply could call any of the app's
+  tools by name, even ones the agent's settings turned off, for example a "read-only" agent writing
+  files or running commands. Such calls are now refused, in chats and in background and sub-agent
+  runs.
+- MCP server tools are now checked when a server connects. A tool is left out if its name is one
+  of the app's own tools (a server could otherwise put a look-alike next to the real one to steer
+  the agent), if its name isn't valid for Amazon Bedrock, or if its description of inputs is
+  unreasonably large; very long tool descriptions are shortened. When two of an agent's servers
+  offer a tool with the same name, only the first server's is used.
+- On Windows, MCP servers that run as a command are now started directly instead of through the
+  command prompt, which could reinterpret characters such as `&`, `|` and `%` in the server's
+  command and arguments.
+- The first time an agent tries to take a screenshot or use the camera, the app asks you whether
+  that agent may, and remembers the answer for that agent. Background agents and sub-agents can no
+  longer capture the screen or the camera at all. Until now, once the app had the system permission,
+  any agent with the tool could look at your screen, including a scheduled agent with nobody
+  watching.
+- The agent's web page fetch now gives up after 60 seconds and reads at most 20 MB, so a hostile
+  site can no longer hang or crash the app. It also never contacts cloud metadata addresses
+  (169.254.169.254 and other link-local addresses), which on a cloud machine hand out its temporary
+  AWS credentials; this is checked on every redirect and on the addresses a site name resolves to.
+- New setting **Settings → Workspace → Local network access for web tools**. Turn it on to stop the
+  agent's web tools from reaching this computer and your local networks (dev servers, admin pages,
+  routers, intranet sites), which text the agent reads could otherwise steer it into. It is off by
+  default, so fetching a local dev server or an intranet page keeps working.
+- The knowledge base website crawler applies the same checks: it never contacts cloud metadata
+  addresses, and with **Block web tools from reaching this computer and local networks** turned on it
+  stays off this computer and your local networks, on redirects too. A website source whose address
+  redirects to a different site is now refused with a message naming where it leads, instead of
+  indexing whatever that other site serves.
+- MCP servers reached by URL no longer follow a redirect to a different site, so the API keys or
+  tokens configured in a server's headers are never sent to another host. Connecting to an older SSE
+  server now times out instead of waiting forever for a server that doesn't answer, and a single
+  oversized message from such a server ends the connection instead of filling memory.
+- New section **Settings → Sandbox → Sandbox restrictions** with two optional switches for new
+  sandbox containers, both off by default. Each one lists what it turns off.
+  - **Lock down sandbox containers** keeps only the Linux capabilities package managers need,
+    blocks privilege gain through `sudo` and other setuid programs, and limits containers to 1,024
+    processes. Installing packages still works; `sudo`, `ping` and similar tools don't.
+  - **Start sandboxes with no network access** cuts sandboxes off from the internet, this
+    computer's services, your local network and a cloud machine's credentials. That also stops
+    package installs, downloads and published ports.
+- Docker sandbox containers no longer restart on their own, whatever the agent's compose file
+  asks for, so a sandbox can't come back by itself after you quit the app.
+- Images in replies that come from other websites now wait for a click: they show a placeholder
+  naming the site and a **Load** button. A reply steered by a web page, file or tool result could
+  otherwise hide parts of your conversation in an image address and send them to that site the
+  moment the reply appeared. To load such images automatically again, turn on **Settings → Chat →
+  Remote images in chat**. Images from your project and attachments, and images in the help guide,
+  changelog and your own files, still load straight away.
+- Your AWS secret access key, session token and proxy password are no longer handed to the app's
+  windows. They stay in the app's background process, which uses them as before. In **Settings →
+  AWS** a saved secret now shows as **Saved (type to replace)**: type a new one to replace it, or
+  click **Remove saved value**; leaving the field empty keeps it. Before, every window held these
+  values in memory, so any fault in the app's pages could have exposed them.
+- Links in search results, knowledge base results and other app content that would open something
+  other than a web page or an email (for example a `file:` or `smb:` address, or a link handled by
+  another app) now show the address and ask before opening. Web and email links open as before.
+- Word documents previewed in the Files panel no longer keep links that would run script code
+  (`javascript:` and similar) or other unusual link types; their text stays but isn't clickable.
+  Web, email and in-document links work as before.
+- The Tavily search API key is now kept the same way: it stays in the app's background process,
+  and the settings show **Saved (type to replace)** with **Remove saved value** once it is saved.
+- On macOS and Linux, the app's settings file (which can hold your AWS keys), chat history and other
+  files it keeps for itself are now readable only by your user account, as is the app's data folder.
+  Before, the settings file could be readable by other accounts on the same computer.
+- Word, PowerPoint and Excel files that would expand to an enormous size when opened (a trick that
+  makes a small file fill all memory) are now refused when attached or indexed into a knowledge base,
+  instead of crashing the app. Ordinary documents are far below the limits (256 MB per part, 1 GB per
+  spreadsheet).
+- Exporting an agent as a Strands Agents project no longer copies the values of its MCP servers'
+  environment variables or headers, which often hold API keys or tokens. The generated `agent.py`
+  reads each variable from the environment it runs in, and `config.yaml` lists header names without
+  their values. Agent names and descriptions are also written so they can't break the generated
+  Python code.
+- Scheduled background agent runs now stop after 100 tool calls instead of 500, since nobody is
+  watching them. Change the limit (1 to 1,000) in the new **Settings → Chat → Background agents**
+  section.
+- When a proxy is turned on, the app no longer connects directly anywhere. Calls to AWS, the web
+  tools, MCP servers reached by URL, knowledge base website sources, the on-device model download and
+  update checks all go through the proxy. If the proxy settings can't be used (no host, a protocol
+  other than HTTP or HTTPS, a malformed host), these connections fail with a message pointing to
+  **Settings → AWS → Proxy Settings**. Before, several of them quietly connected without the proxy,
+  update checks always did, and MCP servers kept connecting the old way after the proxy was changed
+  until the app restarted. Proxy hosts written as IPv6 addresses now work.
+- Pages and images shown inside the app are now blocked, with a notice, whenever a proxy is on
+  that they aren't actually using. That covers images in chats and search results, the Website
+  Generator preview, draw.io diagrams, HTML previews and avatars. It happens after you change the
+  proxy until you restart the app, and always on macOS 13 and older, which can't send this content
+  through a proxy. Before, this content connected without the proxy in those cases. Chat PDF exports
+  leave out remote images in the same situation.
+- Updated the certificate-checking libraries behind the app's secure connections, so certificates
+  from authorities that browsers no longer trust are rejected, and two cryptography libraries with
+  timing fixes.
+
 ### 2026-11-01
 
 - Ports the Docker sandbox publishes are now reachable only from this computer. They used to be

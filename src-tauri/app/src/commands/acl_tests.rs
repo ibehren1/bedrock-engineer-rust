@@ -267,12 +267,19 @@ fn handler_items() -> Vec<(String, String)> {
 fn main_window_modules_have_no_off_prefix_commands() {
     let items = handler_items();
     assert_eq!(items.len(), commands().len());
-    for module in ["local_terminal", "app_update", "knowledge", "usage", "docker"] {
+    for module in [
+        "local_terminal",
+        "app_update",
+        "knowledge",
+        "usage",
+        "docker",
+    ] {
         let mut found = 0;
         for (m, c) in items.iter().filter(|(m, _)| m == module) {
             found += 1;
             // `docker::check_docker_availability` only probes for the Docker CLI.
-            if MAIN_WINDOW_MODULE_EXCEPTIONS.contains(&c.as_str()) || c == "check_docker_availability"
+            if MAIN_WINDOW_MODULE_EXCEPTIONS.contains(&c.as_str())
+                || c == "check_docker_availability"
             {
                 continue;
             }

@@ -342,6 +342,7 @@ impl Tool for CameraCaptureTool {
     }
 
     async fn execute_internal(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
+        super::confirm_capture(ctx, crate::context::CaptureKind::Camera, NAME).await?;
         let prompt = input
             .get("recognizePrompt")
             .and_then(Value::as_str)

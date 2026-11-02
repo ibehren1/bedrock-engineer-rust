@@ -10,8 +10,9 @@ import { modKeyLabel } from '@renderer/lib/platform'
 
 const HomePage = () => {
   const { t } = useTranslation()
-  const { awsRegion, awsAccessKeyId, awsSecretAccessKey } = useSetting()
-  const isInitLoad = !awsRegion || !awsAccessKeyId || !awsSecretAccessKey
+  const { awsRegion, awsAccessKeyId, awsSecretAccessKey, savedAwsSecrets } = useSetting()
+  const isInitLoad =
+    !awsRegion || !awsAccessKeyId || !(awsSecretAccessKey || savedAwsSecrets.secretAccessKey)
 
   // Array of message keys for random selection
   const messageKeys = [

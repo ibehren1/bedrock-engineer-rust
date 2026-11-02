@@ -1007,6 +1007,10 @@ async fn task_crud_persists_to_the_config_store() {
         f.bg.schedule_task(schedule_config("bad", "61 * * * *", true))
             .unwrap_err();
     assert_eq!(err.to_string(), "Invalid cron expression: 61 * * * *");
+    let mut hostile = schedule_config("bad id", "0 9 * * *", true);
+    hostile.task_id = Some("../../escape".into());
+    let err = f.bg.schedule_task(hostile).unwrap_err();
+    assert!(err.to_string().starts_with("Invalid task id"), "{err}");
 
     let out =
         f.bg.schedule_task(schedule_config("Daily", "0 9 * * *", true))
@@ -1431,4 +1435,21 @@ async fn session_handlers_return_electron_shapes() {
         serde_json::to_value(f.bg.get_scheduler_stats()).unwrap()["stats"]["totalTasks"],
         1
     );
+}
+
+// AGENT-D4 / D5: hostile task ids are refused up front; the tool budget comes from settings.
+#[test]
+fn task_ids_are_validated_and_the_tool_budget_is_configurable() {
+    use crate::scheduler::{max_tool_calls, DEFAULT_MAX_TOOL_CALLS, MAX_TOOL_CALLS_KEY};
+    let store = MemoryConfigStore::new(json!({}));
+    assert_eq!(max_tool_calls(&store), DEFAULT_MAX_TOOL_CALLS);
+    let store = MemoryConfigStore::new(json!({ MAX_TOOL_CALLS_KEY: 25 }));
+    assert_eq!(max_tool_calls(&store), 25);
+    let store = MemoryConfigStore::new(json!({ MAX_TOOL_CALLS_KEY: 0 }));
+    assert_eq!(max_tool_calls(&store), 1);
+    let store = MemoryConfigStore::new(json!({ MAX_TOOL_CALLS_KEY: 999_999 }));
+    assert_eq!(max_tool_calls(&store), 1000);
+    for bad in ["../escape", ".hidden", "a/b"] {
+        assert!(!common::json_file::is_safe_file_id(bad), "{bad}");
+    }
 }

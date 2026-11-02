@@ -107,9 +107,14 @@ pub async fn save_website_content(
                 Ok(mut file) => {
                     use tokio::io::AsyncWriteExt;
                     let path_str = final_path.to_string_lossy().into_owned();
-                    file.write_all(content.as_bytes())
-                        .await
-                        .map_err(|e| NodeIoError::new(&e, "write", &path_str, None).message)?;
+                    // tokio's File writes on a background thread: without the flush, the
+                    // write may not have happened yet when this returns (or at all, if the
+                    // runtime goes away), and a reader sees an empty file.
+                    let write_error = |e: std::io::Error| {
+                        NodeIoError::new(&e, "write", &path_str, None).message
+                    };
+                    file.write_all(content.as_bytes()).await.map_err(write_error)?;
+                    file.flush().await.map_err(write_error)?;
                     break;
                 }
                 Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists && counter < 10_000 => {

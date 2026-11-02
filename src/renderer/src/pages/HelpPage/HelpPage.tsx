@@ -106,7 +106,7 @@ export const HelpPage: React.FC = () => {
   const body = useMemo(
     () =>
       guide === null ? null : (
-        <MD headingIds onAnchorClick={scrollTo}>
+        <MD headingIds trustedImages onAnchorClick={scrollTo}>
           {guide}
         </MD>
       ),

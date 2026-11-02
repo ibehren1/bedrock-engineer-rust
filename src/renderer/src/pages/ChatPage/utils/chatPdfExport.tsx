@@ -1,3 +1,4 @@
+import { currentWebContentStatus, withoutRemoteImages } from '@renderer/lib/webContent'
 import { renderToStaticMarkup } from 'react-dom/server'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -134,5 +135,6 @@ export async function buildChatPdfHtml(
     '</html>'
   ].join('\n')
 
-  return { html }
+  // The print window would fetch remote images without the proxy (see lib/webContent.ts).
+  return { html: currentWebContentStatus().allowed ? html : withoutRemoteImages(html) }
 }

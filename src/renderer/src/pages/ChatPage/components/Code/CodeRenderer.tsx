@@ -7,6 +7,7 @@ import { HtmlBlock } from './HtmlBlock'
 import { MermaidBlock } from './MermaidBlock'
 import { DrawIOBlock } from './DrawIOBlock'
 import LocalImage from '@renderer/components/LocalImage'
+import { RemoteImage } from '@renderer/components/RemoteImage'
 import { FilePathAnchor, FilePathCode } from '@renderer/components/FilePathLink'
 import style from '@renderer/components/Markdown/styles.module.css'
 import { extractDrawioXml, isDrawioXml } from '@renderer/lib/drawio/xmlParser'
@@ -60,6 +61,8 @@ export const CodeRenderer: React.FC<CodeRendererProps> = ({ text = '', className
         })()
 
         if (isRemoteUrl) {
+          // Model-written: remote images wait for a click unless the user turned that off.
+          if (src && /^https?:/i.test(src)) return <RemoteImage src={src} alt={alt} {...props} />
           return <img src={src} alt={alt} {...props} />
         }
 

@@ -34,25 +34,74 @@ pub fn attachment_paths(store: &Value) -> AttachmentPaths {
 }
 
 /// `aws.proxyConfig` as a proxy URL (`createProxyAgents`): `None` unless enabled with a host.
-pub fn proxy_url(store: &Value) -> Option<String> {
+#[cfg(test)]
+fn proxy_url(store: &Value) -> Option<String> {
     tools::ToolSettings::from_store(store)
         .proxy
         .and_then(|p| p.proxy_url())
 }
 
-/// An HTTP client honoring the stored proxy (MCP URL servers, the MCP registry search).
-pub fn http_client(store: &Value) -> reqwest::Client {
-    let mut builder = reqwest::Client::builder();
-    if let Some(url) = proxy_url(store) {
-        match reqwest::Proxy::all(&url) {
-            Ok(proxy) => builder = builder.proxy(proxy),
-            Err(e) => tracing::warn!(error = %e, "Ignoring invalid proxy configuration"),
-        }
+fn proxy_config(store: &Value) -> Option<tools::ProxyConfig> {
+    tools::ToolSettings::from_store(store).proxy
+}
+
+/// `builder` with the stored proxy (see `tools::web::proxy`), built. When a proxy is on, every
+/// request goes through it or fails; nothing ever connects directly while a proxy is on, not
+/// even if building the client fails (AGENT-B5).
+fn build_with_proxy(builder: reqwest::ClientBuilder, store: &Value) -> reqwest::Client {
+    let proxy = proxy_config(store);
+    if let Some(reason) = tools::web::proxy::broken_reason(proxy.as_ref()) {
+        tracing::warn!(reason = %reason, "Proxy is on but unusable; requests will fail");
     }
-    builder.build().unwrap_or_else(|e| {
-        tracing::warn!(error = %e, "Failed to build HTTP client; using defaults");
-        reqwest::Client::new()
-    })
+    tools::web::proxy::proxied(builder, proxy.as_ref())
+        .build()
+        .unwrap_or_else(|e| {
+            tracing::error!(error = %e, "Failed to build HTTP client; requests will fail");
+            refusing_client(format!("The app couldn't set up its HTTP client: {e}"))
+        })
+}
+
+/// A client whose every request fails with `reason`.
+fn refusing_client(reason: String) -> reqwest::Client {
+    tools::web::proxy::refuse(reqwest::Client::builder(), reason)
+        .build()
+        .expect("a client with only a proxy and a resolver builds")
+}
+
+/// Whether the stored proxy is on and usable (so name resolution happens at the proxy).
+fn proxy_on(store: &Value) -> bool {
+    matches!(
+        proxy_config(store).map(|p| p.setting()),
+        Some(tools::web::proxy::ProxySetting::On(_))
+    )
+}
+
+/// An HTTP client honoring the stored proxy (the MCP registry search, the embedding model
+/// download).
+pub fn http_client(store: &Value) -> reqwest::Client {
+    build_with_proxy(reqwest::Client::builder(), store)
+}
+
+/// [`http_client`] for MCP URL servers: redirects stay on the server's origin, so the headers
+/// configured for it (API keys, tokens) are never re-sent to another host (AGENT-M5).
+pub fn mcp_http_client(store: &Value) -> reqwest::Client {
+    build_with_proxy(
+        reqwest::Client::builder().redirect(mcp::client::redirect_policy()),
+        store,
+    )
+}
+
+/// [`http_client`] for fetches the model can aim (the knowledge base website crawler): the
+/// destination checks of `tools::web::net_guard` on every request and redirect, with the store's
+/// `blockLocalNetworkAccess` switch (DATA-1).
+pub fn guarded_http_client(store: &Value) -> reqwest::Client {
+    let block_local = store
+        .get("blockLocalNetworkAccess")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let builder =
+        tools::web::net_guard::guard(reqwest::Client::builder(), block_local, proxy_on(store));
+    build_with_proxy(builder, store)
 }
 
 #[cfg(test)]

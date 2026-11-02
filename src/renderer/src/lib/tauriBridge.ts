@@ -1032,6 +1032,10 @@ function createApi(): Window['api'] {
         close: cmd(`${T}.close`, 'docker_sandbox_terminal_close', (terminalId) => ({ terminalId }))
       }
     },
+    webContent: {
+      status: cmd('api.webContent.status', 'window_web_content_status'),
+      onChange: (callback: (status: any) => void) => on('web-content-status', callback)
+    },
     appUpdate: {
       currentVersion: cmd(`${AU}.currentVersion`, 'app_update_current_version'),
       check: cmd(`${AU}.check`, 'app_update_check'),

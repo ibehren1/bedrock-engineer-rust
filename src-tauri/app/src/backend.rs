@@ -275,7 +275,8 @@ impl knowledge::service::KnowledgeHost for KnowledgeHost {
         knowledge::types::KnowledgeSettings::from_store(&store_snapshot(&self.0))
     }
     fn http_client(&self) -> reqwest::Client {
-        settings::http_client(&store_snapshot(&self.0))
+        // Crawled sites choose redirects: destination checks on every hop (DATA-1).
+        settings::guarded_http_client(&store_snapshot(&self.0))
     }
     fn emit(&self, event: &str, payload: Value) {
         if let Err(e) = self.0.emit(event, payload) {
@@ -330,7 +331,7 @@ impl Backend {
             }
         });
         // URL servers use the proxy configured at startup.
-        let mcp = Arc::new(McpManager::new(settings::http_client(&snapshot())));
+        let mcp = Arc::new(McpManager::new(settings::mcp_http_client(&snapshot())));
 
         let runtime = tauri::async_runtime::handle().inner().clone();
         let sdk: Arc<dyn SdkConfigSource> = Arc::new(DefaultSdkConfig);
@@ -388,6 +389,11 @@ impl Backend {
             host_approver: Some(Arc::new(
                 crate::host_command_approval::HostCommandApprovals::new(app.clone(), user_data),
             )),
+            // Each agent asks once before it may capture the screen or the camera (TOOLS-6).
+            capture_approver: Some(Arc::new(crate::capture_approval::CaptureApprovals::new(
+                app.clone(),
+                user_data,
+            ))),
             ..Default::default()
         };
 

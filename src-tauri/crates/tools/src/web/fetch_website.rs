@@ -226,26 +226,31 @@ impl Tool for FetchWebsiteTool {
             }),
         };
 
-        let response = fetch_website(url, &request, ctx.settings.proxy.as_ref())
-            .await
-            .map_err(|msg| {
-                if msg.contains("net::") {
-                    return ToolError::network(
-                        format!("Network error fetching website: {msg}"),
-                        NAME,
-                        Some(url),
-                        None,
-                    );
-                }
-                let mut extra = Map::new();
-                extra.insert("url".into(), json!(url));
-                ToolError::execution(
-                    format!("Error fetching website: {msg}"),
+        let response = fetch_website(
+            url,
+            &request,
+            ctx.settings.proxy.as_ref(),
+            ctx.settings.block_local_network,
+        )
+        .await
+        .map_err(|msg| {
+            if msg.contains("net::") {
+                return ToolError::network(
+                    format!("Network error fetching website: {msg}"),
                     NAME,
-                    Some(json!({})),
-                    Some(extra),
-                )
-            })?;
+                    Some(url),
+                    None,
+                );
+            }
+            let mut extra = Map::new();
+            extra.insert("url".into(), json!(url));
+            ToolError::execution(
+                format!("Error fetching website: {msg}"),
+                NAME,
+                Some(json!({})),
+                Some(extra),
+            )
+        })?;
 
         let original = match &response.data {
             Value::String(s) => s.clone(),

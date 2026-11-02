@@ -112,6 +112,42 @@ const SettingPage = {
     descriptionPlaceholder: 'Description (optional)',
     done: 'Done'
   },
+  savedSecret: {
+    saved: 'Saved. It is kept by the app and not shown here; type a new one to replace it.',
+    clear: 'Remove saved value',
+    placeholder: 'Saved (type to replace)'
+  },
+  backgroundAgentsSettings: {
+    title: 'Background agents',
+    description: 'Limits for scheduled background agent runs, which run with nobody watching.',
+    maxToolCalls: 'Most tool calls per scheduled run',
+    maxToolCallsHint:
+      'When a run reaches this many tool calls it stops. Raise it for long jobs; keep it low so a run that goes wrong, or is steered by something it reads, can only do so much. {{min}} to {{max}}; default {{default}}.',
+    invalid: 'Enter a whole number from {{min}} to {{max}}.'
+  },
+  webContentBlocked: {
+    title: 'Web content blocked',
+    fallback:
+      "A proxy is on that pages shown inside the app aren't using, so they are blocked instead of connecting without it."
+  },
+  remoteImages: {
+    title: 'Remote images in chat',
+    description: 'Images on other websites that a reply links to.',
+    autoLoad: 'Load remote images in replies automatically',
+    placeholder: 'Image from {{host}} not loaded',
+    load: 'Load',
+    why: "Off by default: each remote image shows a placeholder naming the website, and loads when you click Load. Loading an image sends a request to that website, and a reply steered by a web page, file or tool result can hide parts of your conversation in the image's address, so loading it would send them to whoever runs the site. Turn this on to load such images straight away. Images from your project and attachments always load."
+  },
+  networkAccess: {
+    title: 'Local network access for web tools',
+    description:
+      "Controls whether the agent's web tools (fetching a web page, and the knowledge base website crawler) can reach this computer and the networks it is on.",
+    block: 'Block web tools from reaching this computer and local networks',
+    why: 'Why: these requests are made from your computer, and the agent decides where they go. Text the agent reads (a web page, a file, a tool result) can try to steer it into fetching addresses only your computer can reach, such as services running on this computer with no login (dev servers, database or Docker admin pages), your router, printers, or intranet sites and APIs behind your VPN, and then sending what it finds somewhere else.',
+    when: "When this is on, web tools can't reach localhost or private network addresses (10.x, 172.16-31.x, 192.168.x, 100.64-127.x and their IPv6 equivalents), including through redirects or host names that point there. Leave it off if you want the agent to fetch a dev server it started or pages on your intranet. Through a proxy, the proxy looks up host names, so only addresses written directly in the URL are checked.",
+    always:
+      'Always blocked, whatever this setting: cloud instance metadata and other link-local addresses (169.254.x.x, such as 169.254.169.254, and fe80::), which on a cloud machine hand out its temporary credentials to anything that asks.'
+  },
   agentFolders: {
     title: 'Agent folders',
     description:

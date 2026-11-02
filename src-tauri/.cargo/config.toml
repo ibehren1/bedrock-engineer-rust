@@ -1,0 +1,6 @@
+# gemm-f16 (pulled in by candle for the on-device embedding model) uses half-precision NEON
+# instructions in inline asm, which need the `fp16` target feature. Apple's arm64 targets enable
+# it by default; aarch64 Linux doesn't, so the build fails there without this. Arm64 Linux builds
+# therefore need an ARMv8.2-A or newer CPU (Graviton 2+, Ampere, Raspberry Pi 5, Apple silicon VMs).
+[target.aarch64-unknown-linux-gnu]
+rustflags = ["-C", "target-feature=+fp16"]

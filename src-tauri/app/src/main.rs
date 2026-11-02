@@ -7,6 +7,7 @@
 mod approvals;
 mod backend;
 mod budget;
+mod capture_approval;
 mod commands;
 mod errors;
 mod files;
@@ -16,6 +17,7 @@ mod mcp_approval;
 mod menu;
 mod notify;
 mod pdf;
+mod secrets;
 mod security;
 mod settings;
 mod state;
@@ -30,7 +32,6 @@ use std::sync::Mutex;
 use store::Store;
 use tauri::webview::{NewWindowResponse, PermissionKind, PermissionResponse};
 use tauri::{Manager, RunEvent, WebviewWindowBuilder, WindowEvent};
-use tauri_plugin_opener::OpenerExt;
 
 /// App name; the config dir is `<config dir>/<APP_NAME>`.
 const APP_NAME: &str = "Bedrock Engineer";
@@ -209,9 +210,7 @@ fn main() {
             let window = reveal
                 .attach(builder)
                 .on_new_window(move |url, _features| {
-                    if let Err(e) = handle.opener().open_url(url.as_str(), None::<&str>) {
-                        tracing::error!(url = %url, error = %e, "Failed to open external URL");
-                    }
+                    crate::security::open_new_window_url(&handle, &url);
                     NewWindowResponse::Deny
                 })
                 // Keep the window on the app's pages; other links open in the browser.

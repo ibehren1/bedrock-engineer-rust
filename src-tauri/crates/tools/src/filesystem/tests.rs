@@ -7,17 +7,29 @@ use crate::context::ToolContext;
 use crate::types::ToolOutput;
 use serde_json::{json, Value};
 
+/// `rel` (written with `/`) under `dir`, with the platform's separators, which is how the
+/// tools report paths.
 fn p(dir: &tempfile::TempDir, rel: &str) -> String {
-    dir.path().join(rel).to_string_lossy().into_owned()
+    rel.split('/')
+        .fold(dir.path().to_path_buf(), |path, part| path.join(part))
+        .to_string_lossy()
+        .into_owned()
 }
 
-/// `ctx` with the system temp folder (where every test's files live) and `/x` (the document
-/// reader tests' fake paths) as agent folders, so the path guard lets the tools reach them.
+/// An absolute path for the fake document reader (nothing is read from it), inside the temp
+/// folder so the path guard allows it on every platform.
+fn fake_doc(name: &str) -> String {
+    std::env::temp_dir()
+        .join("bedrock-fake-docs")
+        .join(name)
+        .to_string_lossy()
+        .into_owned()
+}
+
+/// `ctx` with the system temp folder (where every test's files live) as an agent folder, so
+/// the path guard lets the tools reach them.
 fn open(mut ctx: ToolContext) -> ToolContext {
-    ctx.settings.agent_file_folders = vec![
-        std::env::temp_dir().to_string_lossy().into_owned(),
-        "/x".into(),
-    ];
+    ctx.settings.agent_file_folders = vec![std::env::temp_dir().to_string_lossy().into_owned()];
     ctx
 }
 
@@ -260,9 +272,10 @@ impl DocumentReader for FakeDocs {
 #[tokio::test]
 async fn pdf_and_docx_go_through_the_document_reader() {
     let mut ctx = open(ToolContext::default());
+    let upper = fake_doc("a.PDF");
     let err = run_tool(
         &ReadFilesTool,
-        json!({"type": "readFiles", "paths": ["/x/a.PDF"]}),
+        json!({"type": "readFiles", "paths": [upper]}),
         &ctx,
     )
     .await
@@ -270,27 +283,29 @@ async fn pdf_and_docx_go_through_the_document_reader() {
     assert!(response(&err)["error"]
         .as_str()
         .unwrap()
-        .starts_with("Error reading PDF file /x/a.PDF: "));
+        .starts_with(&format!("Error reading PDF file {upper}: ")));
 
     ctx.documents = Some(std::sync::Arc::new(FakeDocs));
+    let pdf = fake_doc("a.pdf");
     let out = run_tool(
         &ReadFilesTool,
-        json!({"type": "readFiles", "paths": ["/x/a.pdf"]}),
+        json!({"type": "readFiles", "paths": [pdf]}),
         &ctx,
     )
     .await
     .unwrap();
-    assert!(text(out).ends_with("\npdf:/x/a.pdf:false"));
+    assert!(text(out).ends_with(&format!("\npdf:{pdf}:false")));
+    let docx = fake_doc("b.docx");
     let err = run_tool(
         &ReadFilesTool,
-        json!({"type": "readFiles", "paths": ["/x/b.docx"]}),
+        json!({"type": "readFiles", "paths": [docx]}),
         &ctx,
     )
     .await
     .unwrap_err();
     assert_eq!(
         response(&err)["error"],
-        "Error reading DOCX file /x/b.docx: bad docx"
+        format!("Error reading DOCX file {docx}: bad docx")
     );
 }
 

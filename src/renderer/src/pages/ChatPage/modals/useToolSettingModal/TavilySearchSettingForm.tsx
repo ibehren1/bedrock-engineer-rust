@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { useSettings } from '@renderer/contexts/SettingsContext'
 import { TavilySearchConfig } from 'src/types/agent-chat'
 import { useDomainList } from './hooks/useDomainList'
 import { ApiKeySection } from './components/ApiKeySection'
@@ -22,6 +23,7 @@ export const TavilySearchSettingForm = ({
   onUpdateTavilyConfig
 }: TavilySearchSettingFormProps) => {
   const { t } = useTranslation()
+  const { savedTavilyApiKey } = useSettings()
 
   // Include domains management
   const includeDomainsHook = useDomainList({
@@ -58,7 +60,11 @@ export const TavilySearchSettingForm = ({
       </div>
 
       {/* API Key設定 */}
-      <ApiKeySection apiKey={tavilySearchApiKey} onSave={setTavilySearchApiKey} />
+      <ApiKeySection
+        apiKey={tavilySearchApiKey}
+        onSave={setTavilySearchApiKey}
+        saved={savedTavilyApiKey}
+      />
 
       {/* ドメイン設定 */}
       <div className="flex flex-col gap-2 p-2.5 border border-subtle rounded-control">

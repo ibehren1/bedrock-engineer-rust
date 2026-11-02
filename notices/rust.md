@@ -3010,7 +3010,7 @@ THIS SOFTWARE.
 
 Used by:
 
-- [rustls-webpki 0.103.15](https://github.com/rustls/webpki)
+- [rustls-webpki 0.103.16](https://github.com/rustls/webpki)
 
 ```text
 Except as otherwise noted, this project is licensed under the following
@@ -7188,7 +7188,7 @@ DEALINGS IN THE SOFTWARE.
 
 Used by:
 
-- [crypto-bigint 0.7.5](https://github.com/RustCrypto/crypto-bigint)
+- [crypto-bigint 0.7.10](https://github.com/RustCrypto/crypto-bigint)
 - [sec1 0.8.1](https://github.com/RustCrypto/formats)
 - [spki 0.8.1](https://github.com/RustCrypto/formats)
 
@@ -7771,7 +7771,7 @@ DEALINGS IN THE SOFTWARE.
 
 Used by:
 
-- [ctutils 0.4.2](https://github.com/RustCrypto/utils)
+- [ctutils 0.4.7](https://github.com/RustCrypto/utils)
 
 ```text
 Copyright (c) 2025-2026 The RustCrypto Project Developers

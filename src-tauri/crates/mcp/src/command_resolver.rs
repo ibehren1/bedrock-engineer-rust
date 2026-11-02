@@ -62,23 +62,43 @@ pub fn resolve_command(command: &str) -> Result<String, String> {
         .unwrap_or_else(|| command.to_string()))
 }
 
-/// Where `command` would be found by a `PATH` search: `path` split on `sep`, trying the bare name
-/// and then each of `exts` appended (Windows' `PATHEXT`). A command that already names a path is
-/// checked as it is, with the same extensions. `None` when nothing exists.
+/// Where `command` would be found by a `PATH` search: `path` split on `sep`, trying the name
+/// with each of `exts` appended (Windows' `PATHEXT`) before the bare name, unless the name
+/// already ends in one of them. A command that already names a path is checked as it is, with
+/// the same extensions. `None` when nothing exists.
 ///
-/// On Windows MCP servers are started through `cmd /c`, and `cmd` itself always starts, so a missing
-/// command never surfaces as "not found"; this lookup reports it up front, the way Node's
-/// cross-spawn turns `cmd`'s exit into `ENOENT`.
+/// On Windows the file found is started directly (not through `cmd /c`), so `npx` must find
+/// `npx.cmd` rather than the extensionless shell script npm installs next to it, which Windows
+/// can't run.
 pub fn find_in_path(command: &str, path: &str, sep: char, exts: &[String]) -> Option<PathBuf> {
+    let has_ext = exts.iter().any(|ext| {
+        command
+            .to_ascii_lowercase()
+            .ends_with(&ext.to_ascii_lowercase())
+    });
     let candidates = |base: PathBuf| {
-        std::iter::once(base.clone()).chain(exts.iter().map(move |ext| {
-            let mut name = base.clone().into_os_string();
-            name.push(ext);
-            PathBuf::from(name)
-        }))
+        let with_exts: Vec<PathBuf> = exts
+            .iter()
+            .map(|ext| {
+                let mut name = base.clone().into_os_string();
+                name.push(ext);
+                PathBuf::from(name)
+            })
+            .collect();
+        let mut all = Vec::with_capacity(with_exts.len() + 1);
+        if has_ext {
+            all.push(base);
+            all.extend(with_exts);
+        } else {
+            all.extend(with_exts);
+            all.push(base);
+        }
+        all
     };
     if command.contains('/') || command.contains('\\') {
-        return candidates(PathBuf::from(command)).find(|p| p.is_file());
+        return candidates(PathBuf::from(command))
+            .into_iter()
+            .find(|p| p.is_file());
     }
     path.split(sep)
         .filter(|dir| !dir.is_empty())
@@ -107,6 +127,8 @@ mod tests {
         let bin = dir.path().join("bin");
         std::fs::create_dir(&bin).unwrap();
         std::fs::write(bin.join("npx.cmd"), "").unwrap();
+        // npm installs an extensionless shell script next to npx.cmd; the .cmd must win.
+        std::fs::write(bin.join("npx"), "").unwrap();
         std::fs::write(bin.join("plain"), "").unwrap();
         let path = format!(";{};", bin.display());
         let exts = path_extensions(Some(".exe;.cmd"));
@@ -139,7 +161,11 @@ mod tests {
 
     #[test]
     fn absolute_paths_are_left_alone() {
-        let abs = if cfg!(windows) { "C:\\x\\y.exe" } else { "/opt/x/server" };
+        let abs = if cfg!(windows) {
+            "C:\\x\\y.exe"
+        } else {
+            "/opt/x/server"
+        };
         assert_eq!(resolve_command(abs).unwrap(), abs);
     }
 

@@ -5,7 +5,7 @@
 use crate::agent::SubAgentInvoker;
 use crate::bedrock_tools::{create_bedrock_tools, BedrockBackend, SdkBedrockBackend};
 use crate::command::CommandSandbox;
-use crate::context::{AgentResolver, HostCommandApprover, ToolContext};
+use crate::context::{AgentResolver, CaptureApprover, HostCommandApprover, ToolContext};
 use crate::docker_sandbox::{DockerSandboxTool, SandboxOps};
 use crate::documents::NativeDocumentReader;
 use crate::filesystem::DocumentReader;
@@ -103,6 +103,8 @@ pub struct ContextServices {
     pub sub_agents: Option<Arc<dyn SubAgentInvoker>>,
     /// Confirms allowlisted host commands with the user.
     pub host_approver: Option<Arc<dyn HostCommandApprover>>,
+    /// Confirms screen and camera captures with the user.
+    pub capture_approver: Option<Arc<dyn CaptureApprover>>,
 }
 
 impl Default for ContextServices {
@@ -113,6 +115,7 @@ impl Default for ContextServices {
             documents: Some(Arc::new(NativeDocumentReader)),
             sub_agents: None,
             host_approver: None,
+            capture_approver: None,
         }
     }
 }
@@ -127,6 +130,7 @@ impl ContextServices {
             documents: self.documents.clone(),
             sub_agents: self.sub_agents.clone(),
             host_approver: self.host_approver.clone(),
+            capture_approver: self.capture_approver.clone(),
             ..ToolContext::from_store(store, session_id)
         }
     }

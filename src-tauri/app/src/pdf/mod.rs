@@ -25,7 +25,6 @@ mod windows;
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{LazyLock, Mutex};
 use std::time::Duration;
 use tauri::http::{header, Request, Response, StatusCode};
@@ -35,6 +34,11 @@ use tokio::sync::oneshot;
 
 /// URI scheme serving the documents being printed.
 pub const PROTOCOL: &str = "chatexport";
+
+/// The export page may not run scripts or contact anything but images (APP-4): it is
+/// self-contained HTML with inline styles and data: images, plus any remote images the chat had.
+const DOCUMENT_CSP: &str =
+    "default-src 'none'; img-src data: https: http:; style-src 'unsafe-inline'; font-src data:";
 
 /// Page width and height of the PDF in inches (U.S. Letter, as the docx export).
 const PAGE_SIZE_INCHES: (f64, f64) = (8.5, 11.0);
@@ -63,7 +67,6 @@ pub(crate) type PrintDone = Box<dyn FnOnce(Result<(), String>) + Send>;
 
 /// Documents currently being printed, by id.
 static DOCUMENTS: LazyLock<Mutex<HashMap<String, String>>> = LazyLock::new(Default::default);
-static NEXT_ID: AtomicU64 = AtomicU64::new(1);
 
 /// Removes the document (and the temp file) however the export ends.
 struct Pending {
@@ -85,6 +88,18 @@ pub fn protocol<R: Runtime>(
     _ctx: UriSchemeContext<'_, R>,
     request: Request<Vec<u8>>,
 ) -> Response<Vec<u8>> {
+    respond(&request)
+}
+
+fn respond(request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
+    // Only the print window's own top-level load, which carries no Origin, may fetch a document;
+    // another page loading it as a subresource sends one (APP-4).
+    if request.headers().contains_key(header::ORIGIN) {
+        return Response::builder()
+            .status(StatusCode::FORBIDDEN)
+            .body(Vec::new())
+            .expect("valid response");
+    }
     let id = request.uri().path().trim_start_matches('/');
     let html = DOCUMENTS.lock().ok().and_then(|d| d.get(id).cloned());
     let (status, body) = match html {
@@ -94,6 +109,8 @@ pub fn protocol<R: Runtime>(
     Response::builder()
         .status(status)
         .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
+        .header(header::CONTENT_SECURITY_POLICY, DOCUMENT_CSP)
+        .header(header::X_CONTENT_TYPE_OPTIONS, "nosniff")
         .body(body)
         .expect("valid response")
 }
@@ -114,8 +131,8 @@ pub async fn render_html_to_pdf<R: Runtime>(
     app: &AppHandle<R>,
     html: String,
 ) -> Result<Vec<u8>, String> {
-    let n = NEXT_ID.fetch_add(1, Ordering::Relaxed);
-    let id = format!("{}-{n}", std::process::id());
+    // Random, so no other page can guess a document's address (APP-4).
+    let id = uuid::Uuid::new_v4().simple().to_string();
     let pending = Pending {
         pdf_path: std::env::temp_dir().join(format!("bedrock-engineer-chat-export-{id}.pdf")),
         id: id.clone(),
@@ -135,7 +152,7 @@ pub async fn render_html_to_pdf<R: Runtime>(
     // window's proxy setting (see `webview_proxy`).
     let builder = WebviewWindowBuilder::new(
         app,
-        format!("pdf-export-{n}"),
+        format!("pdf-export-{id}"),
         WebviewUrl::CustomProtocol(url),
     );
     let window = crate::webview_proxy::configure(app, builder)
@@ -219,6 +236,37 @@ mod tests {
         );
         drop(pending);
         assert!(DOCUMENTS.lock().unwrap().get("t-1").is_none());
+    }
+
+    // APP-4: served only to a load without an Origin, with a script-free CSP.
+    #[test]
+    fn documents_are_served_without_scripts_and_never_to_other_pages() {
+        DOCUMENTS
+            .lock()
+            .unwrap()
+            .insert("t-csp".into(), "<p>hi</p>".into());
+        let get = |origin: Option<&str>| {
+            let mut req = Request::builder().uri("chatexport://localhost/t-csp");
+            if let Some(o) = origin {
+                req = req.header(header::ORIGIN, o);
+            }
+            respond(&req.body(Vec::new()).unwrap())
+        };
+        let ok = get(None);
+        assert_eq!(ok.status(), StatusCode::OK);
+        let csp = ok.headers()[header::CONTENT_SECURITY_POLICY]
+            .to_str()
+            .unwrap();
+        assert!(
+            csp.contains("default-src 'none'") && !csp.contains("script-src"),
+            "{csp}"
+        );
+        assert_eq!(
+            get(Some("tauri://localhost")).status(),
+            StatusCode::FORBIDDEN
+        );
+        assert_eq!(get(Some("null")).status(), StatusCode::FORBIDDEN);
+        DOCUMENTS.lock().unwrap().remove("t-csp");
     }
 
     #[test]

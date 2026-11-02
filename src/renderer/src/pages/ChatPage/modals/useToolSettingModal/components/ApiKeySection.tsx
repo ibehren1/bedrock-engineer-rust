@@ -6,9 +6,11 @@ import { Button, Input } from '@renderer/components/ui'
 interface ApiKeySectionProps {
   apiKey: string
   onSave: (apiKey: string) => void
+  /** A key is saved; its value isn't available here. Saving an empty field keeps it. */
+  saved?: boolean
 }
 
-export const ApiKeySection = ({ apiKey: initialApiKey, onSave }: ApiKeySectionProps) => {
+export const ApiKeySection = ({ apiKey: initialApiKey, onSave, saved }: ApiKeySectionProps) => {
   const { t } = useTranslation()
   const [apiKey, setApiKey] = useState(initialApiKey)
   const [showApiKey, setShowApiKey] = useState(false)
@@ -28,7 +30,7 @@ export const ApiKeySection = ({ apiKey: initialApiKey, onSave }: ApiKeySectionPr
               type={showApiKey ? 'text' : 'password'}
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              placeholder="tvly-xxxxxxxxxxxxxxx"
+              placeholder={saved ? t('savedSecret.placeholder') : 'tvly-xxxxxxxxxxxxxxx'}
               className="pr-10"
             />
             <button

@@ -56,6 +56,50 @@ const ALLOWED_SERVICE_KEYS: [&str; 25] = [
     "cpus",
 ];
 
+/// Linux capabilities sandbox containers keep: what package managers and their install scripts
+/// need as root (file ownership and modes, switching to their own users, setting file
+/// capabilities, binding low ports). Docker's other defaults are dropped: raw sockets
+/// (`NET_RAW`, packet spoofing), `MKNOD`, `SYS_CHROOT` and `AUDIT_WRITE` (SBX-6).
+pub const SANDBOX_CAPABILITIES: &[&str] = &[
+    "CHOWN",
+    "DAC_OVERRIDE",
+    "FOWNER",
+    "FSETID",
+    "KILL",
+    "SETGID",
+    "SETUID",
+    "SETPCAP",
+    "SETFCAP",
+    "NET_BIND_SERVICE",
+];
+/// Processes per container, so a fork bomb can't take down the Docker VM (SBX-6).
+pub const SANDBOX_PIDS_LIMIT: u32 = 1024;
+
+/// The writer's own settings on every service, applied after the agent's keys so they always
+/// win. Always: no automatic restarts, so a sandbox never comes back by itself after the app
+/// quits. With the lock-down switch (SBX-6): limited capabilities, no privilege gain through
+/// setuid programs, a process limit. With the network switch (SBX-5): no network at all
+/// (published ports are then dropped, since Docker can't publish them).
+fn harden_service(service: &mut Mapping, config: &DockerSandboxConfig) {
+    service.insert(key("restart"), str_value("no"));
+    if config.lock_down {
+        service.insert(key("cap_drop"), string_seq(["ALL".to_string()]));
+        service.insert(
+            key("cap_add"),
+            string_seq(SANDBOX_CAPABILITIES.iter().map(|c| c.to_string())),
+        );
+        service.insert(
+            key("security_opt"),
+            string_seq(["no-new-privileges:true".to_string()]),
+        );
+        service.insert(key("pids_limit"), Value::from(SANDBOX_PIDS_LIMIT));
+    }
+    if config.disable_network {
+        service.insert(key("network_mode"), str_value("none"));
+        service.remove("ports");
+    }
+}
+
 /// Named volumes (and `dataVolumes` names) become `data/<name>` on the host.
 fn is_valid_volume_name(name: &str) -> bool {
     static NAME: OnceLock<Regex> = OnceLock::new();
@@ -378,12 +422,17 @@ fn build_generated_compose(
         }
         service.insert(key("mem_limit"), str_value(&config.memory_limit));
         service.insert(key("cpus"), Value::from(config.cpu_limit));
+        harden_service(&mut service, config);
 
         service_map.insert(key(&spec.name), Value::Mapping(service));
         summary.push(SandboxServiceSummary {
             name: spec.name.clone(),
             image,
-            ports,
+            ports: if config.disable_network {
+                Vec::new()
+            } else {
+                ports
+            },
         });
     }
 
@@ -637,6 +686,10 @@ fn build_from_agent_yaml(
                 key("ports"),
                 string_seq(ports.iter().map(SandboxPortMapping::publish_spec)),
             );
+        }
+        harden_service(service, config);
+        if config.disable_network {
+            ports.clear();
         }
 
         let image = service.get("image").map(js_display).unwrap_or_default();
@@ -1182,6 +1235,8 @@ mod tests {
                 timeout: 60.0,
                 terminal_acknowledged: None,
                 os: None,
+                disable_network: false,
+                lock_down: false,
             },
         )
         .unwrap();
@@ -1846,7 +1901,71 @@ services:
         assert!(built.document.get("x-base").is_none());
         let app = service(&built, "app");
         assert_eq!(app.get("image").unwrap().as_str(), Some("node:22"));
-        assert_eq!(app.get("restart").unwrap().as_str(), Some("unless-stopped"));
+        // Merged in, then overridden: a sandbox never restarts on its own (SBX-6).
+        assert_eq!(app.get("restart").unwrap().as_str(), Some("no"));
+    }
+
+    // SBX-6: with the lock-down switch every service is hardened, whatever the agent wrote;
+    // without it only the restart policy is forced.
+    #[test]
+    fn services_are_hardened_whatever_the_agent_writes() {
+        let plain = build(CreateSandboxOptions::default()).unwrap();
+        let svc = service(&plain, "main");
+        assert_eq!(svc.get("restart").unwrap().as_str(), Some("no"));
+        assert!(svc.get("cap_drop").is_none() && svc.get("security_opt").is_none());
+        assert!(svc.get("pids_limit").is_none());
+
+        let locked = DockerSandboxConfig {
+            lock_down: true,
+            ..config()
+        };
+        let build_locked = |options: CreateSandboxOptions| {
+            build_compose(&options, &sandbox_dir(), Path::new(PROJECT_PATH), &locked).unwrap()
+        };
+        for built in [
+            build_locked(CreateSandboxOptions::default()),
+            build_locked(CreateSandboxOptions {
+                compose_yaml: Some(
+                    "services:\n  app:\n    image: x\n    restart: always\n    ports:\n      - 8080:80\n".into(),
+                ),
+                ..Default::default()
+            }),
+        ] {
+            let name = built.services[0].name.clone();
+            let svc = service(&built, &name);
+            assert_eq!(strings(svc.get("cap_drop").unwrap()), ["ALL"]);
+            let caps = strings(svc.get("cap_add").unwrap());
+            assert!(caps.contains(&"CHOWN".to_string()) && !caps.contains(&"NET_RAW".to_string()));
+            assert_eq!(strings(svc.get("security_opt").unwrap()), ["no-new-privileges:true"]);
+            assert_eq!(svc.get("pids_limit").unwrap().as_u64(), Some(SANDBOX_PIDS_LIMIT as u64));
+            assert_eq!(svc.get("restart").unwrap().as_str(), Some("no"));
+            assert!(svc.get("network_mode").is_none());
+        }
+    }
+
+    // SBX-5: with the switch, no network and no published ports.
+    #[test]
+    fn the_network_switch_disconnects_every_service() {
+        let config = DockerSandboxConfig {
+            disable_network: true,
+            ..config()
+        };
+        let built = build_compose(
+            &CreateSandboxOptions {
+                compose_yaml: Some(
+                    "services:\n  app:\n    image: x\n    network_mode: bridge\n    ports:\n      - 8080:80\n".into(),
+                ),
+                ..Default::default()
+            },
+            &sandbox_dir(),
+            Path::new(PROJECT_PATH),
+            &config,
+        )
+        .unwrap();
+        let app = service(&built, "app");
+        assert_eq!(app.get("network_mode").unwrap().as_str(), Some("none"));
+        assert!(app.get("ports").is_none());
+        assert!(built.services[0].ports.is_empty());
     }
 
     #[test]

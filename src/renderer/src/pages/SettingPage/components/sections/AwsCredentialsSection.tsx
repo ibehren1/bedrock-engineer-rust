@@ -7,6 +7,7 @@ import { SettingInput } from '../SettingInput'
 import { SettingSelect } from '../SettingSelect'
 import { IAMPolicyModal } from '../IAMPolicyModal'
 import { buildRegionGroups } from '../../utils/regionOptions'
+import { SavedSecretNote } from '../SavedSecretNote'
 
 export const AwsCredentialsSection: React.FC = () => {
   const { t } = useTranslation()
@@ -19,6 +20,8 @@ export const AwsCredentialsSection: React.FC = () => {
     setAwsSecretAccessKey,
     awsSessionToken,
     setAwsSessionToken,
+    savedAwsSecrets,
+    clearSavedAwsSecret,
     useAwsProfile,
     setUseAwsProfile,
     awsProfile,
@@ -93,17 +96,33 @@ export const AwsCredentialsSection: React.FC = () => {
               <SettingInput
                 label={t('AWS Secret Access Key')}
                 type="password"
-                placeholder="****************************************"
+                placeholder={
+                  savedAwsSecrets.secretAccessKey
+                    ? t('savedSecret.placeholder')
+                    : '****************************************'
+                }
                 value={awsSecretAccessKey}
                 onChange={(e) => setAwsSecretAccessKey(e.target.value)}
+              />
+              <SavedSecretNote
+                saved={savedAwsSecrets.secretAccessKey && !awsSecretAccessKey}
+                onClear={() => clearSavedAwsSecret('secretAccessKey')}
               />
 
               <SettingInput
                 label={t('AWS Session Token (optional)')}
                 type="password"
-                placeholder="****************************************"
+                placeholder={
+                  savedAwsSecrets.sessionToken
+                    ? t('savedSecret.placeholder')
+                    : '****************************************'
+                }
                 value={awsSessionToken}
                 onChange={(e) => setAwsSessionToken(e.target.value)}
+              />
+              <SavedSecretNote
+                saved={savedAwsSecrets.sessionToken && !awsSessionToken}
+                onClear={() => clearSavedAwsSecret('sessionToken')}
               />
 
               {regionSelect}

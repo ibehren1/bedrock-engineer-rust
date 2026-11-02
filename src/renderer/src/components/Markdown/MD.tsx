@@ -3,6 +3,7 @@ import remarkGfm from 'remark-gfm'
 import style from './styles.module.css'
 import { useMemo, type ReactNode } from 'react'
 import LocalImage from '../LocalImage'
+import { RemoteImage, TrustedRemoteImage } from '../RemoteImage'
 import { FilePathAnchor, FilePathCode } from '../FilePathLink'
 import rehypeKatex from 'rehype-katex'
 import remarkMath from 'remark-math'
@@ -14,6 +15,11 @@ type MDProps = {
   children: string | null | undefined
   /** Give headings GitHub-style `id`s (`#26-accounting-…`), for long documents like the guide. */
   headingIds?: boolean
+  /**
+   * Content that isn't model-written (the changelog, the user's own files): remote images load
+   * without a click. Model-written content leaves this off (see `RemoteImage`).
+   */
+  trustedImages?: boolean
   /** Handles `#…` links (scroll in-page) instead of opening them; the app uses a hash router. */
   onAnchorClick?: (id: string) => void
 }
@@ -36,7 +42,7 @@ type ImgProps = {
 }
 
 const MD = (props: MDProps) => {
-  const { headingIds, onAnchorClick } = props
+  const { headingIds, onAnchorClick, trustedImages } = props
   const components: Partial<Components> = useMemo(() => {
     return {
       // Links and inline code naming a project file open it in the chat's Files panel
@@ -84,6 +90,9 @@ const MD = (props: MDProps) => {
         })()
 
         if (isRemoteUrl) {
+          const remote = !!src && /^https?:/i.test(src)
+          if (remote && !trustedImages) return <RemoteImage src={src} alt={alt} {...props} />
+          if (remote) return <TrustedRemoteImage src={src} alt={alt} {...props} />
           return <img src={src} alt={alt} {...props} />
         }
 
@@ -91,7 +100,7 @@ const MD = (props: MDProps) => {
         return <LocalImage src={src || ''} alt={alt || ''} {...props} />
       }
     }
-  }, [onAnchorClick])
+  }, [onAnchorClick, trustedImages])
   const rehypePlugins = useMemo(
     () =>
       headingIds

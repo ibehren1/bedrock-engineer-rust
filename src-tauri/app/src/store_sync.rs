@@ -47,9 +47,10 @@ fn flush_on_close(label: &str) -> bool {
     is_bridge_window(label) && !crate::commands::window::is_file_viewer_label(label)
 }
 
-/// The `store-changed` payload.
+/// The `store-changed` payload, with AWS secrets blanked (every webview receives it).
 pub fn change_payload(key: &str, value: Option<&Value>) -> Value {
-    json!({ "key": key, "value": value, "deleted": value.is_none() })
+    let shown = crate::secrets::redact(key, value.cloned());
+    json!({ "key": key, "value": shown, "deleted": value.is_none() })
 }
 
 /// Emit `store-changed` for every write to the config store, whoever makes it.
@@ -58,6 +59,15 @@ pub fn install_store_listener<R: Runtime>(app: &AppHandle<R>) {
     match app.state::<StoreMutex>().lock() {
         Ok(mut store) => store.set_listener(move |key, value| {
             crate::webview_proxy::on_store_change(&handle, key, value);
+            // MCP URL servers connect with a client built for the current proxy (AGENT-B5).
+            if key == "aws" {
+                if let Some(backend) = handle.try_state::<crate::backend::Backend>() {
+                    let store = json!({ "aws": value });
+                    backend
+                        .mcp
+                        .set_http(crate::settings::mcp_http_client(&store));
+                }
+            }
             crate::commands::workspace_files::on_store_change(&handle, key, value);
             if let Err(e) = handle.emit(STORE_CHANGED_EVENT, change_payload(key, value)) {
                 tracing::warn!(key, error = %e, "Failed to emit store-changed");

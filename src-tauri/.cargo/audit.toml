@@ -1,0 +1,17 @@
+# cargo-audit configuration (DEP-3). CI runs `cargo audit` from src-tauri/ and fails on any
+# vulnerability not listed here. Each entry was reviewed; revisit on every dependency bump.
+[advisories]
+ignore = [
+    # crypto-bigint 0.5.5 timing variability, pulled in by aws-sigv4 1.6.x. Only SigV4a signing
+    # uses it; the app signs Bedrock requests with SigV4. Fixed by moving the pinned AWS SDK
+    # crates to versions on crypto-bigint 0.7.
+    "RUSTSEC-2026-0387",
+    # zip 4.6.1, pulled in by tauri-plugin-updater 2.14.0 (Windows only). All four are about
+    # ZipArchive::extract; the updater extracts only update archives whose minisign signature
+    # has already been verified against the bundled public key. No stable updater release uses
+    # a newer zip yet (worklist DEP-11).
+    "RUSTSEC-2026-0429",
+    "RUSTSEC-2026-0367",
+    "RUSTSEC-2026-0368",
+    "RUSTSEC-2026-0369",
+]

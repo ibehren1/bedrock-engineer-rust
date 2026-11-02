@@ -8,7 +8,7 @@
 use crate::chunk::TextKind;
 use crate::html::html_to_text;
 use quick_xml::events::Event;
-use std::io::{Cursor, Read};
+use std::io::Cursor;
 use std::path::Path;
 
 /// Biggest file accepted (before extraction).
@@ -262,6 +262,8 @@ pub fn extract_bytes(bytes: &[u8], format: Format, url: Option<&str>) -> Result<
 /// Every sheet as `## <sheet>` followed by its rows, cells tab-separated.
 fn spreadsheet_text(bytes: &[u8]) -> Result<String, String> {
     use calamine::{open_workbook_auto_from_rs, Data, Reader};
+    // calamine reads whole sheets into memory (DATA-2).
+    tools::documents::check_zip_total(bytes)?;
     let mut wb = open_workbook_auto_from_rs(Cursor::new(bytes.to_vec()))
         .map_err(|e| format!("Cannot read spreadsheet: {e}"))?;
     let mut out = String::new();
@@ -319,11 +321,9 @@ fn pptx_text(bytes: &[u8]) -> Result<String, String> {
     slides.sort();
     let mut out = String::new();
     for (num, name) in slides {
-        let mut xml = String::new();
-        zip.by_name(&name)
-            .map_err(|e| e.to_string())?
-            .read_to_string(&mut xml)
-            .map_err(|e| e.to_string())?;
+        let mut entry = zip.by_name(&name).map_err(|e| e.to_string())?;
+        let xml = tools::documents::read_zip_entry_text(&mut entry)?;
+        drop(entry);
         let text = drawingml_text(&xml)?;
         if !text.trim().is_empty() {
             out.push_str(&format!("## Slide {num}\n{}\n\n", text.trim()));

@@ -3,7 +3,7 @@ import MD from '@renderer/components/Markdown/MD'
 
 export const MarkdownViewer: React.FC<{ content: string }> = ({ content }) => (
   <div className="px-4 py-3 text-ink">
-    <MD>{content}</MD>
+    <MD trustedImages>{content}</MD>
   </div>
 )
 

@@ -9,7 +9,7 @@
 //!   Manual runs ignore that guard and run even when the task is disabled.
 //! * Each run: `task-execution-start` event → "running" history entry → new session
 //!   (`scheduled-<taskId>-<uuid>`) or the task's last session when `continueSession` is on →
-//!   agent chat (tools on, 500 rounds, 10 min first-call timeout) → history entry, task stats,
+//!   agent chat (tools on, `backgroundAgentMaxToolCalls` rounds (default 100), 10 min first-call timeout) → history entry, task stats,
 //!   OS notification and `task-notification` event.
 //!
 //! Differences from the TS: the cron heartbeat re-checks the wall clock at least every 60 s
@@ -42,11 +42,28 @@ use tokio::task::JoinHandle;
 pub const SCHEDULED_TASKS_KEY: &str = "backgroundAgentScheduledTasks";
 /// Longest wait between two wall-clock checks of a cron job.
 pub const HEARTBEAT_MAX_DELAY: Duration = Duration::from_secs(60);
-/// Options for scheduled and manual runs.
-pub fn scheduled_run_options() -> AgentRunOptions {
+/// Config store key: the most tool calls one scheduled run may make (AGENT-D5).
+pub const MAX_TOOL_CALLS_KEY: &str = "backgroundAgentMaxToolCalls";
+/// [`MAX_TOOL_CALLS_KEY`] when unset: nobody watches a scheduled run, so it gets a far smaller
+/// budget than the 500 the TS app allowed.
+pub const DEFAULT_MAX_TOOL_CALLS: usize = 100;
+/// Values outside this range are clamped.
+pub const MAX_TOOL_CALLS_RANGE: std::ops::RangeInclusive<usize> = 1..=1000;
+
+/// The tool-call budget for a scheduled run, from settings.
+pub fn max_tool_calls(config: &dyn ConfigStore) -> usize {
+    config
+        .get(MAX_TOOL_CALLS_KEY)
+        .and_then(|v| v.as_u64())
+        .map(|n| (n as usize).clamp(*MAX_TOOL_CALLS_RANGE.start(), *MAX_TOOL_CALLS_RANGE.end()))
+        .unwrap_or(DEFAULT_MAX_TOOL_CALLS)
+}
+
+/// Options for scheduled and manual runs, with `max_tool_executions` from [`max_tool_calls`].
+pub fn scheduled_run_options(max_tool_executions: usize) -> AgentRunOptions {
     AgentRunOptions {
         enable_tool_execution: true,
-        max_tool_executions: 500,
+        max_tool_executions,
         timeout: Duration::from_millis(600_000),
     }
 }
@@ -262,6 +279,12 @@ impl BackgroundAgentScheduler {
     pub fn schedule_task(&self, config: ScheduleConfig) -> Result<String> {
         if CronExpression::parse(&config.cron_expression).is_err() {
             return Err(Error::InvalidCron(config.cron_expression));
+        }
+        // Task ids end up in session file names and history keys (AGENT-D4).
+        if let Some(id) = config.task_id.as_deref().filter(|id| !id.is_empty()) {
+            if !common::json_file::is_safe_file_id(id) {
+                return Err(Error::InvalidTaskId(id.to_string()));
+            }
         }
         let task = ScheduledTask {
             id: config
@@ -563,7 +586,7 @@ impl BackgroundAgentScheduler {
                     &session_id,
                     &task.agent_config(),
                     &prompt,
-                    &scheduled_run_options(),
+                    &scheduled_run_options(max_tool_calls(self.deps.config.as_ref())),
                 )
                 .await
         }

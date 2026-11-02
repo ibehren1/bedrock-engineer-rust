@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { DrawIoEmbed, DrawIoEmbedRef } from 'react-drawio'
+import { DrawIoEmbedRef } from 'react-drawio'
+import { GatedDrawIoEmbed } from '@renderer/components/GatedDrawIoEmbed'
 import { useAgentChat } from '../ChatPage/hooks/useAgentChat'
 import { TextArea, AttachedImage } from '../ChatPage/components/InputForm/TextArea'
 import useSetting from '@renderer/hooks/useSetting'
@@ -530,7 +531,7 @@ export default function DiagramGeneratorPage() {
                 height: '100%'
               }}
             >
-              <DrawIoEmbed
+              <GatedDrawIoEmbed
                 ref={drawioRef}
                 xml={xml}
                 configuration={{

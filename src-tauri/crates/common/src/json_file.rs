@@ -122,6 +122,8 @@ pub fn quarantine(path: &Path) -> io::Result<PathBuf> {
         n += 1;
     }
     fs::rename(path, &target)?;
+    // A quarantined settings file can still hold credentials (DATA-3).
+    let _ = restrict_file(&target);
     tracing::error!(
         path = %path.display(),
         moved_to = %target.display(),
@@ -132,8 +134,48 @@ pub fn quarantine(path: &Path) -> io::Result<PathBuf> {
 
 static TMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
+/// Make `path` readable and writable by its owner only (Unix; a no-op elsewhere, where the
+/// per-user profile folder already restricts it). Settings and history hold credentials and
+/// conversations, which other accounts on the machine must not read (DATA-3).
+pub fn restrict_file(path: &Path) -> io::Result<()> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(path, fs::Permissions::from_mode(0o600))?;
+    }
+    #[cfg(not(unix))]
+    let _ = path;
+    Ok(())
+}
+
+/// Make `dir` accessible by its owner only (Unix; see [`restrict_file`]).
+pub fn restrict_dir(dir: &Path) -> io::Result<()> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(dir, fs::Permissions::from_mode(0o700))?;
+    }
+    #[cfg(not(unix))]
+    let _ = dir;
+    Ok(())
+}
+
+/// A new file for writing, owner-only on Unix from the start (no window where the umask's
+/// default mode applies).
+fn create_private(path: &Path) -> io::Result<fs::File> {
+    let mut options = fs::OpenOptions::new();
+    options.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    options.open(path)
+}
+
 /// Write `bytes` to `path` through a unique temp file in the same directory (fsynced), then
-/// rename it over `path`. Creates the parent directory. The temp file is removed on failure.
+/// rename it over `path`. Creates the parent directory. The file is owner-only on Unix (0600).
+/// The temp file is removed on failure.
 pub fn write_atomic(path: &Path, bytes: &[u8]) -> io::Result<()> {
     if let Some(dir) = path.parent() {
         if !dir.as_os_str().is_empty() {
@@ -149,7 +191,7 @@ pub fn write_atomic(path: &Path, bytes: &[u8]) -> io::Result<()> {
     ));
     let tmp = path.with_file_name(tmp_name);
     let result = (|| {
-        let mut f = fs::File::create(&tmp)?;
+        let mut f = create_private(&tmp)?;
         f.write_all(bytes)?;
         f.sync_all()?;
         drop(f);
@@ -349,6 +391,31 @@ pub fn is_safe_file_id(id: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+
+    // DATA-3: files written here, and quarantined copies, are owner-only.
+    #[cfg(unix)]
+    #[test]
+    fn written_and_quarantined_files_are_owner_only() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("config.json");
+        write_atomic(&p, b"{}").unwrap();
+        assert_eq!(
+            fs::metadata(&p).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
+        fs::set_permissions(&p, fs::Permissions::from_mode(0o644)).unwrap();
+        let moved = quarantine(&p).unwrap();
+        assert_eq!(
+            fs::metadata(&moved).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
+        restrict_dir(dir.path()).unwrap();
+        assert_eq!(
+            fs::metadata(dir.path()).unwrap().permissions().mode() & 0o777,
+            0o700
+        );
+    }
     use super::*;
     use serde_json::json;
     use tempfile::TempDir;

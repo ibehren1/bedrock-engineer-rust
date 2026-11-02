@@ -192,6 +192,14 @@ export type API = {
       close: (terminalId: string) => Promise<any>
     }
   }
+  /**
+   * Whether web content in the app windows may load remote resources: not while a proxy is on
+   * that it isn't going through (it would connect directly).
+   */
+  webContent: {
+    status: () => Promise<WebContentStatus>
+    onChange: (callback: (status: WebContentStatus) => void) => () => void
+  }
   /** In-app updates from the GitHub releases (main window only). */
   appUpdate: {
     /** The running version. */
@@ -347,3 +355,6 @@ export type AppUpdateCheck = {
   /** The release notes (the newest CHANGELOG section). */
   notes: string | null
 }
+
+/** `window_web_content_status` / the `web-content-status` event. */
+export type WebContentStatus = { allowed: boolean; reason?: string | null }

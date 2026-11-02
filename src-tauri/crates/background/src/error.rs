@@ -6,6 +6,9 @@ pub enum Error {
     /// `new Error(`Invalid cron expression: ${cronExpression}`)`.
     #[error("Invalid cron expression: {0}")]
     InvalidCron(String),
+    /// A caller-supplied task id that isn't a plain file name (AGENT-D4).
+    #[error("Invalid task id: {0}. Use letters, digits, '.', '-' and '_'.")]
+    InvalidTaskId(String),
     /// `new Error(`Task not found: ${taskId}`)`.
     #[error("Task not found: {0}")]
     TaskNotFound(String),

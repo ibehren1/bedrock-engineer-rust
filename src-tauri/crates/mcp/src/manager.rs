@@ -216,7 +216,12 @@ async fn approve_launch(
         return Ok(());
     };
     let server = &target.config;
-    let mut env_names: Vec<String> = server.env.iter().flatten().map(|(k, _)| k.clone()).collect();
+    let mut env_names: Vec<String> = server
+        .env
+        .iter()
+        .flatten()
+        .map(|(k, _)| k.clone())
+        .collect();
     env_names.sort();
     let request = LaunchRequest {
         server_name: server.name.clone(),
@@ -271,7 +276,8 @@ async fn connect(
 /// The MCP client pool for the current agent's servers.
 pub struct McpManager {
     state: Mutex<State>,
-    http: reqwest::Client,
+    /// Replaced when the proxy setting changes ([`McpManager::set_http`]).
+    http: std::sync::RwLock<reqwest::Client>,
     builtin: OnceLock<Arc<dyn BuiltinServers>>,
     aws_env: OnceLock<Arc<dyn AwsEnvSource>>,
     approver: OnceLock<Arc<dyn LaunchApprover>>,
@@ -288,7 +294,7 @@ impl McpManager {
     pub fn new(http: reqwest::Client) -> Self {
         Self {
             state: Mutex::new(State::default()),
-            http,
+            http: std::sync::RwLock::new(http),
             builtin: OnceLock::new(),
             aws_env: OnceLock::new(),
             approver: OnceLock::new(),
@@ -303,6 +309,22 @@ impl McpManager {
         }
     }
 
+    /// Use `http` for URL servers from now on (the app calls this when the proxy setting changes,
+    /// so connections made after the change go through the new proxy). Connected clients keep
+    /// theirs until they reconnect.
+    pub fn set_http(&self, http: reqwest::Client) {
+        if let Ok(mut current) = self.http.write() {
+            *current = http;
+        }
+    }
+
+    fn http(&self) -> reqwest::Client {
+        self.http
+            .read()
+            .map(|c| c.clone())
+            .unwrap_or_else(|e| e.into_inner().clone())
+    }
+
     /// Install the provider of [`ConnectionType::Builtin`] servers (once, at startup).
     pub fn set_builtin(&self, builtin: Arc<dyn BuiltinServers>) {
         if self.builtin.set(builtin).is_err() {
@@ -314,7 +336,10 @@ impl McpManager {
     /// server's `env` (once, at startup). Without one the placeholders are left as they are.
     pub fn set_aws_env(&self, source: Arc<dyn AwsEnvSource>) {
         if self.aws_env.set(source).is_err() {
-            tracing::warn!(category = CATEGORY, "MCP AWS environment source already set");
+            tracing::warn!(
+                category = CATEGORY,
+                "MCP AWS environment source already set"
+            );
         }
     }
 
@@ -373,10 +398,11 @@ impl McpManager {
             .collect();
         let builtin = self.builtin.get();
         let approver = self.approver.get();
+        let http = self.http();
         let connections = futures_util::future::join_all(targets.iter().map(|target| async {
             let server = &target.config;
             tracing::info!(category = CATEGORY, server = %server.name, "Connecting to MCP server");
-            match connect(target, &self.http, builtin, approver).await {
+            match connect(target, &http, builtin, approver).await {
                 Ok(client) => {
                     tracing::info!(category = CATEGORY, server = %server.name, "Successfully connected to MCP server");
                     Some((server.name.clone(), client))
@@ -406,11 +432,25 @@ impl McpManager {
         };
         self.init_from_agent_config(servers).await?;
         let state = self.state.lock().await;
-        Ok(state
-            .clients
-            .iter()
-            .flat_map(|(_, c)| c.tools().iter().cloned())
-            .collect())
+        // One spec per name (AGENT-M2): a later server's tool with a name an earlier server
+        // already provides is left out, matching dispatch, which goes to the first server that
+        // has the tool.
+        let mut seen = std::collections::HashSet::new();
+        let mut specs = Vec::new();
+        for (server, client) in state.clients.iter() {
+            for tool in client.tools() {
+                let name = tool["toolSpec"]["name"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .to_string();
+                if seen.insert(name.clone()) {
+                    specs.push(tool.clone());
+                } else {
+                    tracing::warn!(category = CATEGORY, server = %server, tool = %name, "Ignoring an MCP tool another server already provides");
+                }
+            }
+        }
+        Ok(specs)
     }
 
     /// `tryExecuteMcpTool`
@@ -497,8 +537,13 @@ impl McpManager {
     /// `testMcpServerConnection`: connect, list tools, disconnect.
     pub async fn test_connection(&self, server: &McpServerConfig) -> McpTestResult {
         let expanded = self.expand(std::slice::from_ref(server)).remove(0);
-        test_server_connection(&expanded, &self.http, self.builtin.get(), self.approver.get())
-            .await
+        test_server_connection(
+            &expanded,
+            &self.http(),
+            self.builtin.get(),
+            self.approver.get(),
+        )
+        .await
     }
 
     /// `testAllMcpServerConnections`: sequentially, keyed by server name.
@@ -740,7 +785,10 @@ mod tests {
         let m = McpManager::default();
         m.set_launch_approver(approver.clone());
         let mut server = cmd("planted", "definitely-not-a-real-mcp-server-xyz");
-        server.env = Some(indexmap::IndexMap::from([("TOKEN".to_string(), "secret".to_string())]));
+        server.env = Some(indexmap::IndexMap::from([(
+            "TOKEN".to_string(),
+            "secret".to_string(),
+        )]));
         let servers = vec![server.clone()];
 
         assert!(m.get_tool_specs(Some(&servers)).await.unwrap().is_empty());
@@ -757,7 +805,10 @@ mod tests {
         assert_eq!(seen[0].command, "definitely-not-a-real-mcp-server-xyz");
         assert_eq!(seen[0].env_names, ["TOKEN"]);
         assert!(!seen[0].receives_aws_keys);
-        assert_eq!(seen[0].fingerprint, crate::launch_approval::fingerprint(&server));
+        assert_eq!(
+            seen[0].fingerprint,
+            crate::launch_approval::fingerprint(&server)
+        );
         assert_eq!(seen[0], seen[1]);
     }
 

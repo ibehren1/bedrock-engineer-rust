@@ -54,6 +54,13 @@ interface CommandConfig {
   description: string
 }
 
+/** Whether each AWS secret is saved (their values stay in Rust). */
+export type SavedAwsSecrets = {
+  secretAccessKey: boolean
+  sessionToken: boolean
+  proxyPassword: boolean
+}
+
 export interface SettingsContextType {
   // Advanced Settings
   sendMsgKey: SendMsgKey
@@ -170,6 +177,9 @@ export interface SettingsContextType {
   tavilySearchApiKey: string
   setTavilySearchApiKey: (apiKey: string) => void
   enabledTavilySearch: boolean
+  /** A Tavily key is saved (its value stays in Rust, like the AWS secrets). */
+  savedTavilyApiKey: boolean
+  clearSavedTavilyApiKey: () => void
 
   // AWS Settings
   awsRegion: string
@@ -180,6 +190,13 @@ export interface SettingsContextType {
   setAwsSecretAccessKey: (secretAccessKey: string) => void
   awsSessionToken: string
   setAwsSessionToken: (sessionToken: string) => void
+  /**
+   * Which AWS secrets are saved. Their values never reach the renderer (Rust keeps them and
+   * blanks them in everything it sends here), so Settings shows "saved" instead.
+   */
+  savedAwsSecrets: SavedAwsSecrets
+  /** Remove a saved secret (an empty field alone keeps the saved one). */
+  clearSavedAwsSecret: (secret: keyof SavedAwsSecrets) => void
   useAwsProfile: boolean
   setUseAwsProfile: (useProfile: boolean) => void
   awsProfile: string
@@ -438,12 +455,18 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Tavily Search Settings
   const [tavilySearchApiKey, setStateApiKey] = useState<string>('')
+  const [savedTavilyApiKey, setSavedTavilyApiKey] = useState(false)
 
   // AWS Settings
   const [awsRegion, setStateAwsRegion] = useState<string>('')
   const [awsAccessKeyId, setStateAwsAccessKeyId] = useState<string>('')
   const [awsSecretAccessKey, setStateAwsSecretAccessKey] = useState<string>('')
   const [awsSessionToken, setStateAwsSessionToken] = useState<string>('')
+  const [savedAwsSecrets, setSavedAwsSecrets] = useState<SavedAwsSecrets>({
+    secretAccessKey: false,
+    sessionToken: false,
+    proxyPassword: false
+  })
   const [useAwsProfile, setStateUseAwsProfile] = useState<boolean>(false)
   const [awsProfile, setStateAwsProfile] = useState<string>('default')
 
@@ -641,7 +664,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // Load Tavily Search Settings
     const tavilySearchConfig = window.store.get('tavilySearch')
     if (tavilySearchConfig) {
-      setStateApiKey(tavilySearchConfig.apikey)
+      // Always blank here; hasApikey says whether one is saved.
+      setStateApiKey(tavilySearchConfig.apikey || '')
+      setSavedTavilyApiKey(!!tavilySearchConfig.hasApikey)
     }
 
     // Load AWS Settings
@@ -649,8 +674,14 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (awsConfig) {
       setStateAwsRegion(awsConfig.region || '')
       setStateAwsAccessKeyId(awsConfig.accessKeyId || '')
+      // Always blank here (see SavedAwsSecrets); the flags say whether one is saved.
       setStateAwsSecretAccessKey(awsConfig.secretAccessKey || '')
       setStateAwsSessionToken(awsConfig.sessionToken || '')
+      setSavedAwsSecrets({
+        secretAccessKey: !!awsConfig.hasSecretAccessKey,
+        sessionToken: !!awsConfig.hasSessionToken,
+        proxyPassword: !!awsConfig.hasProxyPassword
+      })
       setStateUseAwsProfile(awsConfig.useProfile || false)
       setStateAwsProfile(awsConfig.profile || 'default')
 
@@ -1089,9 +1120,17 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const setTavilySearchApiKey = (apikey: string) => {
     setStateApiKey(apikey)
+    // An empty key keeps the saved one (Rust merges it); clearSavedTavilyApiKey removes it.
+    if (apikey) setSavedTavilyApiKey(true)
     window.store.set('tavilySearch', {
       apikey: apikey
     })
+  }
+
+  const clearSavedTavilyApiKey = () => {
+    setStateApiKey('')
+    setSavedTavilyApiKey(false)
+    window.store.set('tavilySearch', { apikey: '', clearApikey: true })
   }
 
   const setAwsRegion = (region: string) => {
@@ -1211,6 +1250,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const setAwsSecretAccessKey = (secretAccessKey: string) => {
     setStateAwsSecretAccessKey(secretAccessKey)
+    if (secretAccessKey) setSavedAwsSecrets((prev) => ({ ...prev, secretAccessKey: true }))
     const credentials: AwsCredentialIdentity = {
       accessKeyId: awsAccessKeyId,
       secretAccessKey,
@@ -1221,6 +1261,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const setAwsSessionToken = (sessionToken: string) => {
     setStateAwsSessionToken(sessionToken)
+    if (sessionToken) setSavedAwsSecrets((prev) => ({ ...prev, sessionToken: true }))
     const credentials: AwsCredentialIdentity = {
       accessKeyId: awsAccessKeyId,
       secretAccessKey: awsSecretAccessKey,
@@ -1263,9 +1304,23 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     })
   }
 
+  const clearSavedAwsSecret = (secret: keyof SavedAwsSecrets) => {
+    const flag = {
+      secretAccessKey: 'clearSecretAccessKey',
+      sessionToken: 'clearSessionToken',
+      proxyPassword: 'clearProxyPassword'
+    }[secret]
+    if (secret === 'secretAccessKey') setStateAwsSecretAccessKey('')
+    if (secret === 'sessionToken') setStateAwsSessionToken('')
+    if (secret === 'proxyPassword') setStateProxySettings((prev) => ({ ...prev, password: '' }))
+    setSavedAwsSecrets((prev) => ({ ...prev, [secret]: false }))
+    window.store.set('aws', { ...(window.store.get('aws') || {}), [flag]: true })
+  }
+
   const setProxySettings = (settings: Partial<typeof proxySettings>) => {
     const newSettings = { ...proxySettings, ...settings }
     setStateProxySettings(newSettings)
+    if (settings.password) setSavedAwsSecrets((prev) => ({ ...prev, proxyPassword: true }))
 
     const credentials: AwsCredentialIdentity = {
       accessKeyId: awsAccessKeyId,
@@ -1493,7 +1548,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [currentAgent, fetchMcpTools, updateAgentMcpTools, sharedAgents, directoryAgents])
 
-  const enabledTavilySearch = tavilySearchApiKey.length > 0
+  const enabledTavilySearch = tavilySearchApiKey.length > 0 || savedTavilyApiKey
 
   const setShell = (newShell: string) => {
     setStateShell(newShell)
@@ -2143,6 +2198,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     tavilySearchApiKey,
     setTavilySearchApiKey,
     enabledTavilySearch,
+    savedTavilyApiKey,
+    clearSavedTavilyApiKey,
 
     // AWS Settings
     awsRegion,
@@ -2153,6 +2210,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setAwsSecretAccessKey,
     awsSessionToken,
     setAwsSessionToken,
+    savedAwsSecrets,
+    clearSavedAwsSecret,
     useAwsProfile,
     setUseAwsProfile,
     awsProfile,

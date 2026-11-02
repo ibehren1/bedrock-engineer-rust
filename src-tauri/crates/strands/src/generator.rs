@@ -115,18 +115,6 @@ fn json_compact(v: Option<&Value>) -> String {
     }
 }
 
-/// `JSON.stringify(value, null, 8)`.
-fn json_pretty8(v: &Value) -> String {
-    use serde::Serialize;
-    let mut buf = Vec::new();
-    let formatter = serde_json::ser::PrettyFormatter::with_indent(b"        ");
-    let mut ser = serde_json::Serializer::with_formatter(&mut buf, formatter);
-    if v.serialize(&mut ser).is_err() {
-        return String::new();
-    }
-    String::from_utf8(buf).unwrap_or_default()
-}
-
 /// `name.toLowerCase().replace(/[^a-z0-9]/g, '_')`; the regex works on UTF-16 code units, so a
 /// character outside the BMP becomes two underscores.
 pub fn sanitize_var_name(name: &str) -> String {
@@ -218,13 +206,38 @@ pub fn analyze_mcp_servers(servers: &[Value]) -> Result<Vec<McpServerMapping>, S
         .collect()
 }
 
-/// `generateMcpClientCode`
+/// `text` safe on one line of a Python comment or docstring: line breaks become spaces and
+/// backslashes and `"""` are escaped, so agent-file text can't end the comment or docstring and
+/// add code (AGENT-B4).
+pub fn python_inline_text(text: &str) -> String {
+    text.replace(['\r', '\n'], " ")
+        .replace('\\', "\\\\")
+        .replace("\"\"\"", "\\\"\\\"\\\"")
+}
+
+/// `value` as a Python string literal (a JSON string is one, escapes included).
+fn python_string(value: &str) -> String {
+    serde_json::to_string(value).unwrap_or_else(|_| "\"\"".into())
+}
+
+/// `generateMcpClientCode`. A server's `env` values often hold API keys, so the export doesn't
+/// copy them: each variable is read from the environment the generated agent runs in
+/// (AGENT-B3).
 fn generate_mcp_client_code(server: &Value, client_var_name: &str) -> String {
-    let env_setup = match server.get("env") {
-        env @ Some(v) if js_truthy(env) => format!(
-            ",\n        env={}",
-            json_pretty8(v).replace('\n', "\n        ")
-        ),
+    let env_setup = match server.get("env").and_then(Value::as_object) {
+        Some(env) if !env.is_empty() => {
+            let entries: Vec<String> = env
+                .keys()
+                .map(|k| {
+                    format!(
+                        "            {}: os.environ.get({}, \"\"),",
+                        python_string(k),
+                        python_string(k)
+                    )
+                })
+                .collect();
+            format!(",\n        env={{\n{}\n        }}", entries.join("\n"))
+        }
         _ => String::new(),
     };
     let comment = if js_truthy(server.get("description")) {
@@ -233,8 +246,9 @@ fn generate_mcp_client_code(server: &Value, client_var_name: &str) -> String {
         js_string(server.get("name"))
     };
     format!(
-        "# {comment}\n{client_var_name}_client = MCPClient(lambda: stdio_client(\n    StdioServerParameters(\n        command=\"{command}\",\n        args={args}{env_setup}\n    )\n))",
-        command = js_string(server.get("command")),
+        "# {comment}\n{client_var_name}_client = MCPClient(lambda: stdio_client(\n    StdioServerParameters(\n        command={command},\n        args={args}{env_setup}\n    )\n))",
+        comment = python_inline_text(&comment),
+        command = python_string(&js_string(server.get("command"))),
         args = json_compact(server.get("args")),
     )
 }
@@ -268,6 +282,14 @@ fn generate_mcp_integrated_code(
         "from strands.models import BedrockModel".into(),
     ];
     imports.extend(generate_import_statement(&supported));
+    if servers.iter().any(|s| {
+        s.original
+            .get("env")
+            .and_then(Value::as_object)
+            .is_some_and(|e| !e.is_empty())
+    }) {
+        imports.push("import os".into());
+    }
     if !servers.is_empty() {
         imports.push("from mcp import stdio_client, StdioServerParameters".into());
         imports.push("from strands.tools.mcp import MCPClient".into());
@@ -292,8 +314,14 @@ fn generate_mcp_integrated_code(
     render_template(
         MCP_INTEGRATED_TEMPLATE,
         &[
-            ("agentName", js_string(agent.get("name"))),
-            ("agentDescription", js_string(agent.get("description"))),
+            (
+                "agentName",
+                python_inline_text(&js_string(agent.get("name"))),
+            ),
+            (
+                "agentDescription",
+                python_inline_text(&js_string(agent.get("description"))),
+            ),
             ("imports", imports.join("\n")),
             ("basicToolsSetup", generate_tools_setup_code(&basic_tools)),
             ("specialSetupCode", combine_special_setup_code(&special)),
@@ -513,10 +541,19 @@ fn generate_yaml_config(
                 .iter()
                 .map(|s| {
                     let o = &s.original;
-                    let headers = if js_truthy(o.get("headers")) {
-                        format!("\n    headers: {}", json_compact(o.get("headers")))
-                    } else {
-                        String::new()
+                    // Header values are usually tokens: only the names are exported (AGENT-B3).
+                    let headers = match o.get("headers").and_then(Value::as_object) {
+                        Some(h) if !h.is_empty() => {
+                            let names: serde_json::Map<String, Value> = h
+                                .keys()
+                                .map(|k| (k.clone(), Value::String("<set this value>".into())))
+                                .collect();
+                            format!(
+                                "\n    headers: {}",
+                                json_compact(Some(&Value::Object(names)))
+                            )
+                        }
+                        _ => String::new(),
                     };
                     format!(
                         "  - name: \"{}\"\n    command: \"{}\"\n    args: {}{}",

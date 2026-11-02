@@ -20,8 +20,14 @@ fn session_id(context: Option<&Value>) -> Option<String> {
         .map(str::to_string)
 }
 
-/// Caller metadata from the chat loop's `context` argument (`agentId`, `delegationDepth`,
-/// `delegationLineage`, `allowedAgentIds`, `modelId`), which the model cannot write.
+/// Caller metadata from the chat loop's `context` argument (`agentId`, `allowedAgentIds`,
+/// `modelId`), which the model cannot write.
+///
+/// Delegation depth and lineage are not taken from the renderer (AGENT-D3): every call through
+/// here comes from the chat page's own loop, the root of any delegation, so it is always depth 0
+/// with the calling agent as the whole lineage. Deeper levels only exist inside the Rust agent
+/// loop, which builds them itself. `allowedAgentIds` stays the renderer's (it is the agents the
+/// user @-mentioned in this turn's message); the delegation policy still checks each target.
 ///
 /// The model-authored `toolInput` is never read for this: the registry strips its
 /// `_`-prefixed keys. MCP servers are never taken from the renderer's context either — the
@@ -42,13 +48,12 @@ fn caller_metadata(context: Option<&Value>) -> CallerMetadata {
                 .collect::<Vec<_>>()
         })
     };
+    let agent_id = text("agentId");
     CallerMetadata {
-        agent_id: text("agentId"),
+        delegation_depth: Some(0),
+        delegation_lineage: Some(agent_id.iter().cloned().collect()),
+        agent_id,
         mcp_servers: None,
-        delegation_depth: field("delegationDepth")
-            .and_then(Value::as_u64)
-            .map(|d| u32::try_from(d).unwrap_or(u32::MAX)),
-        delegation_lineage: list("delegationLineage"),
         allowed_agent_ids: list("allowedAgentIds"),
         model_id: text("modelId"),
         // The chat page's own loop: the user is there to answer approval dialogs.
@@ -132,7 +137,21 @@ mod tests {
         assert_eq!(meta.allowed_agent_ids, Some(vec!["reviewer".to_string()]));
         assert_eq!(meta.model_id.as_deref(), Some("m"));
         assert!(meta.mcp_servers.is_none());
-        assert_eq!(caller_metadata(None), CallerMetadata::default());
+        let none = caller_metadata(None);
+        assert_eq!(none.delegation_depth, Some(0));
+        assert_eq!(none.delegation_lineage, Some(vec![]));
+        assert_eq!(none.agent_id, None);
+    }
+
+    // AGENT-D3: a renderer can't claim a delegation depth or lineage; chat-page calls are
+    // always the root of a delegation.
+    #[test]
+    fn delegation_depth_and_lineage_are_not_taken_from_the_renderer() {
+        let meta = caller_metadata(Some(&json!({
+            "agentId": "a1", "delegationDepth": 7, "delegationLineage": ["x", "y"]
+        })));
+        assert_eq!(meta.delegation_depth, Some(0));
+        assert_eq!(meta.delegation_lineage, Some(vec!["a1".to_string()]));
     }
 
     /// The renderer spreads the model's tool input into `toolInput`, so a model can write

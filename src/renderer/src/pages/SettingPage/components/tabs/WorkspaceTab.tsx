@@ -3,6 +3,7 @@ import {
   AgentFoldersSection,
   AllowedCommandsSection,
   ConfigDirSection,
+  NetworkAccessSection,
   ProjectSection
 } from '../sections'
 
@@ -11,6 +12,7 @@ export const WorkspaceTab: React.FC = () => (
     <ProjectSection />
     <AgentFoldersSection />
     <AllowedCommandsSection />
+    <NetworkAccessSection />
     <ConfigDirSection />
   </div>
 )
