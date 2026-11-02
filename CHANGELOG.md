@@ -105,6 +105,9 @@ overview of the fork with screenshots.
 - Updated the certificate-checking libraries behind the app's secure connections, so certificates
   from authorities that browsers no longer trust are rejected, and two cryptography libraries with
   timing fixes.
+- Removed an old copy of the ZIP library that the in-app updater pulled in on Windows, which had
+  open security advisories (one critical). The updater never used it for this app's installers, so
+  updates work as before.
 
 ### 2026-11-01
 
