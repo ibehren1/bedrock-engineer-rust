@@ -10,7 +10,7 @@ type AgentMentionPopupProps = {
   activeIndex: number
   coordinates: CaretCoordinates
   /** Anchor for the caret offsets, which are relative to the textarea's box. */
-  textareaRef: React.RefObject<HTMLTextAreaElement>
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>
   onSelect: (agent: CustomAgent) => void
 }
 

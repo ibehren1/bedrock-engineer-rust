@@ -109,7 +109,7 @@ export const CodeRenderer: React.FC<CodeRendererProps> = ({ text = '', className
           }
         }
 
-        // Inline code (react-markdown 9 has no `inline` flag: no language and one line). One
+        // Inline code (react-markdown has had no `inline` flag since 9: no language and one line). One
         // naming a project file opens it in the Files panel.
         if (!className && !codeContent.includes('\n')) {
           return <FilePathCode text={codeContent}>{children}</FilePathCode>
@@ -125,14 +125,16 @@ export const CodeRenderer: React.FC<CodeRendererProps> = ({ text = '', className
 
   return (
     <div className={`w-full text-ink ${className}`}>
-      <Markdown
-        className={style.reactMarkDown}
-        remarkPlugins={[[remarkGfm, { singleTilde: false }], [remarkMath]]}
-        rehypePlugins={[rehypeKatex]}
-        components={components}
-      >
-        {text}
-      </Markdown>
+      {/* react-markdown 10 no longer takes className; this is the wrapper it used to render. */}
+      <div className={style.reactMarkDown}>
+        <Markdown
+          remarkPlugins={[[remarkGfm, { singleTilde: false }], [remarkMath]]}
+          rehypePlugins={[rehypeKatex]}
+          components={components}
+        >
+          {text}
+        </Markdown>
+      </div>
     </div>
   )
 }

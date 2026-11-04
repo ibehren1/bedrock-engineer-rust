@@ -80,7 +80,7 @@ export const ProxySection: React.FC = () => {
               />
             </div>
 
-            <div className="mt-4 p-3 bg-accent-tint rounded-control">
+            <div className="p-3 bg-accent-tint rounded-control">
               <p className="text-sm text-accent">
                 {t(
                   'Proxy settings will be applied to all AWS SDK connections. Please test your configuration to ensure connectivity.'

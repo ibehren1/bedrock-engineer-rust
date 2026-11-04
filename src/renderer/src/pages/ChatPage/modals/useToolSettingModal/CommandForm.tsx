@@ -99,7 +99,7 @@ export const CommandForm = memo(
               </option>
             ))}
           </Select>
-          <div className="mt-2 space-y-2">
+          <div className="space-y-2">
             <p className="text-xs text-ink-muted">
               {t('Select which shell to use when executing commands')}
             </p>
@@ -108,7 +108,7 @@ export const CommandForm = memo(
             {isWindows && (
               <div className="bg-success-soft p-3 rounded-control">
                 <div className="flex items-start">
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     <svg
                       className="h-4 w-4 text-success mt-0.5"
                       fill="currentColor"
@@ -134,7 +134,7 @@ export const CommandForm = memo(
         </div>
 
         {/* コマンド追加フォーム */}
-        <div className="flex flex-col gap-2 p-2.5 border border-subtle rounded-control mt-4">
+        <div className="flex flex-col gap-2 p-2.5 border border-subtle rounded-control">
           <h4 className="font-medium text-sm mb-2 text-ink">{t('Add New Command Pattern')}</h4>
           <div>
             <Label>{t('Command Pattern')}</Label>
@@ -168,7 +168,7 @@ export const CommandForm = memo(
         </div>
 
         {/* 登録済みコマンドリスト */}
-        <div className="space-y-3 mt-3">
+        <div className="space-y-3">
           <h4 className="font-medium text-sm text-ink">{t('Allowed Command Patterns')}</h4>
           <div className=" grid grid-cols-2 gap-2">
             {allowedCommands.length === 0 ? (

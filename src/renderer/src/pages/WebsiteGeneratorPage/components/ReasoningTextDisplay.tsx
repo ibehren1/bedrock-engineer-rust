@@ -31,14 +31,14 @@ const ReasoningTextDisplayComponent = ({ text }: ReasoningTextDisplayProps) => {
       <div
         className={`transition-all duration-300 rounded-container overflow-hidden ${
           isExpanded
-            ? 'max-h-[30rem] opacity-100 bg-surface-2/50 border border-subtle backdrop-blur-sm'
+            ? 'max-h-120 opacity-100 bg-surface-2/50 border border-subtle backdrop-blur-xs'
             : 'max-h-0 opacity-0'
         }`}
       >
         <div className="px-2.5 py-1.5">
           <div
             ref={textAreaRef}
-            className="pb-5 text-sm text-ink leading-relaxed whitespace-pre-wrap font-light overflow-y-auto pr-2 max-h-[25rem] break-words overflow-wrap-anywhere"
+            className="pb-5 text-sm text-ink leading-relaxed whitespace-pre-wrap font-light overflow-y-auto pr-2 max-h-100 wrap-break-word overflow-wrap-anywhere"
           >
             {text || 'Thinking...'}
           </div>

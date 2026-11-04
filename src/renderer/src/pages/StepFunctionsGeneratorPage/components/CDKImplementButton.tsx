@@ -42,7 +42,7 @@ const CDKImplementButtonComponent = ({
         transition-colors
         duration-200
         whitespace-nowrap
-        flex-shrink-0
+        shrink-0
         ${
           disabled
             ? 'bg-raised text-ink-faint border-strong cursor-not-allowed'

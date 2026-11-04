@@ -5,7 +5,7 @@ import { cn } from './cn'
  * 面と状態表示のプリミティブ。
  *
  * Card は 11 箇所に逐語コピーされていた
- * "flex flex-col p-3 text-sm bg-raised ... rounded border border-subtle"
+ * "flex flex-col p-3 text-sm bg-raised ... rounded-sm border border-subtle"
  * を置き換える。半径は container トークンなので Newspaper では角が落ちる。
  * 内側の余白は p-2.5（10px）。カードが縦に 10 枚並ぶ画面が複数あり、p-3 だと
  * 枠の余白だけで一画面ぶん食う。

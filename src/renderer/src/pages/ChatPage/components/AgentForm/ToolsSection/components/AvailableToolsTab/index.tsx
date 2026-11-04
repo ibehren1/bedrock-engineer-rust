@@ -18,7 +18,7 @@ export const AvailableToolsTab: React.FC<AvailableToolsTabProps> = ({
 
   return (
     <div className="space-y-3" onClick={preventEventPropagation}>
-      <p className="text-xs text-ink-muted mb-1 mt-1">{t('tools.description')}</p>
+      <p className="text-xs text-ink-muted mt-1">{t('tools.description')}</p>
 
       {/* ツールカテゴリセクションをループで表示 */}
       {categorizedTools.map((category) => (

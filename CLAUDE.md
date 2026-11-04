@@ -18,7 +18,7 @@ npm run build:linux       # Build for Linux (AppImage + deb)
 npm run dev:renderer      # Vite dev server only (http://localhost:5173)
 npm run build:renderer    # Vite build only -> dist/renderer (what Tauri bundles)
 
-npm run typecheck         # Run both node (vite.config.ts) and web (renderer) typechecks
+npm run typecheck         # Run both node (vite.config.mts) and web (renderer) typechecks
 npm run lint              # ESLint
 npm run lint:fix          # ESLint with auto-fix
 npm run format            # Prettier
@@ -43,7 +43,7 @@ The universal macOS build needs `rustup target add aarch64-apple-darwin x86_64-a
 
 ## Architecture
 
-A **React + TypeScript renderer** (built by Vite, `vite.config.ts`) runs in a **Tauri v2** webview; the backend is a **Rust Cargo workspace** under `src-tauri/`.
+A **React + TypeScript renderer** (built by Vite, `vite.config.mts`) runs in a **Tauri v2** webview; the backend is a **Rust Cargo workspace** under `src-tauri/`.
 
 ### Rust backend (`src-tauri/`)
 

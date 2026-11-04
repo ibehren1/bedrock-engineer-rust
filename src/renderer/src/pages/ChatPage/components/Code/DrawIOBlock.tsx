@@ -99,7 +99,7 @@ export const DrawIOBlock: React.FC<DrawIOBlockProps> = ({ xml, className = '' })
               >
                 <VscZoomOut size={14} />
               </button>
-              <span className="text-xs text-ink-muted min-w-[3rem] text-center">
+              <span className="text-xs text-ink-muted min-w-12 text-center">
                 {Math.round(zoomLevel * 100)}%
               </span>
               <button

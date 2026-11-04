@@ -49,10 +49,10 @@ export const TagsSection: React.FC<TagsSectionProps> = ({ tags, availableTags = 
   return (
     <div className="space-y-2 pb-4">
       <label className="block text-sm font-medium text-ink">Tags {t('optional')}</label>
-      <p className="text-xs text-ink-muted mb-1">{t('tagsDescription')}</p>
+      <p className="text-xs text-ink-muted">{t('tagsDescription')}</p>
 
       {/* 登録済みタグの表示 */}
-      <div className="flex flex-wrap gap-2 mb-2">
+      <div className="flex flex-wrap gap-2">
         {tags.map((tag) => (
           <span
             key={tag}
@@ -79,7 +79,7 @@ export const TagsSection: React.FC<TagsSectionProps> = ({ tags, availableTags = 
           <div className="flex">
             <ComboboxInput
               className="flex-1 block w-full rounded-control border-strong
-                shadow-sm focus:border-accent focus:ring-accent sm:text-sm
+                shadow-xs focus:border-accent focus:ring-accent sm:text-sm
                 bg-surface text-ink"
               placeholder={t('enterTag')}
               onChange={(event) => setQuery(event.target.value)}
@@ -92,7 +92,7 @@ export const TagsSection: React.FC<TagsSectionProps> = ({ tags, availableTags = 
             />
             <ComboboxButton
               className="ml-2 inline-flex items-center px-3 py-2 border
-              border-strong rounded-control text-sm shadow-sm
+              border-strong rounded-control text-sm shadow-xs
               text-ink bg-surface
               hover:bg-surface-2"
             >
@@ -102,8 +102,8 @@ export const TagsSection: React.FC<TagsSectionProps> = ({ tags, availableTags = 
 
           <ComboboxOptions
             className="absolute z-10 mt-1 w-full bg-surface
-            shadow-lg max-h-60 rounded-control py-1 text-base ring-1 ring-black ring-opacity-5
-            overflow-auto focus:outline-none sm:text-sm"
+            shadow-lg max-h-60 rounded-control py-1 text-base ring-1 ring-black/5
+            overflow-auto focus:outline-hidden sm:text-sm"
           >
             {filteredTags.map((tag) => (
               <ComboboxOption

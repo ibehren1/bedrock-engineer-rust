@@ -59,7 +59,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({
           title={t('myAgents.dragToReorder')}
         />
       )}
-      <div className="flex-shrink-0 mr-4">
+      <div className="shrink-0 mr-4">
         <div
           className={`w-10 h-10 flex items-center justify-center
             ${!isCustomAgent ? 'bg-surface-2' : 'bg-raised'}
@@ -98,7 +98,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({
             )}
           </div>
         </div>
-        <p className="text-sm text-ink-muted line-clamp-2 break-words">
+        <p className="text-sm text-ink-muted line-clamp-2 wrap-break-word">
           {t(agent.description) || t('noDescription')}
         </p>
         <div className="absolute right-0 top-0">

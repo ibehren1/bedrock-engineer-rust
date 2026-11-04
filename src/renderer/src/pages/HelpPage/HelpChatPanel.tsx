@@ -70,7 +70,7 @@ export const HelpChatPanel: React.FC<Props> = (props) => {
   }, [])
 
   return (
-    <aside className="flex flex-col w-[26rem] max-w-[45%] shrink-0 border-l border-subtle pl-3 min-h-0">
+    <aside className="flex flex-col w-104 max-w-[45%] shrink-0 border-l border-subtle pl-3 min-h-0">
       <div className="flex items-center gap-2 pb-2">
         <h2 className="text-heading font-medium text-ink flex-1">{t('help.chat.title')}</h2>
         <Button

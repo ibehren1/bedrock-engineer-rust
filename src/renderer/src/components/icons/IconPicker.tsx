@@ -113,7 +113,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({ selectedIcon, onSelect }
           value={scope}
           onChange={(event) => setScope(event.target.value as PickerScope)}
           className="w-[45%] rounded-control border border-strong bg-surface-2
-            text-sm py-2 pl-2 pr-6 focus:outline-none focus:ring-2 focus:ring-accent
+            text-sm py-2 pl-2 pr-6 focus:outline-hidden focus:ring-2 focus:ring-accent
             text-ink"
         >
           <option value="curated">{t('iconLibraryCurated')}</option>
@@ -130,7 +130,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({ selectedIcon, onSelect }
           onChange={(event) => setSearchQuery(event.target.value)}
           placeholder={t('searchIcons')}
           className="flex-1 min-w-0 px-3 py-2 border border-strong rounded-control
-            bg-surface-2 text-sm focus:outline-none focus:ring-2
+            bg-surface-2 text-sm focus:outline-hidden focus:ring-2
             focus:ring-accent text-ink"
         />
       </div>
@@ -153,9 +153,15 @@ export const IconPicker: React.FC<IconPickerProps> = ({ selectedIcon, onSelect }
                       isSelected={selectedIcon === option.value}
                       onClick={() => onSelect(option.value)}
                     >
-                      {React.cloneElement(option.icon as React.ReactElement, {
-                        className: 'w-6 h-6'
-                      })}
+                      {React.cloneElement(
+                        option.icon as React.ReactElement<{
+                          className?: string
+                          style?: React.CSSProperties
+                        }>,
+                        {
+                          className: 'w-6 h-6'
+                        }
+                      )}
                     </IconButton>
                   ))}
                 </IconGrid>

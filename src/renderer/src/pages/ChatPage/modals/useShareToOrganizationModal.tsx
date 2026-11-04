@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Modal, Button } from 'flowbite-react'
+import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from 'flowbite-react'
 import { useTranslation } from 'react-i18next'
 import { HiOfficeBuilding } from 'react-icons/hi'
 import { CustomAgent, OrganizationConfig } from '@/types/agent-chat'
@@ -63,10 +63,10 @@ const ShareToOrganizationModal: React.FC<ShareToOrganizationModalProps> = ({
   return (
     <Modal show={isOpen} onClose={handleClose} size="md" className="bg-canvas">
       <div className="border-[0.5px] border-surface rounded-container shadow-xl">
-        <Modal.Header className="border-b border-subtle bg-canvas rounded-t-container">
+        <ModalHeader className="border-b border-subtle bg-canvas rounded-t-container">
           {t('shareAgentToOrganization', 'Share Agent to Organization')}
-        </Modal.Header>
-        <Modal.Body className="p-0 bg-surface">
+        </ModalHeader>
+        <ModalBody className="p-0 bg-surface">
           <div className="space-y-2 p-3">
             {/* エージェント情報 */}
             <div className="p-3 bg-surface-2 rounded-container">
@@ -159,8 +159,8 @@ const ShareToOrganizationModal: React.FC<ShareToOrganizationModalProps> = ({
               </div>
             )}
           </div>
-        </Modal.Body>
-        <Modal.Footer className="border-t border-subtle bg-canvas rounded-b-container">
+        </ModalBody>
+        <ModalFooter className="border-t border-subtle bg-canvas rounded-b-container">
           <Button
             onClick={handleShare}
             disabled={isSharing || !selectedOrgId || organizations.length === 0}
@@ -171,7 +171,7 @@ const ShareToOrganizationModal: React.FC<ShareToOrganizationModalProps> = ({
           <Button color="gray" onClick={handleClose} disabled={isSharing}>
             {t('cancel', 'Cancel')}
           </Button>
-        </Modal.Footer>
+        </ModalFooter>
       </div>
     </Modal>
   )

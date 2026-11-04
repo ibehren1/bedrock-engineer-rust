@@ -86,7 +86,7 @@ export const AgentFormSidebar: React.FC<{
         ))}
       </ul>
       {/* 残りのスペースを埋めるための空のdiv */}
-      <div className="flex-grow"></div>
+      <div className="grow"></div>
     </div>
   )
 }

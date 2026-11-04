@@ -50,7 +50,7 @@ export const LightModelSection: React.FC = () => {
           onChange={(e) => handleLightModelChange(e.target.value)}
         />
 
-        <p className="text-xs text-ink-muted mt-1">{t('settings.lightModel.info')}</p>
+        <p className="text-xs text-ink-muted">{t('settings.lightModel.info')}</p>
       </div>
     </SettingSection>
   )

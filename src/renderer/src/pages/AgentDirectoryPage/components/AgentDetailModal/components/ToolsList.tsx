@@ -31,7 +31,7 @@ export const ToolsList: React.FC<ToolsListProps> = ({ tools }) => {
               key={tool}
               className="bg-accent-tint text-accent text-xs font-medium px-2.5 py-1.5 rounded-control flex items-center gap-1.5"
             >
-              <span className="flex-shrink-0 [&>svg]:!size-4">{toolIcons[tool as ToolName]}</span>
+              <span className="shrink-0 [&>svg]:size-4!">{toolIcons[tool as ToolName]}</span>
               <span>{tool}</span>
             </span>
           ))}

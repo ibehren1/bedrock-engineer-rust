@@ -19,8 +19,8 @@ export const FormActionButtons: React.FC<{
         type="button"
         onClick={formEventUtils.createSafeHandler(onCancel)}
         className="px-2.5 py-1 text-sm font-medium text-ink bg-surface
-          border border-strong rounded-control shadow-sm hover:bg-surface-2
-          focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent
+          border border-strong rounded-control shadow-xs hover:bg-surface-2
+          focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-accent
           focus:ring-offset-canvas transition-all duration-200 hover:border-strong"
       >
         {t('cancel')}
@@ -31,7 +31,7 @@ export const FormActionButtons: React.FC<{
           e.stopPropagation()
         }}
         disabled={isGenerating}
-        className={`flex items-center gap-2 px-2.5 py-1 text-sm font-medium border rounded-control shadow-sm focus:outline-none focus:ring-2
+        className={`flex items-center gap-2 px-2.5 py-1 text-sm font-medium border rounded-control shadow-xs focus:outline-hidden focus:ring-2
           focus:ring-offset-2 focus:ring-accent focus:ring-offset-canvas transition-all duration-200
           ${
             isGenerating

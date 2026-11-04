@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useParams } from 'react-router-dom'
+import { useParams } from 'react-router'
 import {
   CheckCircleIcon,
   XCircleIcon,
@@ -510,7 +510,7 @@ const TaskExecutionHistoryPage: React.FC = () => {
       {/* Main Content - 2 Column Layout */}
       <div className="flex flex-1 min-h-0" style={{ height: 'calc(100vh - 200px)' }}>
         {/* Left Column - Execution History List */}
-        <div className="w-1/4 flex-shrink-0 border-r border-subtle overflow-y-auto">
+        <div className="w-1/4 shrink-0 border-r border-subtle overflow-y-auto">
           <div className="p-2.5">
             <h2 className="text-heading font-medium text-ink mb-4">
               {t('backgroundAgent.history.executionHistoryList')} ({filteredHistory.length})
@@ -596,13 +596,13 @@ const TaskExecutionHistoryPage: React.FC = () => {
 
                 <div className="space-y-3 text-sm">
                   <div className="flex items-center space-x-2">
-                    <ChatBubbleBottomCenterTextIcon className="h-4 w-4 text-ink-muted flex-shrink-0" />
+                    <ChatBubbleBottomCenterTextIcon className="h-4 w-4 text-ink-muted shrink-0" />
                     <span className="text-ink">
                       {t('backgroundAgent.history.messageCount')}: {selectedExecution.messageCount}
                     </span>
                   </div>
                   <div className="flex items-start space-x-2">
-                    <DocumentTextIcon className="h-4 w-4 text-ink-muted flex-shrink-0 mt-0.5" />
+                    <DocumentTextIcon className="h-4 w-4 text-ink-muted shrink-0 mt-0.5" />
                     <div className="min-w-0 flex-1">
                       <div className="text-ink text-xs">
                         {t('backgroundAgent.history.sessionId')}:
@@ -617,7 +617,7 @@ const TaskExecutionHistoryPage: React.FC = () => {
                 {selectedExecution.error && (
                   <div className="mt-4 p-3 bg-danger-soft rounded-control border border-danger">
                     <div className="flex items-start space-x-2">
-                      <XCircleIcon className="h-4 w-4 text-danger mt-0.5 flex-shrink-0" />
+                      <XCircleIcon className="h-4 w-4 text-danger mt-0.5 shrink-0" />
                       <div className="text-sm text-danger">{selectedExecution.error}</div>
                     </div>
                   </div>
@@ -661,12 +661,12 @@ const TaskExecutionHistoryPage: React.FC = () => {
                             key={index}
                             className={`flex items-start space-x-3 p-2.5 rounded-container ${getMessageBackgroundColor(message)}`}
                           >
-                            <div className="flex-shrink-0 mt-1">{getMessageIcon(message)}</div>
+                            <div className="shrink-0 mt-1">{getMessageIcon(message)}</div>
                             <div className="flex-1 min-w-0">
                               <div className="text-sm font-medium text-ink mb-2">
                                 {getMessageTitle(message)}
                               </div>
-                              <div className="text-sm text-ink break-words">
+                              <div className="text-sm text-ink wrap-break-word">
                                 {formatMessageContent(message)}
                               </div>
                             </div>
@@ -690,9 +690,11 @@ const TaskExecutionHistoryPage: React.FC = () => {
                     {sessionError && (
                       <div className="mb-4 p-3 bg-danger-soft rounded-control border border-danger">
                         <div className="flex items-start space-x-2">
-                          <XCircleIcon className="h-4 w-4 text-danger mt-0.5 flex-shrink-0" />
+                          <XCircleIcon className="h-4 w-4 text-danger mt-0.5 shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm text-danger break-words">{sessionError}</div>
+                            <div className="text-sm text-danger wrap-break-word">
+                              {sessionError}
+                            </div>
                             <button
                               onClick={() => setSessionError(null)}
                               className="mt-2 text-xs text-danger hover:text-danger-strong"

@@ -18,7 +18,7 @@ export const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
   <button
     onClick={onToggle}
     disabled={disabled}
-    className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-1 ${
+    className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors focus:outline-hidden focus:ring-2 focus:ring-accent focus:ring-offset-1 ${
       enabled ? 'bg-success' : 'bg-sunken'
     } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
     aria-pressed={enabled}

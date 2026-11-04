@@ -97,7 +97,7 @@ export const MemoryPage: React.FC = () => {
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder={t('memoryItems.addPlaceholder')}
-          className="flex-1 text-sm px-2.5 py-1.5 border border-strong rounded-control bg-surface text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent"
+          className="flex-1 text-sm px-2.5 py-1.5 border border-strong rounded-control bg-surface text-ink placeholder:text-ink-faint focus:outline-hidden focus:ring-2 focus:ring-accent"
         />
         <select
           value={kind}

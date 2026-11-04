@@ -23,7 +23,7 @@ export const RecommendChanges: React.FC<RecommendChangesProps> = ({
   if (loading) {
     return (
       <div className="flex gap-1 justify-start items-center text-ink">
-        <LoadingDotsLottie className="h-[2rem]" />
+        <LoadingDotsLottie className="h-8" />
         <span className="text-ink">{loadingText}</span>
       </div>
     )
@@ -37,7 +37,7 @@ export const RecommendChanges: React.FC<RecommendChangesProps> = ({
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: index * 0.2 }}
           key={recommendation.title}
-          className="cursor-pointer rounded-full border p-2 text-xs hover:border-strong hover:bg-surface-2 whitespace-nowrap flex-shrink-0"
+          className="cursor-pointer rounded-full border p-2 text-xs hover:border-strong hover:bg-surface-2 whitespace-nowrap shrink-0"
           onClick={() => onSelect(recommendation.value)}
         >
           {recommendation.title}

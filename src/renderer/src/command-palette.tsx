@@ -1,8 +1,7 @@
-import 'react-cmdk/dist/cmdk.css'
 import CommandPalette, { filterItems, getItemIndex } from 'react-cmdk'
 import { useCallback, useEffect, useState } from 'react'
 import { routes } from './routes'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { isModKey } from './lib/platform'
 
 const CmdK = () => {

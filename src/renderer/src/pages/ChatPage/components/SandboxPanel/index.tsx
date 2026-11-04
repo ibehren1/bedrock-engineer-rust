@@ -111,7 +111,7 @@ export const SandboxPanel: React.FC<SandboxPanelProps> = ({
       className={
         embedded
           ? 'w-full h-full flex flex-col bg-surface overflow-hidden'
-          : 'w-[40rem] h-full flex flex-col bg-surface border border-subtle rounded-container shadow-raised overflow-hidden'
+          : 'w-160 h-full flex flex-col bg-surface border border-subtle rounded-container shadow-raised overflow-hidden'
       }
     >
       <div className="flex items-center gap-2 px-3 py-2 border-b border-subtle">

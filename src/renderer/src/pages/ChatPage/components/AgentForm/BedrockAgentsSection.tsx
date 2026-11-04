@@ -81,7 +81,7 @@ export const BedrockAgentsSection: React.FC<BedrockAgentsSectionProps> = ({
       </p>
 
       {/* Bedrock Agent 追加フォーム */}
-      <div className="flex flex-col gap-2 mt-4">
+      <div className="flex flex-col gap-2">
         <h4 className="font-medium text-sm mb-2">{t('Add New Bedrock Agent')}</h4>
 
         <div>
@@ -125,7 +125,7 @@ export const BedrockAgentsSection: React.FC<BedrockAgentsSectionProps> = ({
       </div>
 
       {/* 登録済み Bedrock Agent リスト */}
-      <div className="space-y-3 mt-3">
+      <div className="space-y-3">
         <h4 className="font-medium text-sm">{t('Available Bedrock Agents')}</h4>
         <div className="grid grid-cols-1 gap-2">
           {agents.length === 0 ? (

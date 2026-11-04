@@ -327,7 +327,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
           </button>
         )}
         <button
-          className={`${toolbarButton} !border-subtle`}
+          className={`${toolbarButton} border-subtle!`}
           onClick={() => void openExternal()}
           title={t('filesPanel.openTooltip')}
         >
@@ -390,7 +390,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
       <div
         tabIndex={-1}
         onKeyDown={selectAllInPreview}
-        className={`flex-1 min-h-0 outline-none ${kind === 'pdf' || editing ? '' : 'overflow-auto'}`}
+        className={`flex-1 min-h-0 outline-hidden ${kind === 'pdf' || editing ? '' : 'overflow-auto'}`}
       >
         <Suspense
           fallback={<div className="p-4 text-sm text-ink-faint">{t('filesPanel.loading')}</div>}

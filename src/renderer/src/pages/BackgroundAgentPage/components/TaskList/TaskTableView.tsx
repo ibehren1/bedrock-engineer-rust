@@ -26,7 +26,7 @@ export const TaskTableView: React.FC<TaskTableViewProps> = ({
   const { t } = useTranslation()
 
   return (
-    <div className="bg-surface shadow overflow-hidden sm:rounded-container">
+    <div className="bg-surface shadow-sm overflow-hidden sm:rounded-container">
       <table className="min-w-full divide-y divide-subtle">
         <TaskTableHeader
           nameLabel={t('backgroundAgent.table.name')}

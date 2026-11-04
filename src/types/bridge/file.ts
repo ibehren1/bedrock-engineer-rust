@@ -1,6 +1,7 @@
 // `window.file`, installed by src/renderer/src/lib/tauriBridge.ts. Like the preload it replaced,
 // these methods never reject: failures come back as `{ success: false, error }` /
 // `{ agents: [], error }`. The `declare function`s below exist only to name the signatures.
+/* eslint-disable @typescript-eslint/no-unused-vars -- the declare functions are used only through `typeof` */
 import type { CustomAgent } from '../agent-chat'
 declare function readSharedAgents(): Promise<{
   agents: CustomAgent[]

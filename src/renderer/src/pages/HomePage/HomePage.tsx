@@ -1,4 +1,4 @@
-import Lottie from 'lottie-react'
+import { Lottie } from 'lottie-react'
 import robotAnimation from './Robot.json'
 import { Kbd } from 'flowbite-react'
 import { useTranslation } from 'react-i18next'
@@ -58,7 +58,10 @@ const HomePage = () => {
   return (
     <div className="flex flex-col gap-3 justify-center items-center h-full">
       {/* https://app.lottiefiles.com/animation/aae1bb98-eced-420a-99ea-022e281fb845?channel=web&source=public-animation&panel=download */}
-      <Lottie animationData={robotAnimation} className="w-[12rem]" />
+      {/* lottie-react 3's display fills its container, so the container carries the size. */}
+      <div className="w-48" style={{ aspectRatio: `${robotAnimation.w} / ${robotAnimation.h}` }}>
+        <Lottie src={robotAnimation} autoplay loop />
+      </div>
 
       <span
         onClick={() => {

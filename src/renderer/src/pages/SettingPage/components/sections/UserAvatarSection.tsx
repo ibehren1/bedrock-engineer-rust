@@ -85,7 +85,7 @@ export const UserAvatarSection: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex flex-col gap-1 mt-4">
+      <div className="flex flex-col gap-1">
         <label htmlFor="user-name-input" className="text-sm font-medium text-ink">
           {t('userName.title')}
         </label>

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router'
 import { FiAlertTriangle, FiFile } from 'react-icons/fi'
 import type { WorkspaceEntry } from '@/types/bridge/workspace-files'
 import { baseName, changedPathsRelative, dirOf } from '@renderer/lib/workspaceFiles/paths'

@@ -17,7 +17,7 @@ import { CodeInterpreterSettingForm } from './CodeInterpreterSettingForm'
 import { DockerSandboxSettingForm } from './DockerSandboxSettingForm'
 import { ScreenCaptureSettingForm } from './ScreenCaptureSettingForm'
 import { CameraCaptureSettingForm } from './CameraCaptureSettingForm'
-import { Modal, ToggleSwitch } from 'flowbite-react'
+import { Modal, ModalBody, ModalHeader, ToggleSwitch } from 'flowbite-react'
 import { memo, useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ToolState } from '@/types/agent-chat'
@@ -86,7 +86,7 @@ const ToolItem: React.FC<ToolItemProps> = ({
     <li
       className={`
         border-b border-faint transition-colors duration-150
-        ${isSelected ? 'bg-accent-tint border-l-2 !border-l-accent' : 'border-l-2 border-l-transparent'}
+        ${isSelected ? 'bg-accent-tint border-l-2 border-l-accent!' : 'border-l-2 border-l-transparent'}
         ${isMcp ? 'bg-accent-tint' : ''}
         cursor-pointer hover:bg-surface-2 w-full
       `}
@@ -95,7 +95,7 @@ const ToolItem: React.FC<ToolItemProps> = ({
       <div className="py-3 px-1 flex items-center justify-center lg:justify-between">
         <div className="flex items-center lg:gap-2.5 w-full justify-center lg:justify-start">
           <div
-            className={`flex-shrink-0 w-7 h-7 flex items-center justify-center
+            className={`shrink-0 w-7 h-7 flex items-center justify-center
                         ${isSelected ? 'text-accent' : 'text-ink-muted'}`}
             title={toolName}
           >
@@ -120,10 +120,7 @@ const ToolItem: React.FC<ToolItemProps> = ({
             </p>
           </div>
         </div>
-        <div
-          onClick={(e) => e.stopPropagation()}
-          className="flex-shrink-0 lg:pl-2 pl-0 lg:block hidden"
-        >
+        <div onClick={(e) => e.stopPropagation()} className="shrink-0 lg:pl-2 pl-0 lg:block hidden">
           {isMcp ? (
             <div className="flex items-center">
               <span className="text-xs text-accent mr-2">Always enabled</span>
@@ -533,7 +530,7 @@ const ToolSettingModal = memo(({ isOpen, onClose }: ToolSettingModalProps) => {
   return (
     <Modal dismissible size="7xl" show={isOpen} onClose={onClose}>
       <div className="border-[0.5px] border-surface rounded-container shadow-xl">
-        <Modal.Header className="border-b border-subtle bg-canvas text-ink rounded-t-container">
+        <ModalHeader className="border-b border-subtle bg-canvas text-ink rounded-t-container">
           {hasSelectedAgent ? (
             <div className="flex items-center">
               <span>Agent Tools: </span>
@@ -547,18 +544,18 @@ const ToolSettingModal = memo(({ isOpen, onClose }: ToolSettingModalProps) => {
               </div>
             </div>
           )}
-        </Modal.Header>
+        </ModalHeader>
 
-        <Modal.Body className="p-0 h-[80vh] bg-surface rounded-container">
+        <ModalBody className="p-0 h-[80vh] bg-surface rounded-container">
           <div className="flex h-full w-full rounded-container bg-surface">
             {/* 左側サイドバー：ツールリスト - fixed height with own scrollbar */}
-            <div className="lg:w-1/3 w-[60px] border-r border-subtle overflow-y-auto h-full max-h-full flex-shrink-0 bg-canvas rounded-bl-lg">
+            <div className="lg:w-1/3 w-[60px] border-r border-subtle overflow-y-auto h-full max-h-full shrink-0 bg-canvas rounded-bl-lg">
               <div className="h-full">
                 {/* カテゴリごとのセクション */}
                 {categorizedTools.map((category) => (
                   <div key={category.id} className="mb-4">
                     {/* カテゴリヘッダー - 背景色と影を追加して重なり防止 */}
-                    <div className="p-3 bg-surface-2 font-medium sticky top-0 z-20 shadow-sm lg:block hidden">
+                    <div className="p-3 bg-surface-2 font-medium sticky top-0 z-20 shadow-xs lg:block hidden">
                       <div className="text-sm text-ink font-semibold">
                         {t(`Tool Categories.${category.name}`)}
                       </div>
@@ -770,7 +767,7 @@ const ToolSettingModal = memo(({ isOpen, onClose }: ToolSettingModalProps) => {
               )}
             </div>
           </div>
-        </Modal.Body>
+        </ModalBody>
       </div>
 
       {/* JSON Spec モーダル */}

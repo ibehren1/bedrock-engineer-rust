@@ -1,4 +1,5 @@
-import type { CustomFlowbiteTheme } from 'flowbite-react'
+import type { ThemeProviderProps } from 'flowbite-react'
+import type { CustomFlowbiteTheme } from 'flowbite-react/types'
 
 /**
  * Flowbite の既定テーマ上書き。
@@ -102,7 +103,7 @@ export const flowbiteTheme: CustomFlowbiteTheme = {
         // 既定の focus:ring-4 は 4px のリングで行が動いて見えるため 2px に。
         // 色は ring-accent。ring-subtle というユーティリティは存在しない
         // （ringColor の拡張は accent だけ）ので書いてはいけない。
-        off: 'hover:bg-raised focus:outline-none focus:ring-2 focus:ring-accent',
+        off: 'hover:bg-raised focus:outline-hidden focus:ring-2 focus:ring-accent',
         on: 'bg-transparent'
       },
       heading: '',
@@ -150,15 +151,15 @@ export const flowbiteTheme: CustomFlowbiteTheme = {
 
   dropdown: {
     arrowIcon: 'ml-1 h-3 w-3',
-    content: 'py-0.5 focus:outline-none',
+    content: 'py-0.5 focus:outline-hidden',
     floating: {
-      base: 'z-10 w-fit divide-y divide-faint rounded-container shadow-raised focus:outline-none',
+      base: 'z-10 w-fit divide-y divide-faint rounded-container shadow-raised focus:outline-hidden',
       content: 'py-0.5 text-sm text-ink',
       divider: 'my-0.5 h-px bg-raised',
       header: 'block px-2 py-1 text-xs text-ink-muted',
       item: {
         container: '',
-        base: 'flex w-full cursor-pointer items-center justify-start px-2 py-1 text-sm text-ink hover:bg-raised focus:bg-raised focus:outline-none',
+        base: 'flex w-full cursor-pointer items-center justify-start px-2 py-1 text-sm text-ink hover:bg-raised focus:bg-raised focus:outline-hidden',
         icon: 'mr-1.5 h-3.5 w-3.5'
       },
       arrow: {
@@ -269,7 +270,8 @@ export const flowbiteTheme: CustomFlowbiteTheme = {
 
   button: {
     // 既定の base は p-0.5 を持ち、size の padding に 2px 足していた。落とす。
-    base: 'group relative flex items-stretch justify-center text-center font-medium transition-colors focus:z-10 focus:outline-none',
+    // Flowbite 0.12 から内側の span がなくなり、角丸も pill ではなく base が持つ。
+    base: 'group relative flex items-center justify-center rounded-control text-center font-medium transition-colors focus:z-10 focus:outline-hidden',
     size: {
       xs: 'px-1.5 py-0.5 text-micro',
       sm: 'px-2 py-0.5 text-xs',
@@ -301,30 +303,7 @@ export const flowbiteTheme: CustomFlowbiteTheme = {
       yellow: FILL_WARNING
     },
     disabled: 'cursor-not-allowed opacity-50',
-    inner: {
-      base: 'flex items-stretch transition-colors',
-      // spinner の逃げ幅も padding に合わせて詰める。
-      isProcessingPadding: { xs: 'pl-5', sm: 'pl-6', md: 'pl-7', lg: 'pl-8', xl: 'pl-9' }
-    },
-    spinnerLeftPosition: {
-      xs: 'left-1.5',
-      sm: 'left-2',
-      md: 'left-2',
-      lg: 'left-2.5',
-      xl: 'left-3'
-    },
-    label:
-      'ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-accent-tint text-micro text-accent',
-    outline: {
-      color: { gray: 'border border-strong', default: 'border-0', light: '' },
-      off: '',
-      on: 'flex w-full justify-center bg-canvas text-ink transition-colors group-enabled:group-hover:bg-opacity-0 group-enabled:group-hover:text-inherit',
-      pill: { off: 'rounded-control', on: 'rounded-full' }
-    },
-    pill: {
-      off: 'rounded-control',
-      on: 'rounded-full'
-    }
+    pill: 'rounded-full'
   },
 
   spinner: {
@@ -347,7 +326,7 @@ export const flowbiteTheme: CustomFlowbiteTheme = {
 
   toggleSwitch: {
     root: {
-      base: 'group flex rounded-control focus:outline-none',
+      base: 'group flex rounded-control focus:outline-hidden',
       active: { on: 'cursor-pointer', off: 'cursor-not-allowed opacity-50' },
       label: 'ms-2 mt-px text-start text-xs font-medium text-ink'
     },
@@ -410,13 +389,13 @@ export const flowbiteTheme: CustomFlowbiteTheme = {
     head: {
       base: 'group/head text-micro text-ink-muted',
       cell: {
-        base: 'bg-surface-2 px-2 py-1 group-first/head:first:rounded-tl-container group-first/head:last:rounded-tr-container'
+        base: 'bg-surface-2 px-2 py-1 first:group-first/head:rounded-tl-container last:group-first/head:rounded-tr-container'
       }
     },
     body: {
       base: 'group/body',
       cell: {
-        base: 'px-2 py-1 text-sm group-first/body:group-first/row:first:rounded-tl-container group-first/body:group-first/row:last:rounded-tr-container group-last/body:group-last/row:first:rounded-bl-container group-last/body:group-last/row:last:rounded-br-container'
+        base: 'px-2 py-1 text-sm first:group-first/row:group-first/body:rounded-tl-container last:group-first/row:group-first/body:rounded-tr-container first:group-last/row:group-last/body:rounded-bl-container last:group-last/row:group-last/body:rounded-br-container'
       }
     },
     row: {
@@ -426,3 +405,23 @@ export const flowbiteTheme: CustomFlowbiteTheme = {
     }
   }
 }
+
+/** Every string in `theme` replaced by `true`: the matching clearTheme shape. */
+const clearLeaves = (theme: object): Record<string, unknown> =>
+  Object.fromEntries(
+    Object.entries(theme).map(([key, value]) => [
+      key,
+      value !== null && typeof value === 'object' ? clearLeaves(value) : true
+    ])
+  )
+
+/**
+ * Pass as ThemeProvider's clearTheme, next to flowbiteTheme.
+ *
+ * Flowbite 0.10 replaced each default string the custom theme set. 0.12 instead merges the two
+ * with tailwind-merge, which keeps every stock class that doesn't conflict with ours, for
+ * example `dark:bg-gray-800`, `text-gray-900` or `focus:ring-4`: the palette and dark variants
+ * this file exists to remove. Clearing exactly the keys set here restores the old behavior;
+ * keys this file doesn't set keep Flowbite's defaults, as before.
+ */
+export const flowbiteClearTheme = clearLeaves(flowbiteTheme) as ThemeProviderProps['clearTheme']

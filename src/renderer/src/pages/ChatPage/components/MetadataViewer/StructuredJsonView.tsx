@@ -61,7 +61,7 @@ export const StructuredJsonView: React.FC<JsonViewerProps> = ({
               {isExpandable ? (
                 <button
                   onClick={() => setExpanded({ ...expanded, [key]: !isItemExpanded })}
-                  className="mr-1 mt-1 focus:outline-none text-ink-muted hover:text-accent"
+                  className="mr-1 mt-1 focus:outline-hidden text-ink-muted hover:text-accent"
                 >
                   {isItemExpanded ? (
                     <FiChevronDown className="w-3 h-3" />
@@ -73,7 +73,7 @@ export const StructuredJsonView: React.FC<JsonViewerProps> = ({
                 <span className="mr-1 w-3">&nbsp;</span>
               )}
 
-              <div className="flex-grow">
+              <div className="grow">
                 <div className="flex items-start">
                   <span className="text-accent mr-2">{isArray ? `${key}:` : `"${key}":`}</span>
 

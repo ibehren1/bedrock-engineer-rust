@@ -311,7 +311,7 @@ export const ReasoningContent: React.FC<ReasoningContentProps> = ({
       <div
         className={`transition-all duration-300 rounded-container overflow-hidden ${
           isExpanded
-            ? 'max-h-[25rem] opacity-100 bg-surface-2/50 border border-subtle backdrop-blur-sm'
+            ? 'max-h-100 opacity-100 bg-surface-2/50 border border-subtle backdrop-blur-xs'
             : 'max-h-0 opacity-0'
         }`}
       >
@@ -319,7 +319,7 @@ export const ReasoningContent: React.FC<ReasoningContentProps> = ({
           {textContent && (
             <div
               ref={textAreaRef}
-              className="pb-5 text-sm text-ink leading-relaxed whitespace-pre-wrap font-light overflow-y-auto pr-2 max-h-[25rem] will-change-scroll transform-gpu"
+              className="pb-5 text-sm text-ink leading-relaxed whitespace-pre-wrap font-light overflow-y-auto pr-2 max-h-100 will-change-scroll transform-gpu"
             >
               {textContent}
             </div>

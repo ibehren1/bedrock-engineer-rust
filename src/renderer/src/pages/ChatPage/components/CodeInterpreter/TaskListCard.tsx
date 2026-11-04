@@ -112,7 +112,7 @@ export const TaskListCard: React.FC<TaskListCardProps> = ({ result }) => {
             <button
               key={status}
               onClick={() => setFilterStatus(status as TaskStatus)}
-              className={`flex items-center gap-1 px-2 py-1 rounded-control transition-colors cursor-pointer hover:shadow-sm ${
+              className={`flex items-center gap-1 px-2 py-1 rounded-control transition-colors cursor-pointer hover:shadow-xs ${
                 isActive ? 'bg-accent-tint ring-1 ring-accent' : 'bg-surface-2 hover:bg-raised'
               }`}
             >
@@ -124,7 +124,7 @@ export const TaskListCard: React.FC<TaskListCardProps> = ({ result }) => {
         })}
         <button
           onClick={() => setFilterStatus('all')}
-          className={`flex items-center gap-1 px-2 py-1 rounded-control transition-colors cursor-pointer hover:shadow-sm ${
+          className={`flex items-center gap-1 px-2 py-1 rounded-control transition-colors cursor-pointer hover:shadow-xs ${
             filterStatus === 'all'
               ? 'bg-accent-tint ring-1 ring-accent'
               : 'bg-accent-tint hover:bg-accent-tint-strong'

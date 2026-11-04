@@ -466,7 +466,7 @@ export const TextArea: React.FC<TextAreaProps> = ({
             ref={textareaRef}
             onCompositionStart={() => setIsComposing(true)}
             onCompositionEnd={() => setIsComposing(false)}
-            className="block w-full p-2.5 pb-16 text-sm text-ink border-none bg-transparent resize-none focus:outline-none focus:ring-0"
+            className="block w-full p-2.5 pb-16 text-sm text-ink border-none bg-transparent resize-none focus:outline-hidden focus:ring-0"
             placeholder={placeholder}
             value={value}
             onChange={(e) => {

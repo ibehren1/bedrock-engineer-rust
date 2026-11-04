@@ -17,7 +17,7 @@ import {
   generateCDKImplementPrompt,
   generateCDKImplementPromptJa
 } from './utils/cdkPromptGenerator'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 
 function StepFunctionsGeneratorPage() {
   const {
@@ -198,10 +198,10 @@ function StepFunctionsGeneratorPage() {
       </div>
 
       {/* Buttom Input Field Block */}
-      <div className="flex gap-2 fixed bottom-0 left-[5rem] right-5 bottom-3">
+      <div className="flex gap-2 fixed bottom-0 left-20 right-5 bottom-3">
         <div className="relative w-full">
           <div className="flex gap-2 justify-between mb-4 items-center">
-            <div className="overflow-x-auto flex-grow">
+            <div className="overflow-x-auto grow">
               <div className="flex flex-nowrap gap-2 min-w-0 whitespace-nowrap">
                 {examples.map((e, index) => {
                   return (
@@ -225,7 +225,7 @@ function StepFunctionsGeneratorPage() {
                       transition-colors
                       duration-200
                       whitespace-nowrap
-                      flex-shrink-0
+                      shrink-0
                     "
                       onClick={() => {
                         setUserInput(e.value)
@@ -237,7 +237,7 @@ function StepFunctionsGeneratorPage() {
                 })}
               </div>
             </div>
-            <div className="flex-shrink-0 ml-2">
+            <div className="shrink-0 ml-2">
               <CDKImplementButton
                 visible={hasValidStateMachine && !loading}
                 onImplement={handleCDKImplementation}

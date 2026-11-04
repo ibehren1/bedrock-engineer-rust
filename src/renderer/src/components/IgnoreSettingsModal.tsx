@@ -1,4 +1,4 @@
-import { Modal } from 'flowbite-react'
+import { Modal, ModalBody, ModalFooter, ModalHeader } from 'flowbite-react'
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSettings } from '@renderer/contexts/SettingsContext'
@@ -108,8 +108,8 @@ export const IgnoreSettingsModal: React.FC<IgnoreSettingsModalProps> = ({
 
   return (
     <Modal dismissible show={isOpen} onClose={handleClose} size="4xl">
-      <Modal.Header>{t('ignoreSettings.title')}</Modal.Header>
-      <Modal.Body>
+      <ModalHeader>{t('ignoreSettings.title')}</ModalHeader>
+      <ModalBody>
         <div className="space-y-4">
           {/* タブナビゲーション */}
           <div className="border-b border-subtle">
@@ -189,8 +189,8 @@ export const IgnoreSettingsModal: React.FC<IgnoreSettingsModalProps> = ({
             </div>
           )}
         </div>
-      </Modal.Body>
-      <Modal.Footer>
+      </ModalBody>
+      <ModalFooter>
         <div className="flex justify-between w-full">
           <button
             onClick={handleClose}
@@ -210,7 +210,7 @@ export const IgnoreSettingsModal: React.FC<IgnoreSettingsModalProps> = ({
             {isSaving ? t('ignoreSettings.saving') : t('ignoreSettings.save')}
           </button>
         </div>
-      </Modal.Footer>
+      </ModalFooter>
     </Modal>
   )
 }

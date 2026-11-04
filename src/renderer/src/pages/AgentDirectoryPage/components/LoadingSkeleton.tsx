@@ -6,11 +6,11 @@ export const LoadingSkeleton: React.FC = () => {
       {[...Array(8)].map((_, index) => (
         <div
           key={index}
-          className="bg-surface rounded-container shadow-sm border border-subtle p-5 animate-pulse"
+          className="bg-surface rounded-container shadow-xs border border-subtle p-5 animate-pulse"
         >
           <div className="flex items-start">
             {/* アイコンスケルトン */}
-            <div className="w-10 h-10 rounded-full bg-sunken mr-3 flex-shrink-0"></div>
+            <div className="w-10 h-10 rounded-full bg-sunken mr-3 shrink-0"></div>
             <div className="flex-1">
               {/* タイトルスケルトン */}
               <div className="h-5 bg-sunken rounded-control mb-2 w-3/4"></div>

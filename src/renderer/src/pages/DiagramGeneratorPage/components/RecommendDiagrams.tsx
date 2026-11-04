@@ -26,7 +26,7 @@ export const RecommendDiagrams: React.FC<RecommendDiagramsProps> = ({
   if (loading) {
     return (
       <div className="flex gap-1 justify-start items-center text-ink">
-        <LoadingDotsLottie className="h-[2rem]" />
+        <LoadingDotsLottie className="h-8" />
         <span className="text-ink">{loadingText || defaultLoadingText}</span>
       </div>
     )
@@ -55,7 +55,7 @@ export const RecommendDiagrams: React.FC<RecommendDiagramsProps> = ({
             transition-colors
             duration-200
             whitespace-nowrap
-            flex-shrink-0
+            shrink-0
           "
           onClick={() => onSelect(recommendation.value)}
         >

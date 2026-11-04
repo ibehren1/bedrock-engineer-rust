@@ -1,6 +1,14 @@
 import { KnowledgeBase } from '@/types/agent-chat'
 import useWebsiteGeneratorSettings from '@renderer/hooks/useWebsiteGeneratorSetting'
-import { Button, Label, Modal, TextInput, ToggleSwitch } from 'flowbite-react'
+import {
+  Button,
+  Label,
+  Modal,
+  ModalBody,
+  ModalHeader,
+  TextInput,
+  ToggleSwitch
+} from 'flowbite-react'
 import React, { useState } from 'react'
 import { BsDatabase } from 'react-icons/bs'
 
@@ -45,8 +53,8 @@ const DataSourceConnectModal = React.memo(({ isOpen, onClose }: DataSourceConnec
 
   return (
     <Modal dismissible show={isOpen} onClose={onClose}>
-      <Modal.Header>Connect Knowledge Base</Modal.Header>
-      <Modal.Body>
+      <ModalHeader>Connect Knowledge Base</ModalHeader>
+      <ModalBody>
         <div className="flex flex-col gap-3">
           {/* Enable/Disable Toggle */}
           <div className="flex items-center justify-between">
@@ -98,7 +106,7 @@ const DataSourceConnectModal = React.memo(({ isOpen, onClose }: DataSourceConnec
             <div className="grid gap-4">
               <div>
                 <div className="mb-2 block">
-                  <Label htmlFor="kbId" value="Knowledge Base ID" />
+                  <Label htmlFor="kbId">Knowledge Base ID</Label>
                 </div>
                 <TextInput
                   id="kbId"
@@ -111,7 +119,7 @@ const DataSourceConnectModal = React.memo(({ isOpen, onClose }: DataSourceConnec
               </div>
               <div>
                 <div className="mb-2 block flex flex-col gap-1">
-                  <Label htmlFor="description" value="Description" />
+                  <Label htmlFor="description">Description</Label>
                   <span className="text-xs text-ink-muted">
                     This is where you outline the data you store, and how it will be referenced in
                     the knowledge base when generating your website.
@@ -135,7 +143,7 @@ const DataSourceConnectModal = React.memo(({ isOpen, onClose }: DataSourceConnec
             </div>
           </div>
         </div>
-      </Modal.Body>
+      </ModalBody>
     </Modal>
   )
 })

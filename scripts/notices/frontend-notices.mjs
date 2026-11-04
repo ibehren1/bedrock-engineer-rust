@@ -56,7 +56,11 @@ const KNOWN_EXCEPTIONS = {
   '@codesandbox/nodebox':
     'Sustainable Use License (source-available, non-commercial redistribution terms); ' +
     'transitive dep of @codesandbox/sandpack-react via sandpack-client. Accepted: the app is ' +
-    'distributed free of charge for internal use, which these terms allow. See NOTICE.'
+    'distributed free of charge for internal use, which these terms allow. See NOTICE.',
+  elkjs:
+    'EPL-2.0 OR GPL-3.0-or-later; distributed under EPL-2.0. The ELK graph layout engine, ' +
+    'bundled by mermaid 12 for chat diagrams. Accepted: shipped unmodified with its license ' +
+    'text; its source is public (https://github.com/kieler/elkjs). See NOTICE.'
 }
 
 // Third-party files vendored into the renderer rather than installed from npm. Each directory

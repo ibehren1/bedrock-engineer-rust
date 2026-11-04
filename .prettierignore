@@ -7,3 +7,4 @@ tsconfig.*.json
 src-tauri/target
 src-tauri/app/gen
 notices
+.flowbite-react

@@ -701,7 +701,7 @@ export const TokenAnalyticsView: React.FC<TokenAnalyticsViewProps> = ({ messages
         <h2 className="text-title text-ink mb-3">{t('Token Usage Analytics')}</h2>
         <div>
           {/* セッション全体の統計 */}
-          <div className="mb-3 p-2.5 bg-raised rounded-container border border-transparent border-subtle shadow-sm">
+          <div className="mb-3 p-2.5 bg-raised rounded-container border border-transparent border-subtle shadow-xs">
             <h3 className="text-heading font-semibold mb-2 text-ink">{t('Session Summary')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -759,7 +759,7 @@ export const TokenAnalyticsView: React.FC<TokenAnalyticsViewProps> = ({ messages
           {activeTab === 'summary' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {/* トークン使用量の詳細 */}
-              <div className="p-2.5 border border-subtle bg-raised/20 rounded-container shadow-sm">
+              <div className="p-2.5 border border-subtle bg-raised/20 rounded-container shadow-xs">
                 <h3 className="text-heading font-semibold mb-4 text-ink">{t('Token Usage')}</h3>
                 <div className="mb-4">
                   <p className="text-sm text-ink-muted flex justify-between items-center py-1 border-b border-faint">
@@ -911,7 +911,7 @@ export const TokenAnalyticsView: React.FC<TokenAnalyticsViewProps> = ({ messages
               </div>
 
               {/* 累積トークン使用量とコスト */}
-              <div className="p-2.5 border border-subtle bg-raised/20 rounded-container shadow-sm">
+              <div className="p-2.5 border border-subtle bg-raised/20 rounded-container shadow-xs">
                 <h3 className="text-heading font-semibold mb-4 text-ink">
                   {t('Cumulative Usage')}
                 </h3>

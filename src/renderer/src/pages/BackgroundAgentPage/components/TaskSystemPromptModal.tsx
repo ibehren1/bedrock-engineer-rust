@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Modal } from 'flowbite-react'
+import { Modal, ModalBody, ModalHeader } from 'flowbite-react'
 import MD from '@renderer/components/Markdown/MD'
 import { ArrowPathIcon } from '@heroicons/react/24/outline'
 
@@ -80,13 +80,13 @@ const TaskSystemPromptModal = React.memo(
     return (
       <Modal dismissible show={isOpen} onClose={onClose} size="7xl" className="bg-canvas">
         <div className="border-[0.5px] border-surface rounded-container shadow-xl">
-          <Modal.Header className="border-b border-subtle bg-canvas rounded-t-container">
+          <ModalHeader className="border-b border-subtle bg-canvas rounded-t-container">
             <div className="flex items-center space-x-2">
               <span>{t('backgroundAgent.systemPrompt.title')}</span>
               {taskName && <span className="text-sm text-ink-muted">- {taskName}</span>}
             </div>
-          </Modal.Header>
-          <Modal.Body className="p-0 bg-surface rounded-b-container">
+          </ModalHeader>
+          <ModalBody className="p-0 bg-surface rounded-b-container">
             <div className="p-3 text-ink">
               {isLoading ? (
                 <div className="flex items-center justify-center py-8 h-[70vh]">
@@ -116,7 +116,7 @@ const TaskSystemPromptModal = React.memo(
                 </div>
               )}
             </div>
-          </Modal.Body>
+          </ModalBody>
         </div>
       </Modal>
     )

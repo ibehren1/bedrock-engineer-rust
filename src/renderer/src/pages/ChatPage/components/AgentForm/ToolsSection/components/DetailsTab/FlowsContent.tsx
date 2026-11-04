@@ -269,7 +269,7 @@ export const FlowsContent: React.FC<FlowsContentProps> = ({ flows, onChange }) =
           {editingIndex !== null ? t('Edit Bedrock Flow') : t('Add New Bedrock Flow')}
         </h4>
 
-        <div className="flex-grow">
+        <div className="grow">
           <Label>{t('Flow Identifier')}</Label>
           <Input
             type="text"
@@ -279,7 +279,7 @@ export const FlowsContent: React.FC<FlowsContentProps> = ({ flows, onChange }) =
           />
         </div>
 
-        <div className="flex-grow">
+        <div className="grow">
           <Label>{t('Flow Alias Identifier')}</Label>
           <Input
             type="text"
@@ -289,7 +289,7 @@ export const FlowsContent: React.FC<FlowsContentProps> = ({ flows, onChange }) =
           />
         </div>
 
-        <div className="flex-grow">
+        <div className="grow">
           <Label>{t('Description')}</Label>
           <Textarea
             value={description}
@@ -300,7 +300,7 @@ export const FlowsContent: React.FC<FlowsContentProps> = ({ flows, onChange }) =
         </div>
 
         {/* 新規: 入力型の選択 */}
-        <div className="flex-grow">
+        <div className="grow">
           <Label>{t('Input Type')}</Label>
           <Select value={inputType} onChange={(e) => setInputType(e.target.value as InputType)}>
             <option value="string">{t('String')}</option>
@@ -313,7 +313,7 @@ export const FlowsContent: React.FC<FlowsContentProps> = ({ flows, onChange }) =
 
         {/* 新規: オブジェクトまたは配列の場合はJSONスキーマエディタを表示 */}
         {(inputType === 'object' || inputType === 'array') && (
-          <div className="flex-grow">
+          <div className="grow">
             <Label>{t('JSON Schema')}</Label>
 
             <div className="border border-subtle rounded-control p-2.5 bg-surface-2">
@@ -498,7 +498,7 @@ export const FlowsContent: React.FC<FlowsContentProps> = ({ flows, onChange }) =
               <p className="text-xs text-ink-muted mt-1 whitespace-pre-line">{flow.description}</p>
               {/* 情報を横並びにする新しいレイアウト */}
               <div className="flex gap-4 mt-1">
-                <div className="w-[15rem]">
+                <div className="w-60">
                   <div>
                     <span className="text-xs text-ink-muted">
                       {t('Flow Alias Identifier')}:{' '}

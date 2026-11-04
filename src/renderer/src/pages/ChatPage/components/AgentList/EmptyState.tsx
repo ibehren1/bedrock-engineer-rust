@@ -7,7 +7,7 @@ export const EmptyState: React.FC = () => {
 
   return (
     <div className="flex flex-col items-center justify-center h-[calc(100vh-16rem)]">
-      <div className="mb-3 p-3 bg-surface rounded-full shadow-sm">
+      <div className="mb-3 p-3 bg-surface rounded-full shadow-xs">
         <TbSearchOff className="w-16 h-16 text-accent" />
       </div>
       <p className="text-heading text-ink mb-2">{t('noAgentsFound')}</p>

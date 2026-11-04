@@ -33,7 +33,7 @@ import { LoaderWithReasoning } from './components/LoaderWithReasoning'
 import { DiagramExplanationView } from './components/DiagramExplanationView'
 import { MdOutlineArticle } from 'react-icons/md'
 import { Tooltip } from 'flowbite-react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { generateCDKPrompt } from './utils/awsDetector'
 import { DiagramModeSelector, DiagramMode } from './components/DiagramModeSelector'
 import { useSystemPromptModal } from '../ChatPage/modals/useSystemPromptModal'
@@ -585,10 +585,10 @@ export default function DiagramGeneratorPage() {
       </div>
 
       {/* Footer */}
-      <div className="flex gap-2 fixed bottom-0 left-[5rem] right-5 bottom-3">
+      <div className="flex gap-2 fixed bottom-0 left-20 right-5 bottom-3">
         <div className="relative w-full">
           <div className="flex gap-2 justify-between pb-2">
-            <div className="overflow-x-auto flex-grow w-full">
+            <div className="overflow-x-auto grow w-full">
               <RecommendDiagrams
                 loading={recommendLoading}
                 recommendations={recommendDiagrams}

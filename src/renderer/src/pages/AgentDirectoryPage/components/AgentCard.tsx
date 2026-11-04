@@ -15,11 +15,11 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onSelect, onTagClic
 
   return (
     <div
-      className="bg-surface rounded-container shadow-sm border border-subtle p-5 transition-all hover:shadow-md cursor-pointer"
+      className="bg-surface rounded-container shadow-xs border border-subtle p-5 transition-all hover:shadow-md cursor-pointer"
       onClick={() => onSelect(agent)}
     >
       <div className="flex items-start">
-        <div className="w-10 h-10 rounded-full flex items-center justify-center mr-3 flex-shrink-0 bg-raised">
+        <div className="w-10 h-10 rounded-full flex items-center justify-center mr-3 shrink-0 bg-raised">
           {agent.icon ? (
             <AgentIconView icon={agent.icon} iconColor={agent.iconColor || '#3B82F6'} />
           ) : (

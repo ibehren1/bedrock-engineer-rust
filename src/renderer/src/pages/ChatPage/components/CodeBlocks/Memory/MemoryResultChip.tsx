@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import toast from 'react-hot-toast'
 import { FiCheck } from 'react-icons/fi'
 import type { MemoryItem } from '@/types/bridge/memory'
@@ -86,7 +86,7 @@ export const MemoryResultChip: React.FC<{ name: MemoryToolName; item: MemoryItem
   return (
     <span className="inline-flex flex-wrap items-center gap-1.5 self-start max-w-full text-xs text-success bg-success/10 border border-success/40 rounded-full px-2 py-0.5">
       <FiCheck className="w-3 h-3 shrink-0" />
-      <span className="min-w-0 break-words">
+      <span className="min-w-0 wrap-break-word">
         {label}: &quot;{preview(item.content)}&quot;
       </span>
       <span aria-hidden>·</span>

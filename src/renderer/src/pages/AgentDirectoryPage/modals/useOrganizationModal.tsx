@@ -1,5 +1,16 @@
 import React, { useState } from 'react'
-import { Modal, Button, Label, TextInput, Textarea, Select } from 'flowbite-react'
+import {
+  Button,
+  HelperText,
+  Label,
+  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  Select,
+  Textarea,
+  TextInput
+} from 'flowbite-react'
 import { useTranslation } from 'react-i18next'
 import { OrganizationConfig } from '@/types/agent-chat'
 import { useSettings } from '@renderer/contexts/SettingsContext'
@@ -44,13 +55,13 @@ const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
   return (
     <Modal show={isOpen} onClose={onClose} size="md" className="bg-canvas">
       <div className="border-[0.5px] border-surface rounded-container shadow-xl">
-        <Modal.Header className="border-b border-subtle bg-canvas rounded-t-container">
+        <ModalHeader className="border-b border-subtle bg-canvas rounded-t-container">
           {t('organization.deleteConfirmTitle')}
-        </Modal.Header>
-        <Modal.Body className="p-0 bg-surface">
+        </ModalHeader>
+        <ModalBody className="p-0 bg-surface">
           <div className="p-3">
             <div className="flex items-start space-x-4">
-              <div className="flex-shrink-0">
+              <div className="shrink-0">
                 <HiExclamationTriangle className="w-4 h-4 text-danger" />
               </div>
               <div>
@@ -63,15 +74,15 @@ const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
               </div>
             </div>
           </div>
-        </Modal.Body>
-        <Modal.Footer className="border-t border-subtle bg-canvas rounded-b-container">
+        </ModalBody>
+        <ModalFooter className="border-t border-subtle bg-canvas rounded-b-container">
           <Button onClick={handleDelete} disabled={isDeleting} color="failure">
             {isDeleting ? t('organization.saving') : t('organization.delete')}
           </Button>
           <Button color="gray" onClick={onClose} disabled={isDeleting}>
             {t('organization.cancel')}
           </Button>
-        </Modal.Footer>
+        </ModalFooter>
       </div>
     </Modal>
   )
@@ -170,10 +181,10 @@ const OrganizationModal: React.FC<OrganizationModalProps> = ({ organization, isO
   return (
     <Modal show={isOpen} onClose={handleClose} size="lg" className="bg-canvas">
       <div className="border-[0.5px] border-surface rounded-container shadow-xl">
-        <Modal.Header className="border-b border-subtle bg-canvas rounded-t-container">
+        <ModalHeader className="border-b border-subtle bg-canvas rounded-t-container">
           {organization ? t('organization.editOrganization') : t('organization.addOrganization')}
-        </Modal.Header>
-        <Modal.Body className="p-0 bg-surface">
+        </ModalHeader>
+        <ModalBody className="p-0 bg-surface">
           <div className="space-y-2 p-3">
             {error && (
               <div className="p-3 bg-danger-soft border border-danger rounded-control">
@@ -288,13 +299,13 @@ const OrganizationModal: React.FC<OrganizationModalProps> = ({ organization, isO
                   }
                   placeholder="agents/"
                   disabled={isLoading}
-                  helperText={t('organization.pathPrefixHelper')}
                 />
+                <HelperText>{t('organization.pathPrefixHelper')}</HelperText>
               </div>
             </div>
           </div>
-        </Modal.Body>
-        <Modal.Footer className="border-t border-subtle bg-canvas rounded-b-container">
+        </ModalBody>
+        <ModalFooter className="border-t border-subtle bg-canvas rounded-b-container">
           <Button onClick={handleSave} disabled={isLoading} color="blue">
             {isLoading
               ? t('organization.saving')
@@ -305,7 +316,7 @@ const OrganizationModal: React.FC<OrganizationModalProps> = ({ organization, isO
           <Button color="gray" onClick={handleClose} disabled={isLoading}>
             {t('organization.cancel')}
           </Button>
-        </Modal.Footer>
+        </ModalFooter>
       </div>
     </Modal>
   )

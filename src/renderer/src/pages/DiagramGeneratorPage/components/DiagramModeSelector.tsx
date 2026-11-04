@@ -1,3 +1,4 @@
+import type { JSX } from 'react'
 import { motion } from 'framer-motion'
 import { AiOutlineCloud, AiOutlineCode, AiOutlineProject } from 'react-icons/ai'
 
@@ -67,7 +68,7 @@ export function DiagramModeSelector({
             border
             ${selectedMode === mode.id ? 'border-success' : 'border-subtle'}
             focus:ring-4
-            focus:outline-none
+            focus:outline-hidden
             focus:ring-accent
             font-medium
             rounded-full

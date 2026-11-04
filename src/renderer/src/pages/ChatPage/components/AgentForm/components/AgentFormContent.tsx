@@ -80,7 +80,7 @@ export const AgentFormContent: React.FC<{
     case 'basic':
       return (
         <div className="space-y-3 pb-4">
-          <h3 className="text-heading font-semibold text-ink mb-3 pb-2 border-b border-subtle">
+          <h3 className="text-heading font-semibold text-ink pb-2 border-b border-subtle">
             {t('Basic Agent Settings')}
           </h3>
 

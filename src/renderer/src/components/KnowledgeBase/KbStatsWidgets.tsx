@@ -147,7 +147,7 @@ export const Sparkline: React.FC<{
       </svg>
       {shown !== null && (
         <div
-          className="absolute z-20 -top-8 px-2 py-1 rounded-control bg-raised border border-subtle shadow-sm text-xs whitespace-nowrap pointer-events-none"
+          className="absolute z-20 -top-8 px-2 py-1 rounded-control bg-raised border border-subtle shadow-xs text-xs whitespace-nowrap pointer-events-none"
           style={{ left: Math.min(Math.max(x(shown) - 40, 0), width - 60) }}
         >
           <span className="font-semibold text-ink">{values[shown]}</span>{' '}
@@ -261,7 +261,7 @@ export const HealthList: React.FC<{ issues: KnowledgeHealthIssue[] }> = ({ issue
               : 'text-accent'
         return (
           <li key={i.kind} className="flex items-start gap-1.5 text-xs text-ink">
-            <Icon className={`w-3.5 h-3.5 mt-px flex-shrink-0 ${cls}`} aria-hidden />
+            <Icon className={`w-3.5 h-3.5 mt-px shrink-0 ${cls}`} aria-hidden />
             <span>
               {t(`knowledgeBase.health.issue.${i.kind}`, {
                 count: i.count,

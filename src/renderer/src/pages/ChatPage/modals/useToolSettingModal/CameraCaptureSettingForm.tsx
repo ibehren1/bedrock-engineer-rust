@@ -238,7 +238,7 @@ export const CameraCaptureSettingForm: React.FC = () => {
 
         {/* LLMモデル選択 */}
         <div className="w-full">
-          <Label htmlFor="cameraCaptureModel" value={t('AI Model for Image Analysis')} />
+          <Label htmlFor="cameraCaptureModel">{t('AI Model for Image Analysis')}</Label>
           <Select
             id="cameraCaptureModel"
             value={recognizeImageModel}
@@ -255,7 +255,7 @@ export const CameraCaptureSettingForm: React.FC = () => {
 
         {/* カメラ品質設定 */}
         <div className="w-full">
-          <Label htmlFor="cameraQuality" value={t('Image Quality')} />
+          <Label htmlFor="cameraQuality">{t('Image Quality')}</Label>
           <Select id="cameraQuality" className="mt-2 w-full" defaultValue="medium">
             <option value="low">{t('Low (640x480)')}</option>
             <option value="medium">{t('Medium (1280x720)')}</option>
@@ -459,7 +459,7 @@ export const CameraCaptureSettingForm: React.FC = () => {
           <div className="space-y-2 p-2.5 bg-surface-2 rounded-control border border-subtle">
             {/* ウィンドウサイズ設定 */}
             <div className="w-full">
-              <Label htmlFor="previewSize" value={t('Preview Window Size')} />
+              <Label htmlFor="previewSize">{t('Preview Window Size')}</Label>
               <Select
                 id="previewSize"
                 value={previewSize}
@@ -474,7 +474,7 @@ export const CameraCaptureSettingForm: React.FC = () => {
 
             {/* ウィンドウ位置設定 */}
             <div className="w-full">
-              <Label htmlFor="previewPosition" value={t('Preview Window Position')} />
+              <Label htmlFor="previewPosition">{t('Preview Window Position')}</Label>
               <Select
                 id="previewPosition"
                 value={previewPosition}
@@ -494,7 +494,7 @@ export const CameraCaptureSettingForm: React.FC = () => {
 
             {/* 透明度設定 */}
             <div className="w-full">
-              <Label htmlFor="previewOpacity" value={t('Window Opacity')} />
+              <Label htmlFor="previewOpacity">{t('Window Opacity')}</Label>
               <div className="flex items-center gap-4 mt-2">
                 <input
                   type="range"
@@ -506,7 +506,7 @@ export const CameraCaptureSettingForm: React.FC = () => {
                   onChange={(e) => setPreviewOpacity(parseFloat(e.target.value))}
                   className="flex-1 h-2 bg-raised rounded-container appearance-none cursor-pointer"
                 />
-                <span className="text-sm text-ink-muted min-w-[4rem]">
+                <span className="text-sm text-ink-muted min-w-16">
                   {Math.round(previewOpacity * 100)}%
                 </span>
               </div>

@@ -26,7 +26,7 @@ export const TaskViewToggle: React.FC<TaskViewToggleProps> = ({
     >
       {/* アニメーション背景 */}
       <motion.div
-        className="absolute top-0.5 h-6 w-8 bg-surface/60 rounded-control shadow-sm"
+        className="absolute top-0.5 h-6 w-8 bg-surface/60 rounded-control shadow-xs"
         animate={{
           x: isTableView ? 32 : 0
         }}

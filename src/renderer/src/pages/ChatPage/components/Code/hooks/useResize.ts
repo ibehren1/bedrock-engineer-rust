@@ -10,7 +10,7 @@ type UseResizeReturn = {
   height: number
   isResizing: boolean
   handleMouseDown: (e: React.MouseEvent) => void
-  containerRef: React.RefObject<HTMLDivElement>
+  containerRef: React.RefObject<HTMLDivElement | null>
 }
 
 export const useResize = ({

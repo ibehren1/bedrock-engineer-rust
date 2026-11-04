@@ -105,7 +105,7 @@ export const IAMPolicyModal: React.FC<IAMPolicyModalProps> = ({ isOpen, onClose 
           <div className="absolute inset-0 bg-black opacity-50" />
         </div>
 
-        <div className="inline-block align-bottom bg-surface rounded-container text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+        <div className="inline-block align-bottom bg-surface rounded-container text-left overflow-hidden shadow-xl relative transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
           <div className="px-4 pt-5 pb-4 sm:p-3 sm:pb-4">
             <div className="sm:flex sm:items-start">
               <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
@@ -117,8 +117,8 @@ export const IAMPolicyModal: React.FC<IAMPolicyModalProps> = ({ isOpen, onClose 
                     type="button"
                     onClick={onClose}
                     className="w-full inline-flex justify-center rounded-control border border-transparent
- shadow-sm px-2.5 py-1 bg-accent text-base font-medium text-accent-fg
-                hover:bg-accent-strong focus:outline-none focus:ring-2
+ shadow-xs px-2.5 py-1 bg-accent text-base font-medium text-accent-fg
+                hover:bg-accent-strong focus:outline-hidden focus:ring-2
                 focus:ring-offset-2 focus:ring-accent sm:ml-3 sm:w-auto sm:text-sm"
                   >
                     {t('Close')}

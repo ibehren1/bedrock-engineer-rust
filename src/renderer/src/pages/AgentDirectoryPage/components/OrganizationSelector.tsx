@@ -1,5 +1,5 @@
 import React from 'react'
-import { Dropdown } from 'flowbite-react'
+import { Dropdown, DropdownDivider, DropdownItem } from 'flowbite-react'
 import { useTranslation } from 'react-i18next'
 import { HiOfficeBuilding, HiChevronDown, HiPlus, HiPencil, HiTrash } from 'react-icons/hi'
 import { BsGlobeAmericas } from 'react-icons/bs'
@@ -59,7 +59,7 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
         )}
       >
         {/* すべて */}
-        <Dropdown.Item
+        <DropdownItem
           onClick={() => onSelectOrganization('all')}
           className={`${selectedOrganization === 'all' ? 'bg-raised' : ''}`}
         >
@@ -67,10 +67,10 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
             <BsGlobeAmericas className="w-4 h-4 mr-2" />
             {t('allAgents', 'All Agents')}
           </div>
-        </Dropdown.Item>
+        </DropdownItem>
 
         {/* コントリビューター */}
-        <Dropdown.Item
+        <DropdownItem
           onClick={() => onSelectOrganization('contributors')}
           className={`${selectedOrganization === 'contributors' ? 'bg-raised' : ''}`}
         >
@@ -78,20 +78,20 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
             <HiUserGroup className="w-4 h-4 mr-2" />
             {t('contributors', 'Contributors')}
           </div>
-        </Dropdown.Item>
+        </DropdownItem>
 
-        {organizations.length > 0 && <Dropdown.Divider />}
+        {organizations.length > 0 && <DropdownDivider />}
 
         {/* 組織一覧 */}
         {organizations.map((org) => (
-          <Dropdown.Item
+          <DropdownItem
             key={org.id}
             onClick={() => onSelectOrganization(org.id)}
             className={`group ${selectedOrganization === org.id ? 'bg-raised' : ''}`}
           >
             <div className="flex items-center justify-between w-full">
               <div className="flex items-center min-w-0 flex-1">
-                <HiOfficeBuilding className="w-4 h-4 mr-2 flex-shrink-0" />
+                <HiOfficeBuilding className="w-4 h-4 mr-2 shrink-0" />
                 <span className="truncate">{org.name}</span>
               </div>
               <div className="flex items-center gap-1 ml-2">
@@ -123,18 +123,18 @@ export const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
                 </button>
               </div>
             </div>
-          </Dropdown.Item>
+          </DropdownItem>
         ))}
 
-        <Dropdown.Divider />
+        <DropdownDivider />
 
         {/* 新しい組織を追加 */}
-        <Dropdown.Item onClick={onAddOrganization}>
+        <DropdownItem onClick={onAddOrganization}>
           <div className="flex items-center">
             <HiPlus className="w-4 h-4 mr-2" />
             {t('addOrganization', 'Add Organization')}
           </div>
-        </Dropdown.Item>
+        </DropdownItem>
       </Dropdown>
     </div>
   )

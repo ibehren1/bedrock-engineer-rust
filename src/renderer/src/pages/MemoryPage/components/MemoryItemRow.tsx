@@ -86,7 +86,7 @@ export const MemoryItemRow: React.FC<MemoryItemRowProps> = ({ item, onUpdate, on
                   cancelEdit()
                 }
               }}
-              className="w-full text-sm px-2 py-1.5 border border-strong rounded-control bg-surface text-ink resize-y focus:outline-none focus:ring-2 focus:ring-accent"
+              className="w-full text-sm px-2 py-1.5 border border-strong rounded-control bg-surface text-ink resize-y focus:outline-hidden focus:ring-2 focus:ring-accent"
             />
             <div className="flex items-center gap-2">
               <button
@@ -108,7 +108,7 @@ export const MemoryItemRow: React.FC<MemoryItemRowProps> = ({ item, onUpdate, on
             </div>
           </div>
         ) : (
-          <p className="text-sm text-ink whitespace-pre-wrap break-words">{item.content}</p>
+          <p className="text-sm text-ink whitespace-pre-wrap wrap-break-word">{item.content}</p>
         )}
         <p className="text-xs text-ink-muted mt-1">{subtitle}</p>
       </div>

@@ -72,7 +72,7 @@ export const CommandsSection: React.FC<CommandsSectionProps> = ({ commands = [],
       </div>
 
       {/* コマンド追加フォーム */}
-      <div className="flex flex-col gap-2 mt-4">
+      <div className="flex flex-col gap-2">
         <h4 className="font-medium text-sm mb-2">{t('Add New Command Pattern')}</h4>
         <div>
           <Label>{t('Command Pattern')}</Label>
@@ -106,7 +106,7 @@ export const CommandsSection: React.FC<CommandsSectionProps> = ({ commands = [],
       </div>
 
       {/* 登録済みコマンドリスト */}
-      <div className="space-y-3 mt-3">
+      <div className="space-y-3">
         <h4 className="font-medium text-sm">{t('Current Command Patterns')}</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {commands.length === 0 ? (

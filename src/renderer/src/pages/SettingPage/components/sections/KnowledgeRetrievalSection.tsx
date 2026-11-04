@@ -37,17 +37,20 @@ export const KnowledgeRetrievalSection: React.FC<{
           onChange={(topK) => onChange({ ...settings, topK })}
         />
       </div>
-      <div className="space-y-1">
+      {/* Spacing set per child, not with space-y: Tailwind CSS 4 spaces inline children differently. */}
+      <div>
         <label className="block text-sm font-medium text-ink">
           {t('knowledgeBase.settings.hybridWeight')}: {settings.hybridWeight.toFixed(2)}
         </label>
-        <p className="text-xs text-ink-muted">{t('knowledgeBase.settings.hybridWeightHint')}</p>
+        <p className="text-xs text-ink-muted mt-1">
+          {t('knowledgeBase.settings.hybridWeightHint')}
+        </p>
         <input
           type="range"
           min={0}
           max={1}
           step={0.05}
-          className="w-full"
+          className="w-full mt-1"
           value={settings.hybridWeight}
           onChange={(e) => onChange({ ...settings, hybridWeight: Number(e.target.value) })}
         />

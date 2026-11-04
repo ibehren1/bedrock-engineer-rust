@@ -216,7 +216,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({ mode, task, onSubm
   const submitLoadingText = isEditMode ? t('common.updating') : t('common.creating')
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div className="fixed inset-0 bg-black/50 overflow-y-auto h-full w-full z-50">
       <div className="relative top-20 mx-auto p-5 w-full max-w-5xl">
         <div className="border-[0.5px] border-surface rounded-container shadow-xl bg-surface">
           <div className="flex items-center justify-between p-3 border-b border-subtle">
@@ -240,7 +240,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({ mode, task, onSubm
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-strong rounded-control shadow-sm focus:outline-none focus:ring-accent focus:border-accent bg-surface text-ink"
+                  className="w-full px-3 py-2 border border-strong rounded-control shadow-xs focus:outline-hidden focus:ring-accent focus:border-accent bg-surface text-ink"
                   placeholder={t('backgroundAgent.form.taskNamePlaceholder')}
                 />
                 {errors.name && <p className="text-danger text-sm mt-1">{errors.name}</p>}
@@ -260,7 +260,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({ mode, task, onSubm
                       onChange={(e) =>
                         setFormData((prev) => ({ ...prev, cronExpression: e.target.value }))
                       }
-                      className="w-full px-3 py-2 border border-strong rounded-control shadow-sm focus:outline-none focus:ring-accent focus:border-accent bg-surface text-ink mb-2"
+                      className="w-full px-3 py-2 border border-strong rounded-control shadow-xs focus:outline-hidden focus:ring-accent focus:border-accent bg-surface text-ink mb-2"
                     >
                       {CRON_PRESETS.map((preset) => (
                         <option key={preset.value} value={preset.value}>
@@ -274,7 +274,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({ mode, task, onSubm
                       onChange={(e) =>
                         setFormData((prev) => ({ ...prev, cronExpression: e.target.value }))
                       }
-                      className="w-full px-3 py-2 border border-strong rounded-control shadow-sm focus:outline-none focus:ring-accent focus:border-accent bg-surface text-ink"
+                      className="w-full px-3 py-2 border border-strong rounded-control shadow-xs focus:outline-hidden focus:ring-accent focus:border-accent bg-surface text-ink"
                       placeholder="0 9 * * 1-5"
                     />
                     {errors.cronExpression && (
@@ -314,7 +314,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({ mode, task, onSubm
                     <label className="block text-sm font-medium text-ink mb-1">
                       {t('backgroundAgent.form.projectDirectory')}
                     </label>
-                    <div className="w-full px-3 py-2 border border-strong rounded-control shadow-sm bg-surface">
+                    <div className="w-full px-3 py-2 border border-strong rounded-control shadow-xs bg-surface">
                       <DirectorySelector
                         projectPath={
                           formData.projectDirectory ||
@@ -334,7 +334,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({ mode, task, onSubm
                     <label className="block text-sm font-medium text-ink mb-1">
                       {t('backgroundAgent.form.model')}
                     </label>
-                    <div className="w-full px-3 py-2 border border-strong rounded-control shadow-sm focus-within:outline-none focus-within:ring-accent focus-within:border-accent bg-surface">
+                    <div className="w-full px-3 py-2 border border-strong rounded-control shadow-xs focus-within:outline-hidden focus-within:ring-accent focus-within:border-accent bg-surface">
                       <ModelSelector
                         openable={true}
                         value={formData.modelId}
@@ -361,7 +361,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({ mode, task, onSubm
                           maxTokens: parseInt(e.target.value) || 1
                         }))
                       }
-                      className="w-full px-3 py-2 border border-strong rounded-control shadow-sm focus:outline-none focus:ring-accent focus:border-accent bg-surface text-ink"
+                      className="w-full px-3 py-2 border border-strong rounded-control shadow-xs focus:outline-hidden focus:ring-accent focus:border-accent bg-surface text-ink"
                       placeholder="4096"
                     />
                     {errors.maxTokens && (
@@ -383,7 +383,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({ mode, task, onSubm
                   value={formData.wakeWord}
                   onChange={(e) => setFormData((prev) => ({ ...prev, wakeWord: e.target.value }))}
                   rows={3}
-                  className="w-full px-3 py-2 border border-strong rounded-control shadow-sm focus:outline-none focus:ring-accent focus:border-accent bg-surface text-ink"
+                  className="w-full px-3 py-2 border border-strong rounded-control shadow-xs focus:outline-hidden focus:ring-accent focus:border-accent bg-surface text-ink"
                   placeholder={t('backgroundAgent.form.wakeWordPlaceholder')}
                 />
                 {errors.wakeWord && <p className="text-danger text-sm mt-1">{errors.wakeWord}</p>}
@@ -407,7 +407,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({ mode, task, onSubm
                   {t('backgroundAgent.form.continueSession')}
                 </label>
               </div>
-              <p className="text-ink-muted text-xs mt-1">
+              <p className="text-ink-muted text-xs">
                 {t('backgroundAgent.form.continueSessionHelp')}
               </p>
 
@@ -423,7 +423,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({ mode, task, onSubm
                       setFormData((prev) => ({ ...prev, continueSessionPrompt: e.target.value }))
                     }
                     rows={3}
-                    className="w-full px-3 py-2 border border-strong rounded-control shadow-sm focus:outline-none focus:ring-accent focus:border-accent bg-surface text-ink"
+                    className="w-full px-3 py-2 border border-strong rounded-control shadow-xs focus:outline-hidden focus:ring-accent focus:border-accent bg-surface text-ink"
                     placeholder={t('backgroundAgent.form.continueSessionPromptPlaceholder')}
                   />
                   <p className="text-ink-muted text-xs mt-1">
@@ -451,14 +451,14 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({ mode, task, onSubm
                 <button
                   type="button"
                   onClick={onCancel}
-                  className="px-2.5 py-1 border border-strong rounded-control shadow-sm text-sm font-medium text-ink bg-surface hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors"
+                  className="px-2.5 py-1 border border-strong rounded-control shadow-xs text-sm font-medium text-ink bg-surface hover:bg-surface-2 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors"
                 >
                   {t('common.cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-2.5 py-1 border border-transparent rounded-control shadow-sm text-sm font-medium text-accent-fg bg-accent hover:bg-accent-strong focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-2.5 py-1 border border-transparent rounded-control shadow-xs text-sm font-medium text-accent-fg bg-accent hover:bg-accent-strong focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {isSubmitting ? submitLoadingText : submitButtonText}
                 </button>

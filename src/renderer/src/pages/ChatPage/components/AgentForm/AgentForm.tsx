@@ -66,7 +66,7 @@ export const AgentForm: React.FC<AgentFormProps> = ({ agent, onSave, onCancel })
         {/* スクロール可能なメインコンテンツエリア */}
         <div className="flex flex-1 min-h-0 overflow-hidden">
           {/* 左側のサイドバーナビゲーション - 画面幅に応じて幅を変更 */}
-          <div className="lg:w-64 w-16 border-r border-subtle flex-shrink-0 overflow-y-auto transition-all duration-300">
+          <div className="lg:w-64 w-16 border-r border-subtle shrink-0 overflow-y-auto transition-all duration-300">
             <AgentFormSidebar
               activeTab={activeTab}
               onTabChange={handleTabChange}
@@ -101,7 +101,7 @@ export const AgentForm: React.FC<AgentFormProps> = ({ agent, onSave, onCancel })
         </div>
 
         {/* フッター固定部分 - 常に画面下部に表示 */}
-        <div className="flex-shrink-0 px-3 py-2 sticky bottom-0 z-10 bg-surface border-t border-subtle backdrop-blur-sm">
+        <div className="shrink-0 px-3 py-2 sticky bottom-0 z-10 bg-surface border-t border-subtle backdrop-blur-xs">
           <FormActionButtons onCancel={handleCancel} isGenerating={isGenerating} />
         </div>
       </form>

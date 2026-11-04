@@ -35,7 +35,7 @@ export const TavilySearchResult: React.FC<Props> = ({ response }) => {
       {response.result.answer && (
         <div>
           <h3 className="text-sm font-bold mb-2 text-ink">Answer</h3>
-          <div className="bg-surface border border-subtle rounded-container p-2.5 shadow-sm text-sm">
+          <div className="bg-surface border border-subtle rounded-container p-2.5 shadow-xs text-sm">
             <p className="text-ink">{response.result.answer}</p>
           </div>
         </div>

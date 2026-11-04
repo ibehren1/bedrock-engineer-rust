@@ -78,7 +78,7 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({ entries }) => {
           key={entry.id}
           className="flex gap-2.5 px-3 py-2 border-b border-subtle hover:bg-surface-2"
         >
-          <div className="text-micro text-ink-faint pt-0.5 min-w-[3rem] tabular-nums">
+          <div className="text-micro text-ink-faint pt-0.5 min-w-12 tabular-nums">
             {formatTime(entry.startedAt)}
           </div>
           <div className="flex-1 min-w-0">

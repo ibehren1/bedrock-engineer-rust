@@ -125,7 +125,7 @@ export const Mermaid = ({
       {zoom &&
         createPortal(
           <div
-            className="fixed inset-0 bg-black bg-opacity-75"
+            className="fixed inset-0 bg-black/75"
             style={{ zIndex: 2147483647 }}
             onClick={() => {
               setZoom(false)
@@ -133,7 +133,7 @@ export const Mermaid = ({
           >
             {/* Top controls bar */}
             <div
-              className="absolute top-4 left-1/2 transform -translate-x-1/2 flex items-center space-x-2 bg-black bg-opacity-60 rounded-container px-2.5 py-1.5"
+              className="absolute top-4 left-1/2 transform -translate-x-1/2 flex items-center space-x-2 bg-black/60 rounded-container px-2.5 py-1.5"
               style={{ zIndex: 2147483647 }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -146,7 +146,7 @@ export const Mermaid = ({
               >
                 <VscZoomOut size={16} />
               </button>
-              <span className="text-white text-sm min-w-[3rem] text-center">
+              <span className="text-white text-sm min-w-12 text-center">
                 {Math.round(fullscreenZoomLevel * 100)}%
               </span>
               <button

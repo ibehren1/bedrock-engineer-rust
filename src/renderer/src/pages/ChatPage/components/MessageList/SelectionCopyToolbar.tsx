@@ -8,7 +8,7 @@ import { copySelectionAsMarkdown, copySelectionAsRichText } from './selectionCop
 
 type SelectionCopyToolbarProps = {
   /** The messages list container. Selections are only actioned when they fall inside it. */
-  containerRef: RefObject<HTMLElement>
+  containerRef: RefObject<HTMLElement | null>
 }
 
 type ToolbarState = {
@@ -22,7 +22,7 @@ const HIDDEN: ToolbarState = { visible: false, x: 0, y: 0 }
 
 // Walk up from a node to check whether it sits inside a rendered message-text block.
 function isWithinMessageText(node: Node | null, container: HTMLElement): boolean {
-  let el = node instanceof Element ? node : node?.parentElement ?? null
+  let el = node instanceof Element ? node : (node?.parentElement ?? null)
   while (el && el !== container) {
     if (el instanceof HTMLElement && el.dataset.messageText === 'true') return true
     el = el.parentElement

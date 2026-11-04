@@ -121,7 +121,7 @@ export const ScreenCaptureSettingForm: React.FC = () => {
 
         {/* LLMモデル選択 */}
         <div className="w-full">
-          <Label htmlFor="recognizeImageModel" value={t('AI Model for Image Analysis')} />
+          <Label htmlFor="recognizeImageModel">{t('AI Model for Image Analysis')}</Label>
           <Select
             id="recognizeImageModel"
             value={recognizeImageModel}

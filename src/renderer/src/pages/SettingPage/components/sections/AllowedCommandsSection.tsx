@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Modal } from 'flowbite-react'
+import { Modal, ModalBody, ModalFooter, ModalHeader } from 'flowbite-react'
 import { useTranslation } from 'react-i18next'
 import { useSettings } from '@renderer/contexts/SettingsContext'
 import { Button, Input } from '@renderer/components/ui'
@@ -48,8 +48,8 @@ const AllowedCommandsModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
 
   return (
     <Modal dismissible show onClose={onClose} size="4xl">
-      <Modal.Header>{t('allowedCommandsSettings.title')}</Modal.Header>
-      <Modal.Body>
+      <ModalHeader>{t('allowedCommandsSettings.title')}</ModalHeader>
+      <ModalBody>
         <div className="flex flex-col gap-4">
           <p className="text-sm text-ink-muted">{t('allowedCommandsSettings.modalHelp')}</p>
           {customAgents.map((agent) => (
@@ -69,12 +69,12 @@ const AllowedCommandsModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
             />
           ))}
         </div>
-      </Modal.Body>
-      <Modal.Footer>
+      </ModalBody>
+      <ModalFooter>
         <Button variant="primary" onClick={onClose}>
           {t('allowedCommandsSettings.done')}
         </Button>
-      </Modal.Footer>
+      </ModalFooter>
     </Modal>
   )
 }
@@ -108,7 +108,7 @@ const AgentCommands: React.FC<{
         <ul className="flex flex-col gap-1">
           {commands.map((command) => (
             <li key={command.pattern} className="flex items-center gap-2 text-sm text-ink">
-              <code className="rounded bg-raised px-1.5 py-0.5">{command.pattern}</code>
+              <code className="rounded-sm bg-raised px-1.5 py-0.5">{command.pattern}</code>
               {command.description && (
                 <span className="text-xs text-ink-muted">{command.description}</span>
               )}

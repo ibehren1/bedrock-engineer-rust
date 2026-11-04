@@ -52,7 +52,7 @@ export const TextEditor: React.FC<TextEditorProps> = ({
             })
           }
         }}
-        className="flex-1 min-h-0 w-full resize-none rounded-container border border-accent bg-surface-2 p-2.5 font-mono text-xs text-ink focus:outline-none focus:ring-1 focus:ring-accent"
+        className="flex-1 min-h-0 w-full resize-none rounded-container border border-accent bg-surface-2 p-2.5 font-mono text-xs text-ink focus:outline-hidden focus:ring-1 focus:ring-accent"
       />
       <div className="flex items-center gap-2 shrink-0">
         <span className="text-micro text-ink-faint mr-auto">

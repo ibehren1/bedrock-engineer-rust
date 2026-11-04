@@ -53,10 +53,13 @@ export const AgentIconView: React.FC<AgentIconViewProps> = ({
   } else {
     const curated = AGENT_ICONS.find((option) => option.value === icon)
     if (curated) {
-      return React.cloneElement(curated.icon as React.ReactElement, {
-        className,
-        style: mergedStyle
-      })
+      return React.cloneElement(
+        curated.icon as React.ReactElement<{ className?: string; style?: React.CSSProperties }>,
+        {
+          className,
+          style: mergedStyle
+        }
+      )
     }
   }
 

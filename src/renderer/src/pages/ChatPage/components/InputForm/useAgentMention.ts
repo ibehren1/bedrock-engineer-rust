@@ -28,7 +28,7 @@ type MentionState = {
 }
 
 export function useAgentMention(
-  textareaRef: React.RefObject<HTMLTextAreaElement>,
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>,
   value: string,
   onChange: (value: string) => void
 ) {

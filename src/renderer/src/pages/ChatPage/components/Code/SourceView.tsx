@@ -35,7 +35,7 @@ export const SourceView: React.FC<SourceViewProps> = ({
   fontSize,
   className = ''
 }) => (
-  <div className={`source-lines bg-[var(--code-surface)] ${className}`}>
+  <div className={`source-lines bg-(--code-surface) ${className}`}>
     <SyntaxHighlighter
       language={language}
       style={tomorrow}
@@ -44,7 +44,7 @@ export const SourceView: React.FC<SourceViewProps> = ({
       lineNumberStyle={{ display: 'none' }}
       wrapLongLines={wrapLongLines}
       lineProps={lineProps}
-      className="!m-0 !bg-transparent"
+      className="m-0! bg-transparent!"
       customStyle={{
         background: 'transparent',
         color: 'var(--code-ink)',

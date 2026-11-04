@@ -29,7 +29,7 @@ export const AgentMetadata: React.FC<AgentMetadataProps> = ({ author, tags }) =>
               <img
                 src={`https://github.com/${author}.png`}
                 alt={`${author} avatar`}
-                className="w-8 h-8 rounded-full object-cover mr-2 flex-shrink-0 border border-subtle"
+                className="w-8 h-8 rounded-full object-cover mr-2 shrink-0 border border-subtle"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none'
                   const sibling = e.currentTarget.nextElementSibling

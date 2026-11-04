@@ -81,7 +81,7 @@ export const ScreenCaptureResult: React.FC<{ response: ScreenCaptureResponse }> 
         {/* Main content area */}
         <div className="flex flex-col md:flex-row gap-4 p-2.5 pt-2">
           {/* Left side: Image display */}
-          <div className="flex-shrink-0 md:w-2/5">
+          <div className="shrink-0 md:w-2/5">
             <div
               onClick={() => setIsFullscreen(true)}
               className="cursor-pointer hover:opacity-80 transition-opacity"
@@ -141,7 +141,7 @@ export const ScreenCaptureResult: React.FC<{ response: ScreenCaptureResponse }> 
       {isFullscreen &&
         createPortal(
           <div
-            className="fixed inset-0 bg-black bg-opacity-75"
+            className="fixed inset-0 bg-black/75"
             style={{ zIndex: 2147483647 }}
             onClick={() => setIsFullscreen(false)}
           >

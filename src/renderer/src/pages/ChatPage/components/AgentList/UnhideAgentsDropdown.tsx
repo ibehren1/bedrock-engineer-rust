@@ -1,5 +1,5 @@
 import React from 'react'
-import { Dropdown } from 'flowbite-react'
+import { Dropdown, DropdownDivider, DropdownHeader, DropdownItem } from 'flowbite-react'
 import { useTranslation } from 'react-i18next'
 import { FiChevronDown } from 'react-icons/fi'
 import { TbRobot } from 'react-icons/tb'
@@ -36,7 +36,7 @@ export const UnhideAgentsDropdown: React.FC<UnhideAgentsDropdownProps> = ({
         <button
           className="px-2 py-1 text-sm font-medium text-ink bg-surface
             border border-strong rounded-container shadow-raised
-            hover:bg-raised focus:outline-none focus:ring-2
+            hover:bg-raised focus:outline-hidden focus:ring-2
             focus:ring-offset-2 focus:ring-accent
             whitespace-nowrap flex gap-1.5 items-center"
         >
@@ -45,11 +45,11 @@ export const UnhideAgentsDropdown: React.FC<UnhideAgentsDropdownProps> = ({
         </button>
       )}
     >
-      <Dropdown.Header>
+      <DropdownHeader>
         <span className="text-xs font-medium text-ink-muted">{t('myAgents.unhideHint')}</span>
-      </Dropdown.Header>
+      </DropdownHeader>
       {hiddenAgents.map((agent) => (
-        <Dropdown.Item
+        <DropdownItem
           key={agent.id}
           onClick={() => onUnhideAgent(agent.id!)}
           className="w-64 flex gap-2 items-center"
@@ -61,12 +61,12 @@ export const UnhideAgentsDropdown: React.FC<UnhideAgentsDropdownProps> = ({
             fallback={<TbRobot className="w-4 h-4 shrink-0" />}
           />
           <span className="truncate">{agent.name}</span>
-        </Dropdown.Item>
+        </DropdownItem>
       ))}
-      <Dropdown.Divider />
-      <Dropdown.Item onClick={onUnhideAll} className="w-64">
+      <DropdownDivider />
+      <DropdownItem onClick={onUnhideAll} className="w-64">
         {t('myAgents.unhideAll')}
-      </Dropdown.Item>
+      </DropdownItem>
     </Dropdown>
   )
 }

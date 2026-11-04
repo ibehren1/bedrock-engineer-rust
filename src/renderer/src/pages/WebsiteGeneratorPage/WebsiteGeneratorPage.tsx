@@ -40,7 +40,7 @@ import { LoaderWithReasoning } from './components/LoaderWithReasoning'
 import { ContinueDevelopmentButton } from './components/ContinueDevelopmentButton'
 import { generateContinueDevelopmentPrompt } from './utils/promptGenerator'
 import { preserveScrollPosition } from './extensions/preserveScrollPosition'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 
 // Layout constants
 const LAYOUT_CONSTANTS = {
@@ -450,7 +450,7 @@ function WebsiteGeneratorPageContents(props: WebsiteGeneratorPageContentsProps) 
 
         {loading ? (
           <div
-            className={`flex ${showCode ? 'w-[50%]' : 'w-[100%]'} h-[100%] justify-center items-center content-center`}
+            className={`flex ${showCode ? 'w-[50%]' : 'w-full'} h-full justify-center items-center content-center`}
           >
             {getLoader(executingTools.size > 0 ? Array.from(executingTools)[0] : null)}
           </div>
@@ -460,10 +460,10 @@ function WebsiteGeneratorPageContents(props: WebsiteGeneratorPageContentsProps) 
       </SandpackLayout>
 
       {/* Buttom Input Field Block */}
-      <div className="flex gap-2 fixed bottom-0 left-[5rem] right-5 bottom-3 z-10">
+      <div className="flex gap-2 fixed bottom-0 left-20 right-5 bottom-3 z-10">
         <div className="relative w-full">
           <div className="flex gap-2 justify-between pb-2">
-            <div className="overflow-x-auto flex-grow max-w-[70%]">
+            <div className="overflow-x-auto grow max-w-[70%]">
               <RecommendChanges
                 loading={recommendLoading}
                 recommendations={recommendChanges}

@@ -61,7 +61,7 @@ author: "your-github-username"
     return isOpen ? (
       <div className="fixed inset-0 z-50 overflow-y-auto" onKeyDown={handleKeyDown}>
         {/* Backdrop */}
-        <div className="fixed inset-0 bg-black bg-opacity-50" onClick={closeModal}></div>
+        <div className="fixed inset-0 bg-black/50" onClick={closeModal}></div>
 
         {/* Modal */}
         <div className="flex items-center justify-center min-h-screen p-2.5">

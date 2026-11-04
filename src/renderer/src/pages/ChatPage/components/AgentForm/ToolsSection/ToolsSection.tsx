@@ -105,7 +105,7 @@ export const ToolsSection: React.FC<ToolsSectionProps> = ({
       )}
 
       {/* タブナビゲーション - 固定 */}
-      <div className="flex-shrink-0 border-b border-subtle">
+      <div className="shrink-0 border-b border-subtle">
         <ul className="flex flex-wrap -mb-px">
           <li className="mr-2">
             <button

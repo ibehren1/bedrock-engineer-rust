@@ -40,7 +40,7 @@ export const RecognizeImageResult: React.FC<{ response: RecognizeImageResponse }
       className="flex flex-col md:flex-row gap-3 bg-surface-2 text-ink p-2.5 rounded-container overflow-hidden shadow-raised border border-subtle mb-2"
     >
       {/* 左側：画像表示 */}
-      <div className="flex-shrink-0 md:w-1/3">
+      <div className="shrink-0 md:w-1/3">
         <LocalImage
           src={image.path}
           alt={'Analyzed image'}

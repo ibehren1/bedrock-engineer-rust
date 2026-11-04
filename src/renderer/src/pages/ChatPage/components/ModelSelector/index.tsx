@@ -77,7 +77,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
       <div className="relative">
         {isOpen && (
           <div
-            className="absolute z-20 w-[25rem] bottom-full mb-1 bg-surface rounded-container shadow-lg
+            className="absolute z-20 w-100 bottom-full mb-1 bg-surface rounded-container shadow-lg
             border border-subtle py-2 px-2 max-h-[40vh] overflow-y-auto"
           >
             {visibleModels.map((model: LLM) => {

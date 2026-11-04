@@ -1,6 +1,6 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router'
 import { SettingsSidebar } from './components/SettingsSidebar'
 import {
   AwsTab,
@@ -45,7 +45,7 @@ export const SettingPage: React.FC = () => {
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <div
-          className="lg:w-64 w-16 border-r border-subtle flex-shrink-0
+          className="lg:w-64 w-16 border-r border-subtle shrink-0
             overflow-y-auto transition-all duration-300"
         >
           <SettingsSidebar activeTab={activeTab} onTabChange={handleTabChange} />

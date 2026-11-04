@@ -1,12 +1,6 @@
 /** @type {import('tailwindcss').Config} */
-const flowbite = require('flowbite-react/tailwind')
-
 module.exports = {
-  content: [
-    './src/renderer/src/**/*.{js,jsx,ts,tsx}',
-    './src/renderer/index.html',
-    flowbite.content()
-  ],
+  content: ['./src/renderer/src/**/*.{js,jsx,ts,tsx}', './src/renderer/index.html'],
   theme: {
     extend: {
       // Semantic colours, backed by the CSS variables in src/renderer/index.css.
@@ -146,7 +140,6 @@ module.exports = {
       }
     }
   },
-  plugins: [flowbite.plugin()],
   // Surfaces, borders, text and accent no longer go through `dark:` at all —
   // they are tokens, so every appearance works without a variant. This is kept
   // only for the vendor CSS (Flowbite, react-cmdk) and the handful of status

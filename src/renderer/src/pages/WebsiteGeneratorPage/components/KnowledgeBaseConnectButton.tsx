@@ -14,14 +14,14 @@ export const KnowledgeBaseConnectButton: React.FC<KnowledgeBaseConnectButtonProp
       className={`flex items-center justify-center p-[2px] overflow-hidden text-xs text-ink rounded-container group
         ${
           enableKnowledgeBase
-            ? 'bg-gradient-to-br from-danger via-danger to-warning group-hover:from-danger group-hover:via-danger group-hover:to-warning'
+            ? 'bg-linear-to-br from-danger via-danger to-warning group-hover:from-danger group-hover:via-danger group-hover:to-warning'
             : 'border border-subtle'
         }
-        text-ink hover:text-ink focus:ring-4 focus:outline-none focus:ring-danger`}
+        text-ink hover:text-ink focus:ring-4 focus:outline-hidden focus:ring-danger`}
     >
       <span
         className={`items-center px-3 py-1.5 transition-all ease-in duration-75 rounded-control flex gap-2
-          ${enableKnowledgeBase ? 'bg-surface group-hover:bg-opacity-0' : 'bg-transparent'}`}
+          ${enableKnowledgeBase ? 'bg-surface' : 'bg-transparent'}`}
       >
         {enableKnowledgeBase ? (
           <BsDatabaseCheck className="text-sm" />

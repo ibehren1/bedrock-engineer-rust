@@ -79,9 +79,9 @@ export const TodoListView: React.FC<TodoListViewProps> = ({ todoList, onRefresh,
                     key={item.id}
                     className="flex items-start gap-3 p-2 rounded-control hover:bg-surface transition-colors"
                   >
-                    <div className="flex-shrink-0">{getStatusIcon(item.status)}</div>
+                    <div className="shrink-0">{getStatusIcon(item.status)}</div>
                     <span
-                      className={`flex-grow text-sm ${
+                      className={`grow text-sm ${
                         item.status === 'completed' || item.status === 'cancelled'
                           ? 'text-ink-faint line-through'
                           : 'text-ink'

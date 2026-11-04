@@ -30,11 +30,9 @@ export const ScenariosSection: React.FC<ScenariosSectionProps> = ({
 
   return (
     <div className="space-y-2">
-      <div className="mb-2">
+      <div>
         <div className="flex items-center space-x-2">
-          <label className="text-sm font-medium text-ink flex-shrink-0">
-            Scenarios {t('optional')}
-          </label>
+          <label className="text-sm font-medium text-ink shrink-0">Scenarios {t('optional')}</label>
           {name && description && system && (
             <button
               type="button"
@@ -64,7 +62,7 @@ export const ScenariosSection: React.FC<ScenariosSectionProps> = ({
                     onChange={(e) => updateScenario(index, 'title', e.target.value)}
                     placeholder={t('scenarioTitlePlaceholder')}
                     className="flex-2 rounded-control border-strong bg-surface
-                      text-ink shadow-sm focus:border-accent focus:ring-accent sm:text-sm"
+                      text-ink shadow-xs focus:border-accent focus:ring-accent sm:text-sm"
                     disabled={isGenerating}
                   />
                   <textarea
@@ -72,7 +70,7 @@ export const ScenariosSection: React.FC<ScenariosSectionProps> = ({
                     onChange={(e) => updateScenario(index, 'content', e.target.value)}
                     placeholder={t('scenarioContentPlaceholder')}
                     className="flex-1 rounded-control border-strong bg-surface
-                      text-ink shadow-sm focus:border-accent focus:ring-accent sm:text-sm"
+                      text-ink shadow-xs focus:border-accent focus:ring-accent sm:text-sm"
                     disabled={isGenerating}
                   />
                   <button

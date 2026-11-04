@@ -373,7 +373,7 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
                   checked={selectedSessionIds.has(session.id)}
                   onChange={() => toggleSessionSelection(session.id)}
                   onClick={(e) => e.stopPropagation()}
-                  className="h-4 w-4 flex-shrink-0 text-accent focus:ring-accent border-strong rounded-control cursor-pointer"
+                  className="h-4 w-4 shrink-0 text-accent focus:ring-accent border-strong rounded-control cursor-pointer"
                 />
               )}
               {editingSessionId === session.id ? (
@@ -419,7 +419,7 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
                     </div>
                     {runningSessionIds.includes(session.id) ? (
                       <p className="text-xs text-accent whitespace-nowrap flex items-center gap-1.5">
-                        <span className="relative flex h-1.5 w-1.5 flex-shrink-0">
+                        <span className="relative flex h-1.5 w-1.5 shrink-0">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-tint opacity-75" />
                           <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-accent-tint" />
                         </span>
@@ -433,7 +433,7 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
                       </p>
                     )}
                   </div>
-                  <div className={`relative flex-shrink-0 ${selectionMode ? 'hidden' : ''}`}>
+                  <div className={`relative shrink-0 ${selectionMode ? 'hidden' : ''}`}>
                     <button
                       onClick={(e) => toggleMenu(session.id, e)}
                       className={menuButtonClasses}

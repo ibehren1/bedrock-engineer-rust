@@ -59,7 +59,7 @@ export const ProjectPathDisplay: React.FC<ProjectPathDisplayProps> = ({
       {needsTruncation && showCopyButton && (
         <button
           onClick={handleCopy}
-          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 hover:bg-raised rounded-control flex-shrink-0"
+          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 hover:bg-raised rounded-control shrink-0"
           title={copied ? 'コピーしました！' : 'パスをコピー'}
         >
           {copied ? (

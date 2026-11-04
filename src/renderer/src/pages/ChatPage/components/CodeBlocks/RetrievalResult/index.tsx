@@ -115,7 +115,7 @@ export const RetrievalResult: React.FC<Props> = ({ result }) => {
       <div className="mb-4">
         <h4 className="text-sm font-bold mb-2 text-ink">Metadata</h4>
         <div className="bg-surface border border-subtle p-2.5 rounded-container">
-          <pre className="whitespace-pre-wrap break-words text-xs text-ink">
+          <pre className="whitespace-pre-wrap wrap-break-word text-xs text-ink">
             {JSON.stringify(metadata, null, 2)}
           </pre>
         </div>

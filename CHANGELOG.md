@@ -7,6 +7,48 @@ dated section here for anything user-visible.
 See the [README](./README.md#whats-different-in-this-fork) for a feature-by-feature
 overview of the fork with screenshots.
 
+### 2026-11-04
+
+- Upgraded the tools used to build and check the app: the code checker (ESLint 8, which is no
+  longer maintained, to ESLint 9), the test runner (Jest 29 to 30) and the build tool (Vite 6 to 8,
+  with its React and SVG plugins). The app works the same; installers now build their interface in
+  seconds instead of about half a minute. All checks and the 444 automated tests pass on the new
+  versions.
+- Three open security alerts on the app's dependencies can't be fixed by upgrading yet. Two are in
+  development tools only and aren't included in the installed app: minimatch (no fixed release for
+  the versions the code checker and test runner use) and deepmerge (no fixed release at all). The third, glib, is part of the Linux
+  window toolkit, and Tauri, the framework the app is built on, still requires the affected version
+  in its latest release. These will be revisited as fixed versions come out.
+- Fixed English counts that were always singular, such as "3 tool call" under a sub-agent's answer
+  and "2 file" in the attachments menu. The translation library is also upgraded to its current
+  version.
+- Upgraded the libraries the app's interface runs on to their current major versions: React 18 to
+  19, React Router 7 to 8, the Terminal tab's terminal (xterm 5 to 6), the Markdown renderer, the
+  animation library, the loading animations and the emoji picker. Nothing is meant to look or work
+  differently. The command palette's library hasn't been updated for React 19, so it is allowed to
+  run on it; it uses nothing that React 19 removed.
+- Diagrams in chats are drawn with Mermaid 12, which lays them out differently: lines run at right
+  angles instead of curving, and flowcharts and state diagrams come out more evenly spaced, though
+  taller. Colors are unchanged. Mermaid 12 needs a current web engine: Safari 17.4 or later on macOS
+  (available as a Safari update back to macOS 12) and WebKitGTK 2.44 or later on Linux (Ubuntu
+  24.04 has it). On older versions diagrams don't render; the PDF viewer already had the same
+  requirement.
+- Moved the interface's styling to Tailwind CSS 4 and its component library to Flowbite React
+  0.12. Every page, dialog and appearance was compared against the previous build screenshot by
+  screenshot, and differences were fixed until they matched, so nothing should look different.
+  One small fix came out of it: the IAM policies dialog in Settings now covers the whole window
+  instead of leaving a thin strip uncovered at the top.
+- The app now includes the ELK graph layout engine, which Mermaid 12 uses for diagrams. It is
+  open source under the Eclipse Public License 2.0 and ships unmodified; its license text is with
+  the app's other third-party notices, and the app's NOTICE file says where its source is.
+- The tour (Home → Open Tour) now walks through the whole sidebar instead of stopping after one
+  step: it starts with Settings, where you enter your AWS credentials, then introduces Chat, My
+  Agents, Memory, the Agent Directory, Background Agents, the three generators and Accounting, and
+  ends on Help with the command palette shortcut. Items you've hidden from the sidebar are skipped.
+- Updated the spreadsheet reader used by local knowledge bases and the document tools (calamine
+  0.37 to 0.38). The old version could crash or run out of memory on a malformed legacy Excel
+  (.xls) file (RUSTSEC-2026-0436).
+
 ### 2026-11-02
 
 - Fixed web pages saved by the agent sometimes ending up as empty files: the save could finish

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Accordion } from 'flowbite-react'
+import { Accordion, AccordionContent, AccordionPanel, AccordionTitle } from 'flowbite-react'
 import { FaShieldAlt } from 'react-icons/fa'
 import CodeRenderer from '../../Code/CodeRenderer'
 
@@ -45,19 +45,19 @@ export const GuardContentCollapsible: React.FC<GuardContentProps> = ({ content }
 
   return (
     <Accordion className="w-full" collapseAll>
-      <Accordion.Panel>
-        <Accordion.Title>
+      <AccordionPanel>
+        <AccordionTitle>
           <div className="flex gap-2 items-center">
             <FaShieldAlt className="text-accent" />
             <span className="text-sm font-medium">Guard Protected Content</span>
           </div>
-        </Accordion.Title>
-        <Accordion.Content>
+        </AccordionTitle>
+        <AccordionContent>
           <div className="text-content">
             <CodeRenderer text={textContent} />
           </div>
-        </Accordion.Content>
-      </Accordion.Panel>
+        </AccordionContent>
+      </AccordionPanel>
     </Accordion>
   )
 }

@@ -26,7 +26,7 @@ export const ViewToggleButton: React.FC<ViewToggleButtonProps> = ({
     >
       {/* アニメーション背景 */}
       <motion.div
-        className="absolute top-0.5 h-5 w-8 bg-surface/60 rounded-control shadow-sm"
+        className="absolute top-0.5 h-5 w-8 bg-surface/60 rounded-control shadow-xs"
         animate={{
           x: isDetailView ? 32 : 0
         }}

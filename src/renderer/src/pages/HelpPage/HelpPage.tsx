@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation } from 'react-router-dom'
+import { useLocation } from 'react-router'
 import { FiMessageCircle, FiSearch } from 'react-icons/fi'
 import type { HelpSearchResult } from '@/types/bridge/api'
 import MD from '@renderer/components/Markdown/MD'
@@ -117,7 +117,7 @@ export const HelpPage: React.FC = () => {
     <div className="flex flex-col h-full px-2.5 py-1.5 gap-3">
       <header className="flex items-center gap-3 flex-wrap">
         <h1 className="text-title text-ink">{t('help.page.title')}</h1>
-        <div className="relative flex-1 min-w-[14rem] max-w-xl">
+        <div className="relative flex-1 min-w-56 max-w-xl">
           <FiSearch
             className="absolute left-2 top-1/2 -translate-y-1/2 text-ink-muted"
             aria-hidden
@@ -143,7 +143,7 @@ export const HelpPage: React.FC = () => {
                 <li key={`${hit.headingPath}-${i}`}>
                   <button
                     type="button"
-                    className="w-full text-left px-3 py-2 hover:bg-sunken focus:bg-sunken focus:outline-none"
+                    className="w-full text-left px-3 py-2 hover:bg-sunken focus:bg-sunken focus:outline-hidden"
                     onClick={() => openHit(hit.headingPath)}
                   >
                     <div className="font-medium text-ink truncate">

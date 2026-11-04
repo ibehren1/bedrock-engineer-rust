@@ -1,5 +1,5 @@
 import React from 'react'
-import { Dropdown } from 'flowbite-react'
+import { Dropdown, DropdownItem } from 'flowbite-react'
 import { Style } from '../templates'
 
 interface StyleSelectorProps {
@@ -12,9 +12,9 @@ export const StyleSelector: React.FC<StyleSelectorProps> = ({ currentStyle, styl
   return (
     <Dropdown label={currentStyle.label} dismissOnClick={true} size="xs" color={'indigo'}>
       {styles?.map((style) => (
-        <Dropdown.Item key={style.value} onClick={() => onSelect(style)}>
+        <DropdownItem key={style.value} onClick={() => onSelect(style)}>
           {style.label}
-        </Dropdown.Item>
+        </DropdownItem>
       ))}
     </Dropdown>
   )

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { FiChevronDown, FiEdit3 } from 'react-icons/fi'
 import { TbRobot } from 'react-icons/tb'
@@ -88,7 +88,7 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
       <div className="relative">
         {isOpen && (
           <div
-            className={`absolute z-20 w-[25rem] ${popoverPosition} bg-surface rounded-container shadow-lg
+            className={`absolute z-20 w-100 ${popoverPosition} bg-surface rounded-container shadow-lg
             border border-subtle py-2 px-2 max-h-[40vh] overflow-y-auto`}
           >
             {selectableAgents.map((agent) => (

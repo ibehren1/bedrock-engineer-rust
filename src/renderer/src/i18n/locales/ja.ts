@@ -30,6 +30,25 @@ import { filesPanel } from './filesPanel'
 import { appUpdate } from './appUpdate'
 
 const HomePage = {
+  tour: {
+    chat: 'AI エージェントとチャットします。プロジェクトフォルダのファイルの読み書き、コマンドの実行、Web 検索など、有効にしたツールを使えます。',
+    myAgents:
+      '独自のエージェントを作成・編集します。システムプロンプト、ツール、MCP サーバー、ローカルナレッジベースを設定できます。',
+    memory:
+      'チャットをまたいでエージェントが覚えておくルールや事実です。覚えるよう頼むか、ここで追加・編集します。',
+    agentDirectory:
+      '共有エージェントや組織のエージェントを含む既製のエージェントを探して、一覧に追加します。',
+    backgroundAgent:
+      'エージェントを定期的に自動実行するようスケジュールし、各実行の内容をあとから確認します。',
+    websiteGenerator:
+      'Web ページを説明すると、そのまま手直しを続けられるライブプレビューを生成します。',
+    stepFunctionsGenerator:
+      '説明から AWS Step Functions のワークフローを生成し、ステートマシンをグラフで表示します。',
+    diagramGenerator:
+      '説明から AWS アーキテクチャ図、ソフトウェア構成図、業務プロセス図を生成します。',
+    accounting: 'Amazon Bedrock の利用料金を日別・モデル別・機能別に確認し、月の予算を設定します。',
+    help: 'オフラインで読めるユーザーガイドです。質問することもできます。ヒント: {{shortcut}} でどこからでもコマンドパレットを開けます。'
+  },
   'set your aws credential':
     'Bedrock に接続する設定をします。設定画面から AWS Credentials（リージョン、アクセスキー、シークレットアクセスキー）を入力してください。',
   'Welcome to Bedrock Engineer': '{{appName}} にようこそ',

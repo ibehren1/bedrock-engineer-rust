@@ -1,6 +1,6 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { FaDocker } from 'react-icons/fa'
 import { useSettings } from '@renderer/contexts/SettingsContext'
 import { DockerEnvironmentStatus } from '@renderer/components/DockerSandbox/DockerEnvironmentStatus'
@@ -55,11 +55,12 @@ export const DockerSandboxSettingForm: React.FC<DockerSandboxSettingFormProps> =
       <DockerEnvironmentStatus />
 
       {/* Settings live on the Settings page's Sandbox tab */}
-      <div className="bg-accent-tint p-2.5 rounded-control space-y-2">
+      <div className="bg-accent-tint p-2.5 rounded-control">
+        {/* Spacing set per child, not with space-y: Tailwind CSS 4 spaces inline children differently. */}
         <p className="text-sm text-ink">{summary}</p>
         <button
           onClick={openSettings}
-          className="px-3 py-1 text-xs bg-surface text-accent border border-accent rounded-control hover:bg-accent-tint-strong"
+          className="mt-2 px-3 py-1 text-xs bg-surface text-accent border border-accent rounded-control hover:bg-accent-tint-strong"
         >
           {t('sandboxSettings.openSettings')}
         </button>

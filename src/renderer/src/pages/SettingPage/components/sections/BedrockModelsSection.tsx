@@ -92,12 +92,12 @@ export const BedrockModelsSection: React.FC = () => {
 
         <div className="space-y-2">
           <label className="block text-sm font-medium text-ink">{t('Visible Models')}</label>
-          <p className="text-xs text-ink-muted mb-2">
+          <p className="text-xs text-ink-muted">
             {t(
               'Select which models appear in the chat model selector. Leave empty to show all models.'
             )}
           </p>
-          <div className="flex flex-wrap gap-2 mb-2">
+          <div className="flex flex-wrap gap-2">
             {bedrockSettings.visibleModelIds.map((modelId) => {
               const model = availableModels.find((m) => m.modelId === modelId)
               return (
@@ -120,9 +120,7 @@ export const BedrockModelsSection: React.FC = () => {
             })}
           </div>
           <select
-            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-strong
-              focus:outline-none focus:ring-accent focus:border-accent
-              sm:text-sm rounded-control bg-surface text-ink"
+            className="block w-full pl-3 pr-10 py-2 text-base border-strong focus:outline-hidden focus:ring-accent focus:border-accent sm:text-sm rounded-control bg-surface text-ink"
             value=""
             onChange={handleVisibleModelSelect}
           >
@@ -138,7 +136,8 @@ export const BedrockModelsSection: React.FC = () => {
         </div>
 
         <div className="space-y-2">
-          <div className="space-y-2">
+          {/* Spacing set per child, not with space-y: Tailwind CSS 4 spaces inline children differently. */}
+          <div>
             <label className="inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
@@ -154,11 +153,11 @@ export const BedrockModelsSection: React.FC = () => {
                 {t('Enable Application Inference Profiles')}
               </span>
             </label>
-            <p className="text-xs text-ink-muted ml-7">
+            <p className="text-xs text-ink-muted ml-7 mt-2">
               {t('Use Application Inference Profiles for cost allocation and tracking')}
             </p>
 
-            <label className="inline-flex items-center cursor-pointer">
+            <label className="inline-flex items-center cursor-pointer mt-2">
               <input
                 type="checkbox"
                 className="form-checkbox h-4 w-4 text-accent rounded-control border-strong
@@ -173,16 +172,16 @@ export const BedrockModelsSection: React.FC = () => {
             </label>
 
             {bedrockSettings.enableRegionFailover && (
-              <div className="ml-7 space-y-2">
+              <div className="ml-7 mt-2 space-y-2">
                 <label className="block text-sm font-medium text-ink">
                   {t('Failover Regions')}
                 </label>
-                <p className="text-xs text-ink-muted mb-2">
+                <p className="text-xs text-ink-muted">
                   {t(
                     'Select regions to be used as failover targets when ThrottlingException occurs'
                   )}
                 </p>
-                <div className="flex flex-wrap gap-2 mb-2">
+                <div className="flex flex-wrap gap-2">
                   {bedrockSettings.availableFailoverRegions.map((region) => {
                     const regionInfo = bedrockRegions.find((r) => r.id === region)
                     return (
@@ -205,9 +204,7 @@ export const BedrockModelsSection: React.FC = () => {
                   })}
                 </div>
                 <select
-                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-strong
-                    focus:outline-none focus:ring-accent focus:border-accent
-                    sm:text-sm rounded-control bg-surface text-ink"
+                  className="block w-full pl-3 pr-10 py-2 text-base border-strong focus:outline-hidden focus:ring-accent focus:border-accent sm:text-sm rounded-control bg-surface text-ink"
                   value=""
                   onChange={handleRegionSelect}
                 >

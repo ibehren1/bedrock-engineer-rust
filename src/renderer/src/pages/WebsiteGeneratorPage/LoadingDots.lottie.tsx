@@ -1,11 +1,17 @@
-import Lottie, { LottieComponentProps } from 'lottie-react'
+import { Lottie } from 'lottie-react'
 import data from '../../assets/lottie/loading-dots.json'
 
-// ignore type animationData from LottieComponentProps
-type LoadingDotsLottieProps = Omit<LottieComponentProps, 'animationData'>
+type LoadingDotsLottieProps = { className?: string }
 
-const LoadingDotsLottie = (props?: LoadingDotsLottieProps) => {
-  return <Lottie {...props} animationData={data} />
+// lottie-react 3 defaults autoplay and loop to off; these spinners play continuously. Its
+// display fills its container (width and height 100%), so the container is sized here: the
+// caller's width or height, the other side from the animation's own aspect ratio.
+const LoadingDotsLottie = ({ className }: LoadingDotsLottieProps) => {
+  return (
+    <div className={className} style={{ aspectRatio: `${data.w} / ${data.h}` }}>
+      <Lottie src={data} autoplay loop />
+    </div>
+  )
 }
 
 export default LoadingDotsLottie

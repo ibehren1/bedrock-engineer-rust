@@ -21,7 +21,7 @@ export const Recommendations: React.FC<RecommendationsProps> = ({
   if (loading) {
     return (
       <div className="flex gap-1 justify-start text-ink">
-        <LoadingDotsLottie className="h-[2rem]" />
+        <LoadingDotsLottie className="h-8" />
       </div>
     )
   }

@@ -22,7 +22,7 @@ export const ImageViewer: React.FC<{ url: string; name: string }> = ({ url, name
       <img
         src={url}
         alt={name}
-        className="max-w-full max-h-full min-h-0 object-contain rounded-control bg-[repeating-conic-gradient(var(--surface-2)_0%_25%,transparent_0%_50%)] bg-[length:16px_16px]"
+        className="max-w-full max-h-full min-h-0 object-contain rounded-control bg-[repeating-conic-gradient(var(--surface-2)_0%_25%,transparent_0%_50%)] bg-size-[16px_16px]"
         onLoad={(e) =>
           setSize({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })
         }

@@ -26,7 +26,7 @@ type Options = {
  * - If the user manually scrolls up, auto-scroll pauses until they return to the bottom.
  */
 export const useStreamingAutoScroll = (
-  containerRef: RefObject<HTMLElement>,
+  containerRef: RefObject<HTMLElement | null>,
   { signature, loading }: Options
 ) => {
   // The answer's first line reached the top — stop following for the current content block.

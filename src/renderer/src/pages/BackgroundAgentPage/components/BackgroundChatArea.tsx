@@ -161,7 +161,7 @@ export const BackgroundChatArea: React.FC<BackgroundChatAreaProps> = ({
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="メッセージを入力..."
-              className="w-full px-3 py-2 border border-strong rounded-control focus:outline-none focus:ring-2 focus:ring-accent bg-raised text-ink resize-none min-h-[40px] max-h-[120px]"
+              className="w-full px-3 py-2 border border-strong rounded-control focus:outline-hidden focus:ring-2 focus:ring-accent bg-raised text-ink resize-none min-h-[40px] max-h-[120px]"
               disabled={loading}
               rows={1}
             />

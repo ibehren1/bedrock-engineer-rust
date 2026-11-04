@@ -1,4 +1,4 @@
-import { Modal, Button } from 'flowbite-react'
+import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from 'flowbite-react'
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import JSONViewer from '@renderer/components/JSONViewer'
@@ -23,14 +23,14 @@ const ToolSpecJsonModal = memo(
         onClose={onClose}
         className="bg-surface border border-subtle shadow-lg"
       >
-        <Modal.Header className="border-b border-subtle bg-surface text-ink rounded-t-container">
+        <ModalHeader className="border-b border-subtle bg-surface text-ink rounded-t-container">
           <div className="flex items-center gap-2">
             <span>{toolName}</span>
             <span className="text-ink-muted">- Tool Specification</span>
           </div>
-        </Modal.Header>
+        </ModalHeader>
 
-        <Modal.Body className="bg-surface rounded-b-container">
+        <ModalBody className="bg-surface rounded-b-container">
           <div className="w-full">
             {toolSpec ? (
               <JSONViewer
@@ -45,13 +45,13 @@ const ToolSpecJsonModal = memo(
               </div>
             )}
           </div>
-        </Modal.Body>
+        </ModalBody>
 
-        <Modal.Footer className="bg-surface border-t border-subtle rounded-b-container">
+        <ModalFooter className="bg-surface border-t border-subtle rounded-b-container">
           <Button onClick={onClose} className="bg-accent hover:bg-accent-strong text-ink">
             {t('Close')}
           </Button>
-        </Modal.Footer>
+        </ModalFooter>
       </Modal>
     )
   }

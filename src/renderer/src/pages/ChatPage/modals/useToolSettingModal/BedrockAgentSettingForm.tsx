@@ -91,7 +91,7 @@ export const BedrockAgentSettingForm = memo(
         <div className="flex flex-col gap-2 p-2.5 border border-subtle rounded-control">
           <h4 className="font-medium text-sm mb-2 text-ink">{t('Add New Bedrock Agent')}</h4>
           <div className="flex gap-2">
-            <div className="flex-grow">
+            <div className="grow">
               <Label>{t('Agent ID')}</Label>
               <Input
                 type="text"
@@ -100,7 +100,7 @@ export const BedrockAgentSettingForm = memo(
                 placeholder="e.g., VREKDPSXYP"
               />
             </div>
-            <div className="flex-grow">
+            <div className="grow">
               <Label>{t('Alias ID')}</Label>
               <Input
                 type="text"
@@ -129,7 +129,7 @@ export const BedrockAgentSettingForm = memo(
         </div>
 
         {/* 登録済み Agent リスト */}
-        <div className="space-y-3 mt-3">
+        <div className="space-y-3">
           <h4 className="font-medium text-sm text-ink">{t('Registered Agents')}</h4>
           {bedrockAgents.length === 0 ? (
             <p className="text-sm text-ink-muted italic">{t('No agents registered yet')}</p>

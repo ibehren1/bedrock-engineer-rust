@@ -59,7 +59,7 @@ export const GenerateImageSettingForm: React.FC = () => {
       {/* 設定フォーム */}
       <div className="flex flex-col gap-2 p-2.5 border border-subtle rounded-control mb-3 w-full">
         <div className="mb-4 w-full">
-          <Label htmlFor="generateImageModel" value={t('Image Generation Model')} />
+          <Label htmlFor="generateImageModel">{t('Image Generation Model')}</Label>
           {sortedModels.length > 0 ? (
             <Select
               id="generateImageModel"

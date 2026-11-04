@@ -1,7 +1,7 @@
 import React from 'react'
 import { CustomAgent } from '@/types/agent-chat'
 import { FiMoreVertical } from 'react-icons/fi'
-import { Dropdown } from 'flowbite-react'
+import { Dropdown, DropdownItem } from 'flowbite-react'
 import { useTranslation } from 'react-i18next'
 import { PROTECTED_DEFAULT_AGENT_IDS } from './useAgentFilter'
 
@@ -69,47 +69,47 @@ export const AgentActionsDropdown: React.FC<AgentActionsDropdownProps> = ({
         )}
       >
         {isEditable && onEdit && (
-          <Dropdown.Item onClick={() => onEdit(agent)} className="w-48">
+          <DropdownItem onClick={() => onEdit(agent)} className="w-48">
             {t('edit')}
-          </Dropdown.Item>
+          </DropdownItem>
         )}
         {onDuplicate && (
-          <Dropdown.Item onClick={() => onDuplicate(agent)} className="w-48">
+          <DropdownItem onClick={() => onDuplicate(agent)} className="w-48">
             {t('duplicate')}
-          </Dropdown.Item>
+          </DropdownItem>
         )}
         {onDownloadYaml && (
-          <Dropdown.Item onClick={() => onDownloadYaml(agent)} className="w-48">
+          <DropdownItem onClick={() => onDownloadYaml(agent)} className="w-48">
             {t('downloadYaml')}
-          </Dropdown.Item>
+          </DropdownItem>
         )}
         {onConvertToStrands && (
-          <Dropdown.Item onClick={() => onConvertToStrands(agent.id!)} className="w-48">
+          <DropdownItem onClick={() => onConvertToStrands(agent.id!)} className="w-48">
             {t('convertToStrands')}
-          </Dropdown.Item>
+          </DropdownItem>
         )}
         {!agent.isShared && onSaveAsShared && (
-          <Dropdown.Item onClick={() => onSaveAsShared(agent)} className="w-48">
+          <DropdownItem onClick={() => onSaveAsShared(agent)} className="w-48">
             {t('saveAsShared')}
-          </Dropdown.Item>
+          </DropdownItem>
         )}
         {isEditable && onShareToOrganization && (
-          <Dropdown.Item onClick={() => onShareToOrganization(agent)} className="w-48">
+          <DropdownItem onClick={() => onShareToOrganization(agent)} className="w-48">
             {t('shareToOrganization')}
-          </Dropdown.Item>
+          </DropdownItem>
         )}
         {hasSharedFile && onDeleteSharedFile && (
-          <Dropdown.Item onClick={() => onDeleteSharedFile(agent)} className="text-danger w-48">
+          <DropdownItem onClick={() => onDeleteSharedFile(agent)} className="text-danger w-48">
             {t('deleteSharedFile')}
-          </Dropdown.Item>
+          </DropdownItem>
         )}
         {isRemovable && onDelete && (
-          <Dropdown.Item
+          <DropdownItem
             onClick={() => onDelete(agent.id!)}
             className={isCustomAgent ? 'text-danger w-48' : 'w-48'}
           >
             {isCustomAgent ? t('delete') : t('myAgents.hideDefault')}
-          </Dropdown.Item>
+          </DropdownItem>
         )}
       </Dropdown>
     </div>

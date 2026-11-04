@@ -50,7 +50,7 @@ export const CodeInterpreterResult: React.FC<CodeInterpreterResultProps> = ({ re
   const hasOutput = response.result.stdout || response.output
 
   return (
-    <div className="bg-surface border border-subtle rounded-container shadow-sm overflow-hidden">
+    <div className="bg-surface border border-subtle rounded-container shadow-xs overflow-hidden">
       {/* Header */}
       <div className="bg-surface-2 px-2.5 py-1.5 border-b border-subtle">
         <div className="flex items-center justify-between">

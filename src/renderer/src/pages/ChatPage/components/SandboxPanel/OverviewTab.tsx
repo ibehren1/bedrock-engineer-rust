@@ -263,7 +263,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 <span
                   className={`size-1.5 rounded-full shrink-0 ${up ? 'bg-success' : 'bg-sunken'}`}
                 />
-                <span className="font-medium min-w-[3rem]">{service.name}</span>
+                <span className="font-medium min-w-12">{service.name}</span>
                 <span className="font-mono text-xs text-ink-faint truncate">{service.image}</span>
                 <div className="ml-auto flex gap-1.5 flex-wrap justify-end">
                   {service.ports.map((port) => (

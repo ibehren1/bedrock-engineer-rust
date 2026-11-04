@@ -26,7 +26,7 @@ export const TemplateButton: React.FC<TemplateButtonProps> = ({
         border
         ${isSelected ? 'border-success' : 'border-subtle'}
         focus:ring-4
-        focus:outline-none
+        focus:outline-hidden
         focus:ring-accent
         font-medium
         rounded-full

@@ -38,7 +38,7 @@ export const RecognizeImageSettingForm: React.FC = () => {
       {/* 設定フォーム */}
       <div className="flex flex-col gap-2 p-2.5 border border-subtle rounded-control mb-3 w-full">
         <div className="mb-4 w-full">
-          <Label htmlFor="recognizeImageModel" value={t('Recognition Model')} />
+          <Label htmlFor="recognizeImageModel">{t('Recognition Model')}</Label>
           <Select
             id="recognizeImageModel"
             value={recognizeImageModel}

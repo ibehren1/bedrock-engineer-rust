@@ -1,5 +1,5 @@
 import React from 'react'
-import { Modal, Button } from 'flowbite-react'
+import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from 'flowbite-react'
 import { useTranslation } from 'react-i18next'
 import { CustomAgent } from '@/types/agent-chat'
 import { BsCheck2Circle } from 'react-icons/bs'
@@ -33,17 +33,17 @@ export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({
     <Modal dismissible show={true} onClose={onClose} size="7xl" className="bg-canvas">
       <div className="border-[0.5px] border-surface rounded-container shadow-xl">
         {/* Header */}
-        <Modal.Header className="border-b border-subtle bg-surface rounded-t-container p-3">
+        <ModalHeader className="border-b border-subtle bg-surface rounded-t-container p-3">
           <AgentHeader
             name={agent.name}
             description={agent.description}
             icon={agent.icon}
             iconColor={agent.iconColor}
           />
-        </Modal.Header>
+        </ModalHeader>
 
         {/* Body - Two Column Layout */}
-        <Modal.Body className="p-0 bg-surface max-h-[calc(85vh-200px)]">
+        <ModalBody className="p-0 bg-surface max-h-[calc(85vh-200px)]">
           <div className="px-6 py-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {/* Left Column */}
@@ -60,10 +60,10 @@ export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({
               </div>
             </div>
           </div>
-        </Modal.Body>
+        </ModalBody>
 
         {/* Footer */}
-        <Modal.Footer className="border-t border-subtle bg-surface rounded-b-container">
+        <ModalFooter className="border-t border-subtle bg-surface rounded-b-container">
           <div className="flex justify-end gap-3 w-full">
             <Button color="gray" onClick={onClose}>
               {t('close')}
@@ -92,7 +92,7 @@ export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({
               </Button>
             )}
           </div>
-        </Modal.Footer>
+        </ModalFooter>
       </div>
     </Modal>
   )

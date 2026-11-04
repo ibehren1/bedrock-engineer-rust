@@ -85,7 +85,7 @@ export const AgentDirectoryPage: React.FC = () => {
               />
               <div
                 className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 text-xs
-                            font-medium bg-ink text-canvas rounded-container shadow-sm opacity-0 group-hover:opacity-100
+                            font-medium bg-ink text-canvas rounded-container shadow-xs opacity-0 group-hover:opacity-100
                             transition-opacity duration-300 whitespace-nowrap pointer-events-none"
               >
                 {t('contributor.tooltip')}

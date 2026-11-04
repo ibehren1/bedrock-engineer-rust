@@ -127,7 +127,7 @@ export const ImagePreview: React.FC<ImagePreviewProps> = ({ filename, imagePath 
 
       {/* Fullscreen Backdrop */}
       {isFullscreen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={toggleFullscreen} />
+        <div className="fixed inset-0 bg-black/50 z-40" onClick={toggleFullscreen} />
       )}
     </div>
   )

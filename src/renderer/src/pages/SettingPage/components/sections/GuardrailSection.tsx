@@ -18,7 +18,8 @@ export const GuardrailSection: React.FC = () => {
   return (
     <SettingSection title={t('Amazon Bedrock Guardrails')} icon={FaShieldAlt}>
       <div className="space-y-2">
-        <div className="space-y-2">
+        {/* Spacing set per child, not with space-y: Tailwind CSS 4 spaces inline children differently. */}
+        <div>
           <label className="inline-flex items-center cursor-pointer">
             <input
               type="checkbox"
@@ -30,7 +31,7 @@ export const GuardrailSection: React.FC = () => {
             />
             <span className="ml-2 text-sm text-ink">{t('Enable Guardrails')}</span>
           </label>
-          <p className="text-xs text-ink-muted">
+          <p className="text-xs text-ink-muted mt-2">
             {t(
               'When enabled, guardrails will be applied to all model interactions to filter harmful content.'
             )}

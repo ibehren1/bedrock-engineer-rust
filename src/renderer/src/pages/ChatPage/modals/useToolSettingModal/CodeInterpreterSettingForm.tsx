@@ -147,7 +147,7 @@ export const CodeInterpreterSettingForm: React.FC = () => {
             <select
               value={codeInterpreterConfig.memoryLimit}
               onChange={(e) => handleConfigChange('memoryLimit', e.target.value)}
-              className="w-full px-3 py-2 border border-strong rounded-control shadow-sm focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent bg-surface text-ink"
+              className="w-full px-3 py-2 border border-strong rounded-control shadow-xs focus:outline-hidden focus:ring-1 focus:ring-accent focus:border-accent bg-surface text-ink"
             >
               {memoryOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -163,7 +163,7 @@ export const CodeInterpreterSettingForm: React.FC = () => {
             <select
               value={codeInterpreterConfig.cpuLimit}
               onChange={(e) => handleConfigChange('cpuLimit', parseFloat(e.target.value))}
-              className="w-full px-3 py-2 border border-strong rounded-control shadow-sm focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent bg-surface text-ink"
+              className="w-full px-3 py-2 border border-strong rounded-control shadow-xs focus:outline-hidden focus:ring-1 focus:ring-accent focus:border-accent bg-surface text-ink"
             >
               {cpuOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -179,7 +179,7 @@ export const CodeInterpreterSettingForm: React.FC = () => {
             <select
               value={codeInterpreterConfig.timeout}
               onChange={(e) => handleConfigChange('timeout', parseInt(e.target.value))}
-              className="w-full px-3 py-2 border border-strong rounded-control shadow-sm focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent bg-surface text-ink"
+              className="w-full px-3 py-2 border border-strong rounded-control shadow-xs focus:outline-hidden focus:ring-1 focus:ring-accent focus:border-accent bg-surface text-ink"
             >
               {timeoutOptions.map((option) => (
                 <option key={option.value} value={option.value}>

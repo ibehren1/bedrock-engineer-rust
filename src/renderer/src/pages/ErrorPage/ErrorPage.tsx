@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Button } from 'flowbite-react'
 import toast from 'react-hot-toast'
-import { useRouteError, isRouteErrorResponse, Link } from 'react-router-dom'
+import { useRouteError, isRouteErrorResponse, Link } from 'react-router'
 
 const ErrorPage = () => {
   const error = useRouteError()

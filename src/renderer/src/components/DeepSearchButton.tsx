@@ -21,7 +21,7 @@ export const DeepSearchButton: React.FC<DeepSearchButtonProps> = (props) => {
       onClick={handleToggleDeepSearch}
       aria-pressed={enableDeepSearch}
       className={`flex items-center gap-1.5 px-2 py-1 text-xs rounded-control transition-colors
-        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent
+        focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent
         ${
           enableDeepSearch
             ? 'bg-accent-tint border border-accent text-accent'

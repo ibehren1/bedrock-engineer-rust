@@ -33,11 +33,11 @@ export const ToolItem: React.FC<ToolItemProps> = ({ tool, isMcp, serverInfo, onT
       } rounded-control hover:border-strong transition-colors duration-200`}
     >
       <div className="flex items-center space-x-3 flex-1 min-w-0">
-        <div className="text-ink-muted flex-shrink-0 w-7 h-7 flex items-center justify-center">
+        <div className="text-ink-muted shrink-0 w-7 h-7 flex items-center justify-center">
           {ToolIcon}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-medium text-ink break-words line-clamp-2" title={displayedName}>
+          <p className="font-medium text-ink wrap-break-word line-clamp-2" title={displayedName}>
             {displayedName}
             {isMcp && (
               <span className="ml-1 text-xs font-normal bg-raised text-ink py-0.5 px-1 rounded-control">
@@ -61,7 +61,7 @@ export const ToolItem: React.FC<ToolItemProps> = ({ tool, isMcp, serverInfo, onT
           </div>
         </div>
       </div>
-      <div className="flex-shrink-0" onClick={preventEventPropagation}>
+      <div className="shrink-0" onClick={preventEventPropagation}>
         {isMcp ? (
           <div className="flex items-center">
             <ToggleSwitch checked={true} onChange={() => {}} disabled={true} label="" />

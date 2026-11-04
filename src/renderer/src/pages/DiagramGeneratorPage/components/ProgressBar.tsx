@@ -34,7 +34,7 @@ const ProgressBarComponent = ({
 
         {/* 進捗バーのアニメーション効果 */}
         <div
-          className="absolute top-0 left-0 h-full bg-gradient-to-r from-transparent via-white to-transparent opacity-30 animate-pulse"
+          className="absolute top-0 left-0 h-full bg-linear-to-r from-transparent via-white to-transparent opacity-30 animate-pulse"
           style={{
             width: '30%',
             transform: `translateX(${clampedProgress * 3.33 - 100}%)`,

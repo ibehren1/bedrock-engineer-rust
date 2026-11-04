@@ -11,11 +11,11 @@ export const AgentIcon: React.FC<AgentIconProps> = ({ agent, size = 'sm' }) => {
   const iconSize = size === 'sm' ? 'h-4 w-4' : 'h-4 w-4'
 
   if (!agent?.icon) {
-    return <CogIcon className={`${iconSize} flex-shrink-0`} />
+    return <CogIcon className={`${iconSize} shrink-0`} />
   }
 
   return (
-    <div className={`${iconSize} flex items-center justify-center flex-shrink-0`}>
+    <div className={`${iconSize} flex items-center justify-center shrink-0`}>
       <AgentIconView icon={agent.icon} iconColor={agent.iconColor} />
     </div>
   )

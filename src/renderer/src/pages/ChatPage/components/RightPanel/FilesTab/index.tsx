@@ -393,7 +393,7 @@ export const FilesTab: React.FC<FilesTabProps> = ({
         onClick={() => select(entry.path, entry.kind)}
         className={`w-full flex items-center gap-1.5 py-[3px] pr-1.5 rounded-control text-left text-xs whitespace-nowrap ${
           isSelected
-            ? 'bg-accent-tint outline outline-1 outline-accent text-ink'
+            ? 'bg-accent-tint outline-solid outline-1 outline-accent text-ink'
             : 'text-ink hover:bg-surface-2'
         }`}
         style={{ paddingLeft: 6 + depth * 14 }}
@@ -556,7 +556,7 @@ export const FilesTab: React.FC<FilesTabProps> = ({
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder={t('filesPanel.filterPlaceholder')}
-            className="mx-1.5 my-1.5 px-1.5 py-1 text-xs rounded-control bg-surface-2 border border-subtle text-ink placeholder:text-ink-faint focus:outline-none focus:border-accent"
+            className="mx-1.5 my-1.5 px-1.5 py-1 text-xs rounded-control bg-surface-2 border border-subtle text-ink placeholder:text-ink-faint focus:outline-hidden focus:border-accent"
           />
           <div className="flex-1 min-h-0 overflow-auto px-1 pb-2">
             {scope === 'project' ? renderProject() : renderChat()}
@@ -573,7 +573,7 @@ export const FilesTab: React.FC<FilesTabProps> = ({
           onPointerDown={treeWidth.onPointerDown}
           onKeyDown={treeWidth.onKeyDown}
           onDoubleClick={treeWidth.reset}
-          className="group relative w-px shrink-0 bg-[var(--border)] cursor-col-resize focus:outline-none"
+          className="group relative w-px shrink-0 bg-(--border) cursor-col-resize focus:outline-hidden"
         >
           {/* Wider invisible grab area; the line highlights on hover / focus. */}
           <div className="absolute inset-y-0 -left-1 -right-1 z-10" />

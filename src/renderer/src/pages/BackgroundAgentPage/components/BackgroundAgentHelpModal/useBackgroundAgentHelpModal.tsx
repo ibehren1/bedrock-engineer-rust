@@ -22,7 +22,7 @@ export const useBackgroundAgentHelpModal = () => {
     return isOpen ? (
       <div className="fixed inset-0 z-50 overflow-y-auto" onKeyDown={handleKeyDown}>
         {/* Backdrop */}
-        <div className="fixed inset-0 bg-black bg-opacity-50" onClick={closeModal}></div>
+        <div className="fixed inset-0 bg-black/50" onClick={closeModal}></div>
 
         {/* Modal */}
         <div className="flex items-center justify-center min-h-screen p-2.5">
@@ -55,7 +55,7 @@ export const useBackgroundAgentHelpModal = () => {
                 <div className="space-y-2">
                   {/* Development Tasks */}
                   <div className="flex items-start p-2.5 bg-surface-2 border border-subtle rounded-container shadow-raised transition-shadow">
-                    <div className="flex-shrink-0 mr-3">
+                    <div className="shrink-0 mr-3">
                       <div className="w-8 h-8 bg-success-soft rounded-full flex items-center justify-center">
                         <FiCode className="w-4 h-4 text-success" />
                       </div>
@@ -72,7 +72,7 @@ export const useBackgroundAgentHelpModal = () => {
 
                   {/* Workflow Support */}
                   <div className="flex items-start p-2.5 bg-surface-2 border border-subtle rounded-container shadow-raised transition-shadow">
-                    <div className="flex-shrink-0 mr-3">
+                    <div className="shrink-0 mr-3">
                       <div className="w-8 h-8 bg-accent-tint rounded-full flex items-center justify-center">
                         <FiCpu className="w-4 h-4 text-accent" />
                       </div>
@@ -89,7 +89,7 @@ export const useBackgroundAgentHelpModal = () => {
 
                   {/* Business Automation */}
                   <div className="flex items-start p-2.5 bg-surface-2 border border-subtle rounded-container shadow-raised transition-shadow">
-                    <div className="flex-shrink-0 mr-3">
+                    <div className="shrink-0 mr-3">
                       <div className="w-8 h-8 bg-warning-soft rounded-full flex items-center justify-center">
                         <FiZap className="w-4 h-4 text-warning" />
                       </div>

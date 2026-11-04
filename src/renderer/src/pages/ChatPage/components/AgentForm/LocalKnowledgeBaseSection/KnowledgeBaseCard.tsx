@@ -94,7 +94,7 @@ const CrawlOptionsFields: React.FC<{
         <NumberInput
           min={0}
           max={10}
-          className={`${inputClass} !w-16`}
+          className={`${inputClass} w-16!`}
           value={value.maxDepth}
           onChange={(maxDepth) => onChange({ ...value, maxDepth })}
         />
@@ -104,7 +104,7 @@ const CrawlOptionsFields: React.FC<{
         <NumberInput
           min={1}
           max={1000}
-          className={`${inputClass} !w-20`}
+          className={`${inputClass} w-20!`}
           value={value.maxPages}
           onChange={(maxPages) => onChange({ ...value, maxPages })}
         />
@@ -195,7 +195,7 @@ const SourceRow: React.FC<{
   return (
     <li className="py-2">
       <div className="flex items-start gap-2">
-        <Icon className="w-4 h-4 mt-0.5 text-ink-muted flex-shrink-0" />
+        <Icon className="w-4 h-4 mt-0.5 text-ink-muted shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="text-sm text-ink truncate" title={source.title}>
             {source.title}
@@ -243,12 +243,12 @@ const SourceRow: React.FC<{
             </div>
           )}
           {!job && source.error && source.status !== 'ready' && (
-            <div className="text-xs text-danger mt-0.5 break-words">{source.error}</div>
+            <div className="text-xs text-danger mt-0.5 wrap-break-word">{source.error}</div>
           )}
           {job && <JobProgress job={job} onCancel={() => onCancel(job.jobId)} />}
         </div>
         {!job && !editing && (
-          <div className="flex gap-1 flex-shrink-0">
+          <div className="flex gap-1 shrink-0">
             {source.kind === 'url' && (
               <button
                 type="button"
@@ -509,7 +509,7 @@ export const KnowledgeBaseCard: React.FC<{
           )}
         </div>
         {!editing && (
-          <div className="flex gap-1 flex-shrink-0">
+          <div className="flex gap-1 shrink-0">
             {mismatch && kb.chunkCount > 0 && !rebuildJob && (
               <button
                 type="button"

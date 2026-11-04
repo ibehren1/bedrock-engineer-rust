@@ -4,7 +4,7 @@ import LoadingWebsiteLottie from '../pages/WebsiteGeneratorPage/LoadingWebsite.l
 export const WebLoader = () => {
   return (
     <div className="flex flex-col justify-center items-center gap-2">
-      <LoadingWebsiteLottie className="w-[8rem]" />
+      <LoadingWebsiteLottie className="w-32" />
       <span className="text-sm text-ink-faint">Searching websites...</span>
       <span className="text-xs text-ink-faint">
         <LazyVisibleMessage message="Searching for related source code" />

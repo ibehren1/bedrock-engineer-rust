@@ -285,7 +285,7 @@ export const KnowledgeStorageSection: React.FC = () => {
                 const key = `${e.agentId}/${e.kbId}`
                 return (
                   <tr key={key} className="align-top hover:bg-surface-2">
-                    <td className="px-3 py-2 min-w-[12rem]">
+                    <td className="px-3 py-2 min-w-48">
                       <div className="text-sm font-medium text-ink">{e.name}</div>
                       <div className="text-ink-muted">
                         {e.orphan ? (
@@ -302,7 +302,7 @@ export const KnowledgeStorageSection: React.FC = () => {
                         {t('knowledgeBase.settings.overview.sources', { count: e.sourceCount })}
                       </div>
                     </td>
-                    <td className="px-3 py-2 text-right text-ink min-w-[6rem]">
+                    <td className="px-3 py-2 text-right text-ink min-w-24">
                       {formatBytes(e.bytes)}
                       {s && s.health.reclaimableBytes > 0 && (
                         <div className="mt-1">

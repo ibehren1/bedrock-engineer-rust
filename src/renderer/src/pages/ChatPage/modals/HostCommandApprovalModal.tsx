@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Modal } from 'flowbite-react'
+import { Modal, ModalBody, ModalFooter, ModalHeader } from 'flowbite-react'
 import { FiAlertTriangle } from 'react-icons/fi'
 import {
   getPendingHostApproval,
@@ -27,13 +27,13 @@ export const HostCommandApprovalModal: React.FC = () => {
       size="lg"
       dismissible={false}
     >
-      <Modal.Header>
+      <ModalHeader>
         <div className="flex items-center gap-2">
           <FiAlertTriangle className="text-warning" />
           {t('hostCommand.title')}
         </div>
-      </Modal.Header>
-      <Modal.Body>
+      </ModalHeader>
+      <ModalBody>
         <div className="space-y-2">
           <p className="text-sm text-ink">{t('hostCommand.body')}</p>
 
@@ -46,8 +46,8 @@ export const HostCommandApprovalModal: React.FC = () => {
 
           <p className="text-xs text-ink-muted">{t('hostCommand.note')}</p>
         </div>
-      </Modal.Body>
-      <Modal.Footer>
+      </ModalBody>
+      <ModalFooter>
         <div className="flex w-full justify-end gap-2">
           <button
             onClick={() => resolveHostApproval('deny')}
@@ -68,7 +68,7 @@ export const HostCommandApprovalModal: React.FC = () => {
             {t('hostCommand.allowForChat')}
           </button>
         </div>
-      </Modal.Footer>
+      </ModalFooter>
     </Modal>
   )
 }

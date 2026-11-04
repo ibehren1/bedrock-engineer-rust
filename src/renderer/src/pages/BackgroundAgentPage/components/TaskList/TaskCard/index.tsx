@@ -113,7 +113,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   }
 
   return (
-    <div className="bg-surface rounded-container border-[0.5px] border-subtle p-3 shadow-sm hover:shadow-md transition-all duration-200">
+    <div className="bg-surface rounded-container border-[0.5px] border-subtle p-3 shadow-xs hover:shadow-md transition-all duration-200">
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <TaskHeader name={task.name} hasError={!!task.lastError} />

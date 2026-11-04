@@ -110,14 +110,16 @@ const MD = (props: MDProps) => {
   )
 
   return (
-    <Markdown
-      className={style.reactMarkDown}
-      remarkPlugins={[[remarkGfm, { singleTilde: false }], [remarkMath]]}
-      rehypePlugins={rehypePlugins}
-      components={components}
-    >
-      {props.children}
-    </Markdown>
+    // react-markdown 10 no longer takes className; this is the wrapper it used to render.
+    <div className={style.reactMarkDown}>
+      <Markdown
+        remarkPlugins={[[remarkGfm, { singleTilde: false }], [remarkMath]]}
+        rehypePlugins={rehypePlugins}
+        components={components}
+      >
+        {props.children}
+      </Markdown>
+    </div>
   )
 }
 

@@ -1,7 +1,15 @@
 import type { Message } from '@aws-sdk/client-bedrock-runtime'
 
 import { IdentifiableMessage } from '@/types/chat/message'
-import { Modal } from 'flowbite-react'
+import {
+  AccordionContent,
+  AccordionPanel,
+  AccordionTitle,
+  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader
+} from 'flowbite-react'
 import { MetadataViewer } from '../MetadataViewer'
 import { useState, useRef, useEffect, memo, useCallback } from 'react'
 import { Avatar } from './Avatar'
@@ -261,8 +269,8 @@ export const ChatMessage = memo(function ChatMessage({
                   </div>
                 )}
                 <Accordion className="w-full" collapseAll>
-                  <Accordion.Panel>
-                    <Accordion.Title>
+                  <AccordionPanel>
+                    <AccordionTitle>
                       <div className="flex gap-3 items-center">
                         <span>{toolIcons[c.toolUse?.name || 'unknown']}</span>
                         <div className="flex gap-2">
@@ -273,11 +281,11 @@ export const ChatMessage = memo(function ChatMessage({
                           <span>{c.toolUse?.toolUseId}</span>
                         </div>
                       </div>
-                    </Accordion.Title>
-                    <Accordion.Content>
+                    </AccordionTitle>
+                    <AccordionContent>
                       <JSONCodeBlock json={c.toolUse?.input} />
-                    </Accordion.Content>
-                  </Accordion.Panel>
+                    </AccordionContent>
+                  </AccordionPanel>
                 </Accordion>
               </div>
             )
@@ -292,8 +300,8 @@ export const ChatMessage = memo(function ChatMessage({
                   <MemoryResultChip key={`${r.item.id}-${i}`} name={r.name} item={r.item} />
                 ))}
                 <Accordion className="w-full" collapseAll>
-                  <Accordion.Panel>
-                    <Accordion.Title>
+                  <AccordionPanel>
+                    <AccordionTitle>
                       {/* Status was a 24px saturated checkmark plus a solid
                           bg-green-500 / bg-red-700 chip on every single tool
                           result. Now a 5px dot and a quiet tinted badge, so a
@@ -318,8 +326,8 @@ export const ChatMessage = memo(function ChatMessage({
                           {c.toolResult?.toolUseId}
                         </span>
                       </div>
-                    </Accordion.Title>
-                    <Accordion.Content className="w-full">
+                    </AccordionTitle>
+                    <AccordionContent className="w-full">
                       {c.toolResult?.content?.map((content, index) => {
                         if ('text' in content) {
                           return <TextCodeBlock key={index} text={content.text ?? ''} />
@@ -341,8 +349,8 @@ export const ChatMessage = memo(function ChatMessage({
                           throw new Error('Invalid tool result content')
                         }
                       })}
-                    </Accordion.Content>
-                  </Accordion.Panel>
+                    </AccordionContent>
+                  </AccordionPanel>
                 </Accordion>
               </div>
             )
@@ -353,7 +361,7 @@ export const ChatMessage = memo(function ChatMessage({
                 <img
                   src={imageUrl}
                   alt="image"
-                  className="rounded-container shadow-sm max-h-[512px] object-contain"
+                  className="rounded-container shadow-xs max-h-[512px] object-contain"
                 />
               </div>
             )
@@ -376,20 +384,20 @@ export const ChatMessage = memo(function ChatMessage({
         className="metadata-modal"
         dismissible
       >
-        <Modal.Header>
+        <ModalHeader>
           <div className="text-heading font-medium">{t('Metadata')}</div>
-        </Modal.Header>
-        <Modal.Body className="max-h-[80vh] overflow-auto">
+        </ModalHeader>
+        <ModalBody className="max-h-[80vh] overflow-auto">
           {message.metadata && <MetadataViewer metadata={message.metadata} />}
-        </Modal.Body>
-        <Modal.Footer>
+        </ModalBody>
+        <ModalFooter>
           <button
             onClick={() => setShowMetadataModal(false)}
             className="px-5 py-2.5 text-sm font-medium bg-accent text-accent-fg rounded-container hover:bg-accent-strong focus:ring-4 focus:ring-accent transition-all"
           >
             {t('Close')}
           </button>
-        </Modal.Footer>
+        </ModalFooter>
       </Modal>
     </div>
   )

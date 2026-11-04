@@ -70,7 +70,7 @@ export const ComposeTab: React.FC<ComposeTabProps> = ({
     return (
       <div className="h-full flex flex-col items-center justify-center gap-2 p-7 text-center">
         <p className="m-0 text-sm font-medium text-ink">{t('dockerSandbox.compose.noneTitle')}</p>
-        <p className="m-0 max-w-[26rem] text-xs text-ink-muted">
+        <p className="m-0 max-w-104 text-xs text-ink-muted">
           {t('dockerSandbox.compose.noneBody')}
         </p>
       </div>
@@ -86,7 +86,7 @@ export const ComposeTab: React.FC<ComposeTabProps> = ({
         {/* <Mermaid> opens the diagram full window on click, with zoom controls and Esc to
             close — the panel is only 40rem wide, so a stack of several services needs it. */}
         <div
-          className="bg-surface-2 border border-subtle rounded-container p-2 min-h-[14rem]"
+          className="bg-surface-2 border border-subtle rounded-container p-2 min-h-56"
           title={t('dockerSandbox.compose.expandHint')}
         >
           {/* Keyed on the source so a state change re-renders rather than reusing the SVG. */}

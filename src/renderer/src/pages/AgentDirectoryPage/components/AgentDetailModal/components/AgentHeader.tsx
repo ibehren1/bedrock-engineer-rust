@@ -15,7 +15,7 @@ export const AgentHeader: React.FC<AgentHeaderProps> = ({ name, description, ico
 
   return (
     <div className="flex items-start">
-      <div className="w-8 h-8 rounded-full flex items-center justify-center mr-2 bg-raised flex-shrink-0">
+      <div className="w-8 h-8 rounded-full flex items-center justify-center mr-2 bg-raised shrink-0">
         {icon ? (
           <AgentIconView
             icon={icon}

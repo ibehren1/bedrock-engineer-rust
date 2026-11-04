@@ -18,7 +18,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
         <select
           value={selectedCategory}
           onChange={onChange}
-          className="text-sm border-strong rounded-control shadow-sm focus:ring-accent focus:border-accent bg-raised bg-surface text-ink"
+          className="text-sm border-strong rounded-control shadow-xs focus:ring-accent focus:border-accent bg-raised bg-surface text-ink"
         >
           <option value="general">{t('Tool Categories.General Purpose')}</option>
           <option value="coding">{t('Tool Categories.Software Development')}</option>

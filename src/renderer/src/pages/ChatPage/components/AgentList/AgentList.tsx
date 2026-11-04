@@ -110,7 +110,7 @@ export const AgentList: React.FC<AgentListProps> = ({
               onClick={onImportAgent}
               className="px-2.5 py-1 text-sm font-medium text-ink
                 bg-surface border border-strong rounded-container
-                shadow-sm hover:bg-surface-2 focus:outline-none focus:ring-2
+                shadow-xs hover:bg-surface-2 focus:outline-hidden focus:ring-2
                 focus:ring-offset-2 focus:ring-accent focus:ring-offset-canvas
                 whitespace-nowrap flex gap-2 items-center"
             >
@@ -121,8 +121,8 @@ export const AgentList: React.FC<AgentListProps> = ({
           <button
             onClick={onAddNewAgent}
             className="px-2.5 py-1 text-sm font-medium text-accent-fg bg-accent
-              border border-transparent rounded-container shadow-sm hover:bg-accent-strong
-              focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent
+              border border-transparent rounded-container shadow-xs hover:bg-accent-strong
+              focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-accent
               focus:ring-offset-canvas whitespace-nowrap flex gap-2 items-center"
           >
             {t('addNewAgent')}

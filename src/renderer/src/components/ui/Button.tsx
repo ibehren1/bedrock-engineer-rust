@@ -9,7 +9,7 @@ export type ButtonSize = 'sm' | 'md'
  *
  * これまで primary ボタンには 2 つの流儀が並存していた:
  *   px-3 py-1  / bg-blue-500 / rounded            (9 箇所)
- *   px-4 py-2  / bg-blue-600 / rounded-md / shadow-sm / focus ring (9 箇所)
+ *   px-4 py-2  / bg-blue-600 / rounded-md / shadow-xs / focus ring (9 箇所)
  * さらにフォーカスリングの有無も揃っていなかった。ここに一本化する。
  *
  * 色はアクセントトークン経由なので、charcoal（アンバー）でも文字色が自動的に
@@ -50,7 +50,7 @@ export const Button: React.FC<ButtonProps> = ({
     className={cn(
       'inline-flex items-center justify-center rounded-control font-medium transition-colors',
       // The nav rail and most buttons had no focus ring at all.
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+      'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent',
       'disabled:cursor-not-allowed disabled:opacity-50',
       VARIANTS[variant],
       SIZES[size],

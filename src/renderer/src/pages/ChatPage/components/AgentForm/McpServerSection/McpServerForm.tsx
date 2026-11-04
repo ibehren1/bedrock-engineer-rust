@@ -170,7 +170,7 @@ export const McpServerForm: React.FC<McpServerFormProps> = ({
             if (jsonError) setJsonError(null)
           }}
           onClick={preventModalClose}
-          className="mt-1 block w-full h-64 px-3 py-2 bg-surface text-ink border border-strong rounded-control shadow-sm focus:outline-none focus:ring-accent focus:border-accent sm:text-sm font-mono"
+          className="mt-1 block w-full h-64 px-3 py-2 bg-surface text-ink border border-strong rounded-control shadow-xs focus:outline-hidden focus:ring-accent focus:border-accent sm:text-sm font-mono"
           placeholder={`{
   "mcpServers": {
     "my-mcp-server": {

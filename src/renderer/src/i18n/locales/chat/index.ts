@@ -54,8 +54,8 @@ export const chatPage = {
         truncated: "The sub-agent's answer was truncated because it was very long.",
         toolBudgetReached:
           'The sub-agent stopped after reaching its tool-call budget, so this answer may be incomplete.',
-        toolCalls: '{{count}} tool call',
-        toolCalls_plural: '{{count}} tool calls',
+        toolCalls_one: '{{count}} tool call',
+        toolCalls_other: '{{count}} tool calls',
         tokens: '{{count}} tokens'
       },
       ignoreFiles: {
@@ -76,8 +76,8 @@ export const chatPage = {
         menu: {
           title: 'Attachments',
           empty: 'No files attached to this chat yet.',
-          summary: '{{count}} file · {{size}}',
-          summary_plural: '{{count}} files · {{size}}',
+          summary_one: '{{count}} file · {{size}}',
+          summary_other: '{{count}} files · {{size}}',
           addFiles: 'Add files…',
           openFolder: 'Open attachments folder',
           remove: 'Remove {{name}}'
@@ -313,7 +313,6 @@ export const chatPage = {
           title: '添付ファイル',
           empty: 'このチャットにはまだファイルが添付されていません。',
           summary: '{{count}} 件 · {{size}}',
-          summary_plural: '{{count}} 件 · {{size}}',
           addFiles: 'ファイルを追加…',
           openFolder: '添付ファイルフォルダを開く',
           remove: '{{name}} を削除'

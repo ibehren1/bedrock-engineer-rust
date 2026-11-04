@@ -40,7 +40,7 @@ import { subscribeTouchedFiles, useTouchedFiles } from '@renderer/lib/workspaceF
 import { usePanelAttention } from './components/RightPanel/usePanelAttention'
 import { useChatAttachments } from './hooks/useChatAttachments'
 import { useChatHistory } from '@renderer/contexts/ChatHistoryContext'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router'
 import { useStreamingAutoScroll } from '@renderer/hooks/useStreamingAutoScroll'
 import { useLightProcessingModel } from '@renderer/lib/modelSelection'
 import { generateSessionTitle } from './utils/titleGenerator'

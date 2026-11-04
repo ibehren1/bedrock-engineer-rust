@@ -98,7 +98,7 @@ export const ExecutedCodeBlock: React.FC<ExecutedCodeBlockProps> = ({ code }) =>
   /**
    * Renders the copy button with appropriate icon and text
    */
-  const renderCopyButton = (): JSX.Element => (
+  const renderCopyButton = (): React.JSX.Element => (
     <button
       onClick={handleCopy}
       className={CSS_CLASSES.copyButton}
@@ -122,7 +122,7 @@ export const ExecutedCodeBlock: React.FC<ExecutedCodeBlockProps> = ({ code }) =>
   /**
    * Renders the header section with language label and copy button
    */
-  const renderHeader = (): JSX.Element => (
+  const renderHeader = (): React.JSX.Element => (
     <div className={CSS_CLASSES.header}>
       <div className="flex items-center gap-2">
         <span className={CSS_CLASSES.languageLabel}>{LANGUAGE}</span>
@@ -134,7 +134,7 @@ export const ExecutedCodeBlock: React.FC<ExecutedCodeBlockProps> = ({ code }) =>
   /**
    * Renders the syntax highlighted code content
    */
-  const renderCodeContent = (): JSX.Element => (
+  const renderCodeContent = (): React.JSX.Element => (
     <div className={CSS_CLASSES.codeContent}>
       <SyntaxHighlighter
         language={LANGUAGE}

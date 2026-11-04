@@ -264,7 +264,7 @@ export const BasicSection: React.FC<BasicSectionProps> = ({
               value={name}
               onChange={(e) => onChange('name', e.target.value)}
               className="mt-1 block w-full rounded-control border-strong bg-surface
-              text-ink shadow-sm focus:border-accent focus:ring-accent sm:text-sm"
+              text-ink shadow-xs focus:border-accent focus:ring-accent sm:text-sm"
               required
               placeholder={t('namePlaceholder')}
             />
@@ -281,7 +281,7 @@ export const BasicSection: React.FC<BasicSectionProps> = ({
           value={description}
           onChange={(e) => onChange('description', e.target.value)}
           className="mt-1 block w-full rounded-control border-strong bg-surface
-            text-ink shadow-sm focus:border-accent focus:ring-accent sm:text-sm"
+            text-ink shadow-xs focus:border-accent focus:ring-accent sm:text-sm"
           required
           placeholder={t('descriptionPlaceholder')}
         />

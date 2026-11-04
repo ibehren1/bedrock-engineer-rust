@@ -10,7 +10,7 @@ export const TextViewer: React.FC<{ content: string; language: string }> = ({
 }) => {
   if (content.length > HIGHLIGHT_LIMIT || language === 'text') {
     return (
-      <pre className="m-0 p-3 font-mono text-xs text-ink whitespace-pre-wrap break-words">
+      <pre className="m-0 p-3 font-mono text-xs text-ink whitespace-pre-wrap wrap-break-word">
         {content}
       </pre>
     )

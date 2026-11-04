@@ -20,3 +20,8 @@ of the Website Generator's live preview) is under the Sustainable Use License, w
 internal and non-commercial use and free-of-charge redistribution. This app is distributed free
 of charge on those terms; do not sell it or offer it as a paid service without replacing that
 component.
+
+One bundled component is under a weak-copyleft license: elkjs (the ELK graph layout engine, which
+mermaid uses to lay out chat diagrams) is offered under EPL-2.0 OR GPL-3.0-or-later and is
+distributed here under the Eclipse Public License 2.0. It is included unmodified; its source code
+is available at https://github.com/kieler/elkjs, and its license text is in notices/frontend.md.

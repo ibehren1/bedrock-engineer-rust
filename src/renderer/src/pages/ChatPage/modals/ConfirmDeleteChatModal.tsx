@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Modal } from 'flowbite-react'
+import { Modal, ModalBody, ModalFooter, ModalHeader } from 'flowbite-react'
 import { FaDocker } from 'react-icons/fa'
 
 export type DeleteChatScope = 'single' | 'selected' | 'all'
@@ -51,8 +51,8 @@ export const ConfirmDeleteChatModal: React.FC<ConfirmDeleteChatModalProps> = ({
 
   return (
     <Modal show={!!request} onClose={onCancel} size="md">
-      <Modal.Header>{t('deleteChat.title')}</Modal.Header>
-      <Modal.Body>
+      <ModalHeader>{t('deleteChat.title')}</ModalHeader>
+      <ModalBody>
         <div className="space-y-2">
           <p className="text-sm text-ink">{message()}</p>
 
@@ -80,8 +80,8 @@ export const ConfirmDeleteChatModal: React.FC<ConfirmDeleteChatModalProps> = ({
             </div>
           )}
         </div>
-      </Modal.Body>
-      <Modal.Footer>
+      </ModalBody>
+      <ModalFooter>
         <div className="flex w-full justify-end gap-2">
           <button
             onClick={onCancel}
@@ -96,7 +96,7 @@ export const ConfirmDeleteChatModal: React.FC<ConfirmDeleteChatModalProps> = ({
             {t('deleteChat.delete')}
           </button>
         </div>
-      </Modal.Footer>
+      </ModalFooter>
     </Modal>
   )
 }

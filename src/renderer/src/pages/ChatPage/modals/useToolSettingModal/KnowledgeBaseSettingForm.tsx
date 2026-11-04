@@ -70,7 +70,7 @@ export const KnowledgeBaseSettingForm = ({
       {/* KnowledgeBase 追加フォーム */}
       <div className="flex flex-col gap-2 p-2.5 border border-subtle rounded-control">
         <h4 className="font-medium text-sm mb-2 text-ink">{t('Add New Knowledge Base')}</h4>
-        <div className="flex-grow">
+        <div className="grow">
           <Label>{t('Knowledge Base ID')}</Label>
           <Input
             type="text"
@@ -79,7 +79,7 @@ export const KnowledgeBaseSettingForm = ({
             placeholder="e.g., BM7GYFCKIA"
           />
         </div>
-        <div className="flex-grow">
+        <div className="grow">
           <Label>{t('Description')}</Label>
           <Textarea
             value={newDescription}
@@ -99,7 +99,7 @@ export const KnowledgeBaseSettingForm = ({
       </div>
 
       {/* 登録済み KnowledgeBase リスト */}
-      <div className="space-y-3 mt-3">
+      <div className="space-y-3">
         <h4 className="font-medium text-sm text-ink">{t('Registered Knowledge Bases')}</h4>
         {knowledgeBases.length === 0 ? (
           <p className="text-sm text-ink-muted italic">{t('No knowledge bases registered yet')}</p>
@@ -112,7 +112,7 @@ export const KnowledgeBaseSettingForm = ({
               {editMode === kb.knowledgeBaseId ? (
                 // 編集モード
                 <div className="flex flex-col gap-2">
-                  <div className="flex-grow">
+                  <div className="grow">
                     <Label>{t('Knowledge Base ID')}</Label>
                     <Input
                       type="text"
@@ -122,7 +122,7 @@ export const KnowledgeBaseSettingForm = ({
                       }
                     />
                   </div>
-                  <div className="flex-grow">
+                  <div className="grow">
                     <Label>{t('Description')}</Label>
                     <Textarea
                       value={editData.description}

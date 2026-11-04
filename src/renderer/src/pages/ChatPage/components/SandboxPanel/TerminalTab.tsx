@@ -86,7 +86,7 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({
   if (!isRunning) {
     return (
       <State title={t('dockerSandbox.terminal.stoppedTitle')}>
-        <p className="m-0 max-w-[26rem] text-xs text-ink-muted">
+        <p className="m-0 max-w-104 text-xs text-ink-muted">
           {t('dockerSandbox.terminal.stoppedBody')}
         </p>
         <button
@@ -102,7 +102,7 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({
   if (capability && !capability.supported) {
     return (
       <State title={t('dockerSandbox.terminal.unavailableTitle')}>
-        <p className="m-0 max-w-[28rem] text-xs text-ink-muted">{capability.reason}</p>
+        <p className="m-0 max-w-md text-xs text-ink-muted">{capability.reason}</p>
       </State>
     )
   }
@@ -110,7 +110,7 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({
   if (acknowledged === false) {
     return (
       <State title={t('dockerSandbox.terminal.ackTitle')}>
-        <div className="text-left bg-surface-2 border border-subtle rounded-container px-3 py-2.5 max-w-[28rem]">
+        <div className="text-left bg-surface-2 border border-subtle rounded-container px-3 py-2.5 max-w-md">
           <ul className="m-0 pl-4 list-disc">
             <li className="text-xs text-ink-muted mb-1">
               {t('dockerSandbox.terminal.ackWorkspace', {

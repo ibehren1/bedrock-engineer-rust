@@ -25,7 +25,7 @@ const Tile: React.FC<{ label: string; value: string; hint?: string }> = ({
   value,
   hint
 }) => (
-  <Card className="flex flex-col gap-1 min-w-[10rem]">
+  <Card className="flex flex-col gap-1 min-w-40">
     <span className="text-xs text-ink-muted">{label}</span>
     <span className="text-xl font-semibold text-ink tabular-nums">{value}</span>
     {hint && <span className="text-xs text-ink-muted">{hint}</span>}

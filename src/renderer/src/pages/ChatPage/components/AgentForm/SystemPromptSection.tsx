@@ -106,7 +106,7 @@ export const SystemPromptSection: React.FC<SystemPromptSectionProps> = ({
   return (
     <div>
       <div className="flex justify-between pb-2">
-        <div className="flex-grow">
+        <div className="grow">
           <div className="flex items-center gap-2">
             <label className="block text-sm font-medium text-ink">{t('systemPrompt')}</label>
             <div className="flex justify-end items-center space-x-2">
@@ -168,7 +168,7 @@ export const SystemPromptSection: React.FC<SystemPromptSectionProps> = ({
             onChange={handleAdditionalInstructionChange}
             disabled={isGenerating}
             className={`block w-full rounded-control border-strong bg-surface
-              text-ink shadow-sm focus:border-accent focus:ring-accent sm:text-sm
+              text-ink shadow-xs focus:border-accent focus:ring-accent sm:text-sm
               h-[150px] ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
             placeholder={t(
               'additionalInstructionPlaceholder',
@@ -211,7 +211,7 @@ export const SystemPromptSection: React.FC<SystemPromptSectionProps> = ({
             onChange={(e) => onChange(e.target.value)}
             disabled={isGenerating}
             className={`block w-full rounded-control border-strong bg-surface
-              text-ink shadow-sm focus:border-accent focus:ring-accent sm:text-sm
+              text-ink shadow-xs focus:border-accent focus:ring-accent sm:text-sm
               h-[512px] ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
             required
             placeholder={t('systemPromptPlaceholder')}

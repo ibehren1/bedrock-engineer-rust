@@ -27,7 +27,7 @@ export const AgentViewToggle: React.FC<AgentViewToggleProps> = ({
     >
       {/* Animation background */}
       <motion.div
-        className="absolute top-0.5 h-8 w-10 bg-surface/60 rounded-control shadow-sm"
+        className="absolute top-0.5 h-8 w-10 bg-surface/60 rounded-control shadow-xs"
         animate={{
           x: viewMode === 'table' ? 40 : 0
         }}

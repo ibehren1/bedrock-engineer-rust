@@ -30,6 +30,25 @@ import { filesPanel } from './filesPanel'
 import { appUpdate } from './appUpdate'
 
 const HomePage = {
+  tour: {
+    chat: 'Chat with an AI agent. It can read and write files in your project folder, run commands, search the web and use whatever tools you enable for it.',
+    myAgents:
+      'Create and edit your own agents: their system prompt, tools, MCP servers and local knowledge bases.',
+    memory:
+      'Rules and facts the agent remembers across chats. Ask it to remember something, or add and edit entries here.',
+    agentDirectory:
+      'Browse ready-made agents, including shared and organization agents, and add them to your list.',
+    backgroundAgent:
+      'Schedule agents to run on their own on a recurring schedule, and look back at what each run did.',
+    websiteGenerator: 'Describe a web page and get a live preview you can keep refining.',
+    stepFunctionsGenerator:
+      'Generate AWS Step Functions workflows from a description, with a visual graph of each state machine.',
+    diagramGenerator:
+      'Generate AWS architecture, software and business process diagrams from a description.',
+    accounting:
+      'See what your Amazon Bedrock usage costs by day, model and feature, and set a monthly budget.',
+    help: 'The user guide, available offline. You can also ask it questions. Tip: {{shortcut}} opens the command palette from anywhere.'
+  },
   'set your aws credential':
     'Set up the Amazon Bedrock configuration. Enter your AWS Credentials (region, access key, secret access key) from the settings screen.',
   'Welcome to Bedrock Engineer': 'Welcome to {{appName}}',

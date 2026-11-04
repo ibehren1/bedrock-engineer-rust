@@ -55,7 +55,7 @@ export const NewSessionModal: React.FC<NewSessionModalProps> = ({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-surface rounded-container shadow-xl w-full max-w-md mx-4">
         {/* ヘッダー */}
         <div className="flex items-center justify-between p-3 border-b border-subtle">
@@ -86,7 +86,7 @@ export const NewSessionModal: React.FC<NewSessionModalProps> = ({
               <select
                 value={selectedAgentId || ''}
                 onChange={(e) => setSelectedAgentId(e.target.value || null)}
-                className="w-full px-3 py-2 border border-strong rounded-control focus:outline-none focus:ring-2 focus:ring-accent bg-raised text-ink appearance-none"
+                className="w-full px-3 py-2 border border-strong rounded-control focus:outline-hidden focus:ring-2 focus:ring-accent bg-raised text-ink appearance-none"
               >
                 <option value="">{t('backgroundAgent.newSession.noAgent')}</option>
                 {agents.map((agent) => (

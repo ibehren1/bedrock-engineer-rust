@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react'
 import { modKeyLabel, pageShortcut } from './lib/platform'
 import { FiGithub, FiHelpCircle } from 'react-icons/fi'
-import { Flowbite, Tooltip } from 'flowbite-react'
-import { flowbiteTheme } from './flowbiteTheme'
+import { ThemeProvider, Tooltip } from 'flowbite-react'
+import { ThemeInit } from '../../../.flowbite-react/init'
+import { flowbiteClearTheme, flowbiteTheme } from './flowbiteTheme'
 import {
   createHashRouter,
   Link,
@@ -10,7 +11,7 @@ import {
   RouterProvider,
   useLocation,
   useNavigate
-} from 'react-router-dom'
+} from 'react-router'
 import CmdK from './command-palette'
 import { routes, subRoutes } from './routes'
 import { isRouteActive, isStandaloneWindowRoute } from './lib/routeMatching'
@@ -24,11 +25,15 @@ import { AgentDirectoryProvider } from './contexts/AgentDirectoryContext'
 import { MemoryProvider } from './contexts/MemoryContext'
 import { AppUpdateProvider } from './contexts/AppUpdateContext'
 import { UpdateBanner } from './components/UpdateBanner'
-import { StepType, TourProvider } from '@reactour/tour'
+import { TourProvider, useTour } from '@reactour/tour'
+import { buildTourSteps } from './tourSteps'
 import { useTranslation } from 'react-i18next'
 import { ToastService } from './services/ToastService'
 import { useTheme } from './hooks/useTheme'
 import { useBudgetStatus } from './pages/AccountingPage/useBudgetStatus'
+
+/** The command palette shortcut as shown to the user: ⌘K on macOS, Ctrl+K elsewhere. */
+const paletteShortcutLabel = (): string => (modKeyLabel() === '⌘' ? '⌘K' : `${modKeyLabel()}+K`)
 
 const ListItem: React.FC<{
   children: any
@@ -45,9 +50,10 @@ const ListItem: React.FC<{
   // p-1.5/m-0.5 rather than p-3/m-1: at 16px icons this gives a 28px hit target
   // in a 40px rail, instead of 44px in a 56px one.
   const base =
-    'p-1.5 cursor-pointer m-0.5 rounded-control transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent '
+    'p-1.5 cursor-pointer m-0.5 rounded-control transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent '
   return (
-    <Link to={href} className={href === '/setting' ? 'react-tour-first-step' : ''}>
+    // data-tour: the app tour's stops point at sidebar items by href (tourSteps.ts).
+    <Link to={href} data-tour={href}>
       {toolTipContent ? (
         <Tooltip content={toolTipContent} placement="right" animation="duration-500">
           <li className={base + bgColor}>{children}</li>
@@ -69,6 +75,12 @@ const Layout: React.FC = () => {
   // Keep <html data-theme> in sync with the appearance setting (and OS changes
   // when 'system' is selected).
   useTheme()
+
+  // The tour skips sidebar items hidden in Settings → Sidebar, and follows the language.
+  const { setSteps } = useTour()
+  useEffect(() => {
+    setSteps?.(buildTourSteps(t, sidebarHiddenItems, paletteShortcutLabel()))
+  }, [setSteps, t, sidebarHiddenItems])
 
   // App menu > Settings… (Rust only sends it to the main window).
   useEffect(() => window.appWindow.onOpenSettings(() => navigate('/setting')), [navigate])
@@ -197,30 +209,31 @@ const styles: any = {
   }),
   badge: (base) => ({
     ...base,
+    // On the popover's top edge rather than hanging off its left corner: the last stop (Help,
+    // at the bottom of the sidebar) puts the popover flush with the window's left edge, which
+    // clipped the step number.
+    left: '0.75em',
     color: 'var(--accent-fg)',
     backgroundColor: 'var(--accent)'
   })
 }
 
-function App(): JSX.Element {
+function App(): React.JSX.Element {
   const { t } = useTranslation()
 
-  const steps: StepType[] = [
-    {
-      selector: '.react-tour-first-step',
-      content: t('set your aws credential'),
-      position: 'right'
-    }
-  ]
+  // Every stop; Layout narrows this to the items shown in the sidebar.
+  const steps = buildTourSteps(t, [], paletteShortcutLabel())
 
   return (
     // Flowbite components rendered with stock defaults until now — there was no
     // provider anywhere, so all 42 import sites used marketing-site spacing.
-    // See flowbiteTheme.ts. `mode: 'light'` keeps Flowbite's own dark-mode
-    // toggle out of the way: this app drives appearance from data-theme, and
-    // letting Flowbite manage a `dark` class as well would give two competing
-    // sources of truth.
-    <Flowbite theme={{ theme: flowbiteTheme, mode: 'light' }}>
+    // See flowbiteTheme.ts. Flowbite's own dark-mode switching (useThemeMode /
+    // ThemeModeScript) is never used: this app drives appearance from data-theme,
+    // and letting Flowbite manage a `dark` class as well would give two competing
+    // sources of truth. ThemeInit tells Flowbite it runs on Tailwind CSS 4
+    // (.flowbite-react/config.json), so it converts its stock classes.
+    <ThemeProvider theme={flowbiteTheme} clearTheme={flowbiteClearTheme}>
+      <ThemeInit />
       <TourProvider steps={steps} styles={styles}>
         <SettingsProvider>
           <ChatHistoryProvider>
@@ -237,7 +250,7 @@ function App(): JSX.Element {
           </ChatHistoryProvider>
         </SettingsProvider>
       </TourProvider>
-    </Flowbite>
+    </ThemeProvider>
   )
 }
 
