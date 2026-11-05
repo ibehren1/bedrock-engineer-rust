@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { SessionMetadata, ChatSession, ChatMessage } from '@/types/chat/history'
+import { SessionMetadata, ChatSession, ChatMessage, ChatFolder } from '@/types/chat/history'
 import { clearHostApproval } from '@renderer/pages/ChatPage/lib/hostCommandApproval'
 
 interface ChatHistoryContextType {
   sessions: SessionMetadata[]
+  /** The chat history's folders, in creation order. */
+  folders: ChatFolder[]
   currentSessionId?: string
   getSession: (sessionId: string) => ChatSession | null
   createSession: (agentId: string, modelId: string, systemPrompt?: string) => Promise<string>
@@ -25,12 +27,19 @@ interface ChatHistoryContextType {
   setUseMemoryItems: (sessionId: string, value: boolean) => Promise<void>
   /** Record project-relative paths the agent created or changed in this chat. */
   addTouchedFiles: (sessionId: string, paths: string[]) => Promise<void>
+  createFolder: (name: string) => Promise<string>
+  renameFolder: (folderId: string, name: string) => Promise<void>
+  /** Removes a folder; its chats move back out of any folder. */
+  deleteFolder: (folderId: string) => Promise<void>
+  /** Puts chats in a folder, or takes them out of any folder with `null`. */
+  moveSessionsToFolder: (sessionIds: string[], folderId: string | null) => Promise<void>
 }
 
 const ChatHistoryContext = createContext<ChatHistoryContextType | undefined>(undefined)
 
 export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [sessions, setSessions] = useState<SessionMetadata[]>([])
+  const [folders, setFolders] = useState<ChatFolder[]>([])
   const [currentSessionId, setCurrentSessionId] = useState<string | undefined>()
 
   // 初期化時にセッションをロード
@@ -48,6 +57,7 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const loadSessions = useCallback(() => {
     const sessionMetadata = window.chatHistory.getAllSessionMetadata()
     setSessions(sessionMetadata)
+    setFolders(window.chatHistory.getFolders())
   }, [])
 
   // セッション情報を取得
@@ -221,8 +231,45 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
     []
   )
 
+  const createFolder = useCallback(
+    async (name: string): Promise<string> => {
+      const id = await window.chatHistory.createFolder(name)
+      loadSessions()
+      return id
+    },
+    [loadSessions]
+  )
+
+  const renameFolder = useCallback(
+    async (folderId: string, name: string): Promise<void> => {
+      await window.chatHistory.renameFolder(folderId, name)
+      loadSessions()
+    },
+    [loadSessions]
+  )
+
+  const deleteFolder = useCallback(
+    async (folderId: string): Promise<void> => {
+      await window.chatHistory.deleteFolder(folderId)
+      loadSessions()
+    },
+    [loadSessions]
+  )
+
+  const moveSessionsToFolder = useCallback(
+    async (sessionIds: string[], folderId: string | null): Promise<void> => {
+      const done = window.chatHistory.moveSessionsToFolder(sessionIds, folderId)
+      // The bridge moves its cache before the round trip; show that straight away.
+      loadSessions()
+      await done
+      loadSessions()
+    },
+    [loadSessions]
+  )
+
   const value = {
     sessions,
+    folders,
     currentSessionId,
     getSession,
     createSession,
@@ -236,7 +283,11 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
     updateMessageContent,
     deleteMessage,
     setUseMemoryItems,
-    addTouchedFiles
+    addTouchedFiles,
+    createFolder,
+    renameFolder,
+    deleteFolder,
+    moveSessionsToFolder
   }
 
   return <ChatHistoryContext.Provider value={value}>{children}</ChatHistoryContext.Provider>

@@ -29,6 +29,15 @@ export interface SessionMetadata {
   agentId: string
   modelId: string
   systemPrompt?: string
+  /** The chat history folder this chat is in, if any. */
+  folderId?: string
+}
+
+/** A folder in the chat history sidebar. Chats point at it through `folderId`. */
+export interface ChatFolder {
+  id: string
+  name: string
+  createdAt: number
 }
 
 export interface ChatSession {

@@ -83,6 +83,11 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         chat_history::chat_history_delete_message,
         chat_history::chat_history_set_use_memory_items,
         chat_history::chat_history_add_touched_files,
+        chat_history::chat_history_get_folders,
+        chat_history::chat_history_create_folder,
+        chat_history::chat_history_rename_folder,
+        chat_history::chat_history_delete_folder,
+        chat_history::chat_history_move_sessions_to_folder,
         // window.workspaceFiles (Files panel)
         workspace_files::workspace_files_list,
         workspace_files::workspace_files_read_text,

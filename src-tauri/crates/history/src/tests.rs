@@ -623,3 +623,97 @@ fn new_returns_an_error_on_a_metadata_read_error_and_keeps_the_data() {
         "{}"
     );
 }
+
+// ---------------------------------------------------------------------------------------------
+// folders
+// ---------------------------------------------------------------------------------------------
+
+fn folder_of(m: &ChatSessionManager, id: &str) -> Option<String> {
+    m.metadata()
+        .get(id)
+        .and_then(|e| e.get("folderId"))
+        .and_then(Value::as_str)
+        .map(str::to_owned)
+}
+
+#[test]
+fn opening_without_folders_lists_none_and_keeps_the_file() {
+    let d = electron_user_data();
+    let before = read(d.path().join(META_FILE));
+    let m = ChatSessionManager::new(d.path()).unwrap();
+    assert!(m.folders().is_empty());
+    assert!(m.snapshot().folders.is_empty());
+    assert_eq!(read(d.path().join(META_FILE)), before);
+}
+
+#[test]
+fn create_rename_and_list_folders() {
+    let d = TempDir::new().unwrap();
+    let m = ChatSessionManager::new(d.path()).unwrap();
+    assert_eq!(m.create_folder("   "), None);
+    let a = m.create_folder("  Work ").unwrap();
+    let b = m.create_folder("Home").unwrap();
+    assert_ne!(a, b, "folders created in the same millisecond get distinct ids");
+    m.rename_folder(&a, "Projects");
+    m.rename_folder(&a, "  ");
+    m.rename_folder("folder_unknown", "x");
+    let folders = m.folders();
+    let names: Vec<&str> = folders.iter().map(|f| f["name"].as_str().unwrap()).collect();
+    assert_eq!(names, ["Projects", "Home"]);
+    assert_eq!(m.snapshot().folders.len(), 2);
+}
+
+#[test]
+fn moving_chats_sets_folder_without_touching_updated_at() {
+    let d = electron_user_data();
+    let m = ChatSessionManager::new(d.path()).unwrap();
+    let folder = m.create_folder("Work").unwrap();
+    let recent_before = m.recent_ids();
+    let updated_before = m.metadata()[RICH]["updatedAt"].clone();
+
+    m.move_sessions_to_folder(&[RICH.to_string(), "session_missing".into()], Some(&folder));
+    assert_eq!(folder_of(&m, RICH).as_deref(), Some(folder.as_str()));
+    assert_eq!(m.get_session(RICH).unwrap()["folderId"], json!(folder));
+    assert_eq!(m.metadata()[RICH]["updatedAt"], updated_before);
+    assert_eq!(m.recent_ids(), recent_before);
+
+    // An unknown folder changes nothing.
+    m.move_sessions_to_folder(&[RICH.to_string()], Some("folder_unknown"));
+    assert_eq!(folder_of(&m, RICH).as_deref(), Some(folder.as_str()));
+
+    m.move_sessions_to_folder(&[RICH.to_string()], None);
+    assert_eq!(folder_of(&m, RICH), None);
+    assert!(m.get_session(RICH).unwrap().get("folderId").is_none());
+}
+
+#[test]
+fn deleting_a_folder_keeps_its_chats() {
+    let d = electron_user_data();
+    let m = ChatSessionManager::new(d.path()).unwrap();
+    let work = m.create_folder("Work").unwrap();
+    let home = m.create_folder("Home").unwrap();
+    m.move_sessions_to_folder(&[RICH.to_string()], Some(&work));
+    m.move_sessions_to_folder(&[NO_PROMPT.to_string()], Some(&home));
+
+    m.delete_folder(&work);
+    let folders = m.folders();
+    assert_eq!(folders.len(), 1);
+    assert_eq!(folders[0]["id"], json!(home));
+    assert!(m.get_session(RICH).is_some());
+    assert_eq!(folder_of(&m, RICH), None);
+    assert_eq!(folder_of(&m, NO_PROMPT).as_deref(), Some(home.as_str()));
+}
+
+#[test]
+fn rebuilt_metadata_keeps_folder_ids() {
+    let d = electron_user_data();
+    let folder = {
+        let m = ChatSessionManager::new(d.path()).unwrap();
+        let f = m.create_folder("Work").unwrap();
+        m.move_sessions_to_folder(&[RICH.to_string()], Some(&f));
+        f
+    };
+    fs::remove_file(d.path().join(META_FILE)).unwrap();
+    let m = ChatSessionManager::new(d.path()).unwrap();
+    assert_eq!(folder_of(&m, RICH).as_deref(), Some(folder.as_str()));
+}

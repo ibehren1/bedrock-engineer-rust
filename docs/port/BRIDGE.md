@@ -373,6 +373,11 @@ Notes on the file commands (`src-tauri/app/src/commands/{file,agent_files}.rs`):
 | `memory.update` | `memory_update` | `{ id, content?, kind?, enabled? }` → `MemoryItem` (bumps `updatedAt`; unknown id rejects) |
 | `memory.delete` | `memory_delete` | `{ id }` → `boolean` (`true` if removed) |
 | `chatHistory.addTouchedFiles` | `chat_history_add_touched_files` | `{ sessionId, paths }` (merges project-relative paths into the session's top-level `touchedFiles: string[]`, deduplicated, first-seen order; unknown session = no-op) |
+| `chatHistory.getFolders` | `chat_history_get_folders` | → `ChatFolder[]` (`{ id, name, createdAt }`, creation order; the bridge serves it from the cache, hydrated by the snapshot's `folders`) |
+| `chatHistory.createFolder` | `chat_history_create_folder` | `{ name }` → folder id (`folder_<ms>`; empty name rejects) |
+| `chatHistory.renameFolder` | `chat_history_rename_folder` | `{ folderId, name }` (empty name or unknown id = no-op) |
+| `chatHistory.deleteFolder` | `chat_history_delete_folder` | `{ folderId }` (its chats lose `folderId`; they are not deleted) |
+| `chatHistory.moveSessionsToFolder` | `chat_history_move_sessions_to_folder` | `{ sessionIds, folderId \| null }` (sets or clears the session's top-level `folderId`, copied into its metadata; no `updatedAt` bump; unknown folder = no-op) |
 | `workspaceFiles.list` | `workspace_files_list` | `{ dir }` (`""` = root) → `{ root, entries: { name, path, kind: 'file' \| 'dir', size, modifiedMs, ext }[] }` |
 | `workspaceFiles.readText` | `workspace_files_read_text` | `{ path }` → `{ content, truncated, size, modifiedMs }` (first 2 MB; rejects `Not a text file`) |
 | `workspaceFiles.writeText` | `workspace_files_write_text` | `{ path, content, expectedModifiedMs? }` → `{ modifiedMs }` (rejects `CONFLICT: ...` when the mtime differs) |

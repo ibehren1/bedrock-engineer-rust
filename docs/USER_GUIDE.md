@@ -916,8 +916,8 @@ number of messages and, once the chat has cost anything, its estimated cost so f
 has **Show chat history**, a green **New chat** button, and your most recent chats as one- or
 two-letter initials — hover to see a title, click to switch to it.
 
-Clicking the **Chat History** heading opens a menu with **Generate All Titles**, **Select** and
-**Delete All**. **Select** lets you tick several chats (or **Select all**) and delete them together.
+Clicking the **Chat History** heading opens a menu with **New folder**, **Generate All Titles**,
+**Select** and **Delete All**. **Select** lets you tick several chats (or **Select all**) and delete them together.
 Deleting a chat also deletes that chat's
 [attachments folder](#7-attachments-giving-the-agent-your-files), its
 [Docker sandbox container](#10-the-docker-sandbox) and any [terminals](#612-the-terminal-tab) open in
@@ -928,6 +928,15 @@ Chat titles are generated for you from the first thing you say, using the
 formatting — and is trimmed to fit the sidebar. Each chat's **⋯** menu offers **Edit title** to type
 your own (Enter saves, Esc cancels), **Generate title** to ask for a new one, and **Delete**.
 **Generate All Titles** redoes every chat that still has a placeholder "Chat…" title.
+
+**Folders** group related chats. **New folder** adds one at the top of the list and lets you type its
+name straight away (Enter saves). Drag a chat onto a folder to put it there; drag it onto the
+**Chat History** heading or the list of chats below the folders to take it out again. In **Select**
+mode, dragging one of the ticked chats moves all of them. Each chat's **⋯** menu also has
+**Move to folder**, for moving without dragging. Click a folder to fold or unfold it; the app
+remembers which ones you folded. A folder's **⋯** menu has **Rename folder** and **Delete folder**.
+Deleting a folder never deletes its chats: they move back to the main list. **Delete All** deletes
+every chat but keeps your folders.
 
 ### 6.10 The folder, Tools and .ignore buttons
 

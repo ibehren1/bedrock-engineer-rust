@@ -18,7 +18,18 @@ export const history = {
     // Dotted keys, unlike the English-as-key entries above, which are older.
     history: {
       hasAttachments: 'Has attached files',
-      hasSandbox: 'Has a Docker sandbox'
+      hasSandbox: 'Has a Docker sandbox',
+      newFolder: 'New folder',
+      defaultFolderName: 'New folder',
+      renameFolder: 'Rename folder',
+      deleteFolder: 'Delete folder',
+      deleteFolderConfirm:
+        'Delete the folder "{{name}}"? The chats in it are not deleted; they move back to the main list.',
+      moveToFolder: 'Move to folder',
+      noFolder: 'No folder',
+      chatCount_one: '{{count}} chat',
+      chatCount_other: '{{count}} chats',
+      dropToRemoveFromFolder: 'Drop here to take chats out of their folder'
     }
   },
   ja: {
@@ -39,7 +50,17 @@ export const history = {
       '選択した {{count}} 件のチャットを削除してもよろしいですか？',
     history: {
       hasAttachments: '添付ファイルあり',
-      hasSandbox: 'Docker サンドボックスあり'
+      hasSandbox: 'Docker サンドボックスあり',
+      newFolder: '新しいフォルダ',
+      defaultFolderName: '新しいフォルダ',
+      renameFolder: 'フォルダ名を変更する',
+      deleteFolder: 'フォルダを削除する',
+      deleteFolderConfirm:
+        'フォルダ「{{name}}」を削除しますか？中のチャットは削除されず、通常の一覧に戻ります。',
+      moveToFolder: 'フォルダへ移動',
+      noFolder: 'フォルダなし',
+      chatCount_other: '{{count}} 件',
+      dropToRemoveFromFolder: 'ここにドロップするとフォルダから出します'
     }
   }
 }

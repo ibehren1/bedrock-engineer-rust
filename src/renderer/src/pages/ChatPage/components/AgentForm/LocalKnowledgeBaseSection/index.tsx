@@ -149,7 +149,7 @@ export const LocalKnowledgeBaseSection: React.FC<{
         </div>
       )}
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         {kb.kbs.map((info) => (
           <KnowledgeBaseCard
             key={info.id}

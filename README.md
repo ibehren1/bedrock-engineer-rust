@@ -308,6 +308,8 @@ credentials.
   trimmed with a pointer to read the rest, and formats nothing can extract are passed along as paths.
   Deleting the chat deletes its attachments folder.
 - Chat history supports multi-select delete.
+- Chat history has **folders**: create one from the Chat History menu, then drag chats onto it (or
+  use a chat's Move to folder menu). Folders fold, can be renamed, and deleting one keeps its chats.
 
 ### Memory
 

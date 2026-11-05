@@ -7,6 +7,19 @@ dated section here for anything user-visible.
 See the [README](./README.md#whats-different-in-this-fork) for a feature-by-feature
 overview of the fork with screenshots.
 
+### 2026-11-05
+
+- On an agent's Knowledge Base tab, each knowledge base now has a bolder outline and a little more
+  space around it, so with several knowledge bases it is easy to see where one ends and the next
+  begins.
+- Knowledge bases on an agent's Knowledge Base tab now start out folded. While folded, the four
+  statistics boxes (passages, storage, searches and search time) sit to the right of the name and
+  details; unfolding moves them back to the top of the expanded view.
+- The chat history now has folders. Create one with **New folder** in the Chat History menu, then
+  drag chats onto it, or use **Move to folder** in a chat's menu. Drag a chat onto the heading or
+  the main list to take it out again. Folders can be folded, renamed and deleted; deleting a folder
+  keeps its chats and moves them back to the main list.
+
 ### 2026-11-04
 
 - Upgraded the tools used to build and check the app: the code checker (ESLint 8, which is no

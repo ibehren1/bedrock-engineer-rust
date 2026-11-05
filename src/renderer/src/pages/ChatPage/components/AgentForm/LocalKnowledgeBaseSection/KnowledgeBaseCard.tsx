@@ -411,7 +411,7 @@ export const KnowledgeBaseCard: React.FC<{
   crawlerDefaults: KnowledgeSettings['crawler']
 }> = ({ kb, sources, jobs, actions, currentSpec, crawlerDefaults }) => {
   const { t } = useTranslation()
-  const [open, setOpen] = useState(sources.length === 0)
+  const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(kb.name)
   const [description, setDescription] = useState(kb.description)
@@ -428,7 +428,7 @@ export const KnowledgeBaseCard: React.FC<{
   useEffect(reloadStats, [reloadStats, kb.bytes, kb.chunkCount, kb.sourceCount, sources])
 
   return (
-    <div className="border border-subtle rounded-container bg-surface">
+    <div className="border-2 border-strong rounded-container bg-surface shadow-sm">
       <div className="flex items-start gap-2 p-2.5">
         <button
           type="button"
@@ -487,11 +487,15 @@ export const KnowledgeBaseCard: React.FC<{
               </div>
               {kb.description && <div className="text-xs text-ink-muted">{kb.description}</div>}
               <div className="text-xs text-ink-muted mt-0.5">
-                {!open &&
-                  `${t('knowledgeBase.stats.collapsed', {
-                    chunks: compactNumber(kb.chunkCount),
-                    size: formatBytes(kb.bytes)
-                  })} · `}
+                {!open && (
+                  // On wide screens the stat tiles beside the details show these counts.
+                  <span className={stats ? 'md:hidden' : undefined}>
+                    {`${t('knowledgeBase.stats.collapsed', {
+                      chunks: compactNumber(kb.chunkCount),
+                      size: formatBytes(kb.bytes)
+                    })} · `}
+                  </span>
+                )}
                 {embeddingLabel(kb.embedding)}
               </div>
             </button>
@@ -508,6 +512,11 @@ export const KnowledgeBaseCard: React.FC<{
             <JobProgress job={rebuildJob} onCancel={() => actions.cancelJob(rebuildJob.jobId)} />
           )}
         </div>
+        {!open && stats && (
+          <div className="hidden md:block w-1/2 shrink-0">
+            <KbStatTiles stats={stats} columns="grid-cols-4" />
+          </div>
+        )}
         {!editing && (
           <div className="flex gap-1 shrink-0">
             {mismatch && kb.chunkCount > 0 && !rebuildJob && (

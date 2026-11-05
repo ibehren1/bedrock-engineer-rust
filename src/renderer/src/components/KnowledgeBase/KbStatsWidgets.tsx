@@ -276,12 +276,16 @@ export const HealthList: React.FC<{ issues: KnowledgeHealthIssue[] }> = ({ issue
 }
 
 /** The KPI row for one knowledgebase. */
-export const KbStatTiles: React.FC<{ stats: KbStats }> = ({ stats }) => {
+export const KbStatTiles: React.FC<{
+  stats: KbStats
+  /** Grid column classes; the default is two columns, four on wide screens. */
+  columns?: string
+}> = ({ stats, columns = 'grid-cols-2 lg:grid-cols-4' }) => {
   const { t, i18n } = useTranslation()
   const { info, usage, health } = stats
   const reclaimShare = info.bytes > 0 ? health.reclaimableBytes / info.bytes : 0
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+    <div className={`grid ${columns} gap-2`}>
       <StatTile
         label={t('knowledgeBase.stats.passages')}
         value={compactNumber(info.chunkCount)}

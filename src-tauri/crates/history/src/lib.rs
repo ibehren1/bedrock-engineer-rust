@@ -8,6 +8,12 @@
 //! - `<userData>/chat-sessions-meta.json` — an electron-store file (tab indent) with
 //!   `{ recentSessions: string[], metadata: { [id]: SessionMetadata }, activeSessionId? }`.
 //!
+//! Folders (an addition of this fork): the metadata file's `folders` key holds
+//! `[{ id, name, createdAt }]`, and a chat in a folder has a top-level `folderId` in its session
+//! file, copied into its metadata entry. A missing `folders` key is an empty list (it is not a
+//! default, so opening an older file doesn't rewrite it), and a `folderId` naming a folder that
+//! no longer exists counts as no folder.
+//!
 //! Sessions and messages are handled as JSON values rather than typed structs, so fields this
 //! port doesn't know about (message metadata, tool state, future additions) and key order survive
 //! a read-modify-write untouched.
@@ -77,6 +83,8 @@ pub fn default_session_title() -> String {
 pub struct Snapshot {
     pub active_session_id: Option<String>,
     pub metadata: Vec<Value>,
+    /// The chat history's folders, in creation order.
+    pub folders: Vec<Value>,
     pub recent: Vec<Value>,
     /// Full sessions for the active session and the recent list. Other sessions are fetched on
     /// demand (see BRIDGE.md).
@@ -359,6 +367,130 @@ impl ChatSessionManager {
         self.write_session_file(session_id, &session);
     }
 
+    /// The folders, in creation order (`[]` when the key is missing or not a list).
+    pub fn folders(&self) -> Vec<Value> {
+        match self.meta.get("folders") {
+            Some(Value::Array(a)) => a,
+            _ => Vec::new(),
+        }
+    }
+
+    fn folder_exists(&self, folder_id: &str) -> bool {
+        self.folders()
+            .iter()
+            .any(|f| f.get("id").and_then(Value::as_str) == Some(folder_id))
+    }
+
+    /// Adds a folder named `name` (trimmed) at the end of the list and returns its id, or `None`
+    /// for an empty name or when the metadata file can't be written.
+    pub fn create_folder(&self, name: &str) -> Option<String> {
+        let name = name.trim();
+        if name.is_empty() {
+            return None;
+        }
+        let taken: HashSet<String> = self
+            .folders()
+            .iter()
+            .filter_map(|f| f.get("id").and_then(Value::as_str).map(str::to_owned))
+            .collect();
+        let mut stamp = now_ms();
+        while taken.contains(&format!("folder_{stamp}")) {
+            stamp += 1;
+        }
+        let id = format!("folder_{stamp}");
+        let folder = json!({ "id": id, "name": name, "createdAt": now_ms() });
+        let result = self.meta.update_key("folders", |current| {
+            let mut list = match current {
+                Some(Value::Array(a)) => a,
+                _ => Vec::new(),
+            };
+            list.push(folder);
+            Value::Array(list)
+        });
+        match result {
+            Ok(()) => Some(id),
+            Err(e) => {
+                tracing::error!(category = CATEGORY, error = %e, "Error writing chat session metadata");
+                None
+            }
+        }
+    }
+
+    /// Renames a folder; an empty name or unknown id is a no-op.
+    pub fn rename_folder(&self, folder_id: &str, name: &str) {
+        let name = name.trim();
+        if name.is_empty() || !self.folder_exists(folder_id) {
+            return;
+        }
+        self.update_meta("folders", |current| {
+            let mut list = match current {
+                Some(Value::Array(a)) => a,
+                _ => Vec::new(),
+            };
+            for f in &mut list {
+                if f.get("id").and_then(Value::as_str) == Some(folder_id) {
+                    if let Some(obj) = f.as_object_mut() {
+                        obj.insert("name".into(), json!(name));
+                    }
+                }
+            }
+            Value::Array(list)
+        });
+    }
+
+    /// Removes a folder. Its chats are kept and move back out of any folder.
+    pub fn delete_folder(&self, folder_id: &str) {
+        let in_folder: Vec<String> = self
+            .metadata()
+            .into_iter()
+            .filter(|(_, m)| m.get("folderId").and_then(Value::as_str) == Some(folder_id))
+            .map(|(id, _)| id)
+            .collect();
+        self.set_folder_id(&in_folder, None);
+        self.update_meta("folders", |current| {
+            let list: Vec<Value> = match current {
+                Some(Value::Array(a)) => a,
+                _ => Vec::new(),
+            }
+            .into_iter()
+            .filter(|f| f.get("id").and_then(Value::as_str) != Some(folder_id))
+            .collect();
+            Value::Array(list)
+        });
+    }
+
+    /// Puts chats in `folder_id`, or takes them out of any folder with `None`. Like the title,
+    /// this doesn't touch `updatedAt` or the recent list. An unknown folder is a logged no-op;
+    /// unknown chats are skipped.
+    pub fn move_sessions_to_folder(&self, session_ids: &[String], folder_id: Option<&str>) {
+        if let Some(id) = folder_id {
+            if !self.folder_exists(id) {
+                tracing::error!(category = CATEGORY, folder_id = id, "Unknown chat folder");
+                return;
+            }
+        }
+        self.set_folder_id(session_ids, folder_id);
+    }
+
+    fn set_folder_id(&self, session_ids: &[String], folder_id: Option<&str>) {
+        for session_id in session_ids {
+            let Some(mut session) = self.read_session_file(session_id) else {
+                continue;
+            };
+            let Some(obj) = session.as_object_mut() else {
+                continue;
+            };
+            let changed = match folder_id {
+                Some(id) => obj.insert("folderId".into(), json!(id)) != Some(json!(id)),
+                None => obj.shift_remove("folderId").is_some(),
+            };
+            if changed {
+                self.write_session_file(session_id, &session);
+                self.update_metadata(session_id, &session);
+            }
+        }
+    }
+
     /// `deleteSession`. The metadata entry is only removed when the file could be deleted; the id
     /// is always dropped from the recent list. The active session id is left alone.
     pub fn delete_session(&self, session_id: &str) {
@@ -557,6 +689,7 @@ impl ChatSessionManager {
         Snapshot {
             active_session_id,
             metadata,
+            folders: self.folders(),
             recent,
             sessions,
         }
@@ -580,7 +713,7 @@ pub fn session_metadata(session: &Value) -> Value {
         .and_then(Value::as_array)
         .map_or(0, Vec::len);
     m.insert("messageCount".into(), json!(count));
-    for k in ["agentId", "modelId", "systemPrompt"] {
+    for k in ["agentId", "modelId", "systemPrompt", "folderId"] {
         copy(&mut m, k);
     }
     Value::Object(m)

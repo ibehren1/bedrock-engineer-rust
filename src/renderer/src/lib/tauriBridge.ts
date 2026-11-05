@@ -45,7 +45,7 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { getImageGenerationModelsForRegion } from '@common/models/models'
 import { captureCameraFrame, type CameraFrameRequest } from './cameraCapture'
-import type { ChatMessage, ChatSession, SessionMetadata } from '@/types/chat/history'
+import type { ChatFolder, ChatMessage, ChatSession, SessionMetadata } from '@/types/chat/history'
 import type { MemoryItem } from '@/types/bridge/memory'
 import type {
   WorkspaceExistsResult,
@@ -345,6 +345,7 @@ type ChatHistorySnapshot = {
   activeSessionId?: string | null
   metadata: SessionMetadata[]
   recent: SessionMetadata[]
+  folders: ChatFolder[]
   sessions: Record<string, ChatSession>
 }
 
@@ -352,6 +353,7 @@ const chat: ChatHistorySnapshot = {
   activeSessionId: undefined,
   metadata: [],
   recent: [],
+  folders: [],
   sessions: {}
 }
 
@@ -361,6 +363,7 @@ async function hydrateChatHistory() {
     chat.activeSessionId = snap.activeSessionId ?? undefined
     chat.metadata = snap.metadata ?? []
     chat.recent = snap.recent ?? []
+    chat.folders = snap.folders ?? []
     chat.sessions = snap.sessions ?? {}
   } catch (e) {
     if (!(e instanceof NotPortedError))
@@ -371,10 +374,11 @@ async function hydrateChatHistory() {
 /** Re-read the list-level state (and optionally one session) after a mutation. */
 async function refreshChat(sessionId?: string) {
   const M = 'chatHistory.refresh'
-  const [metadata, recent, active, session] = await Promise.all([
+  const [metadata, recent, active, folders, session] = await Promise.all([
     call<SessionMetadata[]>(M, 'chat_history_get_all_session_metadata'),
     call<SessionMetadata[]>(M, 'chat_history_get_recent_sessions'),
     call<string | null>(M, 'chat_history_get_active_session_id'),
+    call<ChatFolder[]>(M, 'chat_history_get_folders'),
     sessionId
       ? call<ChatSession | null>(M, 'chat_history_get_session', { sessionId })
       : Promise.resolve(undefined)
@@ -382,6 +386,7 @@ async function refreshChat(sessionId?: string) {
   chat.metadata = metadata ?? []
   chat.recent = recent ?? []
   chat.activeSessionId = active ?? undefined
+  chat.folders = folders ?? []
   if (sessionId) {
     if (session) chat.sessions[sessionId] = session
     else delete chat.sessions[sessionId]
@@ -523,6 +528,35 @@ function createChatHistory(): Window['chatHistory'] {
       const cached = chat.sessions[sessionId]
       if (cached) cached.touchedFiles = [...new Set([...(cached.touchedFiles ?? []), ...paths])]
       await call(`${M}.addTouchedFiles`, 'chat_history_add_touched_files', { sessionId, paths })
+    },
+    getFolders() {
+      return clone(chat.folders)
+    },
+    async createFolder(name: string) {
+      const id = await call<string>(`${M}.createFolder`, 'chat_history_create_folder', { name })
+      await refreshChat()
+      return id
+    },
+    async renameFolder(folderId: string, name: string) {
+      await call(`${M}.renameFolder`, 'chat_history_rename_folder', { folderId, name })
+      await refreshChat()
+    },
+    async deleteFolder(folderId: string) {
+      await call(`${M}.deleteFolder`, 'chat_history_delete_folder', { folderId })
+      await refreshChat()
+    },
+    async moveSessionsToFolder(sessionIds: string[], folderId: string | null) {
+      if (sessionIds.length === 0) return
+      // Move in the cache first so the sidebar doesn't wait for the round trip.
+      const ids = new Set(sessionIds)
+      chat.metadata = chat.metadata.map((m) =>
+        ids.has(m.id) ? { ...m, folderId: folderId ?? undefined } : m
+      )
+      await call(`${M}.moveSessionsToFolder`, 'chat_history_move_sessions_to_folder', {
+        sessionIds,
+        folderId
+      })
+      await refreshChat()
     }
   } as Window['chatHistory']
 }

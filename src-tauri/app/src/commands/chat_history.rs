@@ -173,6 +173,57 @@ pub async fn chat_history_add_touched_files(
     Ok(())
 }
 
+/// The chat history's folders, in creation order.
+#[tauri::command]
+pub async fn chat_history_get_folders(state: History<'_>) -> Result<Vec<Value>, String> {
+    Ok(state.lock()?.folders())
+}
+
+/// Adds a folder and returns its id.
+#[tauri::command]
+pub async fn chat_history_create_folder(
+    state: History<'_>,
+    name: String,
+) -> Result<String, String> {
+    state
+        .lock()?
+        .create_folder(&name)
+        .ok_or_else(|| "Could not create the folder".to_string())
+}
+
+#[tauri::command]
+pub async fn chat_history_rename_folder(
+    state: History<'_>,
+    folder_id: String,
+    name: String,
+) -> Result<(), String> {
+    state.lock()?.rename_folder(&folder_id, &name);
+    Ok(())
+}
+
+/// Removes a folder; its chats stay and move back out of any folder.
+#[tauri::command]
+pub async fn chat_history_delete_folder(
+    state: History<'_>,
+    folder_id: String,
+) -> Result<(), String> {
+    state.lock()?.delete_folder(&folder_id);
+    Ok(())
+}
+
+/// Moves chats into `folder_id`, or out of any folder when it is `null`.
+#[tauri::command]
+pub async fn chat_history_move_sessions_to_folder(
+    state: History<'_>,
+    session_ids: Vec<String>,
+    folder_id: Option<String>,
+) -> Result<(), String> {
+    state
+        .lock()?
+        .move_sessions_to_folder(&session_ids, folder_id.as_deref());
+    Ok(())
+}
+
 /// URI scheme for synchronous session reads: `chathistory://localhost/<sessionId>` (macOS/Linux)
 /// or `http://chathistory.localhost/<sessionId>` (Windows) — what `convertFileSrc(id,
 /// 'chathistory')` builds. Responds with the session JSON, or `404` with body `null`.
