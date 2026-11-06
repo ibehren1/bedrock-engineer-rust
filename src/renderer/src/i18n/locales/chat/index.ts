@@ -40,7 +40,10 @@ export const chatPage = {
           sending: 'Sending...'
         },
         mention: {
-          ariaLabel: 'Agents you can delegate to'
+          ariaLabel: 'Agents and knowledge bases you can mention',
+          agents: 'Agents',
+          knowledgeBases: 'Knowledge bases',
+          thisAgent: 'this agent'
         }
       },
       delegation: {
@@ -277,7 +280,10 @@ export const chatPage = {
           sending: '送信中...'
         },
         mention: {
-          ariaLabel: '委譲できるエージェント'
+          ariaLabel: 'メンションできるエージェントとナレッジベース',
+          agents: 'エージェント',
+          knowledgeBases: 'ナレッジベース',
+          thisAgent: 'このエージェント'
         }
       },
       delegation: {

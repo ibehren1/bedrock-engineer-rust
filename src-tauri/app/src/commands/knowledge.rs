@@ -9,7 +9,9 @@
 //! knowledgebase as `knowledge:changed`.
 
 use crate::backend::{store_snapshot, Backend};
-use knowledge::types::{JobInfo, KbInfo, SearchHit, SourceInfo, StorageOverview, UrlOptions};
+use knowledge::types::{
+    JobInfo, KbGrant, KbInfo, SearchHit, SearchOrigin, SourceInfo, StorageOverview, UrlOptions,
+};
 use serde_json::Value;
 use std::collections::HashSet;
 use tauri::{AppHandle, Emitter, State, WebviewWindow};
@@ -273,6 +275,75 @@ pub async fn knowledge_search(
             knowledge::types::SearchOrigin::Test,
         )
         .await
+}
+
+/// The `searchKnowledgeBase` tool for a chat turn that `@mentions` knowledgebases: searches
+/// only the granted ones (any agent's) and returns the same text as the built-in server. The
+/// renderer builds `grants` from the user's message, never from the model's input.
+#[tauri::command]
+pub async fn knowledge_search_granted(
+    backend: State<'_, Backend>,
+    grants: Vec<KbGrant>,
+    query: String,
+    knowledge_base: Option<String>,
+    top_k: Option<usize>,
+) -> Result<String, String> {
+    let top_k = top_k.map(|k| k.clamp(1, 20));
+    let hits = backend
+        .knowledge
+        .search_granted(
+            &grants,
+            knowledge_base.as_deref(),
+            &query,
+            top_k,
+            SearchOrigin::Agent,
+        )
+        .await?;
+    Ok(knowledge::mcp_server::format_hits(query.trim(), &hits))
+}
+
+/// The `listKnowledgeBaseSources` tool for a chat turn that `@mentions` knowledgebases.
+#[tauri::command]
+pub async fn knowledge_list_sources_granted(
+    backend: State<'_, Backend>,
+    grants: Vec<KbGrant>,
+    knowledge_base: Option<String>,
+) -> Result<String, String> {
+    let svc = backend.knowledge.clone();
+    let mut out = String::new();
+    for (agent_id, kb) in svc.granted(&grants, knowledge_base.as_deref())? {
+        let sources = svc.list_sources(&agent_id, &kb.id)?;
+        out.push_str(&knowledge::mcp_server::format_sources(&kb.name, &sources));
+    }
+    Ok(out)
+}
+
+/// Opens a cited knowledgebase source (a local file or folder) with its default app. Only
+/// paths that are a document or source of some knowledgebase open, so a link the model wrote
+/// can't launch anything else; web pages open through the normal link handling.
+#[tauri::command]
+pub async fn knowledge_open_source(
+    app: AppHandle,
+    backend: State<'_, Backend>,
+    uri: String,
+) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    let svc = backend.knowledge.clone();
+    let known = {
+        let uri = uri.clone();
+        tauri::async_runtime::spawn_blocking(move || svc.is_known_uri(&uri))
+            .await
+            .map_err(|e| e.to_string())?
+    };
+    if !known {
+        return Err(format!("{uri} is not a source in any knowledge base"));
+    }
+    if !std::path::Path::new(&uri).exists() {
+        return Err(format!("{uri} no longer exists"));
+    }
+    app.opener()
+        .open_path(uri, None::<&str>)
+        .map_err(|e| e.to_string())
 }
 
 /// Usage (searches, latency, last job) and health checks for one knowledgebase.

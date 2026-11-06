@@ -217,6 +217,9 @@ Type `@` followed by an agent name to hand one step of a task to that agent. The
 with its own tools and system prompt, and its result comes back to the agent you are talking to — no
 switching back and forth. For example, `use @email to find the email from Kevin and compose a reply`.
 
+The same `@` list offers every agent's local knowledge bases. Mentioning one makes the knowledge base
+tools search only the mentioned knowledge bases for that message, even another agent's.
+
 ![agent-mention](./assets/agent-mention.png)
 
 ### Finding MCP servers
@@ -309,7 +312,8 @@ credentials.
   Deleting the chat deletes its attachments folder.
 - Chat history supports multi-select delete.
 - Chat history has **folders**: create one from the Chat History menu, then drag chats onto it (or
-  use a chat's Move to folder menu). Folders fold, can be renamed, and deleting one keeps its chats.
+  use a chat's Move to folder menu). Folders fold, can be renamed and reordered (drag one by its
+  name, or Move up / Move down), and deleting one keeps its chats.
 
 ### Memory
 
@@ -389,7 +393,9 @@ An agent can search documents and websites you give it, all stored on your compu
   `searchKnowledgeBase` tool returns the most relevant passages, ranked by both meaning and
   keyword matches, with the file path or page URL they came from (`listKnowledgeBases` and
   `listKnowledgeBaseSources` let it see what is there). Its system prompt lists the
-  knowledge bases and asks the agent to search them and cite its sources. Background agents and
+  knowledge bases and asks the agent to search them and cite each passage inline, right after the
+  fact it supports; every result is tagged with its title, section, file path or URL, knowledge
+  base, position in the document and a ready-made citation link. Background agents and
   sub-agents get the same tools. The agent editor's **MCP Servers** tab shows the server as
   **Built-in** with its tools and a **Test connection** button, and the **Tools** tab lists the
   tools with the other MCP tools. In a chat, each search shows up as a `searchKnowledgeBase` tool

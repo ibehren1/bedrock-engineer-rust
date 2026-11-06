@@ -1,17 +1,19 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { TbRobot } from 'react-icons/tb'
+import { FiDatabase } from 'react-icons/fi'
 import { useTranslation } from 'react-i18next'
 import { CustomAgent } from '@/types/agent-chat'
 import { AgentIconView } from '@renderer/components/icons/AgentIconView'
 import type { CaretCoordinates } from './caretCoordinates'
+import { mentionItemKey, type MentionItem } from './useAgentMention'
 
 type AgentMentionPopupProps = {
-  items: CustomAgent[]
+  items: MentionItem[]
   activeIndex: number
   coordinates: CaretCoordinates
   /** Anchor for the caret offsets, which are relative to the textarea's box. */
   textareaRef: React.RefObject<HTMLTextAreaElement | null>
-  onSelect: (agent: CustomAgent) => void
+  onSelect: (item: MentionItem) => void
 }
 
 /** Gap between the caret line and the popup. */
@@ -39,7 +41,7 @@ const renderIcon = (agent: CustomAgent) => (
 )
 
 /**
- * Caret-anchored agent picker for `@` mentions.
+ * Caret-anchored agent and knowledge base picker for `@` mentions.
  *
  * Positioned `fixed` against the viewport rather than absolutely inside the
  * textarea's container: the chat input sits at the bottom of the window, so an
@@ -125,26 +127,58 @@ export const AgentMentionPopup: React.FC<AgentMentionPopupProps> = ({
       role="listbox"
       aria-label={t('textarea.mention.ariaLabel')}
     >
-      {items.map((agent, index) => (
-        <button
-          key={agent.id}
-          ref={index === activeIndex ? activeItemRef : undefined}
-          type="button"
-          role="option"
-          aria-selected={index === activeIndex}
-          // Description lives in the native tooltip to keep rows single-line
-          title={agent.description || agent.name}
-          // The textarea must keep focus, so don't let mousedown blur it
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => onSelect(agent)}
-          className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors ${
-            index === activeIndex ? 'bg-accent-tint' : 'hover:bg-surface-2'
-          }`}
-        >
-          <span className="shrink-0 text-ink-muted">{renderIcon(agent)}</span>
-          <span className="truncate text-ink">{agent.name}</span>
-        </button>
-      ))}
+      {items.map((item, index) => {
+        const heading =
+          index === 0 || items[index - 1].kind !== item.kind
+            ? t(
+                item.kind === 'agent'
+                  ? 'textarea.mention.agents'
+                  : 'textarea.mention.knowledgeBases'
+              )
+            : null
+        const label = item.kind === 'agent' ? item.agent.name : item.kb.kbName
+        const tooltip =
+          item.kind === 'agent'
+            ? item.agent.description || item.agent.name
+            : [item.kb.mention, item.kb.description].filter(Boolean).join('\n')
+        return (
+          <React.Fragment key={mentionItemKey(item)}>
+            {heading && (
+              <div className="px-3 pt-1.5 pb-0.5 text-micro font-medium uppercase tracking-wide text-ink-faint">
+                {heading}
+              </div>
+            )}
+            <button
+              ref={index === activeIndex ? activeItemRef : undefined}
+              type="button"
+              role="option"
+              aria-selected={index === activeIndex}
+              // Description lives in the native tooltip to keep rows single-line
+              title={tooltip}
+              // The textarea must keep focus, so don't let mousedown blur it
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => onSelect(item)}
+              className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors ${
+                index === activeIndex ? 'bg-accent-tint' : 'hover:bg-surface-2'
+              }`}
+            >
+              <span className="shrink-0 text-ink-muted">
+                {item.kind === 'agent' ? (
+                  renderIcon(item.agent)
+                ) : (
+                  <FiDatabase className="w-4 h-4" />
+                )}
+              </span>
+              <span className="truncate text-ink">{label}</span>
+              {item.kind === 'kb' && (
+                <span className="ml-auto shrink-0 max-w-[45%] truncate text-xs text-ink-muted">
+                  {item.kb.isOwn ? t('textarea.mention.thisAgent') : item.kb.agentName}
+                </span>
+              )}
+            </button>
+          </React.Fragment>
+        )
+      })}
     </div>
   )
 }

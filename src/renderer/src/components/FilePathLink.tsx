@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useFilesPanel } from '@renderer/contexts/FilesPanelContext'
-import { detectFilePath } from '@renderer/lib/workspaceFiles/paths'
+import toast from 'react-hot-toast'
+import { detectFilePath, isAbsolutePath } from '@renderer/lib/workspaceFiles/paths'
 import {
   cachedWorkspacePath,
   resolveWorkspacePath,
@@ -102,8 +103,9 @@ type FilePathAnchorProps = {
 }
 
 /**
- * A Markdown link. One pointing at an existing project file opens it in the Files panel;
- * anything else opens the target externally, as before.
+ * A Markdown link. One pointing at an existing project file opens it in the Files panel; an
+ * absolute path elsewhere (a knowledge base citation) opens with its default app when it is a
+ * knowledge base source; anything else opens the target externally, as before.
  */
 export const FilePathAnchor: React.FC<FilePathAnchorProps> = ({ href, title, children }) => {
   const panel = useFilesPanel()
@@ -121,7 +123,11 @@ export const FilePathAnchor: React.FC<FilePathAnchorProps> = ({ href, title, chi
       onClick={(e) => {
         e.preventDefault()
         if (panel && resolved) panel.openFile(resolved.path, resolved.kind)
-        else if (href) open(href)
+        else if (decoded && isAbsolutePath(decoded) && window.api?.knowledge?.openSource) {
+          window.api.knowledge
+            .openSource(decoded)
+            .catch((err) => toast.error(err instanceof Error ? err.message : String(err)))
+        } else if (href) open(href)
       }}
       style={{ cursor: 'pointer' }}
     >

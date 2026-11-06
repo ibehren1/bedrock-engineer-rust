@@ -7,6 +7,20 @@ dated section here for anything user-visible.
 See the [README](./README.md#whats-different-in-this-fork) for a feature-by-feature
 overview of the fork with screenshots.
 
+### 2026-11-06
+
+- Chat history folders can be put in any order: drag a folder by its name above or below another
+  one, or use **Move up** and **Move down** in the folder's menu. The order is kept between launches.
+- Every passage a local knowledge base returns is now tagged with its source (title and section,
+  file path or page URL, knowledge base and its position in the document) plus a ready-made
+  citation link. Agents are asked to put that link right after each sentence or bullet that uses the
+  passage, so each fact carries its reference where you read it rather than in a list at the end.
+  Clicking a cited file opens it with its default app (only files that are in one of your knowledge
+  bases), and the knowledge base search box on the agent editor shows the same source details.
+- Knowledge bases can be `@mentioned` in the message box, like agents. The `@` list shows every
+  agent's knowledge bases (the current agent's first); mentioning one makes the agent search only
+  the mentioned knowledge bases for that message, even ones that belong to another agent.
+
 ### 2026-11-05
 
 - On an agent's Knowledge Base tab, each knowledge base now has a bolder outline and a little more

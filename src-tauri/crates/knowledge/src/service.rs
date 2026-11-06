@@ -1132,12 +1132,9 @@ impl KnowledgeService {
         top_k: Option<usize>,
         origin: SearchOrigin,
     ) -> Result<Vec<SearchHit>, String> {
-        let query = query.trim();
-        if query.is_empty() {
+        if query.trim().is_empty() {
             return Err("Query is empty".into());
         }
-        let settings = self.host.settings();
-        let top_k = top_k.unwrap_or(settings.top_k).clamp(1, MAX_TOP_K);
         let mut kbs = self.list(agent_id)?;
         if kbs.is_empty() {
             return Err("This agent has no knowledge bases".into());
@@ -1148,10 +1145,90 @@ impl KnowledgeService {
                 return Err(format!("No knowledge base named \"{sel}\""));
             }
         }
+        let targets = kbs.into_iter().map(|k| (agent_id.to_string(), k)).collect();
+        self.search_targets(targets, query, top_k, origin).await
+    }
+
+    /// The granted knowledgebases that still exist, with their agent ids. `kb` narrows to the
+    /// ones with that id or (case-insensitive) name; naming one outside the grants is an error
+    /// that lists the allowed names.
+    pub fn granted(
+        &self,
+        grants: &[KbGrant],
+        kb: Option<&str>,
+    ) -> Result<Vec<(String, KbInfo)>, String> {
+        let mut out: Vec<(String, KbInfo)> = Vec::new();
+        for g in grants {
+            if out.iter().any(|(a, k)| a == &g.agent_id && k.id == g.kb_id) {
+                continue;
+            }
+            if let Some(info) = self
+                .list(&g.agent_id)
+                .unwrap_or_default()
+                .into_iter()
+                .find(|k| k.id == g.kb_id)
+            {
+                out.push((g.agent_id.clone(), info));
+            }
+        }
+        if out.is_empty() {
+            return Err("The knowledge bases mentioned in this message no longer exist".into());
+        }
+        if let Some(sel) = kb.map(str::trim).filter(|s| !s.is_empty()) {
+            let names: Vec<String> = out.iter().map(|(_, k)| format!("\"{}\"", k.name)).collect();
+            out.retain(|(_, k)| k.id == sel || k.name.eq_ignore_ascii_case(sel));
+            if out.is_empty() {
+                return Err(format!(
+                    "\"{sel}\" is not one of the knowledge bases mentioned in this message. Use one of: {}",
+                    names.join(", ")
+                ));
+            }
+        }
+        Ok(out)
+    }
+
+    /// Search only the granted knowledgebases (see [`Self::granted`]).
+    pub async fn search_granted(
+        &self,
+        grants: &[KbGrant],
+        kb: Option<&str>,
+        query: &str,
+        top_k: Option<usize>,
+        origin: SearchOrigin,
+    ) -> Result<Vec<SearchHit>, String> {
+        if query.trim().is_empty() {
+            return Err("Query is empty".into());
+        }
+        let targets = self.granted(grants, kb)?;
+        self.search_targets(targets, query, top_k, origin).await
+    }
+
+    /// Whether `uri` is a document or source in any agent's knowledgebase.
+    pub fn is_known_uri(&self, uri: &str) -> bool {
+        self.agent_ids().iter().any(|agent| {
+            self.kb_ids(agent).unwrap_or_default().iter().any(|kb| {
+                self.store(agent, kb)
+                    .and_then(|s| s.has_uri(uri))
+                    .unwrap_or(false)
+            })
+        })
+    }
+
+    /// Hybrid search over `(agent id, knowledgebase)` targets, best `top_k` overall.
+    async fn search_targets(
+        &self,
+        targets: Vec<(String, KbInfo)>,
+        query: &str,
+        top_k: Option<usize>,
+        origin: SearchOrigin,
+    ) -> Result<Vec<SearchHit>, String> {
+        let query = query.trim();
+        let settings = self.host.settings();
+        let top_k = top_k.unwrap_or(settings.top_k).clamp(1, MAX_TOP_K);
         // One query embedding per distinct model.
         let mut query_vectors: HashMap<EmbeddingSpec, Vec<f32>> = HashMap::new();
         let mut hits = Vec::new();
-        for info in kbs {
+        for (agent_id, info) in targets {
             if info.chunk_count == 0 {
                 continue;
             }
@@ -1172,7 +1249,7 @@ impl KnowledgeService {
                     v
                 }
             };
-            let store = self.store(agent_id, &info.id)?;
+            let store = self.store(&agent_id, &info.id)?;
             let (q, weight) = (query.to_string(), settings.hybrid_weight);
             let found = blocking(move || {
                 let found = hybrid_search(&store, &qv, &q, top_k, weight)?;
@@ -1189,6 +1266,7 @@ impl KnowledgeService {
                 source_id: c.source_id,
                 title: c.title,
                 uri: c.uri,
+                ord: c.ord,
                 heading_path: c.heading_path,
                 text: c.text,
                 score,
@@ -1516,6 +1594,78 @@ mod tests {
             tokio::time::sleep(Duration::from_millis(10)).await;
         }
         panic!("jobs did not finish: {:?}", svc.jobs(None));
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn granted_search_spans_agents_and_stays_inside_the_grants() {
+        let dir = tempfile::tempdir().unwrap();
+        let (svc, _) = service(dir.path());
+        let mine = svc.create("agent1", "Manuals", "").unwrap();
+        let theirs = svc.create("agent2", "Recipes", "").unwrap();
+        let hidden = svc.create("agent2", "Secrets", "").unwrap();
+        for (agent, kb, name, text) in [
+            (
+                "agent1",
+                &mine.id,
+                "m.md",
+                "Press the red button to launch rockets.",
+            ),
+            (
+                "agent2",
+                &theirs.id,
+                "r.md",
+                "Bake the red velvet cake for an hour.",
+            ),
+            ("agent2", &hidden.id, "s.md", "The red key opens the vault."),
+        ] {
+            let f = dir.path().join(name);
+            std::fs::write(&f, text).unwrap();
+            svc.add_files(agent, kb, &[f.to_string_lossy().into_owned()])
+                .unwrap();
+        }
+        wait_idle(&svc).await;
+
+        let grants = [
+            KbGrant {
+                agent_id: "agent1".into(),
+                kb_id: mine.id.clone(),
+            },
+            KbGrant {
+                agent_id: "agent2".into(),
+                kb_id: theirs.id.clone(),
+            },
+            KbGrant {
+                agent_id: "agent2".into(),
+                kb_id: "kb_gone".into(),
+            },
+        ];
+        let hits = svc
+            .search_granted(&grants, None, "red", Some(10), SearchOrigin::Agent)
+            .await
+            .unwrap();
+        let mut kbs: Vec<&str> = hits.iter().map(|h| h.kb_name.as_str()).collect();
+        kbs.sort();
+        kbs.dedup();
+        assert_eq!(kbs, ["Manuals", "Recipes"]);
+        assert!(hits.iter().all(|h| !h.uri.is_empty() && h.ord == 0));
+
+        // By name, case-insensitive; a knowledgebase outside the grants is refused.
+        let hits = svc
+            .search_granted(&grants, Some("recipes"), "red", None, SearchOrigin::Agent)
+            .await
+            .unwrap();
+        assert!(hits.iter().all(|h| h.kb_name == "Recipes"));
+        let err = svc
+            .search_granted(&grants, Some("Secrets"), "red", None, SearchOrigin::Agent)
+            .await
+            .unwrap_err();
+        assert!(err.contains("\"Manuals\", \"Recipes\""), "{err}");
+        assert!(svc.granted(&grants[2..], None).is_err());
+
+        // Only indexed documents count as known sources.
+        let doc = dir.path().join("r.md").to_string_lossy().into_owned();
+        assert!(svc.is_known_uri(&doc));
+        assert!(!svc.is_known_uri("/etc/passwd"));
     }
 
     #[tokio::test(flavor = "multi_thread")]

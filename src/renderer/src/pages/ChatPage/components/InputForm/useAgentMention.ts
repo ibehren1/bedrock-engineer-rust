@@ -2,13 +2,18 @@
  * `@` mention typeahead for the chat textarea.
  *
  * Mentioning an agent permits the current agent to delegate to it for that turn
- * (see `utils/agentMentions.ts`); this hook is only the typing convenience.
+ * (see `utils/agentMentions.ts`); mentioning a knowledge base points the knowledge base
+ * tools at it (`utils/knowledgeMentions.ts`). This hook is only the typing convenience.
  */
 
 import { useCallback, useMemo, useState } from 'react'
 import type { CustomAgent } from '@/types/agent-chat'
 import { useSettings } from '@renderer/contexts/SettingsContext'
 import { getMentionableAgents } from '../../utils/agentMentions'
+import {
+  getMentionableKnowledgeBases,
+  type MentionableKnowledgeBase
+} from '../../utils/knowledgeMentions'
 import { getCaretCoordinates, type CaretCoordinates } from './caretCoordinates'
 
 /**
@@ -17,7 +22,27 @@ import { getCaretCoordinates, type CaretCoordinates } from './caretCoordinates'
  */
 const TRIGGER_PATTERN = /(?:^|[\s([{"'>])@([^\s@]{0,40})$/
 
-/** The popup scrolls, so this only guards against an absurdly long agent list. */
+/** A row of the popup. */
+export type MentionItem =
+  { kind: 'agent'; agent: CustomAgent } | { kind: 'kb'; kb: MentionableKnowledgeBase }
+
+export const mentionItemKey = (item: MentionItem): string =>
+  item.kind === 'agent' ? `agent:${item.agent.id}` : `kb:${item.kb.agentId}:${item.kb.kbId}`
+
+/** The text a row inserts after the `@`. */
+const mentionText = (item: MentionItem): string =>
+  item.kind === 'agent' ? item.agent.name : item.kb.mention
+
+/** Prefix matches first, so typing "@Rev" surfaces "Reviewer" over "Code Review Helper". */
+function rank<T>(list: T[], query: string, name: (item: T) => string): T[] {
+  return [...list].sort((a, b) => {
+    const aPrefix = name(a).toLowerCase().startsWith(query) ? 0 : 1
+    const bPrefix = name(b).toLowerCase().startsWith(query) ? 0 : 1
+    return aPrefix - bPrefix || name(a).localeCompare(name(b))
+  })
+}
+
+/** The popup scrolls, so this only guards against an absurdly long list. */
 export const MAX_MENTION_SUGGESTIONS = 50
 
 type MentionState = {
@@ -40,27 +65,40 @@ export function useAgentMention(
     () => getMentionableAgents(agents, selectedAgentId),
     [agents, selectedAgentId]
   )
+  const knowledgeBases = useMemo(
+    () => getMentionableKnowledgeBases(agents, selectedAgentId),
+    [agents, selectedAgentId]
+  )
 
-  const items = useMemo(() => {
+  // Agents first, then knowledge bases (the current agent's own ones first).
+  const items = useMemo((): MentionItem[] => {
     if (!state) return []
     const query = state.query.toLowerCase()
+    const has = (text?: string) => !!text && text.toLowerCase().includes(query)
 
-    return candidates
-      .filter((agent) => {
-        if (!query) return true
-        const nameMatch = agent.name.toLowerCase().includes(query)
-        const descMatch = agent.description?.toLowerCase().includes(query) || false
-        const tagMatch = agent.tags?.some((tag) => tag.toLowerCase().includes(query)) || false
-        return nameMatch || descMatch || tagMatch
-      })
-      .sort((a, b) => {
-        // Prefix matches first, so typing "@Rev" surfaces "Reviewer" over "Code Review Helper"
-        const aPrefix = a.name.toLowerCase().startsWith(query) ? 0 : 1
-        const bPrefix = b.name.toLowerCase().startsWith(query) ? 0 : 1
-        return aPrefix - bPrefix || a.name.localeCompare(b.name)
-      })
-      .slice(0, MAX_MENTION_SUGGESTIONS)
-  }, [candidates, state])
+    const agentItems = rank(
+      candidates.filter(
+        (agent) =>
+          !query ||
+          has(agent.name) ||
+          has(agent.description) ||
+          !!agent.tags?.some((tag) => has(tag))
+      ),
+      query,
+      (agent) => agent.name
+    ).map((agent): MentionItem => ({ kind: 'agent', agent }))
+    const kbItems = rank(
+      knowledgeBases.filter(
+        (kb) => !query || has(kb.mention) || has(kb.description) || has(kb.agentName)
+      ),
+      query,
+      (kb) => kb.kbName
+    )
+      .sort((a, b) => Number(b.isOwn) - Number(a.isOwn))
+      .map((kb): MentionItem => ({ kind: 'kb', kb }))
+
+    return [...agentItems, ...kbItems].slice(0, MAX_MENTION_SUGGESTIONS)
+  }, [candidates, knowledgeBases, state])
 
   const open = !!state && items.length > 0
 
@@ -103,14 +141,14 @@ export function useAgentMention(
     [items.length]
   )
 
-  /** Replace the `@query` fragment with `@AgentName `. */
+  /** Replace the `@query` fragment with `@Name `. */
   const select = useCallback(
-    (agent: CustomAgent) => {
+    (item: MentionItem) => {
       const textarea = textareaRef.current
       if (!textarea || !state) return
 
       const caret = textarea.selectionStart ?? value.length
-      const insertion = `@${agent.name} `
+      const insertion = `@${mentionText(item)} `
       const next = value.substring(0, state.startIndex) + insertion + value.substring(caret)
       const nextCaret = state.startIndex + insertion.length
 
@@ -129,8 +167,8 @@ export function useAgentMention(
   )
 
   const selectActive = useCallback(() => {
-    const agent = items[activeIndex]
-    if (agent) select(agent)
+    const item = items[activeIndex]
+    if (item) select(item)
   }, [activeIndex, items, select])
 
   return {

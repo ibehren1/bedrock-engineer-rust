@@ -392,7 +392,9 @@ const SearchTester: React.FC<{ onSearch: (q: string) => Promise<KnowledgeSearchH
                   {t('knowledgeBase.score', { score: h.score.toFixed(4) })}
                 </span>
               </div>
-              <div className="text-xs text-ink-muted truncate">{h.uri}</div>
+              <div className="text-xs text-ink-muted truncate" title={h.uri}>
+                {t('knowledgeBase.hitSource', { kb: h.kbName, passage: h.ord + 1, uri: h.uri })}
+              </div>
               <p className="text-xs text-ink mt-1 whitespace-pre-wrap line-clamp-6">{h.text}</p>
             </li>
           ))}

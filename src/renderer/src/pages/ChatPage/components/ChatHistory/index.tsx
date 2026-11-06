@@ -14,7 +14,9 @@ import {
   FiFolderPlus,
   FiFolderMinus,
   FiChevronDown,
-  FiChevronRight
+  FiChevronRight,
+  FiArrowUp,
+  FiArrowDown
 } from 'react-icons/fi'
 import { RiArchiveStackLine } from 'react-icons/ri'
 import { FaDocker, FaPaperclip } from 'react-icons/fa'
@@ -25,7 +27,16 @@ import { useLightProcessingModel } from '@renderer/lib/modelSelection'
 import { useRunningSessions } from '../../runners/useRunningSessions'
 import { ConfirmDeleteChatModal, DeleteChatRequest } from '../../modals/ConfirmDeleteChatModal'
 import { useSessionResources } from './useSessionResources'
-import { CHAT_DRAG_TYPE, draggedChatIds, groupSessionsByFolder, isChatDrag } from './groupSessions'
+import {
+  CHAT_DRAG_TYPE,
+  FOLDER_DRAG_TYPE,
+  draggedChatIds,
+  groupSessionsByFolder,
+  isChatDrag,
+  isFolderDrag,
+  moveFolder,
+  shiftFolder
+} from './groupSessions'
 
 /** localStorage key holding the ids of folded folders. */
 const FOLDED_FOLDERS_KEY = 'chatHistory.foldedFolders'
@@ -70,6 +81,12 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
   // A chat is being dragged, and the folder (or LOOSE) under the pointer.
   const [dragging, setDragging] = useState(false)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
+  // A folder header is being dragged, and where it would land.
+  const [draggedFolderId, setDraggedFolderId] = useState<string | null>(null)
+  const [folderDrop, setFolderDrop] = useState<{
+    id: string
+    position: 'before' | 'after'
+  } | null>(null)
 
   const { getLightModelId } = useLightProcessingModel()
   const { t } = useTranslation()
@@ -88,6 +105,7 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
     folders,
     createFolder,
     renameFolder,
+    reorderFolders,
     deleteFolder,
     moveSessionsToFolder
   } = useChatHistory()
@@ -190,11 +208,44 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
     setDropTarget(null)
   }
 
+  const folderIds = () => folders.map((f) => f.id)
+
+  // Dragging a folder header reorders the folders.
+  const handleFolderDragStart = (folderId: string, e: React.DragEvent) => {
+    e.dataTransfer.setData(FOLDER_DRAG_TYPE, folderId)
+    e.dataTransfer.effectAllowed = 'move'
+    setFolderMenuOpenId(undefined)
+    setDraggedFolderId(folderId)
+  }
+
+  const handleFolderDragEnd = () => {
+    setDraggedFolderId(null)
+    setFolderDrop(null)
+  }
+
+  const shiftFolderBy = (folderId: string, by: -1 | 1, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setFolderMenuOpenId(undefined)
+    const ids = folderIds()
+    const next = shiftFolder(ids, folderId, by)
+    if (next !== ids) void reorderFolders(next)
+  }
+
   /** Drop handlers for a folder (`folderId`) or, with `null`, the chats in no folder. */
   const dropProps = (folderId: string | null) => {
     const key = folderId ?? LOOSE
     return {
       onDragOver: (e: React.DragEvent) => {
+        if (folderId && isFolderDrag(e)) {
+          e.preventDefault()
+          e.dataTransfer.dropEffect = 'move'
+          const rect = e.currentTarget.getBoundingClientRect()
+          const position = e.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+          if (folderDrop?.id !== folderId || folderDrop.position !== position) {
+            setFolderDrop({ id: folderId, position })
+          }
+          return
+        }
         if (!isChatDrag(e)) return
         e.preventDefault()
         e.dataTransfer.dropEffect = 'move'
@@ -203,8 +254,20 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
       onDragLeave: (e: React.DragEvent) => {
         if (e.currentTarget.contains(e.relatedTarget as Node | null)) return
         setDropTarget((current) => (current === key ? null : current))
+        setFolderDrop((current) => (current?.id === folderId ? null : current))
       },
       onDrop: (e: React.DragEvent) => {
+        if (folderId && isFolderDrag(e)) {
+          e.preventDefault()
+          e.stopPropagation()
+          const moved = e.dataTransfer.getData(FOLDER_DRAG_TYPE)
+          const position = folderDrop?.id === folderId ? folderDrop.position : 'before'
+          handleFolderDragEnd()
+          const ids = folderIds()
+          const next = moveFolder(ids, moved, folderId, position)
+          if (next !== ids) void reorderFolders(next)
+          return
+        }
         if (!isChatDrag(e)) return
         e.preventDefault()
         e.stopPropagation()
@@ -662,19 +725,36 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
           loose list or the heading to take them out of their folder. */}
       {folders.length > 0 && (
         <div className="space-y-2 mb-2">
-          {folders.map((folder) => {
+          {folders.map((folder, index) => {
             const items = grouped.byFolder.get(folder.id) ?? []
             const folded = foldedFolders.has(folder.id)
             const editing = editingFolderId === folder.id
+            // The insertion line shows where a dragged folder would land.
+            const insertAt =
+              draggedFolderId && draggedFolderId !== folder.id && folderDrop?.id === folder.id
+                ? folderDrop.position
+                : null
             return (
               <div
                 key={folder.id}
-                className={`rounded-container ${dropHighlight(folder.id)}`}
+                className={`relative rounded-container ${dropHighlight(folder.id)} ${
+                  draggedFolderId === folder.id ? 'opacity-50' : ''
+                }`}
                 {...dropProps(folder.id)}
               >
+                {insertAt && (
+                  <div
+                    className={`pointer-events-none absolute left-0 right-0 h-0.5 bg-accent ${
+                      insertAt === 'before' ? '-top-1' : '-bottom-1'
+                    }`}
+                  />
+                )}
                 <div
                   className="flex items-center gap-1.5 px-2 py-1.5 rounded-container cursor-pointer hover:bg-sunken"
                   onClick={() => !editing && toggleFolded(folder.id)}
+                  draggable={!editing}
+                  onDragStart={(e) => handleFolderDragStart(folder.id, e)}
+                  onDragEnd={handleFolderDragEnd}
                 >
                   {folded ? (
                     <FiChevronRight className="w-4 h-4 shrink-0 text-ink-muted" />
@@ -738,6 +818,24 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
                                 <FiEdit2 className="w-4 h-4" />
                                 {t('history.renameFolder')}
                               </button>
+                              {index > 0 && (
+                                <button
+                                  onClick={(e) => shiftFolderBy(folder.id, -1, e)}
+                                  className="w-full text-left px-2.5 py-1 text-sm text-ink hover:bg-raised flex items-center gap-2"
+                                >
+                                  <FiArrowUp className="w-4 h-4" />
+                                  {t('history.moveFolderUp')}
+                                </button>
+                              )}
+                              {index < folders.length - 1 && (
+                                <button
+                                  onClick={(e) => shiftFolderBy(folder.id, 1, e)}
+                                  className="w-full text-left px-2.5 py-1 text-sm text-ink hover:bg-raised flex items-center gap-2"
+                                >
+                                  <FiArrowDown className="w-4 h-4" />
+                                  {t('history.moveFolderDown')}
+                                </button>
+                              )}
                               <button
                                 onClick={(e) => handleDeleteFolder(folder.id, folder.name, e)}
                                 className="w-full text-left px-2.5 py-1 text-sm text-danger hover:bg-raised flex items-center gap-2 border-t border-faint"

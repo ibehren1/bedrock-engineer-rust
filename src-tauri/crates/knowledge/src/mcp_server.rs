@@ -62,7 +62,36 @@ fn truncate(text: &str, max: usize) -> String {
     format!("{cut}…")
 }
 
-/// Search results as text for the model.
+/// A Markdown link to a passage's source: the label is its title (and heading), the target its
+/// file path or URL, in angle brackets when it has spaces or parentheses.
+pub fn citation_link(title: &str, heading_path: &str, uri: &str) -> String {
+    let mut label = if title.trim().is_empty() {
+        uri.to_string()
+    } else {
+        title.trim().to_string()
+    };
+    if !heading_path.is_empty() {
+        label.push_str(" › ");
+        label.push_str(heading_path);
+    }
+    let label = label
+        .replace('\\', "\\\\")
+        .replace('[', "\\[")
+        .replace(']', "\\]")
+        .replace('\n', " ");
+    let target = if uri
+        .chars()
+        .any(|c| c.is_whitespace() || c == '(' || c == ')')
+    {
+        format!("<{}>", uri.replace('<', "%3C").replace('>', "%3E"))
+    } else {
+        uri.to_string()
+    };
+    format!("[{label}]({target})")
+}
+
+/// Search results as text for the model. Every passage carries its source: title, heading,
+/// file path or URL, knowledgebase, position in the document and a ready-made citation link.
 pub fn format_hits(query: &str, hits: &[SearchHit]) -> String {
     if hits.is_empty() {
         return format!("No passages in the knowledge base match \"{query}\".");
@@ -75,11 +104,56 @@ pub fn format_hits(query: &str, hits: &[SearchHit]) -> String {
             head.push_str(&h.heading_path);
         }
         out.push_str(&format!(
-            "\n[{}] {head}\nSource: {}\nKnowledge base: {}\n\n{}\n",
+            "\n[{}] {head}\nSource: {}\nKnowledge base: {}\nPassage: {} of the document\nCite as: {}\n\n{}\n",
             i + 1,
             h.uri,
             h.kb_name,
+            h.ord + 1,
+            citation_link(&h.title, &h.heading_path, &h.uri),
             truncate(&h.text, MAX_RESULT_CHARS)
+        ));
+    }
+    out
+}
+
+/// Knowledgebases as a list for the model.
+pub fn format_kb_list(kbs: &[crate::types::KbInfo]) -> String {
+    let mut out = String::new();
+    for k in kbs {
+        out.push_str(&format!(
+            "- {} (id: {}): {} sources, {} passages{}\n",
+            k.name,
+            k.id,
+            k.source_count,
+            k.chunk_count,
+            if k.description.is_empty() {
+                String::new()
+            } else {
+                format!(". {}", k.description)
+            }
+        ));
+    }
+    out
+}
+
+/// One knowledgebase's sources as text for the model.
+pub fn format_sources(kb_name: &str, sources: &[crate::types::SourceInfo]) -> String {
+    let mut out = format!("{kb_name}:\n");
+    if sources.is_empty() {
+        out.push_str("  (no sources)\n");
+    }
+    for s in sources {
+        let kind = match s.kind {
+            SourceKind::File => "file",
+            SourceKind::Folder => "folder",
+            SourceKind::Url => "website",
+        };
+        out.push_str(&format!(
+            "  - {} [{kind}] {} ({} documents, status {})\n",
+            s.title,
+            s.uri,
+            s.document_count,
+            s.status.as_str()
         ));
     }
     out
@@ -131,45 +205,13 @@ impl KbMcpServer {
                 if kbs.is_empty() {
                     return Ok("This agent has no knowledge bases.".into());
                 }
-                let mut out = String::new();
-                for k in kbs {
-                    out.push_str(&format!(
-                        "- {} (id: {}): {} sources, {} passages{}\n",
-                        k.name,
-                        k.id,
-                        k.source_count,
-                        k.chunk_count,
-                        if k.description.is_empty() {
-                            String::new()
-                        } else {
-                            format!(". {}", k.description)
-                        }
-                    ));
-                }
-                Ok(out)
+                Ok(format_kb_list(&kbs))
             }
             SOURCES_TOOL => {
                 let mut out = String::new();
                 for k in self.select_kb(str_arg("knowledgeBase"))? {
-                    out.push_str(&format!("{}:\n", k.name));
                     let sources = self.svc.list_sources(&self.agent_id, &k.id)?;
-                    if sources.is_empty() {
-                        out.push_str("  (no sources)\n");
-                    }
-                    for s in sources {
-                        let kind = match s.kind {
-                            SourceKind::File => "file",
-                            SourceKind::Folder => "folder",
-                            SourceKind::Url => "website",
-                        };
-                        out.push_str(&format!(
-                            "  - {} [{kind}] {} ({} documents, status {})\n",
-                            s.title,
-                            s.uri,
-                            s.document_count,
-                            s.status.as_str()
-                        ));
-                    }
+                    out.push_str(&format_sources(&k.name, &sources));
                 }
                 Ok(out)
             }
@@ -284,6 +326,7 @@ mod tests {
             source_id: "s".into(),
             title: "Guide".into(),
             uri: "https://x/guide".into(),
+            ord: 2,
             heading_path: "Install".into(),
             text: "Run it.".into(),
             score: 1.0,
@@ -291,10 +334,24 @@ mod tests {
         let s = format_hits("install", &[hit]);
         assert!(
             s.contains(
-                "[1] Guide › Install\nSource: https://x/guide\nKnowledge base: Docs\n\nRun it."
+                "[1] Guide › Install\nSource: https://x/guide\nKnowledge base: Docs\nPassage: 3 of the document\nCite as: [Guide › Install](https://x/guide)\n\nRun it."
             ),
             "{s}"
         );
+    }
+
+    #[test]
+    fn citation_links_are_valid_markdown() {
+        assert_eq!(
+            citation_link("Guide", "", "https://x/a"),
+            "[Guide](https://x/a)"
+        );
+        assert_eq!(
+            citation_link("Notes [v2]", "A › B", "/Users/me/My Notes (old).md"),
+            "[Notes \\[v2\\] › A › B](</Users/me/My Notes (old).md>)"
+        );
+        // No title: the path is the label.
+        assert_eq!(citation_link(" ", "", "/a.md"), "[/a.md](/a.md)");
     }
 
     #[tokio::test(flavor = "multi_thread")]
@@ -344,6 +401,7 @@ mod tests {
         let text = r.result[0]["text"].as_str().unwrap();
         assert!(text.contains("blue folder"), "{text}");
         assert!(text.contains("Source: "), "{text}");
+        assert!(text.contains("Cite as: [n.md]("), "{text}");
 
         let r = manager
             .execute_tool(LIST_TOOL, &json!({}), Some(&servers))

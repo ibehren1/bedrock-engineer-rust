@@ -367,7 +367,7 @@ impl ChatSessionManager {
         self.write_session_file(session_id, &session);
     }
 
-    /// The folders, in creation order (`[]` when the key is missing or not a list).
+    /// The folders, in display order (`[]` when the key is missing or not a list).
     pub fn folders(&self) -> Vec<Value> {
         match self.meta.get("folders") {
             Some(Value::Array(a)) => a,
@@ -434,6 +434,28 @@ impl ChatSessionManager {
                     }
                 }
             }
+            Value::Array(list)
+        });
+    }
+
+    /// Puts the folders in the order of `folder_ids`. Unknown ids are ignored; folders missing
+    /// from `folder_ids` keep their relative order after the listed ones.
+    pub fn reorder_folders(&self, folder_ids: &[String]) {
+        self.update_meta("folders", |current| {
+            let mut rest: Vec<Value> = match current {
+                Some(Value::Array(a)) => a,
+                _ => Vec::new(),
+            };
+            let mut list = Vec::with_capacity(rest.len());
+            for id in folder_ids {
+                if let Some(i) = rest
+                    .iter()
+                    .position(|f| f.get("id").and_then(Value::as_str) == Some(id.as_str()))
+                {
+                    list.push(rest.remove(i));
+                }
+            }
+            list.extend(rest);
             Value::Array(list)
         });
     }

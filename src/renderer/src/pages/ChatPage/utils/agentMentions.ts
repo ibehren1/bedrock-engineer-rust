@@ -31,37 +31,36 @@ export function getMentionableAgents(agents: CustomAgent[], selfAgentId?: string
   )
 }
 
+/** Something that can be @mentioned: the text after the `@`, a unique key and the item. */
+export type MentionCandidate<T> = { mention: string; key: string; value: T }
+
 /**
- * Find the agents @mentioned in a message, in first-mention order.
+ * The candidates @mentioned in `text`, in first-mention order, each once.
  *
- * Candidate names are matched longest-first so that `@Software Architect` wins
- * over a hypothetical `@Software`, and so that names containing spaces work.
+ * Names are matched longest-first so that `@Software Architect` wins over a hypothetical
+ * `@Software`, and so that names containing spaces work. A span taken by a longer name is not
+ * matched again, so `@Writer Pro` is only "Writer Pro" and `@Agent/Notes` is not also `@Agent`.
  */
-export function parseAgentMentions(
-  text: string,
-  agents: CustomAgent[],
-  selfAgentId?: string
-): CustomAgent[] {
+export function matchMentions<T>(text: string, candidates: MentionCandidate<T>[]): T[] {
   if (!text || !text.includes('@')) return []
 
-  const candidates = getMentionableAgents(agents, selfAgentId).sort(
-    (a, b) => b.name.length - a.name.length
-  )
+  const sorted = candidates
+    .filter((c) => !!c.mention)
+    .sort((a, b) => b.mention.length - a.mention.length)
 
-  const matches: Array<{ index: number; agent: CustomAgent }> = []
-  const claimedAgentIds = new Set<string>()
-  // Character spans already consumed by a longer name, so that `@Writer Pro`
-  // resolves to "Writer Pro" only and does not also count as "Writer".
+  const matches: Array<{ index: number; value: T }> = []
+  const claimedKeys = new Set<string>()
   const claimedSpans: Array<[number, number]> = []
 
   const overlapsClaimed = (start: number, end: number) =>
     claimedSpans.some(([from, to]) => start < to && end > from)
 
-  for (const agent of candidates) {
-    if (!agent.name) continue
-
+  for (const candidate of sorted) {
     // (?![\w-]) keeps `@Review` from matching the text `@Reviewer`
-    const pattern = new RegExp(`${MENTION_BOUNDARY}@${escapeRegExp(agent.name)}(?![\\w-])`, 'gi')
+    const pattern = new RegExp(
+      `${MENTION_BOUNDARY}@${escapeRegExp(candidate.mention)}(?![\\w-])`,
+      'gi'
+    )
 
     let match: RegExpExecArray | null
     while ((match = pattern.exec(text)) !== null) {
@@ -73,14 +72,34 @@ export function parseAgentMentions(
 
       claimedSpans.push([start, end])
 
-      if (!claimedAgentIds.has(agent.id!)) {
-        claimedAgentIds.add(agent.id!)
-        matches.push({ index: start, agent })
+      if (!claimedKeys.has(candidate.key)) {
+        claimedKeys.add(candidate.key)
+        matches.push({ index: start, value: candidate.value })
       }
     }
   }
 
-  return matches.sort((a, b) => a.index - b.index).map((m) => m.agent)
+  return matches.sort((a, b) => a.index - b.index).map((m) => m.value)
+}
+
+/** Agents as mention candidates. */
+export const agentMentionCandidates = (
+  agents: CustomAgent[],
+  selfAgentId?: string
+): MentionCandidate<CustomAgent>[] =>
+  getMentionableAgents(agents, selfAgentId).map((agent) => ({
+    mention: agent.name,
+    key: `agent:${agent.id}`,
+    value: agent
+  }))
+
+/** Find the agents @mentioned in a message, in first-mention order. */
+export function parseAgentMentions(
+  text: string,
+  agents: CustomAgent[],
+  selfAgentId?: string
+): CustomAgent[] {
+  return matchMentions(text, agentMentionCandidates(agents, selfAgentId))
 }
 
 /**

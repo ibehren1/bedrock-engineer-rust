@@ -4,7 +4,7 @@ import { clearHostApproval } from '@renderer/pages/ChatPage/lib/hostCommandAppro
 
 interface ChatHistoryContextType {
   sessions: SessionMetadata[]
-  /** The chat history's folders, in creation order. */
+  /** The chat history's folders, in display order. */
   folders: ChatFolder[]
   currentSessionId?: string
   getSession: (sessionId: string) => ChatSession | null
@@ -29,6 +29,8 @@ interface ChatHistoryContextType {
   addTouchedFiles: (sessionId: string, paths: string[]) => Promise<void>
   createFolder: (name: string) => Promise<string>
   renameFolder: (folderId: string, name: string) => Promise<void>
+  /** Puts the folders in this order. */
+  reorderFolders: (folderIds: string[]) => Promise<void>
   /** Removes a folder; its chats move back out of any folder. */
   deleteFolder: (folderId: string) => Promise<void>
   /** Puts chats in a folder, or takes them out of any folder with `null`. */
@@ -248,6 +250,17 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
     [loadSessions]
   )
 
+  const reorderFolders = useCallback(
+    async (folderIds: string[]): Promise<void> => {
+      const done = window.chatHistory.reorderFolders(folderIds)
+      // The bridge reorders its cache before the round trip; show that straight away.
+      loadSessions()
+      await done
+      loadSessions()
+    },
+    [loadSessions]
+  )
+
   const deleteFolder = useCallback(
     async (folderId: string): Promise<void> => {
       await window.chatHistory.deleteFolder(folderId)
@@ -286,6 +299,7 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
     addTouchedFiles,
     createFolder,
     renameFolder,
+    reorderFolders,
     deleteFolder,
     moveSessionsToFolder
   }

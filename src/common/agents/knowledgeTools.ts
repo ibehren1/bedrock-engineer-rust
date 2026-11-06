@@ -12,7 +12,7 @@ export const KNOWLEDGE_BASE_TOOL_DEFINITIONS = [
   {
     name: 'searchKnowledgeBase',
     description:
-      "Search this agent's local knowledge bases (documents and websites the user added) and return the most relevant passages with their sources. Use it before answering questions the knowledge bases may cover, and cite the sources you use.",
+      'Search this agent\'s local knowledge bases (documents and websites the user added) and return the most relevant passages with their sources. Use it before answering questions the knowledge bases may cover, and cite each passage inline with its "Cite as" link, right after the fact it supports.',
     inputSchema: {
       type: 'object',
       properties: {

@@ -38,3 +38,36 @@ export function draggedChatIds(dataTransfer: DataTransfer | null): string[] {
     return []
   }
 }
+
+/** MIME type of the folder id a dragged folder header carries. */
+export const FOLDER_DRAG_TYPE = 'application/x-bedrock-folder'
+
+/** Whether a drag carries a folder from the history list. */
+export const isFolderDrag = (e: { dataTransfer: DataTransfer | null }): boolean =>
+  !!e.dataTransfer && Array.from(e.dataTransfer.types).includes(FOLDER_DRAG_TYPE)
+
+/**
+ * `ids` with `movedId` placed before or after `targetId`; `ids` unchanged when either is
+ * unknown or they are the same.
+ */
+export function moveFolder(
+  ids: string[],
+  movedId: string,
+  targetId: string,
+  position: 'before' | 'after'
+): string[] {
+  if (movedId === targetId || !ids.includes(movedId) || !ids.includes(targetId)) return ids
+  const rest = ids.filter((id) => id !== movedId)
+  const at = rest.indexOf(targetId) + (position === 'after' ? 1 : 0)
+  return [...rest.slice(0, at), movedId, ...rest.slice(at)]
+}
+
+/** `ids` with `id` moved one place up (`-1`) or down (`1`); unchanged at either end. */
+export function shiftFolder(ids: string[], id: string, by: -1 | 1): string[] {
+  const i = ids.indexOf(id)
+  const j = i + by
+  if (i < 0 || j < 0 || j >= ids.length) return ids
+  const next = [...ids]
+  ;[next[i], next[j]] = [next[j], next[i]]
+  return next
+}

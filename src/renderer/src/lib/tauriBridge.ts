@@ -541,6 +541,19 @@ function createChatHistory(): Window['chatHistory'] {
       await call(`${M}.renameFolder`, 'chat_history_rename_folder', { folderId, name })
       await refreshChat()
     },
+    async reorderFolders(folderIds: string[]) {
+      // Reorder the cache first so the sidebar doesn't wait for the round trip.
+      const byId = new Map(chat.folders.map((f) => [f.id, f]))
+      const listed = folderIds.flatMap((id) => {
+        const f = byId.get(id)
+        if (!f) return []
+        byId.delete(id)
+        return [f]
+      })
+      chat.folders = [...listed, ...chat.folders.filter((f) => byId.has(f.id))]
+      await call(`${M}.reorderFolders`, 'chat_history_reorder_folders', { folderIds })
+      await refreshChat()
+    },
     async deleteFolder(folderId: string) {
       await call(`${M}.deleteFolder`, 'chat_history_delete_folder', { folderId })
       await refreshChat()
@@ -1137,6 +1150,17 @@ function createApi(): Window['api'] {
         kbId,
         topK
       })),
+      searchGranted: cmd(
+        `${KB}.searchGranted`,
+        'knowledge_search_granted',
+        (grants, query, knowledgeBase, topK) => ({ grants, query, knowledgeBase, topK })
+      ),
+      listSourcesGranted: cmd(
+        `${KB}.listSourcesGranted`,
+        'knowledge_list_sources_granted',
+        (grants, knowledgeBase) => ({ grants, knowledgeBase })
+      ),
+      openSource: cmd(`${KB}.openSource`, 'knowledge_open_source', (uri) => ({ uri })),
       stats: cmd(`${KB}.stats`, 'knowledge_stats', (agentId, kbId) => ({ agentId, kbId })),
       optimize: cmd(`${KB}.optimize`, 'knowledge_optimize', (agentId, kbId) => ({
         agentId,

@@ -142,10 +142,15 @@ export type KnowledgeSearchHit = {
   sourceId: string
   title: string
   uri: string
+  /** Position of the passage in its document, from 0. */
+  ord: number
   headingPath: string
   text: string
   score: number
 }
+
+/** A knowledgebase of any agent that the user `@mentioned` for one chat turn. */
+export type KnowledgeBaseGrant = { agentId: string; kbId: string }
 
 /** A finished ingestion / rebuild / optimize job. */
 export type KnowledgeJobLog = {
@@ -273,6 +278,17 @@ export type KnowledgeApi = {
     kbId?: string,
     topK?: number
   ) => Promise<KnowledgeSearchHit[]>
+  /** `searchKnowledgeBase` over only the `@mentioned` knowledgebases: the tool's text result. */
+  searchGranted: (
+    grants: KnowledgeBaseGrant[],
+    query: string,
+    knowledgeBase?: string,
+    topK?: number
+  ) => Promise<string>
+  /** `listKnowledgeBaseSources` over only the `@mentioned` knowledgebases. */
+  listSourcesGranted: (grants: KnowledgeBaseGrant[], knowledgeBase?: string) => Promise<string>
+  /** Open a cited local file or folder; refused unless it is a source of some knowledgebase. */
+  openSource: (uri: string) => Promise<void>
   /** Usage over the last `periodDays` days and health checks. */
   stats: (agentId: string, kbId: string) => Promise<KbStats>
   /** Compact the file, merge the keyword index, check integrity. */

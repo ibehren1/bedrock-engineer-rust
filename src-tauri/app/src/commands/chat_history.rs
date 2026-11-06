@@ -173,7 +173,7 @@ pub async fn chat_history_add_touched_files(
     Ok(())
 }
 
-/// The chat history's folders, in creation order.
+/// The chat history's folders, in display order.
 #[tauri::command]
 pub async fn chat_history_get_folders(state: History<'_>) -> Result<Vec<Value>, String> {
     Ok(state.lock()?.folders())
@@ -198,6 +198,16 @@ pub async fn chat_history_rename_folder(
     name: String,
 ) -> Result<(), String> {
     state.lock()?.rename_folder(&folder_id, &name);
+    Ok(())
+}
+
+/// Puts the folders in the given order (unknown ids ignored, unlisted folders last).
+#[tauri::command]
+pub async fn chat_history_reorder_folders(
+    state: History<'_>,
+    folder_ids: Vec<String>,
+) -> Result<(), String> {
+    state.lock()?.reorder_folders(&folder_ids);
     Ok(())
 }
 

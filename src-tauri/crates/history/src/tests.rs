@@ -653,14 +653,46 @@ fn create_rename_and_list_folders() {
     assert_eq!(m.create_folder("   "), None);
     let a = m.create_folder("  Work ").unwrap();
     let b = m.create_folder("Home").unwrap();
-    assert_ne!(a, b, "folders created in the same millisecond get distinct ids");
+    assert_ne!(
+        a, b,
+        "folders created in the same millisecond get distinct ids"
+    );
     m.rename_folder(&a, "Projects");
     m.rename_folder(&a, "  ");
     m.rename_folder("folder_unknown", "x");
     let folders = m.folders();
-    let names: Vec<&str> = folders.iter().map(|f| f["name"].as_str().unwrap()).collect();
+    let names: Vec<&str> = folders
+        .iter()
+        .map(|f| f["name"].as_str().unwrap())
+        .collect();
     assert_eq!(names, ["Projects", "Home"]);
     assert_eq!(m.snapshot().folders.len(), 2);
+}
+
+#[test]
+fn reordering_folders_keeps_unlisted_ones_last() {
+    let d = TempDir::new().unwrap();
+    let m = ChatSessionManager::new(d.path()).unwrap();
+    let a = m.create_folder("A").unwrap();
+    let b = m.create_folder("B").unwrap();
+    let c = m.create_folder("C").unwrap();
+    let names = |m: &ChatSessionManager| -> Vec<String> {
+        m.folders()
+            .iter()
+            .map(|f| f["name"].as_str().unwrap().to_string())
+            .collect()
+    };
+    m.reorder_folders(&[c.clone(), a.clone(), b.clone()]);
+    assert_eq!(names(&m), ["C", "A", "B"]);
+    // Unknown ids are ignored and folders left out keep their order at the end.
+    m.reorder_folders(&["folder_unknown".into(), b.clone()]);
+    assert_eq!(names(&m), ["B", "C", "A"]);
+    // Duplicates don't duplicate folders.
+    m.reorder_folders(&[a.clone(), a.clone()]);
+    assert_eq!(names(&m), ["A", "B", "C"]);
+    // The order survives reopening.
+    let reopened = ChatSessionManager::new(d.path()).unwrap();
+    assert_eq!(names(&reopened), ["A", "B", "C"]);
 }
 
 #[test]

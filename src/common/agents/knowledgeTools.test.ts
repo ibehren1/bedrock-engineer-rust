@@ -54,7 +54,7 @@ describe('buildKnowledgeBasePrompt', () => {
         ]
       })
     ).toBe(
-      '<local_knowledge_bases>\nYou have local knowledge bases with documents and websites the user added:\n- Docs: Product docs\n- Notes\nSearch them with the searchKnowledgeBase tool before answering questions they may cover, and cite the sources (file path or URL) of the passages you use.\n</local_knowledge_bases>'
+      '<local_knowledge_bases>\nYou have local knowledge bases with documents and websites the user added:\n- Docs: Product docs\n- Notes\nSearch them with the searchKnowledgeBase tool before answering questions they may cover. Cite inline: put a passage\'s "Cite as" link right after each sentence or bullet that uses a fact from it, not in a list at the end, and never state a fact from a knowledge base without its link.\n</local_knowledge_bases>'
     )
   })
 

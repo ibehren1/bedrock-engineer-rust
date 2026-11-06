@@ -1,5 +1,11 @@
 import type { ChatFolder, SessionMetadata } from '@/types/chat/history'
-import { draggedChatIds, groupSessionsByFolder, CHAT_DRAG_TYPE } from './groupSessions'
+import {
+  draggedChatIds,
+  groupSessionsByFolder,
+  moveFolder,
+  shiftFolder,
+  CHAT_DRAG_TYPE
+} from './groupSessions'
 
 const session = (id: string, folderId?: string): SessionMetadata => ({
   id,
@@ -43,5 +49,30 @@ describe('draggedChatIds', () => {
     expect(draggedChatIds(transfer('not json'))).toEqual([])
     expect(draggedChatIds(transfer('{"a":1}'))).toEqual([])
     expect(draggedChatIds(null)).toEqual([])
+  })
+})
+
+describe('moveFolder', () => {
+  const ids = ['a', 'b', 'c', 'd']
+  it('places the folder before or after the target', () => {
+    expect(moveFolder(ids, 'd', 'b', 'before')).toEqual(['a', 'd', 'b', 'c'])
+    expect(moveFolder(ids, 'a', 'c', 'after')).toEqual(['b', 'c', 'a', 'd'])
+    expect(moveFolder(ids, 'a', 'd', 'after')).toEqual(['b', 'c', 'd', 'a'])
+  })
+  it('leaves the list alone for itself or unknown ids', () => {
+    expect(moveFolder(ids, 'b', 'b', 'before')).toBe(ids)
+    expect(moveFolder(ids, 'x', 'b', 'before')).toBe(ids)
+    expect(moveFolder(ids, 'b', 'x', 'after')).toBe(ids)
+  })
+})
+
+describe('shiftFolder', () => {
+  const ids = ['a', 'b', 'c']
+  it('moves one place and stops at the ends', () => {
+    expect(shiftFolder(ids, 'b', -1)).toEqual(['b', 'a', 'c'])
+    expect(shiftFolder(ids, 'b', 1)).toEqual(['a', 'c', 'b'])
+    expect(shiftFolder(ids, 'a', -1)).toBe(ids)
+    expect(shiftFolder(ids, 'c', 1)).toBe(ids)
+    expect(shiftFolder(ids, 'x', 1)).toBe(ids)
   })
 })

@@ -86,6 +86,7 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         chat_history::chat_history_get_folders,
         chat_history::chat_history_create_folder,
         chat_history::chat_history_rename_folder,
+        chat_history::chat_history_reorder_folders,
         chat_history::chat_history_delete_folder,
         chat_history::chat_history_move_sessions_to_folder,
         // window.workspaceFiles (Files panel)
@@ -289,6 +290,9 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         knowledge::knowledge_jobs,
         knowledge::knowledge_cancel_job,
         knowledge::knowledge_search,
+        knowledge::knowledge_search_granted,
+        knowledge::knowledge_list_sources_granted,
+        knowledge::knowledge_open_source,
         knowledge::knowledge_stats,
         knowledge::knowledge_optimize,
         knowledge::knowledge_storage_overview,

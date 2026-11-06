@@ -359,9 +359,21 @@ pub struct SearchHit {
     pub title: String,
     /// File path or page URL.
     pub uri: String,
+    /// Position of the passage in its document, from 0.
+    #[serde(default)]
+    pub ord: i64,
     pub heading_path: String,
     pub text: String,
     pub score: f64,
+}
+
+/// A knowledgebase of any agent that the user pointed the model at for one chat turn
+/// (an `@mention`). Only the app grants these, never the model.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KbGrant {
+    pub agent_id: String,
+    pub kb_id: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

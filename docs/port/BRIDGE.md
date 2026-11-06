@@ -376,6 +376,7 @@ Notes on the file commands (`src-tauri/app/src/commands/{file,agent_files}.rs`):
 | `chatHistory.getFolders` | `chat_history_get_folders` | → `ChatFolder[]` (`{ id, name, createdAt }`, creation order; the bridge serves it from the cache, hydrated by the snapshot's `folders`) |
 | `chatHistory.createFolder` | `chat_history_create_folder` | `{ name }` → folder id (`folder_<ms>`; empty name rejects) |
 | `chatHistory.renameFolder` | `chat_history_rename_folder` | `{ folderId, name }` (empty name or unknown id = no-op) |
+| `chatHistory.reorderFolders` | `chat_history_reorder_folders` | `{ folderIds }` (folders in this order; unknown ids ignored, unlisted folders last) |
 | `chatHistory.deleteFolder` | `chat_history_delete_folder` | `{ folderId }` (its chats lose `folderId`; they are not deleted) |
 | `chatHistory.moveSessionsToFolder` | `chat_history_move_sessions_to_folder` | `{ sessionIds, folderId \| null }` (sets or clears the session's top-level `folderId`, copied into its metadata; no `updatedAt` bump; unknown folder = no-op) |
 | `workspaceFiles.list` | `workspace_files_list` | `{ dir }` (`""` = root) → `{ root, entries: { name, path, kind: 'file' \| 'dir', size, modifiedMs, ext }[] }` |
@@ -494,6 +495,9 @@ Notes on the file commands (`src-tauri/app/src/commands/{file,agent_files}.rs`):
 | `api.knowledge.jobs` | `knowledge_jobs` | `{ agentId? }` → `KnowledgeJob[]` (running and queued) |
 | `api.knowledge.cancelJob` | `knowledge_cancel_job` | `{ jobId }` → `boolean` |
 | `api.knowledge.search` | `knowledge_search` | `{ agentId, query, kbId?, topK? }` → `KnowledgeSearchHit[]` |
+| `api.knowledge.searchGranted` | `knowledge_search_granted` | `{ grants: {agentId, kbId}[], query, knowledgeBase?, topK? }` → `string` (the `searchKnowledgeBase` result over only the `@mentioned` knowledgebases; grants come from the user's message, never the model) |
+| `api.knowledge.listSourcesGranted` | `knowledge_list_sources_granted` | `{ grants, knowledgeBase? }` → `string` |
+| `api.knowledge.openSource` | `knowledge_open_source` | `{ uri }` (opens a cited local file or folder with its default app; refused unless it is a document or source of some knowledgebase) |
 | `api.knowledge.stats` | `knowledge_stats` | `{ agentId, kbId }` → `KbStats` (`info`, `usage` over 30 days: daily agent searches, p50/p95 latency, last job; `health`: reclaimable bytes, issues) |
 | `api.knowledge.optimize` | `knowledge_optimize` | `{ agentId, kbId }` → `{ bytesBefore, bytesAfter, integrity }` (FTS optimize, quick_check, WAL checkpoint, VACUUM; waits for a running job) |
 | `api.knowledge.storageOverview` | `knowledge_storage_overview` | → `{ root, totalBytes, knowledgeBases: [{ agentId, kbId, name, bytes, sourceCount, chunkCount, embedding, orphan, stats }] }` |

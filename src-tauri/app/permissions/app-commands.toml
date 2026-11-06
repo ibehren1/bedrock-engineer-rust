@@ -28,6 +28,7 @@ permissions = [
   "allow-chat-history-get-folders",
   "allow-chat-history-create-folder",
   "allow-chat-history-rename-folder",
+  "allow-chat-history-reorder-folders",
   "allow-chat-history-delete-folder",
   "allow-chat-history-move-sessions-to-folder",
   "allow-workspace-files-list",

@@ -131,6 +131,7 @@ export const knowledgeBase = {
       searching: 'Searching…',
       noResults: 'No matching passages.',
       score: 'score {{score}}',
+      hitSource: '{{kb}} · passage {{passage}} · {{uri}}',
       file: 'File',
       website: 'Website',
       settings: {
@@ -344,6 +345,7 @@ export const knowledgeBase = {
       searching: '検索中…',
       noResults: '一致するパッセージはありません。',
       score: 'スコア {{score}}',
+      hitSource: '{{kb}} · パッセージ {{passage}} · {{uri}}',
       file: 'ファイル',
       website: 'ウェブサイト',
       settings: {

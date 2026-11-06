@@ -72,6 +72,8 @@ pub struct StoredChunk {
     pub source_id: String,
     pub title: String,
     pub uri: String,
+    /// Position of the chunk in its document, from 0.
+    pub ord: i64,
     pub heading_path: String,
     pub text: String,
 }
@@ -532,6 +534,18 @@ impl KbStore {
             .map_err(err)
     }
 
+    /// Whether a document (or a source) has this URI.
+    pub fn has_uri(&self, uri: &str) -> Result<bool> {
+        self.lock()
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM documents WHERE uri = ?1)
+                     OR EXISTS(SELECT 1 FROM sources WHERE uri = ?1)",
+                [uri],
+                |r| r.get(0),
+            )
+            .map_err(err)
+    }
+
     /// URIs of the source's documents.
     pub fn document_uris(&self, source_id: &str) -> Result<Vec<String>> {
         let c = self.lock();
@@ -740,7 +754,7 @@ impl KbStore {
         let c = self.lock();
         let mut st = c
             .prepare_cached(
-                "SELECT c.id, c.source_id, d.title, d.uri, c.heading_path, c.text
+                "SELECT c.id, c.source_id, d.title, d.uri, c.heading_path, c.text, c.ord
                  FROM chunks c JOIN documents d ON d.id = c.document_id WHERE c.id = ?1",
             )
             .map_err(err)?;
@@ -755,6 +769,7 @@ impl KbStore {
                         uri: r.get(3)?,
                         heading_path: r.get(4)?,
                         text: r.get(5)?,
+                        ord: r.get(6)?,
                     })
                 })
                 .optional()

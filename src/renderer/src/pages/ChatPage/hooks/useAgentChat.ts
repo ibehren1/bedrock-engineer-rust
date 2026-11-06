@@ -51,9 +51,16 @@ import { PricingCalculator } from '@common/models/pricing'
 import {
   applyDelegationAllowlist,
   hasInvokeAgentTool,
-  INVOKE_AGENT_TOOL_NAME,
-  parseAgentMentions
+  INVOKE_AGENT_TOOL_NAME
 } from '../utils/agentMentions'
+import {
+  buildMentionedKnowledgeBasesPrompt,
+  isMentionedKnowledgeBaseTool,
+  parseMentions,
+  runMentionedKnowledgeBaseTool,
+  withMentionedKnowledgeBaseTools,
+  type MentionableKnowledgeBase
+} from '../utils/knowledgeMentions'
 
 /**
  * ターン単位のツール構成。
@@ -63,6 +70,8 @@ import {
 type TurnContext = {
   tools: ToolState[]
   allowedAgentIds: string[]
+  /** Knowledgebases @mentioned this turn; the knowledgebase tools search only these. */
+  mentionedKnowledgeBases: MentionableKnowledgeBase[]
   /**
    * このチャットの添付ファイルから組み立てたブロック。送信時に一度だけ作り、
    * ターン内の全リクエスト（ツール実行の再帰を含む）で使い回す。
@@ -1082,7 +1091,16 @@ export const useAgentChat = (
           }
         }
 
-        const toolResult = await window.api.bedrock.executeTool(toolInput, callerContext)
+        // A turn that @mentions knowledgebases searches only those (any agent's), with the
+        // grants from the user's message rather than the model's input.
+        const toolResult =
+          turnCtx.mentionedKnowledgeBases.length > 0 && isMentionedKnowledgeBaseTool(toolInput.type)
+            ? await runMentionedKnowledgeBaseTool(
+                toolInput.type,
+                toolInput,
+                turnCtx.mentionedKnowledgeBases
+              )
+            : await window.api.bedrock.executeTool(toolInput, callerContext)
 
         // Files this chat created or changed, for the Files panel's "This chat" view.
         if (turnSessionId) {
@@ -1303,10 +1321,16 @@ export const useAgentChat = (
 
     // @メンションからこのターンだけの委譲許可リストを導出する。
     // enabledTools は静的な仕様のままなので、ここでターン専用のツール構成を作る
-    const mentionedAgents = parseAgentMentions(userInput, agents, agentId)
+    const mentions = parseMentions(userInput, agents, agentId)
+    const mentionedAgents = mentions.agents
+    const mentionedKnowledgeBases = mentions.knowledgeBases
     const turnCtx: TurnContext = {
-      tools: applyDelegationAllowlist(enabledTools, mentionedAgents),
+      tools: withMentionedKnowledgeBaseTools(
+        applyDelegationAllowlist(enabledTools, mentionedAgents),
+        mentionedKnowledgeBases
+      ),
       allowedAgentIds: mentionedAgents.map((agent) => agent.id!),
+      mentionedKnowledgeBases,
       attachments: []
     }
 
@@ -1368,6 +1392,11 @@ export const useAgentChat = (
           () => undefined
         )
         if (extra) turnCtx.systemPrompt = systemPrompt ? `${systemPrompt}\n${extra}` : extra
+      }
+      const kbBlock = buildMentionedKnowledgeBasesPrompt(mentionedKnowledgeBases)
+      if (kbBlock) {
+        const base = turnSystem(turnCtx)
+        turnCtx.systemPrompt = base ? `${base}\n\n${kbBlock}` : kbBlock
       }
 
       const imageContents: any =

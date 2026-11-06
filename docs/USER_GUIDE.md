@@ -934,7 +934,9 @@ name straight away (Enter saves). Drag a chat onto a folder to put it there; dra
 **Chat History** heading or the list of chats below the folders to take it out again. In **Select**
 mode, dragging one of the ticked chats moves all of them. Each chat's **⋯** menu also has
 **Move to folder**, for moving without dragging. Click a folder to fold or unfold it; the app
-remembers which ones you folded. A folder's **⋯** menu has **Rename folder** and **Delete folder**.
+remembers which ones you folded. Drag a folder by its name to put it somewhere else in the list: a
+line shows where it will land, above or below the folder under the pointer. A folder's **⋯** menu
+has **Rename folder**, **Move up**, **Move down** and **Delete folder**.
 Deleting a folder never deletes its chats: they move back to the main list. **Delete All** deletes
 every chat but keeps your folders.
 
@@ -1577,7 +1579,10 @@ and go away when it has none.
 
 **How to tell they are being used.** Each search shows up in the chat as a `searchKnowledgeBase` tool
 call. Expand it to see the query the agent used and the passages it got back. The agent is asked to
-cite the file or URL of the passages it uses, so a well-grounded answer names its sources. The
+cite each passage inline: every result carries a ready-made link to its file or page, and the agent
+puts that link right after each sentence or bullet that uses it, so you can check every claim where
+you read it instead of in a list at the end. Click a link to open the web page, or the file with its
+default app (only files that are in one of your knowledge bases open this way). The
 **System prompt** tab shows a `<local_knowledge_bases>` block listing each knowledge base by name and
 description, with the instruction to search them before answering questions they may cover.
 
@@ -1948,6 +1953,10 @@ their tools bolted on.
 
 This is the same mechanism as the `invokeAgent` tool, so an agent can also delegate on its own
 initiative if you give it that tool and mention in its system prompt when it should.
+
+The same `@` list also shows your **knowledge bases**, from every agent. Mentioning one tells the
+agent to search it for that message, without handing the work to another agent
+([Section 24.4](#244-how-the-agent-uses-a-knowledge-base)).
 
 ---
 
@@ -2948,8 +2957,10 @@ its three tools — `searchKnowledgeBase`, `listKnowledgeBases` and `listKnowled
 
 The app also adds a `<local_knowledge_bases>` block to the agent's system prompt, listing each
 knowledge base by name and description and telling the agent to search them before answering
-questions they may cover, and to cite the file path or URL of the passages it uses. Open the chat's
-**System prompt** tab to see it.
+questions they may cover, and to cite each passage inline, right after the fact it supports. Every
+search result is tagged with its source: the document title and section, the file path or page URL,
+the knowledge base it came from, its position in the document and a ready-made **Cite as** link the
+agent copies into its answer. Open the chat's **System prompt** tab to see the block.
 
 To check that the agent really used its knowledge base, look in the conversation for a
 `searchKnowledgeBase` tool call and expand it: you see the query the agent searched for and the
@@ -2964,7 +2975,15 @@ Tips for good results:
 - **Ask in the words the documents use.** The search understands meaning, but exact product names and
   error codes help it.
 - The knowledge base tools work in background tasks and when the agent is called by another agent, but
-  not in **Plan mode**, where MCP tools are off.
+  not in **Plan mode**, where MCP tools are off (an `@` mention still works there, see below).
+
+**Pointing the agent at a knowledge base with `@`.** Type `@` in the message box: below the agents,
+the list shows **Knowledge bases**, those of the agent you are talking to first, then every other
+agent's, with the owning agent's name on the right. Pick one (or type its name after the `@`) and,
+for that message, the agent searches only the knowledge bases you mentioned, even ones that belong to
+another agent or when the current agent has none of its own. Mention several to search them
+together. When two knowledge bases share a name, or a knowledge base has an agent's name, the other
+agent's one is written `@Agent name/Knowledge base name`.
 
 ### 24.5 How the website crawler behaves
 
