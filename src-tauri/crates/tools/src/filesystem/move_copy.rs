@@ -52,7 +52,12 @@ async fn transfer(op: Op, tool: &str, input: &Value, ctx: &ToolContext) -> Resul
         Op::Copy => crate::util::path_guard::Access::Read,
     };
     let source = &super::guarded(ctx, str_of(input, "source"), source_access, tool)?;
-    let destination = &super::guarded(ctx, str_of(input, "destination"), crate::util::path_guard::Access::Write, tool)?;
+    let destination = &super::guarded(
+        ctx,
+        str_of(input, "destination"),
+        crate::util::path_guard::Access::Write,
+        tool,
+    )?;
     let result = async {
         mkdir_recursive(&parent_dir(destination)).await?;
         match op {

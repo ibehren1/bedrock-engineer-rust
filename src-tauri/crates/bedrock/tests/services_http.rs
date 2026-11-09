@@ -489,7 +489,7 @@ async fn retrieve_and_generate_round_trip_and_not_found() {
             "type": "KNOWLEDGE_BASE",
             "knowledgeBaseConfiguration": {
                 "knowledgeBaseId": "KB1",
-                "modelArn": "arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
+                "modelArn": "arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-haiku-5-5",
                 "generationConfiguration": { "promptTemplate": { "textPromptTemplate": "$search_results$" } }
             }
         }
@@ -834,7 +834,7 @@ async fn structured_output_forces_tool_and_returns_input() {
     let req = structured_output::WebsiteRecommendationsRequest {
         website_code: "<html></html>".into(),
         language: "English".into(),
-        model_id: "us.anthropic.claude-sonnet-4-6".into(),
+        model_id: "us.anthropic.claude-sonnet-5-5".into(),
     };
     let out = structured_output::get_website_recommendations(&svc, &converse_settings(), &req)
         .await
@@ -892,7 +892,7 @@ async fn recognize_image_claude_and_nova_paths() {
     let claude = image_recognition::RecognizeImageRequest {
         image_path: path.clone(),
         prompt: None,
-        model_id: Some("us.anthropic.claude-haiku-4-5-20251001-v1:0".into()),
+        model_id: Some("us.anthropic.claude-haiku-5-5".into()),
     };
     let text =
         image_recognition::recognize_image(fake.as_ref(), &svc, &converse_settings(), &claude)

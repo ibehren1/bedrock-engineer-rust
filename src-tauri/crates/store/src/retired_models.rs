@@ -9,6 +9,9 @@
 //!
 //! Only settings are rewritten. Chat history and background session/execution
 //! records are history and keep the model they actually ran on.
+//!
+//! The `interleaveThinking` setting is also removed here: only the Claude 4 models
+//! took it, and the app no longer reads it.
 
 use models::{all_models, get_base_model_id, Llm};
 use serde_json::{Map, Value};
@@ -36,6 +39,23 @@ const RETIRED_TEXT: &[(&str, &str)] = &[
         "anthropic.claude-haiku-5-5",
     ),
     ("amazon.nova-premier-v1:0", "amazon.nova-2-lite-v1:0"),
+    // Claude 4.x, retired 2026-11-09.
+    (
+        "anthropic.claude-haiku-4-5-20251001-v1:0",
+        "anthropic.claude-haiku-5-5",
+    ),
+    ("anthropic.claude-sonnet-4-6", "anthropic.claude-sonnet-5-5"),
+    (
+        "anthropic.claude-opus-4-5-20251101-v1:0",
+        "anthropic.claude-opus-5-5",
+    ),
+    ("anthropic.claude-opus-4-6-v1", "anthropic.claude-opus-5-5"),
+    ("anthropic.claude-opus-4-7", "anthropic.claude-opus-5-5"),
+    ("anthropic.claude-opus-4-8", "anthropic.claude-opus-5-5"),
+    // OpenAI GPT-5.x, retired 2026-11-09: each tier goes to its GPT-6 line counterpart.
+    ("openai.gpt-5.6-sol", "openai.gpt-6.1-sol"),
+    ("openai.gpt-5.6-terra", "openai.gpt-6.1-terra"),
+    ("openai.gpt-5.6-luna", "openai.gpt-6-luna"),
 ];
 
 /// Retired image model ID -> replacement. Image model IDs carry no profile prefix.
@@ -62,6 +82,11 @@ const RETIRED_IMAGE: &[(&str, &str)] = &[
 
 /// Applies the remaps in place. A no-op (no key written) when nothing is retired.
 pub(crate) fn migrate(data: &mut Map<String, Value>) {
+    // The setting went with the Claude 4 models (the only ones that took it).
+    if data.remove("interleaveThinking").is_some() {
+        tracing::info!("Removed the retired interleaveThinking setting");
+    }
+
     for key in ["llm", "lightProcessingModel"] {
         if let Some(llm) = data.get_mut(key) {
             migrate_llm(key, llm);
@@ -309,7 +334,7 @@ mod tests {
             m["bedrockSettings"]["visibleModelIds"],
             json!([
                 "global.anthropic.claude-opus-5-5",
-                "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+                "us.anthropic.claude-haiku-5-5",
                 "global.anthropic.claude-haiku-5-5"
             ])
         );
@@ -337,12 +362,75 @@ mod tests {
         let input = json!({
             "llm": stale_llm("global.anthropic.claude-opus-5-5"),
             "lightProcessingModel": { "modelId": "arn:aws:bedrock:us-east-1:1:application-inference-profile/x" },
-            "recognizeImageTool": { "modelId": "us.anthropic.claude-haiku-4-5-20251001-v1:0" },
+            "recognizeImageTool": { "modelId": "us.anthropic.claude-haiku-5-5" },
             "generateImageTool": { "modelId": "stability.sd3-5-large-v1:0" },
             "bedrockSettings": { "visibleModelIds": ["a", "a"] },
             "backgroundAgentScheduledTasks": [{ "modelId": "anthropic.claude" }]
         });
         assert_eq!(Value::Object(run(input.clone())), input);
+    }
+
+    #[test]
+    fn claude_4_and_gpt_5_mapped_to_current_models() {
+        for (old, new) in [
+            (
+                "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+                "us.anthropic.claude-haiku-5-5",
+            ),
+            (
+                "global.anthropic.claude-sonnet-4-6",
+                "global.anthropic.claude-sonnet-5-5",
+            ),
+            (
+                "eu.anthropic.claude-opus-4-5-20251101-v1:0",
+                "eu.anthropic.claude-opus-5-5",
+            ),
+            (
+                "anthropic.claude-opus-4-6-v1",
+                "global.anthropic.claude-opus-5-5",
+            ),
+            (
+                "jp.anthropic.claude-opus-4-7",
+                "jp.anthropic.claude-opus-5-5",
+            ),
+            (
+                "us.anthropic.claude-opus-4-8",
+                "us.anthropic.claude-opus-5-5",
+            ),
+            ("us.openai.gpt-5.6-sol", "us.openai.gpt-6.1-sol"),
+            ("global.openai.gpt-5.6-terra", "global.openai.gpt-6.1-terra"),
+            ("us.openai.gpt-5.6-luna", "us.openai.gpt-6-luna"),
+        ] {
+            assert_eq!(text_replacement_id(old).as_deref(), Some(new), "{old}");
+        }
+        let m = run(json!({ "llm": stale_llm("us.openai.gpt-5.6-sol") }));
+        assert_eq!(m["llm"], llm("us.openai.gpt-6.1-sol"));
+    }
+
+    #[test]
+    fn every_replacement_is_registered() {
+        for (old, new) in RETIRED_TEXT {
+            assert!(
+                all_models()
+                    .iter()
+                    .any(|m| get_base_model_id(&m.model_id) == *new),
+                "{old} -> {new} is not in the registry"
+            );
+            assert!(
+                !all_models()
+                    .iter()
+                    .any(|m| get_base_model_id(&m.model_id) == *old),
+                "{old} is still in the registry"
+            );
+        }
+    }
+
+    #[test]
+    fn interleaved_thinking_setting_removed() {
+        for value in [json!(true), json!(false)] {
+            let m = run(json!({ "interleaveThinking": value }));
+            assert!(!m.contains_key("interleaveThinking"));
+        }
     }
 
     #[test]

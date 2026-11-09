@@ -37,8 +37,6 @@ def create_model():
     """Create Bedrock model"""
     bedrock_model = BedrockModel(
         model_id="{{modelConfig}}",
-        temperature=0.3,
-        top_p=0.8,
         boto_session=session
     )
     return bedrock_model

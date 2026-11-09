@@ -38,13 +38,10 @@ fn has(ids: &[impl AsRef<str>], id: &str) -> bool {
 mod openai_gpt {
     use super::*;
 
-    const OPENAI_GPT_MODELS: [(&str, &str); 6] = [
+    const OPENAI_GPT_MODELS: [(&str, &str); 3] = [
         ("gpt-6-astra", "GPT-6 Astra"),
         ("gpt-6-sol", "GPT-6 Sol"),
         ("gpt-6-luna", "GPT-6 Luna"),
-        ("gpt-5.6-sol", "GPT-5.6 Sol"),
-        ("gpt-5.6-terra", "GPT-5.6 Terra"),
-        ("gpt-5.6-luna", "GPT-5.6 Luna"),
     ];
 
     #[test]
@@ -62,11 +59,14 @@ mod openai_gpt {
         }
     }
 
+    /// GPT-5.4 and 5.5 were never reachable via Converse; GPT-5.6 was retired on 2026-11-09.
     #[test]
-    fn gpt_5_5_and_5_4_not_registered() {
-        let ids = ids();
-        assert!(!ids.iter().any(|id| id.contains("gpt-5.5")));
-        assert!(!ids.iter().any(|id| id.contains("gpt-5.4")));
+    fn no_gpt_5_model_registered() {
+        let gpt5: Vec<_> = ids()
+            .into_iter()
+            .filter(|id| id.contains(".gpt-5.") || id.contains(".gpt-5-"))
+            .collect();
+        assert!(gpt5.is_empty(), "{gpt5:?}");
     }
 
     #[test]
@@ -103,13 +103,6 @@ mod openai_gpt {
     }
 
     #[test]
-    fn pricing_gpt_5_6_sol() {
-        let calc = PricingCalculator::new("us.openai.gpt-5.6-sol");
-        assert_close(calc.calculate_input_cost(1_000_000), 5.5);
-        assert_close(calc.calculate_output_cost(1_000_000), 33.0);
-    }
-
-    #[test]
     fn pricing_gpt_6_astra() {
         let calc = PricingCalculator::new("us.openai.gpt-6-astra");
         assert_close(calc.calculate_input_cost(1_000_000), 11.0);
@@ -131,11 +124,9 @@ mod openai_gpt {
     }
 
     #[test]
-    fn shared_suffix_tiers_resolve_distinctly() {
+    fn tiers_resolve_to_their_own_rates() {
         assert_eq!(name_of("us.openai.gpt-6-sol"), Some("GPT-6 Sol"));
-        assert_eq!(name_of("us.openai.gpt-5.6-sol"), Some("GPT-5.6 Sol"));
         assert_eq!(name_of("us.openai.gpt-6-luna"), Some("GPT-6 Luna"));
-        assert_eq!(name_of("us.openai.gpt-5.6-luna"), Some("GPT-5.6 Luna"));
         let input = |id| {
             get_model_config(id)
                 .and_then(|c| c.pricing)
@@ -260,10 +251,12 @@ mod openai_gpt_6_1_terra {
     }
 
     #[test]
-    fn does_not_resolve_to_gpt_5_6_terra_or_gpt_6_1_sol() {
+    fn does_not_resolve_to_gpt_6_1_sol() {
         assert_eq!(name_of("us.openai.gpt-6.1-terra"), Some("GPT-6.1 Terra"));
-        assert_eq!(name_of("global.openai.gpt-6.1-terra"), Some("GPT-6.1 Terra"));
-        assert_eq!(name_of("us.openai.gpt-5.6-terra"), Some("GPT-5.6 Terra"));
+        assert_eq!(
+            name_of("global.openai.gpt-6.1-terra"),
+            Some("GPT-6.1 Terra")
+        );
         assert_eq!(name_of("us.openai.gpt-6.1-sol"), Some("GPT-6.1 Sol"));
     }
 
@@ -361,6 +354,10 @@ mod claude_opus_5_5 {
         );
         assert_eq!(name_of("us.anthropic.claude-opus-5"), Some("Claude Opus 5"));
         assert_eq!(
+            name_of("us.anthropic.claude-fable-5-2"),
+            Some("Claude Fable 5.2")
+        );
+        assert_eq!(
             name_of("us.anthropic.claude-fable-5-1"),
             Some("Claude Fable 5.1")
         );
@@ -398,18 +395,71 @@ mod claude_haiku_5_5 {
     fn prompt_caching_declared() {
         assert_full_cache("us.anthropic.claude-haiku-5-5");
     }
+}
+
+/// describe('Claude Fable 5.2 registry integration')
+mod claude_fable_5_2 {
+    use super::*;
 
     #[test]
-    fn not_confused_with_haiku_4_5() {
-        assert_eq!(
-            name_of("global.anthropic.claude-haiku-5-5"),
-            Some("Claude Haiku 5.5")
-        );
-        assert_eq!(
-            name_of("us.anthropic.claude-haiku-4-5-20251001-v1:0"),
-            Some("Claude Haiku 4.5")
-        );
+    fn global_and_us_profiles_no_bare_id() {
+        let ids = ids();
+        assert!(has(&ids, "global.anthropic.claude-fable-5-2"));
+        assert!(has(&ids, "us.anthropic.claude-fable-5-2"));
+        assert!(!has(&ids, "eu.anthropic.claude-fable-5-2"));
+        assert!(!has(&ids, "jp.anthropic.claude-fable-5-2"));
+        assert!(!has(&ids, "anthropic.claude-fable-5-2"));
     }
+
+    #[test]
+    fn display_names_and_capabilities() {
+        assert_adaptive_capabilities(
+            "global.anthropic.claude-fable-5-2",
+            "Claude Fable 5.2 (Global)",
+        );
+        let regions = &find("global.anthropic.claude-fable-5-2").unwrap().regions;
+        assert!(regions.iter().any(|r| r == "eu-west-1"));
+        assert!(regions.iter().any(|r| r == "ap-northeast-1"));
+    }
+
+    #[test]
+    fn global_reaches_europe_and_us_geo_only_north_america() {
+        let eu = region_ids("eu-west-1");
+        assert!(has(&eu, "global.anthropic.claude-fable-5-2"));
+        assert!(!has(&eu, "us.anthropic.claude-fable-5-2"));
+        assert!(has(
+            &region_ids("ca-central-1"),
+            "us.anthropic.claude-fable-5-2"
+        ));
+    }
+
+    #[test]
+    fn pricing_per_1k() {
+        let calc = PricingCalculator::new("global.anthropic.claude-fable-5-2");
+        assert_close(calc.calculate_input_cost(1_000_000), 10.0);
+        assert_close(calc.calculate_output_cost(1_000_000), 50.0);
+        assert_close(calc.calculate_cache_read_cost(1_000_000), 1.0);
+        assert_close(calc.calculate_cache_write_cost(1_000_000), 12.5);
+    }
+
+    #[test]
+    fn prompt_caching_declared() {
+        assert_full_cache("us.anthropic.claude-fable-5-2");
+    }
+}
+
+/// describe('retired Claude 4.x models')
+#[test]
+fn no_claude_4_model_registered() {
+    let claude4: Vec<_> = ids()
+        .into_iter()
+        .filter(|id| {
+            ["sonnet", "opus", "haiku"]
+                .iter()
+                .any(|f| id.contains(&format!("claude-{f}-4")))
+        })
+        .collect();
+    assert!(claude4.is_empty(), "{claude4:?}");
 }
 
 /// describe('Claude Sonnet 5.5 registry integration')
@@ -485,7 +535,7 @@ mod xai_grok {
     }
 
     #[test]
-    fn grok_4_7_and_opus_4_7_never_resolve_to_each_other() {
+    fn grok_4_7_resolves_to_its_own_config() {
         for grok in ["us.xai.grok-4.7", "global.xai.grok-4.7", "xai.grok-4.7"] {
             let c = get_model_config(grok).unwrap();
             assert_eq!(c.name, "Grok 4.7");
@@ -494,19 +544,6 @@ mod xai_grok {
             assert_eq!(
                 c.supported_thinking_types,
                 Some(vec![ThinkingType::Enabled])
-            );
-        }
-        for opus in [
-            "us.anthropic.claude-opus-4-7",
-            "global.anthropic.claude-opus-4-7",
-            "jp.anthropic.claude-opus-4-7",
-        ] {
-            let c = get_model_config(opus).unwrap();
-            assert_eq!(c.name, "Claude Opus 4.7");
-            assert_eq!(c.provider, ModelProvider::Anthropic);
-            assert_eq!(
-                c.supported_thinking_types,
-                Some(vec![ThinkingType::Adaptive])
             );
         }
     }
@@ -578,11 +615,8 @@ mod clamp_max_tokens {
     #[test]
     fn lowers_request_over_ceiling() {
         assert_eq!(
-            clamp_max_tokens_to_model_limit(
-                "us.anthropic.claude-haiku-4-5-20251001-v1:0",
-                Some(128000)
-            ),
-            Some(64000)
+            clamp_max_tokens_to_model_limit("us.deepseek.r1-v1:0", Some(128000)),
+            Some(32768)
         );
         assert_eq!(
             clamp_max_tokens_to_model_limit("us.amazon.nova-lite-v1:0", Some(128000)),
@@ -635,14 +669,12 @@ mod clamp_max_tokens {
 #[test]
 fn model_output_ceilings() {
     let cases = [
-        ("us.anthropic.claude-haiku-4-5-20251001-v1:0", 64000),
         ("us.anthropic.claude-haiku-5-5", 128000),
-        ("us.anthropic.claude-sonnet-4-6", 64000),
-        ("us.anthropic.claude-opus-4-8", 128000),
         ("us.anthropic.claude-opus-5", 128000),
         ("us.anthropic.claude-opus-5-5", 128000),
         ("us.anthropic.claude-sonnet-5", 128000),
         ("us.anthropic.claude-sonnet-5-5", 128000),
+        ("global.anthropic.claude-fable-5-2", 128000),
         ("us.amazon.nova-lite-v1:0", 5120),
         ("us.amazon.nova-pro-v1:0", 5120),
         ("us.amazon.nova-2-lite-v1:0", 64000),
@@ -652,7 +684,6 @@ fn model_output_ceilings() {
         ("us.openai.gpt-6.1-terra", 128000),
         ("us.openai.gpt-6-sol", 128000),
         ("us.openai.gpt-6-luna", 128000),
-        ("us.openai.gpt-5.6-sol", 128000),
         ("openai.gpt-oss-120b-1:0", 16384),
         ("openai.gpt-oss-20b-1:0", 16384),
         ("moonshotai.kimi-k2.5", 16384),

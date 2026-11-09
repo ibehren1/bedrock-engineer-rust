@@ -649,7 +649,7 @@ region, the **View required IAM policies** dialog, and **Proxy Settings**.
 
 - **Max Tokens** (default 4,096) — the longest reply the model is allowed to produce. A "token" is
   roughly ¾ of a word. Raise it if answers get cut off mid-sentence; lower it to keep replies short
-  and cheap. Each model has its own ceiling — 128,000 tokens on Claude Opus 5, 64,000 on Haiku 4.5,
+  and cheap. Each model has its own ceiling — 128,000 tokens on Claude Opus 5, 32,768 on DeepSeek R1,
   5,120 on the first-generation Nova models — and requests are capped at whichever is lower, this
   setting or the ceiling of the model you are using. So you can leave it high without a smaller model
   refusing the request; that model simply uses as much of it as it can.
@@ -660,7 +660,7 @@ region, the **View required IAM policies** dialog, and **Proxy Settings**.
 - **Thinking Mode / Thinking Budget** — the default for the **Thinking** control on the Chat page
   ([Section 6.2](#62-the-three-main-controls)).
 
-Some newer models (Claude Opus 4.7 and later, Sonnet 5 and later, Haiku 5.5, and a few others) no
+Some newer models (the Claude 5 family, Kimi K3, and the GPT-6 and Grok models) no
 longer accept Temperature and topP, so for those the app leaves both out and the model's own defaults
 apply.
 
@@ -777,7 +777,7 @@ This is where most work happens.
 │           │                [stop] [whale] [Files] [MD] [Word] [PDF] [new]  │
 │           ├────────────────────────────────────────────────────────────────┤
 │           │ Type message or attach files…                                  │  input box
-│           │ [Agent ▾] [Model ▾] [Thinking ▾] [Interleave]   [Plan|Act] [➤] │  controls
+│           │ [Agent ▾] [Model ▾] [Thinking ▾]                [Plan|Act] [➤] │  controls
 └───────────┴────────────────────────────────────────────────────────────────┘
 ```
 
@@ -812,15 +812,11 @@ that can think.
 | **Quick** (1K)   | A little planning.                                                                                                                                                                    |
 | **Normal** (4K)  | Everyday multi-step work.                                                                                                                                                             |
 | **Deep** (16K)   | Hard debugging, tricky analysis, long plans.                                                                                                                                          |
-| **Deeper** (32K) | The hardest problems. On models that use effort levels instead of a thinking budget (Grok 4.7, Grok 4.6, GPT-6.1, GPT-6, GPT-5.6), this asks for the highest effort the model offers. |
+| **Deeper** (32K) | The hardest problems. On models that use effort levels instead of a thinking budget (Grok 4.7, Grok 4.6, GPT-6.1, GPT-6), this asks for the highest effort the model offers.         |
 
 Models that think adaptively offer just **None** and **Adaptive**; the others offer None and the four
 budgets. Some models always think and cannot be turned down; the control will tell you when that is
 the case.
-
-On some Claude models, while thinking is on, there is also an **Interleave** toggle. When on, you see
-the model's reasoning woven into its answer as it works, instead of only the final result. Handy for
-understanding _why_ it did something.
 
 ### 6.3 Plan mode and Act mode
 
@@ -976,7 +972,8 @@ box.
 **The file list**
 
 - **Project** shows the whole folder as a tree. **This chat** narrows it to the files the agent
-  created or changed in the current chat, grouped by folder.
+  created or changed in the current chat, grouped by folder — mostly the chat's own folder
+  ([7.5](#75-the-chats-own-folder)).
 - Files the agent created or changed in this chat carry a **fuchsia dot** in the full tree too, and the
   folders that hold them open on their own. A folder you collapse stays collapsed.
 - **Filter files…** narrows the list by name. The list updates by itself as files change.
@@ -1062,14 +1059,20 @@ Three ways, all equivalent:
 - Click the **paperclip** button above the message box and choose **Add files…**. The paperclip is
   there even before the first message, so you can attach first and then ask.
 
-The moment you do, the file is copied into your project folder at:
+The moment you do, the file is copied into **this chat's folder** in your project:
 
 ```
-<your project folder>/attachments/<chat-title>-<id>/
+<your project folder>/chats/<chat-title>/attachments/
 ```
 
-The folder is named after the chat, and gets renamed automatically when the chat title changes —
-including when a title is generated for you.
+The folder is named after the chat, with the title in lowercase words joined by hyphens, and gets
+renamed automatically when the chat title changes — including when a title is generated for you.
+Two chats with the same title get `<title>` and `<title>-2`. Rename the folder yourself and the app
+finds it anyway (it marks each folder with the chat it belongs to) and names it after the title
+again the next time the title changes.
+
+The chat folder holds everything that belongs to the chat, not just attachments — see
+[7.5](#75-the-chats-own-folder).
 
 ### 7.2 Managing files
 
@@ -1116,8 +1119,44 @@ not bloat your saved chat history or your Markdown, Word and PDF exports.
 
 ### 7.4 Cleaning up
 
-Deleting a chat deletes its attachments folder. Deleting all chats clears the whole `attachments/`
-folder, including chats that never got as far as sending a message.
+Deleting a chat deletes its whole folder, attachments and all. Deleting all chats clears the
+`chats/` folder, including chats that never got as far as sending a message. Folders in there that
+the app didn't create are left alone.
+
+### 7.5 The chat's own folder
+
+Everything a chat produces goes in one folder, `chats/<chat-title>/`:
+
+```
+<your project folder>/
+  chats/
+    ocr-benchmark/            ← one folder per chat, named after its title
+      attachments/            ← files you attached
+      README.md               ← files the agent wrote for this chat
+      benchmark.py
+```
+
+The agent is told where its folder is and saves new work there: code it writes, notes, diagrams,
+generated images, Code Interpreter output. It still edits your project's own files when you ask it
+to — the folder is where *new* files go, not a cage.
+
+Why it matters: before this, each chat invented its own folder names in the top of your project
+folder, and a long day of chats left a dozen stray folders behind. Now one chat is one folder, and
+deleting the chat cleans it up.
+
+- **Opening an older chat tidies it.** The first time you open a chat from before this change, the
+  files it created are moved into its folder and the Files tab shows them at their new paths. Only
+  files that are plainly the chat's own move: a file another chat also touched, a file git tracks,
+  and anything older than the chat itself stay exactly where they are, and nothing is ever
+  overwritten.
+- **Renaming a chat moves the folder**, with everything inside it.
+- **`chats/` comes with a `.gitignore`** that keeps attachments and the app's marker files out of
+  version control while leaving what the agent wrote visible to git. Edit it if you'd rather commit
+  (or ignore) all of it.
+- **Code Interpreter** runs in the chat's folder, so its plots and data files land there too, and it
+  can read the chat's attachments at `/workspace/attachments/`.
+- **Commands** (`executeCommand`) run in the chat's folder unless the agent gives an absolute
+  working directory, in the Docker sandbox as well as on your machine.
 
 ---
 
@@ -2137,10 +2176,10 @@ Useful when you know what the steps are but not the exact JSON syntax for expres
 | If you want…                                             | Use                                                          |
 | -------------------------------------------------------- | ------------------------------------------------------------ |
 | A good all-round default                                 | **Claude Sonnet 5.5**                                        |
-| The strongest reasoning for hard problems                | **Claude Opus 5.5** or **Claude Fable 5.1**                  |
+| The strongest reasoning for hard problems                | **Claude Opus 5.5** or **Claude Fable 5.2**                  |
 | Speed and low cost for simple work                       | **Claude Haiku 5.5** or **Amazon Nova Lite**                 |
 | The cheapest option for background tasks and chat titles | **Amazon Nova Micro**, **Nova Lite** or **Claude Haiku 5.5** |
-| A very large context window for huge documents           | **Claude Fable 5.1** (1M tokens) or **Grok 4.7** (500K)      |
+| A very large context window for huge documents           | **Claude Fable 5.2** (1M tokens) or **Grok 4.7** (500K)      |
 | OpenAI's most capable model, cost no object              | **GPT-6 Astra** (1.05M tokens, $11/$55 per 1M)               |
 | Near-Astra quality at a mid-tier OpenAI price            | **GPT-6.1 Sol** (1M tokens, $2.20/$11 per 1M)                |
 | A strong, low-cost OpenAI model for agent work           | **GPT-6.1 Terra** (1.05M tokens, $1.10/$5.50 per 1M)         |
@@ -2154,13 +2193,12 @@ before you commit.
 
 Which of these you see depends on your region and your **Visible Models** allowlist.
 
-**Anthropic (Claude):** Haiku 4.5, Haiku 5.5, Sonnet 4.6, Sonnet 5, Sonnet 5.5, Opus 4.6, Opus 4.7,
-Opus 4.8, Opus 5, Opus 5.5, Fable 5, Fable 5.1
+**Anthropic (Claude):** Haiku 5.5, Sonnet 5, Sonnet 5.5, Opus 5, Opus 5.5, Fable 5, Fable 5.1,
+Fable 5.2
 
 **Amazon (Nova):** Nova Micro, Nova Lite, Nova 2 Lite, Nova Pro
 
-**OpenAI:** GPT-6 Astra, GPT-6.1 Sol, GPT-6.1 Terra, GPT-6 Sol, GPT-6 Luna, GPT-5.6 Sol, GPT-5.6 Terra, GPT-5.6 Luna,
-GPT-OSS 20B, GPT-OSS 120B
+**OpenAI:** GPT-6 Astra, GPT-6.1 Sol, GPT-6.1 Terra, GPT-6 Sol, GPT-6 Luna, GPT-OSS 20B, GPT-OSS 120B
 
 **Others:** DeepSeek R1, Kimi K3, Kimi K2.5, Grok 4.6, Grok 4.7
 
@@ -2247,7 +2285,7 @@ folder name; the app moves that folder here the first time it starts.
 
 ```
 <your project folder>/
-  attachments/<chat>-<id>/       ← files you attached to a chat
+  chats/<chat-title>/            ← one folder per chat (its files, and attachments/)
   .bedrock-engineer/
     agents/                      ← agents shared with this project
     rules/                       ← project-specific rules for agents to follow

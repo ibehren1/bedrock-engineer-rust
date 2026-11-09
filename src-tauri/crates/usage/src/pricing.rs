@@ -152,16 +152,16 @@ mod tests {
 
     #[test]
     fn converse_cost_uses_catalog_rates_and_strips_prefix() {
-        let mut e = event(UsageService::Converse, "us.anthropic.claude-sonnet-4-6");
+        let mut e = event(UsageService::Converse, "us.anthropic.claude-sonnet-5-5");
         e.input_tokens = 1000;
         e.output_tokens = 500;
         e.cache_read_tokens = 200;
         e.cache_write_tokens = 100;
         let p = price(&e);
-        assert_eq!(p.model_id, "anthropic.claude-sonnet-4-6");
-        let expected = (1000.0 * 0.003 + 500.0 * 0.015 + 200.0 * 0.0003 + 100.0 * 0.00375) / 1000.0;
+        assert_eq!(p.model_id, "anthropic.claude-sonnet-5-5");
+        let expected = (1000.0 * 0.002 + 500.0 * 0.01 + 200.0 * 0.0002 + 100.0 * 0.0025) / 1000.0;
         assert!((p.cost_usd.unwrap() - expected).abs() < 1e-12);
-        assert_eq!(p.snapshot.unwrap()["input"], 0.003);
+        assert_eq!(p.snapshot.unwrap()["input"], 0.002);
     }
 
     #[test]
@@ -170,7 +170,7 @@ mod tests {
             UsageService::Converse,
             "arn:aws:bedrock:us-east-1:123:default-prompt-router/anthropic.claude:1",
         );
-        e.invoked_model_id = Some("anthropic.claude-sonnet-4-6".into());
+        e.invoked_model_id = Some("anthropic.claude-sonnet-5-5".into());
         e.input_tokens = 1000;
         assert!(price(&e).cost_usd.unwrap() > 0.0);
     }
@@ -185,6 +185,26 @@ mod tests {
         let p = price(&e);
         assert_eq!(p.model_name, "Claude Sonnet 4");
         assert!((p.cost_usd.unwrap() - 0.003).abs() < 1e-12);
+
+        for (id, name, input) in [
+            (
+                "global.anthropic.claude-sonnet-4-6",
+                "Claude Sonnet 4.6",
+                0.003,
+            ),
+            (
+                "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+                "Claude Haiku 4.5",
+                0.001,
+            ),
+            ("global.anthropic.claude-opus-4-8", "Claude Opus 4.8", 0.005),
+            ("us.openai.gpt-5.6-sol", "GPT-5.6 Sol", 0.0055),
+        ] {
+            e.raw_model_id = id.into();
+            let p = price(&e);
+            assert_eq!(p.model_name, name, "{id}");
+            assert!((p.cost_usd.unwrap() - input).abs() < 1e-12, "{id}");
+        }
     }
 
     #[test]
@@ -246,9 +266,9 @@ mod tests {
         assert!((long - expected).abs() < 1e-12, "{long} vs {expected}");
 
         // Models without rules are unchanged by the prefix.
-        let mut s = event(UsageService::Converse, "us.anthropic.claude-sonnet-4-6");
+        let mut s = event(UsageService::Converse, "us.anthropic.claude-sonnet-5-5");
         s.input_tokens = 1000;
-        assert!((price(&s).cost_usd.unwrap() - 0.003).abs() < 1e-12);
+        assert!((price(&s).cost_usd.unwrap() - 0.002).abs() < 1e-12);
         assert_eq!(profile_prefix("arn:aws:bedrock:x"), "base");
         assert_eq!(profile_prefix("apac.amazon.nova-pro-v1:0"), "apac");
     }

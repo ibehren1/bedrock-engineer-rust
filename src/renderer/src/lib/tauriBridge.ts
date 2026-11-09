@@ -377,7 +377,11 @@ async function hydrateChatHistory() {
   }
 }
 
-/** Re-read the list-level state (and optionally one session) after a mutation. */
+/**
+ * Re-read the list-level state (and optionally one session) after a mutation. Pass a session id
+ * only for a small session (a new one): sessions can be tens of MB, so mutations of an existing
+ * one patch the cached copy instead of re-reading it.
+ */
 async function refreshChat(sessionId?: string) {
   const M = 'chatHistory.refresh'
   const [metadata, recent, active, folders, session] = await Promise.all([
@@ -399,13 +403,47 @@ async function refreshChat(sessionId?: string) {
   }
 }
 
+/** Bumped when sessions are deleted, so a load that was in flight doesn't cache them again. */
+let chatDeletions = 0
+/** `loadSession` reads in flight, so two callers share one read. */
+const sessionLoads = new Map<string, Promise<boolean>>()
+
+/** Read a session into the cache without blocking the window. Resolves to whether it exists. */
+function loadSessionIntoCache(sessionId: string): Promise<boolean> {
+  if (!sessionId) return Promise.resolve(false)
+  if (chat.sessions[sessionId]) return Promise.resolve(true)
+  let load = sessionLoads.get(sessionId)
+  if (!load) {
+    const deletions = chatDeletions
+    load = call<ChatSession | null>('chatHistory.loadSession', 'chat_history_get_session', {
+      sessionId
+    })
+      .then((session) => {
+        if (chat.sessions[sessionId]) return true
+        if (!session || deletions !== chatDeletions) return false
+        chat.sessions[sessionId] = session
+        return true
+      })
+      .catch((e) => {
+        console.error(`[tauriBridge] chatHistory.loadSession('${sessionId}') failed`, e)
+        return false
+      })
+      .finally(() => sessionLoads.delete(sessionId))
+    sessionLoads.set(sessionId, load)
+  }
+  return load
+}
+
 /**
- * `getSession` is synchronous but the snapshot only carries the active and recent sessions. For any
- * other id, read it with a synchronous XHR from the `chathistory` URI scheme the Rust side serves
- * (`convertFileSrc(id, 'chathistory')` → `chathistory://localhost/<id>`, or
- * `http://chathistory.localhost/<id>` on Windows). `null` when the session doesn't exist.
+ * Last resort for `getSession` on a session nobody loaded first (`loadSession`). The snapshot only
+ * carries the active and recent sessions, so this reads it with a synchronous XHR from the
+ * `chathistory` URI scheme the Rust side serves (`convertFileSrc(id, 'chathistory')` →
+ * `chathistory://localhost/<id>`, or `http://chathistory.localhost/<id>` on Windows). That blocks
+ * the window while a possibly large file is read and parsed, so the common paths load sessions
+ * asynchronously before reading them. `null` when the session doesn't exist.
  */
 function fetchSessionSync(sessionId: string): ChatSession | null {
+  console.warn(`[tauriBridge] chatHistory.getSession('${sessionId}') read synchronously`)
   try {
     const xhr = new XMLHttpRequest()
     xhr.open('GET', convertFileSrc(sessionId, 'chathistory'), false)
@@ -419,6 +457,20 @@ function fetchSessionSync(sessionId: string): ChatSession | null {
     return null
   }
 }
+
+/** Fields `getSessionField` can answer from the list metadata for a session not in the cache. */
+const METADATA_FIELDS = new Set<string>([
+  'id',
+  'title',
+  'createdAt',
+  'updatedAt',
+  'agentId',
+  'modelId',
+  'systemPrompt'
+])
+
+/** A value as the backend stores it (JSON), so the cached copy matches the file. */
+const asStored = <T>(v: T): T => JSON.parse(JSON.stringify(v))
 
 function background(method: string, p: Promise<unknown>) {
   p.catch((e) => console.error(`[tauriBridge] ${method} failed`, e))
@@ -439,21 +491,51 @@ function createChatHistory(): Window['chatHistory'] {
       return id
     },
     async addMessage(sessionId: string, message: ChatMessage) {
-      await call(`${M}.addMessage`, 'chat_history_add_message', { sessionId, message })
-      await refreshChat(sessionId)
+      // Append to the cached copy rather than re-reading a session that may be tens of MB.
+      const cached = chat.sessions[sessionId]
+      const stored = cached ? asStored(message) : undefined
+      if (cached && stored) {
+        cached.messages = [...(cached.messages ?? []), stored]
+        cached.updatedAt = Date.now()
+      }
+      try {
+        await call(`${M}.addMessage`, 'chat_history_add_message', { sessionId, message })
+      } catch (e) {
+        if (cached && stored) cached.messages = cached.messages.filter((m) => m !== stored)
+        throw e
+      }
+      await refreshChat()
     },
     getSession(sessionId: string) {
       if (!sessionId) return null
       return clone(chat.sessions[sessionId] ?? fetchSessionSync(sessionId))
     },
+    loadSession: loadSessionIntoCache,
+    isSessionLoaded(sessionId: string) {
+      return !!sessionId && !!chat.sessions[sessionId]
+    },
+    getSessionField(sessionId: string, key: keyof ChatSession) {
+      if (!sessionId) return undefined
+      const cached = chat.sessions[sessionId]
+      if (cached) return clone(cached[key])
+      if (!METADATA_FIELDS.has(key)) return undefined
+      const meta = chat.metadata.find((m) => m.id === sessionId)
+      return meta ? clone((meta as unknown as Record<string, unknown>)[key]) : undefined
+    },
+    getTouchedFiles(sessionId: string) {
+      return [...((sessionId && chat.sessions[sessionId]?.touchedFiles) || [])]
+    },
     async updateSessionTitle(sessionId: string, title: string) {
+      const cached = chat.sessions[sessionId]
+      if (cached) cached.title = title
       await call(`${M}.updateSessionTitle`, 'chat_history_update_session_title', {
         sessionId,
         title
       })
-      await refreshChat(sessionId)
+      await refreshChat()
     },
     deleteSession(sessionId: string) {
+      chatDeletions++
       delete chat.sessions[sessionId]
       chat.metadata = chat.metadata.filter((m) => m.id !== sessionId)
       chat.recent = chat.recent.filter((m) => m.id !== sessionId)
@@ -466,6 +548,7 @@ function createChatHistory(): Window['chatHistory'] {
     },
     deleteSessions(sessionIds: string[]) {
       const ids = new Set(sessionIds)
+      chatDeletions++
       ids.forEach((id) => delete chat.sessions[id])
       chat.metadata = chat.metadata.filter((m) => !ids.has(m.id))
       chat.recent = chat.recent.filter((m) => !ids.has(m.id))
@@ -477,6 +560,7 @@ function createChatHistory(): Window['chatHistory'] {
       )
     },
     deleteAllSessions() {
+      chatDeletions++
       chat.sessions = {}
       chat.metadata = []
       chat.recent = []
@@ -507,16 +591,29 @@ function createChatHistory(): Window['chatHistory'] {
       messageIndex: number,
       updatedMessage: ChatMessage
     ) {
+      // Patch the cached copy like the backend does (out-of-range indexes change nothing).
+      const cached = chat.sessions[sessionId]
+      if (cached?.messages && messageIndex >= 0 && messageIndex < cached.messages.length) {
+        cached.messages = cached.messages.map((m, i) =>
+          i === messageIndex ? asStored(updatedMessage) : m
+        )
+        cached.updatedAt = Date.now()
+      }
       await call(`${M}.updateMessageContent`, 'chat_history_update_message_content', {
         sessionId,
         messageIndex,
         updatedMessage
       })
-      await refreshChat(sessionId)
+      await refreshChat()
     },
     async deleteMessage(sessionId: string, messageIndex: number) {
+      const cached = chat.sessions[sessionId]
+      if (cached?.messages && messageIndex >= 0 && messageIndex < cached.messages.length) {
+        cached.messages = cached.messages.filter((_, i) => i !== messageIndex)
+        cached.updatedAt = Date.now()
+      }
       await call(`${M}.deleteMessage`, 'chat_history_delete_message', { sessionId, messageIndex })
-      await refreshChat(sessionId)
+      await refreshChat()
     },
     async setUseMemoryItems(sessionId: string, value: boolean) {
       // Update the cache first so a getSession right after the toggle sees the new value.
@@ -526,17 +623,17 @@ function createChatHistory(): Window['chatHistory'] {
         sessionId,
         value
       })
-      await refreshChat(sessionId)
+      await refreshChat()
     },
     async setMentionGrants(sessionId: string, grants: MentionGrants) {
       // Cache first, like setUseMemoryItems, so a getSession right after sees the change.
       const cached = chat.sessions[sessionId]
-      if (cached) cached.mentionGrants = grants
+      if (cached) cached.mentionGrants = clone(grants)
       await call(`${M}.setMentionGrants`, 'chat_history_set_mention_grants', {
         sessionId,
         grants
       })
-      await refreshChat(sessionId)
+      await refreshChat()
     },
     async addTouchedFiles(sessionId: string, paths: string[]) {
       if (paths.length === 0) return
@@ -1264,6 +1361,8 @@ function createApi(): Window['api'] {
       })),
       removeEveryFolder: cmd(`${CA}.removeEveryFolder`, 'chat_attachments_remove_every_folder'),
       rename: cmd(`${CA}.rename`, 'chat_attachments_rename', (sessionId) => ({ sessionId })),
+      tidy: cmd(`${CA}.tidy`, 'chat_attachments_tidy', (sessionId) => ({ sessionId })),
+      folder: cmd(`${CA}.folder`, 'chat_attachments_folder', (sessionId) => ({ sessionId })),
       buildContext: cmd(`${CA}.buildContext`, 'chat_attachments_build_context', (sessionId) => ({
         sessionId
       })),

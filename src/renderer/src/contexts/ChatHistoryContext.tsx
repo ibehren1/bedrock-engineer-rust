@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { refreshTouchedFilesAfterRename } from '@renderer/lib/workspaceFiles/touchedFiles'
 import {
   SessionMetadata,
   ChatSession,
@@ -13,7 +14,15 @@ interface ChatHistoryContextType {
   /** The chat history's folders, in display order. */
   folders: ChatFolder[]
   currentSessionId?: string
+  /** A copy of the whole session (see `window.chatHistory.getSession`; `loadSession` first). */
   getSession: (sessionId: string) => ChatSession | null
+  /** Read a session into the cache without blocking the window; resolves to whether it exists. */
+  loadSession: (sessionId: string) => Promise<boolean>
+  /** One field of a cached session, without copying the whole session. */
+  getSessionField: <K extends keyof ChatSession>(
+    sessionId: string,
+    key: K
+  ) => ChatSession[K] | undefined
   createSession: (agentId: string, modelId: string, systemPrompt?: string) => Promise<string>
   addMessage: (sessionId: string, message: ChatMessage) => Promise<void>
   updateSessionTitle: (sessionId: string, title: string) => Promise<void>
@@ -74,6 +83,17 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return window.chatHistory.getSession(sessionId)
   }, [])
 
+  const loadSession = useCallback(
+    (sessionId: string) => window.chatHistory.loadSession(sessionId),
+    []
+  )
+
+  const getSessionField = useCallback(
+    <K extends keyof ChatSession>(sessionId: string, key: K) =>
+      window.chatHistory.getSessionField(sessionId, key),
+    []
+  )
+
   // 新規セッションを作成
   const createSession = useCallback(
     async (agentId: string, modelId: string, systemPrompt?: string): Promise<string> => {
@@ -107,9 +127,11 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
         // 名前が読みやすくなるだけの処理なので、失敗してもリネーム自体は妨げない。
       }
 
-      // 添付ファイルのフォルダもタイトルに追従させる（ファイルはそのまま残る）。
+      // The chat's own folder follows the title too (its files move with it).
       try {
         await window.api.chatAttachments.rename(sessionId)
+        // The folder moved, so re-read the chat's file list at its new paths.
+        await refreshTouchedFilesAfterRename(sessionId)
       } catch {
         // こちらも見た目だけの処理なので、失敗を伝播させない。
       }
@@ -298,6 +320,8 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
     folders,
     currentSessionId,
     getSession,
+    loadSession,
+    getSessionField,
     createSession,
     addMessage,
     updateSessionTitle,

@@ -83,7 +83,7 @@ impl ClientFactory for Fake {
 struct Info;
 impl ModelInfo for Info {
     fn supports_thinking(&self, model_id: &str) -> bool {
-        model_id.contains("claude-sonnet-4")
+        model_id.contains("claude-thinking-test")
     }
     fn supported_thinking_types(&self, _: &str) -> Vec<ThinkingType> {
         vec![ThinkingType::Enabled]
@@ -190,7 +190,7 @@ fn service(fake: &Fake) -> ConverseService {
 
 fn chat_request() -> ConverseRequest {
     serde_json::from_value(json!({
-        "modelId": "us.anthropic.claude-sonnet-4-6",
+        "modelId": "us.anthropic.claude-thinking-test",
         "system": [{ "text": "You are helpful." }, { "cachePoint": { "type": "default" } }],
         "messages": [
             { "id": "m0", "role": "user", "content": [

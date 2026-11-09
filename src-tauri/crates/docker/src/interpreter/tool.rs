@@ -1,8 +1,10 @@
 //! The `codeInterpreter` operations. Port of `CodeInterpreterTool.ts` minus the `BaseTool`
 //! plumbing, which the tools crate supplies when it wraps this as a Tool.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use std::time::SystemTime;
 
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -33,6 +35,9 @@ NOT needed for operations: "status", "cancel", "list".
 CRITICAL FILE HANDLING RULES:
 - Input files: Mounted at /data/ directory (READ-ONLY). Access via inputFiles parameter.
 - Output files: MUST be created in current working directory (/workspace) to persist on host.
+  In a chat, /workspace is the chat's folder on the host, so generated files are saved there
+  next to the chat's other files, and files the user attached to the chat are readable at
+  /workspace/attachments/.
 - NEVER attempt to write to /data/ - it will fail with permission error.
 - Only files in /workspace are automatically detected and made available on host system.
 
@@ -180,6 +185,34 @@ pub struct CodeInterpreter {
     tasks: Arc<TaskManager>,
     session_id: String,
     current_workspace: Mutex<Option<PathBuf>>,
+    /// Workspace override (the chat's folder) of each async task that has one.
+    task_workspaces: Mutex<HashMap<String, PathBuf>>,
+}
+
+/// Top-level files of a folder with their (mtime, size), to tell what a run made or changed.
+type Snapshot = HashMap<String, (Option<SystemTime>, u64)>;
+
+fn snapshot_files(dir: &Path) -> Snapshot {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return Snapshot::new();
+    };
+    entries
+        .flatten()
+        .filter_map(|entry| {
+            let meta = entry.metadata().ok()?;
+            meta.is_file().then(|| {
+                (
+                    entry.file_name().to_string_lossy().into_owned(),
+                    (meta.modified().ok(), meta.len()),
+                )
+            })
+        })
+        .collect()
+}
+
+/// The code script the executor writes into the workspace (`temp_<ts>.py`).
+fn is_temp_script(name: &str) -> bool {
+    name.starts_with("temp_") && name.ends_with(".py")
 }
 
 fn generate_session_id() -> String {
@@ -226,6 +259,7 @@ impl CodeInterpreter {
             logger,
             session_id,
             current_workspace: Mutex::new(None),
+            task_workspaces: Mutex::new(HashMap::new()),
         })
     }
 
@@ -390,8 +424,19 @@ impl CodeInterpreter {
         }
     }
 
-    /// Validate and run one tool call.
+    /// Validate and run one tool call in this interpreter's own workspace.
     pub async fn execute(self: &Arc<Self>, input: Value) -> Result<CodeInterpreterOutput> {
+        self.execute_in(input, None).await
+    }
+
+    /// Validate and run one tool call. With `workspace` (a chat's folder), code runs there:
+    /// it is mounted at /workspace, never cleaned up, and only files the run made or changed are
+    /// reported. Without it, the interpreter's own temporary workspace is used.
+    pub async fn execute_in(
+        self: &Arc<Self>,
+        input: Value,
+        workspace: Option<PathBuf>,
+    ) -> Result<CodeInterpreterOutput> {
         let validation = Self::validate_input(&input);
         if !validation.is_valid {
             return Err(Error::InvalidInput(format!(
@@ -416,21 +461,27 @@ impl CodeInterpreter {
         let task_id = input.task_id.clone().unwrap_or_default();
         Ok(match operation {
             Operation::Execute if input.run_async == Some(true) => {
-                CodeInterpreterOutput::Task(self.execute_async(input))
+                CodeInterpreterOutput::Task(self.execute_async(input, workspace))
             }
-            Operation::Execute => CodeInterpreterOutput::Execution(self.execute_sync(&input).await),
+            Operation::Execute => CodeInterpreterOutput::Execution(
+                self.execute_sync(&input, workspace.as_deref()).await,
+            ),
             Operation::Status => CodeInterpreterOutput::Task(self.get_task_status(&task_id)),
             Operation::Cancel => CodeInterpreterOutput::Task(self.cancel_task(&task_id)),
             Operation::List => CodeInterpreterOutput::List(self.list_tasks(input.status_filter)),
         })
     }
 
-    async fn execute_sync(&self, input: &CodeInterpreterInput) -> CodeInterpreterResult {
+    async fn execute_sync(
+        &self,
+        input: &CodeInterpreterInput,
+        workspace: Option<&Path>,
+    ) -> CodeInterpreterResult {
         self.logger.info(
             "Executing Python code synchronously",
             json!({ "codeLength": input.code.len(), "sessionId": self.session_id }),
         );
-        match self.try_execute_sync(input).await {
+        match self.try_execute_sync(input, workspace).await {
             Ok(result) => result,
             Err(error) => {
                 let message = error.to_string();
@@ -461,6 +512,7 @@ impl CodeInterpreter {
     async fn try_execute_sync(
         &self,
         input: &CodeInterpreterInput,
+        workspace_override: Option<&Path>,
     ) -> Result<CodeInterpreterResult> {
         let check = self.executor.check_docker_availability().await;
         if !check.available {
@@ -470,13 +522,24 @@ impl CodeInterpreter {
             )));
         }
 
-        self.files.initialize_workspace()?;
-        let workspace = self.files.get_workspace_path()?;
+        let (workspace, before) = match workspace_override {
+            Some(dir) => {
+                std::fs::create_dir_all(dir).map_err(|error| {
+                    Error::msg(format!("Failed to prepare the chat folder: {error}"))
+                })?;
+                let had_data_dir = dir.join("data").exists();
+                (dir.to_path_buf(), Some((snapshot_files(dir), had_data_dir)))
+            }
+            None => {
+                self.files.initialize_workspace()?;
+                let workspace = self.files.get_workspace_path()?;
+                // Clean up workspaces older than 24 hours in the background.
+                let files = self.files.clone();
+                std::thread::spawn(move || files.cleanup_old_workspaces(24));
+                (workspace, None)
+            }
+        };
         *self.current_workspace.lock().unwrap() = Some(workspace.clone());
-
-        // Clean up workspaces older than 24 hours in the background.
-        let files = self.files.clone();
-        std::thread::spawn(move || files.cleanup_old_workspaces(24));
 
         self.executor.set_input_roots(self.input_roots());
         let processed = add_matplotlib_japanese_font_support(&input.code);
@@ -492,13 +555,42 @@ impl CodeInterpreter {
             )
             .await;
 
-        let generated: Vec<String> = self
-            .files
-            .list_files()
-            .into_iter()
-            .filter(|f| f.kind == FileKind::File && !f.name.starts_with("temp_"))
-            .map(|f| workspace.join(&f.name).to_string_lossy().into_owned())
-            .collect();
+        let generated: Vec<String> = match &before {
+            // A chat's folder: drop the run's script, report only what the run made or changed.
+            Some((before, had_data_dir)) => {
+                // The executor's empty mount point for /data is noise in a chat's folder.
+                if !had_data_dir {
+                    let _ = std::fs::remove_dir(workspace.join("data"));
+                }
+                let after = snapshot_files(&workspace);
+                for name in after.keys() {
+                    if is_temp_script(name) && !before.contains_key(name) {
+                        let _ = std::fs::remove_file(workspace.join(name));
+                    }
+                }
+                let mut names: Vec<&String> = after
+                    .iter()
+                    .filter(|(name, stamp)| {
+                        !is_temp_script(name)
+                            && !name.starts_with('.')
+                            && before.get(*name) != Some(*stamp)
+                    })
+                    .map(|(name, _)| name)
+                    .collect();
+                names.sort();
+                names
+                    .into_iter()
+                    .map(|name| workspace.join(name).to_string_lossy().into_owned())
+                    .collect()
+            }
+            None => self
+                .files
+                .list_files()
+                .into_iter()
+                .filter(|f| f.kind == FileKind::File && !f.name.starts_with("temp_"))
+                .map(|f| workspace.join(&f.name).to_string_lossy().into_owned())
+                .collect(),
+        };
 
         let mut output = execution.stdout.clone();
         if let Some(files) = input.input_files.as_ref().filter(|f| !f.is_empty()) {
@@ -555,7 +647,11 @@ impl CodeInterpreter {
         })
     }
 
-    fn execute_async(self: &Arc<Self>, input: CodeInterpreterInput) -> AsyncTaskResult {
+    fn execute_async(
+        self: &Arc<Self>,
+        input: CodeInterpreterInput,
+        workspace: Option<PathBuf>,
+    ) -> AsyncTaskResult {
         if !self.tasks.can_start_new_task() {
             return AsyncTaskResult {
                 success: false,
@@ -580,6 +676,12 @@ impl CodeInterpreter {
             .tasks
             .create_task(&input.code, environment, input.input_files.clone());
 
+        if let Some(dir) = workspace {
+            self.task_workspaces
+                .lock()
+                .unwrap()
+                .insert(task.task_id.clone(), dir);
+        }
         let this = self.clone();
         let task_id = task.task_id.clone();
         tokio::spawn(async move {
@@ -621,7 +723,8 @@ impl CodeInterpreter {
             input_files: task.input_files,
             ..Default::default()
         };
-        let result = self.execute_sync(&input).await;
+        let workspace = self.task_workspaces.lock().unwrap().remove(task_id);
+        let result = self.execute_sync(&input, workspace.as_deref()).await;
         self.tasks.set_task_result(task_id, result);
     }
 
@@ -921,5 +1024,75 @@ mod tests {
         let value = serde_json::to_value(&cancel).unwrap();
         assert_eq!(value["message"], "Failed to cancel task");
         assert_eq!(value["status"], "failed");
+    }
+
+    /// A Docker that is installed, has the image, and whose run writes `chart.png`.
+    fn working_docker(chat: &Path) -> Arc<FakeRunner> {
+        let runner = FakeRunner::new();
+        let chat = chat.to_path_buf();
+        runner.respond_with(move |_, args| match args.first().map(String::as_str) {
+            Some("--version") => RunResult::ok("Docker version 27.0.0"),
+            Some("images") => RunResult::ok("sha256:abc\n"),
+            Some("run") => {
+                std::fs::write(chat.join("chart.png"), b"png").unwrap();
+                RunResult::ok("done\n")
+            }
+            _ => RunResult::ok(""),
+        });
+        runner
+    }
+
+    #[tokio::test]
+    async fn runs_in_the_chat_folder_and_reports_only_what_the_run_made() {
+        let project = tempfile::tempdir().unwrap();
+        let chat = project.path().join("chats/my-chat");
+        std::fs::create_dir_all(chat.join("attachments")).unwrap();
+        std::fs::write(chat.join("notes.md"), "already here").unwrap();
+        std::fs::write(chat.join(".chat-session.json"), "{}").unwrap();
+        let runner = working_docker(&chat);
+        let project_path = project.path().to_string_lossy().into_owned();
+        let settings: Arc<dyn Settings> =
+            Arc::new(move |key: &str| (key == "projectPath").then(|| json!(project_path.clone())));
+        let ci = CodeInterpreter::with_runner(settings, Arc::new(LogFacadeLogger), runner.clone());
+
+        let output = ci
+            .execute_in(
+                json!({"type": "codeInterpreter", "code": "print(1)"}),
+                Some(chat.clone()),
+            )
+            .await
+            .unwrap();
+        let CodeInterpreterOutput::Execution(result) = output else {
+            panic!("expected an execution result");
+        };
+        assert!(result.success, "{result:?}");
+        assert_eq!(
+            result.result.files,
+            [chat.join("chart.png").to_string_lossy().into_owned()]
+        );
+
+        // The chat folder is what is mounted at /workspace.
+        let run = runner
+            .calls()
+            .into_iter()
+            .find(|(_, args)| args.first().map(String::as_str) == Some("run"))
+            .unwrap()
+            .1;
+        assert!(run.contains(&format!("{}:/workspace", chat.to_string_lossy())));
+
+        // The script is removed, everything else stays, and no temporary workspace was made.
+        let mut left: Vec<String> = std::fs::read_dir(&chat)
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        left.sort();
+        assert_eq!(
+            left,
+            [".chat-session.json", "attachments", "chart.png", "notes.md"]
+        );
+        assert!(!project.path().join(".bedrock-engineer/workspaces").exists());
+
+        ci.dispose().await;
+        assert!(chat.join("notes.md").exists());
     }
 }

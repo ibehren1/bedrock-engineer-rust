@@ -154,6 +154,10 @@ pub trait AgentResolver: Send + Sync {
 pub struct ToolSettings {
     /// `projectPath`.
     pub project_path: Option<String>,
+    /// The chat's folder (`<projectPath>/chats/<chat-name>`), set when the call comes from a
+    /// chat. Relative paths resolve against it instead of the project folder. It may not exist
+    /// yet: [`ToolContext::ensure_chat_dir`] creates it.
+    pub chat_dir: Option<String>,
     /// `agentFileFolders`: folders outside the project the file tools may also use (see
     /// [`crate::util::path_guard`]).
     pub agent_file_folders: Vec<String>,
@@ -179,7 +183,7 @@ pub struct ToolSettings {
     /// `customAgents`, raw.
     pub custom_agents: Vec<Value>,
     /// What the Bedrock services read from the store (`aws`, `inferenceParams`,
-    /// `thinkingMode`, `interleaveThinking`, `guardrailSettings`, `bedrockSettings`).
+    /// `thinkingMode`, `guardrailSettings`, `bedrockSettings`).
     pub converse: bedrock::ConverseSettings,
     /// `generateImageTool.modelId`.
     pub generate_image_model_id: Option<String>,
@@ -211,6 +215,7 @@ impl std::fmt::Debug for ToolSettings {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ToolSettings")
             .field("project_path", &self.project_path)
+            .field("chat_dir", &self.chat_dir)
             .field("user_data_path", &self.user_data_path)
             .field("shell", &self.shell)
             .field("selected_agent_id", &self.selected_agent_id)
@@ -249,14 +254,20 @@ pub fn converse_settings_from_store(store: &Value) -> bedrock::ConverseSettings 
         aws: parse("aws", field("aws")).unwrap_or_default(),
         inference_params: parse("inferenceParams", inference.as_ref()).unwrap_or_default(),
         thinking_mode: parse("thinkingMode", field("thinkingMode")),
-        interleave_thinking: parse("interleaveThinking", field("interleaveThinking"))
-            .unwrap_or(false),
         guardrail_settings: parse("guardrailSettings", field("guardrailSettings")),
         bedrock_settings: parse("bedrockSettings", field("bedrockSettings")),
     }
 }
 
 impl ToolSettings {
+    /// The store paths the `attachments` crate needs to find a chat's folder.
+    pub fn attachment_paths(&self) -> attachments::AttachmentPaths {
+        attachments::AttachmentPaths::new(
+            self.project_path.as_deref(),
+            self.user_data_path.as_deref(),
+        )
+    }
+
     /// Build from the whole store object (`store.all()`).
     pub fn from_store(store: &Value) -> ToolSettings {
         let str_at = |ptr: &str| {
@@ -268,6 +279,7 @@ impl ToolSettings {
         };
         ToolSettings {
             project_path: str_at("/projectPath"),
+            chat_dir: None,
             agent_file_folders: store
                 .get("agentFileFolders")
                 .and_then(Value::as_array)
@@ -483,13 +495,44 @@ impl ToolContext {
         }
     }
 
-    /// Context from a store snapshot and optional chat session id.
+    /// Context from a store snapshot and optional chat session id. A chat's calls get its
+    /// folder as [`ToolSettings::chat_dir`].
     pub fn from_store(store: &Value, session_id: Option<String>) -> Self {
+        let mut settings = ToolSettings::from_store(store);
+        let session_id = session_id.filter(|s| !s.is_empty());
+        // Only a real chat has a folder; a background agent run's session is not a chat.
+        if let Some(session) = session_id
+            .as_deref()
+            .filter(|s| attachments::is_chat_session(&settings.attachment_paths(), s))
+        {
+            settings.chat_dir =
+                attachments::resolve_chat_dir(&settings.attachment_paths(), session)
+                    .ok()
+                    .map(|p| p.to_string_lossy().into_owned());
+        }
         ToolContext {
-            settings: ToolSettings::from_store(store),
+            settings,
             session_id,
             ..Default::default()
         }
+    }
+
+    /// Create the chat's folder (and its ownership marker) when `path` is inside it, so a file
+    /// the agent writes there lands in a folder the app recognises as the chat's.
+    pub fn ensure_chat_dir_for(&self, path: &std::path::Path) {
+        let (Some(dir), Some(session)) = (&self.settings.chat_dir, &self.session_id) else {
+            return;
+        };
+        if path.starts_with(dir) {
+            self.ensure_chat_dir(session);
+        }
+    }
+
+    /// Create the chat's folder; its path, or `None` when there is no chat or project folder.
+    pub fn ensure_chat_dir(&self, session: &str) -> Option<std::path::PathBuf> {
+        attachments::ensure_chat_dir(&self.settings.attachment_paths(), session)
+            .map_err(|e| tracing::warn!(error = %e, "Could not create the chat folder"))
+            .ok()
     }
 
     /// The agent the call runs as: the caller's agent, else the store's `selectedAgentId`.

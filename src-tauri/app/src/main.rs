@@ -160,7 +160,10 @@ fn main() {
                 PermissionResponse::Default
             }
         })
-        .register_uri_scheme_protocol(
+        // One chat session as JSON (`getSession` for a session not in the startup snapshot).
+        // Asynchronous: sessions reach tens of megabytes and must not be read on the main
+        // thread, which would freeze the window.
+        .register_asynchronous_uri_scheme_protocol(
             commands::chat_history::SESSION_PROTOCOL,
             commands::chat_history::session_protocol,
         )

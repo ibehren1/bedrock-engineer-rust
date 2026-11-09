@@ -398,6 +398,72 @@ impl ChatSessionManager {
         self.write_session_file(session_id, &session);
     }
 
+    /// The session's `touchedFiles` (`[]` when missing).
+    pub fn touched_files(&self, session_id: &str) -> Vec<String> {
+        self.read_session_file(session_id)
+            .and_then(|s| s.get("touchedFiles").cloned())
+            .and_then(|v| serde_json::from_value(v).ok())
+            .unwrap_or_default()
+    }
+
+    /// Replace the session's `touchedFiles` (after its files moved). Doesn't touch `updatedAt`.
+    /// Unknown sessions are a no-op.
+    pub fn set_touched_files(&self, session_id: &str, paths: &[String]) {
+        let Some(mut session) = self.read_session_file(session_id) else {
+            return;
+        };
+        let Some(obj) = session.as_object_mut() else {
+            return;
+        };
+        if obj.get("touchedFiles") == Some(&json!(paths)) {
+            return;
+        }
+        obj.insert("touchedFiles".into(), json!(paths));
+        self.write_session_file(session_id, &session);
+    }
+
+    /// The session's `(createdAt, updatedAt)` from the metadata, in epoch ms.
+    pub fn session_times(&self, session_id: &str) -> Option<(f64, f64)> {
+        let meta = self.metadata();
+        let entry = meta.get(session_id)?;
+        let created = entry.get("createdAt")?.as_f64()?;
+        let updated = entry
+            .get("updatedAt")
+            .and_then(Value::as_f64)
+            .unwrap_or(created);
+        Some((created, updated))
+    }
+
+    /// Files listed by the other chats that were active while this one was (their
+    /// `[createdAt, updatedAt]` overlaps `[from_ms, until_ms]`). Only those chats can have
+    /// written the same files, so the rest of the history (possibly hundreds of large session
+    /// files) is not read.
+    pub fn touched_files_of_overlapping_sessions(
+        &self,
+        session_id: &str,
+        from_ms: f64,
+        until_ms: f64,
+    ) -> HashSet<String> {
+        let mut out = HashSet::new();
+        for (id, entry) in self.metadata() {
+            if id == session_id {
+                continue;
+            }
+            let created = entry
+                .get("createdAt")
+                .and_then(Value::as_f64)
+                .unwrap_or(0.0);
+            let updated = entry
+                .get("updatedAt")
+                .and_then(Value::as_f64)
+                .unwrap_or(f64::MAX);
+            if created <= until_ms && updated >= from_ms {
+                out.extend(self.touched_files(&id));
+            }
+        }
+        out
+    }
+
     /// The folders, in display order (`[]` when the key is missing or not a list).
     pub fn folders(&self) -> Vec<Value> {
         match self.meta.get("folders") {

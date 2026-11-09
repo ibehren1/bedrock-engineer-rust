@@ -162,6 +162,8 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         attachments::chat_attachments_remove_all,
         attachments::chat_attachments_remove_every_folder,
         attachments::chat_attachments_rename,
+        attachments::chat_attachments_tidy,
+        attachments::chat_attachments_folder,
         attachments::chat_attachments_build_context,
         attachments::chat_attachments_open_folder,
         // window.api.help

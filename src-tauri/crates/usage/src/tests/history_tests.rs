@@ -89,7 +89,7 @@ fn imports_chat_usage_once_and_stops_at_live_recording() {
     let sep = rows.iter().find(|r| r.local_day == "2026-09-01").unwrap();
     assert_eq!(sep.agent_id.as_deref(), Some("softwareAgent"));
     assert_eq!(sep.session_id.as_deref(), Some("s1"));
-    assert!((sep.cost_usd.unwrap() - 0.003).abs() < 1e-12);
+    assert!((sep.cost_usd.unwrap() - 0.002).abs() < 1e-12);
     assert_eq!(
         rows.iter()
             .find(|r| r.local_day == "2026-10-02")
@@ -147,9 +147,9 @@ fn breakdown_and_csv() {
             .map(|r| (r.key.as_str(), r.sub_key.as_str()))
             .collect::<Vec<_>>(),
         vec![
-            ("2026-10-01", "anthropic.claude-sonnet-4-6"),
+            ("2026-10-01", "anthropic.claude-sonnet-5-5"),
             ("2026-10-01", "acme.mystery"),
-            ("2026-10-02", "anthropic.claude-sonnet-4-6"),
+            ("2026-10-02", "anthropic.claude-sonnet-5-5"),
         ]
     );
 
@@ -163,5 +163,5 @@ fn breakdown_and_csv() {
         lines[1]
     );
     assert!(lines[3].contains("\"chat,quoted\""));
-    assert!(lines[3].contains(",0.006000,"));
+    assert!(lines[3].contains(",0.004000,"));
 }

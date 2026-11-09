@@ -87,7 +87,6 @@ pub fn init(data: &mut Map<String, Value>, env: &Env) {
         "thinkingMode",
         json!({ "type": "enabled", "budget_tokens": 4096 }),
     );
-    missing(data, "interleaveThinking", json!(false));
     falsy(data, "customAgents", json!([]));
     falsy(data, "selectedAgentId", json!("softwareAgent"));
     falsy(data, "knowledgeBases", json!([]));
@@ -247,7 +246,6 @@ mod tests {
                 "aws",
                 "inferenceParams",
                 "thinkingMode",
-                "interleaveThinking",
                 "customAgents",
                 "selectedAgentId",
                 "knowledgeBases",
@@ -342,7 +340,6 @@ mod tests {
     fn undefined_only_keys_keep_falsy_values() {
         let m = with(json!({
             "language": "",
-            "interleaveThinking": false,
             "lightProcessingModel": null,
             "planMode": false,
             "userEmoji": "",

@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use serde_json::{json, Value};
 
 const NAME: &str = "writeToFile";
-const DESCRIPTION: &str = "Write content to an existing file at the specified path. Use this when you need to add or update content in an existing file. \n !IMPORTANT: Be careful not to exceed the output_tokens limit.\n\nWrite content to files in your project. Always provide complete file content.";
+const DESCRIPTION: &str = "Write content to an existing file at the specified path. Use this when you need to add or update content in an existing file. \n !IMPORTANT: Be careful not to exceed the output_tokens limit.\n\nWrite content to files in your project. Always provide complete file content. A relative path is saved in this chat's folder, where new files for the chat belong; use an absolute path to change an existing project file.";
 
 /// `WriteToFileTool`.
 pub struct WriteToFileTool;
@@ -58,7 +58,12 @@ impl Tool for WriteToFileTool {
     }
 
     async fn execute_internal(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
-        let path = &super::guarded(ctx, str_of(&input, "path"), crate::util::path_guard::Access::Write, NAME)?;
+        let path = &super::guarded(
+            ctx,
+            str_of(&input, "path"),
+            crate::util::path_guard::Access::Write,
+            NAME,
+        )?;
         let content = str_of(&input, "content");
         tracing::debug!(content_length = content.len(), "Writing to file: {path}");
         let result = async {

@@ -166,7 +166,11 @@ export function changedPathsRelative(
   const out: string[] = []
   for (const path of event.paths ?? []) {
     const rel = toProjectRelative(path, root)
-    if (rel && !out.includes(rel)) out.push(rel)
+    // Hidden files are the app's and the tools' own (the chat folder's ownership marker,
+    // .DS_Store, git internals), not work the chat did.
+    if (rel && !out.includes(rel) && !rel.split('/').some((part) => part.startsWith('.'))) {
+      out.push(rel)
+    }
   }
   return out
 }

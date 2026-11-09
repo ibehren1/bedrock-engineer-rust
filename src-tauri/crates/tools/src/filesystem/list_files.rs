@@ -212,7 +212,12 @@ impl Tool for ListFilesTool {
     }
 
     async fn execute_internal(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
-        let dir = &super::guarded(ctx, str_of(&input, "path"), crate::util::path_guard::Access::Read, NAME)?;
+        let dir = &super::guarded(
+            ctx,
+            str_of(&input, "path"),
+            crate::util::path_guard::Access::Read,
+            NAME,
+        )?;
         let options = input.get("options");
         let ignore_files: Vec<String> = match options.and_then(|o| o.get("ignoreFiles")) {
             Some(Value::Array(a)) => a

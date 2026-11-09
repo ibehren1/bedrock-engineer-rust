@@ -1,7 +1,7 @@
 //! Settings the converse path reads from the electron-store config.
 //!
 //! These mirror the store keys read by `src/main/api/bedrock/services/converseService.ts`
-//! (`aws`, `inferenceParams`, `thinkingMode`, `interleaveThinking`, `guardrailSettings`,
+//! (`aws`, `inferenceParams`, `thinkingMode`, `guardrailSettings`,
 //! `bedrockSettings`). They are plain serde structs so the app layer can deserialize them straight
 //! out of the store JSON without this crate depending on the `store` crate.
 
@@ -159,8 +159,6 @@ pub struct ConverseSettings {
     pub inference_params: InferenceConfig,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub thinking_mode: Option<ThinkingMode>,
-    #[serde(default)]
-    pub interleave_thinking: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub guardrail_settings: Option<GuardrailSettings>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -185,7 +183,6 @@ mod tests {
             },
             "inferenceParams": { "maxTokens": 4096, "temperature": 0.5, "topP": 0.9 },
             "thinkingMode": { "type": "enabled", "budget_tokens": 4096 },
-            "interleaveThinking": true,
             "guardrailSettings": {
                 "enabled": false, "guardrailIdentifier": "", "guardrailVersion": "DRAFT", "trace": "enabled"
             },
@@ -207,7 +204,6 @@ mod tests {
             Some("enabled")
         );
         assert_eq!(settings.thinking_mode.unwrap().budget_tokens, Some(4096));
-        assert!(settings.interleave_thinking);
         assert_eq!(
             settings
                 .bedrock_settings

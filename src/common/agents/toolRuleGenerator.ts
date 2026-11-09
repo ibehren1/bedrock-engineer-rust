@@ -46,8 +46,7 @@ If you are acting as a voice chat, please ignore this illustration rule.
 - If a complex diagram is required  please express it in draw.io xml format.
 - Ask user permission before generating images with Stable Diffusion
 - Display images using Markdown syntax: \`![image-name](url)\`
-  - (example) \`![img]({{projectPath}}/generated_image.png)\`
-  - (example) \`![img]({{projectPath}}/workspaces/workspace-20250529-session_1748509562336_4xe58p/generated_image.png)\`
+  - (example) \`![img]({{projectPath}}/chats/my-chat/generated_image.png)\`
   - Do not start with file://. Start with /.
 - Use KaTeX format for mathematical formulas
 - For web applications, source images from Pexels or user-specified sources

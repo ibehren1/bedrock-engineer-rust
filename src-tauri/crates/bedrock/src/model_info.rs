@@ -139,37 +139,37 @@ mod tests {
         assert_eq!(clamp_max_tokens(&NoModelInfo, "m", Some(5)), Some(5));
     }
 
-    const SONNET_4_6: &str = "us.anthropic.claude-sonnet-4-6";
+    const SONNET_5_5: &str = "us.anthropic.claude-sonnet-5-5";
     const NOVA_PRO: &str = "us.amazon.nova-pro-v1:0";
 
     #[test]
     fn registry_answers_match_the_models_crate() {
         let info = RegistryModelInfo;
-        assert!(info.supports_thinking(SONNET_4_6));
+        assert!(info.supports_thinking(SONNET_5_5));
         assert!(!info.supports_thinking(NOVA_PRO));
         assert!(!info.supports_thinking("unknown-model"));
         assert_eq!(
-            info.supported_thinking_types(SONNET_4_6),
-            models::get_supported_thinking_types(SONNET_4_6)
+            info.supported_thinking_types(SONNET_5_5),
+            models::get_supported_thinking_types(SONNET_5_5)
         );
         assert!(info.supported_thinking_types("unknown-model").is_empty());
 
-        let limit = models::get_model_config(SONNET_4_6)
+        let limit = models::get_model_config(SONNET_5_5)
             .unwrap()
             .max_tokens_limit;
-        assert_eq!(info.max_tokens_limit(SONNET_4_6), Some(i64::from(limit)));
+        assert_eq!(info.max_tokens_limit(SONNET_5_5), Some(i64::from(limit)));
         assert_eq!(info.max_tokens_limit("unknown-model"), None);
         assert_eq!(
-            clamp_max_tokens(&info, SONNET_4_6, Some(10_000_000)),
+            clamp_max_tokens(&info, SONNET_5_5, Some(10_000_000)),
             Some(i64::from(limit))
         );
 
         // regions: exact model ID match only (allModels.find(m => m.modelId === id)).
-        let regions = info.regions(SONNET_4_6).unwrap();
+        let regions = info.regions(SONNET_5_5).unwrap();
         assert!(regions.iter().any(|r| r == "us-east-1"));
-        assert_eq!(info.regions("anthropic.claude-sonnet-4-6"), None);
+        assert_eq!(info.regions("anthropic.claude-sonnet-5-5"), None);
 
-        assert!(info.cache_config(SONNET_4_6).unwrap().supported);
+        assert!(info.cache_config(SONNET_5_5).unwrap().supported);
         assert_eq!(info.cache_config("unknown-model"), None);
     }
 
@@ -178,7 +178,7 @@ mod tests {
     #[test]
     fn prompt_cache_manager_agrees_with_cache_config() {
         use crate::PromptCacheManager;
-        for id in [SONNET_4_6, NOVA_PRO, "unknown-model"] {
+        for id in [SONNET_5_5, NOVA_PRO, "unknown-model"] {
             let m = PromptCacheManager::new(id);
             let cfg = RegistryModelInfo.cache_config(id);
             assert_eq!(m.is_supported(), cfg.as_ref().is_some_and(|c| c.supported));
@@ -194,7 +194,7 @@ mod tests {
     #[test]
     fn prompt_cache_first_point_on_last_message_marks_only_last() {
         use serde_json::json;
-        let m = crate::PromptCacheManager::new(SONNET_4_6);
+        let m = crate::PromptCacheManager::new(SONNET_5_5);
         let msgs = vec![
             json!({ "role": "user", "content": [{ "text": "a" }] }),
             json!({ "role": "assistant", "content": [{ "text": "b" }] }),

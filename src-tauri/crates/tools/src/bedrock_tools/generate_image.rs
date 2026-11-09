@@ -90,7 +90,7 @@ impl Tool for GenerateImageTool {
                     },
                     "outputPath": {
                         "type": "string",
-                        "description": "Path where the generated image should be saved, including filename (e.g., \"/path/to/image.png\")"
+                        "description": "Path where the generated image should be saved, including filename. A relative path (e.g., \"images/hero.png\") is saved in this chat's folder."
                     },
                     "negativePrompt": {
                         "type": "string",
@@ -165,6 +165,15 @@ impl Tool for GenerateImageTool {
         let s = |k: &str| input.get(k).and_then(Value::as_str).map(str::to_string);
         let prompt = s("prompt").unwrap_or_default();
         let output_path = s("outputPath").unwrap_or_default();
+        // A relative path is saved in the chat's folder.
+        let output_path = match ctx.settings.chat_dir.as_deref() {
+            Some(chat) if !output_path.is_empty() && !Path::new(&output_path).is_absolute() => {
+                let full = Path::new(chat).join(&output_path);
+                ctx.ensure_chat_dir_for(&full);
+                full.to_string_lossy().into_owned()
+            }
+            _ => output_path,
+        };
         let negative_prompt = s("negativePrompt");
         let aspect_ratio = s("aspect_ratio");
         let seed = input.get("seed").and_then(Value::as_f64);

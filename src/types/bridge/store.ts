@@ -68,7 +68,6 @@ export type StoreScheme = {
   thinkingMode?: ThinkingMode
 
   /** インターリーブ思考の設定（思考モードの拡張機能） */
-  interleaveThinking?: boolean
 
   /** 画像認識ツールの設定 */
   recognizeImageTool?: {

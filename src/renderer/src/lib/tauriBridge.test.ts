@@ -370,6 +370,96 @@ describe('installTauriBridge', () => {
     expect(seen).toEqual([{ root: '/p', paths: ['a.md'] }])
   })
 
+  it('serves chat sessions from the cache and patches it instead of re-reading', async () => {
+    const meta = {
+      id: 's2',
+      title: 'Chat later',
+      createdAt: 1,
+      updatedAt: 1,
+      messageCount: 3,
+      agentId: 'helpAgent',
+      modelId: 'm'
+    }
+    const session = (id: string) => ({
+      id,
+      title: 'Chat one',
+      createdAt: 1,
+      updatedAt: 1,
+      agentId: 'a1',
+      modelId: 'm',
+      messages: [{ id: 'm0', role: 'user', content: [{ text: 'hi' }], timestamp: 1 }],
+      touchedFiles: ['a.md']
+    })
+    let resolveLoad: (v: unknown) => void = () => {}
+    invokeMock.mockImplementation(async (command: string, args?: any) => {
+      if (command === 'store_all') return {}
+      if (command === 'chat_history_snapshot')
+        return { metadata: [meta], recent: [], folders: [], sessions: { s1: session('s1') } }
+      if (command === 'chat_history_get_session')
+        return new Promise((r) => (resolveLoad = () => r(session(args.sessionId))))
+      if (command.startsWith('chat_history_get_') || command.startsWith('chat_history_'))
+        return command.endsWith('_id') ? null : []
+      return null
+    })
+    // The bridge installs once per module; a fresh copy hydrates this snapshot.
+    let fresh: typeof import('./tauriBridge') | undefined
+    jest.isolateModules(() => {
+      fresh = require('./tauriBridge')
+    })
+    await fresh!.installTauriBridge()
+    const ch = g.window.chatHistory
+
+    // Field reads don't copy the session; uncached sessions answer from the list metadata only.
+    expect(ch.getSessionField('s1', 'agentId')).toBe('a1')
+    expect(ch.getSessionField('s2', 'agentId')).toBe('helpAgent')
+    expect(ch.getSessionField('s2', 'touchedFiles')).toBeUndefined()
+    const touched = ch.getTouchedFiles('s1')
+    touched.push('mutated')
+    expect(ch.getTouchedFiles('s1')).toEqual(['a.md'])
+    expect(ch.getTouchedFiles('s2')).toEqual([])
+    expect(ch.isSessionLoaded('s1')).toBe(true)
+
+    // addMessage appends to the cached copy; only the list metadata is re-read.
+    const message = { id: 'm1', role: 'assistant', content: [{ text: 'yo' }], timestamp: 2 }
+    await ch.addMessage('s1', message)
+    message.content[0].text = 'mutated'
+    expect(ch.getSession('s1').messages.map((m: any) => m.content[0].text)).toEqual(['hi', 'yo'])
+    expect(invokeMock).toHaveBeenCalledWith('chat_history_add_message', {
+      sessionId: 's1',
+      message
+    })
+    expect(invokeMock).toHaveBeenCalledWith('chat_history_get_all_session_metadata', undefined)
+    expect(invokeMock).not.toHaveBeenCalledWith('chat_history_get_session', expect.anything())
+
+    await ch.updateMessageContent('s1', 1, { ...message, content: [{ text: 'edited' }] })
+    await ch.deleteMessage('s1', 0)
+    await ch.deleteMessage('s1', 5) // out of range: no change, like the backend
+    await ch.updateSessionTitle('s1', 'Named')
+    expect(ch.getSession('s1').messages.map((m: any) => m.content[0].text)).toEqual(['edited'])
+    expect(ch.getSessionField('s1', 'title')).toBe('Named')
+    expect(invokeMock).not.toHaveBeenCalledWith('chat_history_get_session', expect.anything())
+
+    // loadSession reads asynchronously, once for concurrent callers, and fills the cache.
+    expect(ch.isSessionLoaded('s2')).toBe(false)
+    const first = ch.loadSession('s2')
+    const second = ch.loadSession('s2')
+    resolveLoad(undefined)
+    await expect(first).resolves.toBe(true)
+    await expect(second).resolves.toBe(true)
+    expect(
+      invokeMock.mock.calls.filter(([c]: [string]) => c === 'chat_history_get_session')
+    ).toEqual([['chat_history_get_session', { sessionId: 's2' }]])
+    expect(ch.getSessionField('s2', 'touchedFiles')).toEqual(['a.md'])
+    await expect(ch.loadSession('s2')).resolves.toBe(true)
+
+    // A chat deleted while it loads isn't cached again.
+    const load = ch.loadSession('s3')
+    ch.deleteSession('s3')
+    resolveLoad(undefined)
+    await expect(load).resolves.toBe(false)
+    expect(ch.isSessionLoaded('s3')).toBe(false)
+  })
+
   it('reference-counts the workspace file watcher', async () => {
     await installTauriBridge()
     invokeMock.mockReset()

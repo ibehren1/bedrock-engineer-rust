@@ -372,7 +372,10 @@ async fn list_files_ignore_depth_and_lines() {
     assert!(out.contains("deep.txt"));
 
     // Store defaults (agentChatConfig.ignoreFiles) apply when the input has none.
-    let ctx = open(ToolContext::from_store(&json!({"agentChatConfig": {"ignoreFiles": ["src"]}}), None));
+    let ctx = open(ToolContext::from_store(
+        &json!({"agentChatConfig": {"ignoreFiles": ["src"]}}),
+        None,
+    ));
     let out = text(
         run_tool(
             &ListFilesTool,
@@ -551,7 +554,10 @@ async fn oversized_results_are_chunked() {
     let dir = tempfile::tempdir().unwrap();
     let f = p(&dir, "big.txt");
     std::fs::write(&f, "y".repeat(1000)).unwrap();
-    let ctx = open(ToolContext::from_store(&json!({"inferenceParams": {"maxTokens": 50}}), None));
+    let ctx = open(ToolContext::from_store(
+        &json!({"inferenceParams": {"maxTokens": 50}}),
+        None,
+    ));
     let out = text(
         run_tool(
             &ReadFilesTool,
@@ -577,7 +583,10 @@ async fn file_tools_refuse_paths_outside_the_agent_folders() {
     );
     let outside = "/etc/passwd";
     let cases: Vec<(Box<dyn Tool>, Value)> = vec![
-        (Box::new(ReadFilesTool), json!({"type": "readFiles", "paths": [outside]})),
+        (
+            Box::new(ReadFilesTool),
+            json!({"type": "readFiles", "paths": [outside]}),
+        ),
         (
             Box::new(WriteToFileTool),
             json!({"type": "writeToFile", "path": "/tmp/../etc/x", "content": "x"}),
@@ -586,8 +595,14 @@ async fn file_tools_refuse_paths_outside_the_agent_folders() {
             Box::new(ApplyDiffEditTool),
             json!({"type": "applyDiffEdit", "path": outside, "originalText": "a", "updatedText": "b"}),
         ),
-        (Box::new(CreateFolderTool), json!({"type": "createFolder", "path": "../escape"})),
-        (Box::new(ListFilesTool), json!({"type": "listFiles", "path": "/"})),
+        (
+            Box::new(CreateFolderTool),
+            json!({"type": "createFolder", "path": "../escape"}),
+        ),
+        (
+            Box::new(ListFilesTool),
+            json!({"type": "listFiles", "path": "/"}),
+        ),
         (
             Box::new(CopyFileTool),
             json!({"type": "copyFile", "source": outside, "destination": "copied"}),
@@ -598,8 +613,14 @@ async fn file_tools_refuse_paths_outside_the_agent_folders() {
         ),
     ];
     for (tool, input) in cases {
-        let err = run_tool(tool.as_ref(), input.clone(), &ctx).await.unwrap_err();
-        assert!(err.message.contains("Access denied"), "{input}: {}", err.message);
+        let err = run_tool(tool.as_ref(), input.clone(), &ctx)
+            .await
+            .unwrap_err();
+        assert!(
+            err.message.contains("Access denied"),
+            "{input}: {}",
+            err.message
+        );
     }
     // Relative paths land in the project.
     run_tool(

@@ -12,7 +12,7 @@ use serde_json::{json, Map, Value};
 use std::sync::{Arc, Mutex};
 
 const NAME: &str = "executeCommand";
-const DESCRIPTION: &str = "Execute a command or send input to a running process. First execute the command to get a PID, then use that PID to send input if needed. Usage: 1) First call with command and cwd to start process, 2) If input is required, call again with pid and stdin.\n\nWhen the dockerSandbox tool is enabled, commands run inside this chat's isolated Docker container by default and any command is permitted there — the sandbox is created automatically on first use. The project directory ({{projectPath}}) is mounted at /workspace, so use /workspace paths for cwd. The sandbox is a bare image of the OS the user chose (Debian by default); check /etc/os-release, then use apt-get (after \"apt-get update\") on Ubuntu or Debian and dnf on Amazon Linux or RHEL-family images.\n\nSet target: \"host\" to run on the user's own machine instead. Host commands require the user to approve them, and only commands from this allowed list may be used: {{allowedCommands}}. A host command must be one program with its arguments: chaining (;, &&, ||), pipes, redirection (>, <), backgrounding (&) and command substitution ($(...), backticks) are refused, so run each step as its own command. Prefer the sandbox unless the task genuinely needs the host (for example git operations on the real repository).\n\nSet detach: true to start a long-running process in the background and return immediately; read its output later with the dockerSandbox logs operation.";
+const DESCRIPTION: &str = "Execute a command or send input to a running process. First execute the command to get a PID, then use that PID to send input if needed. Usage: 1) First call with command (and optionally cwd) to start process, 2) If input is required, call again with pid and stdin.\n\nWhen the dockerSandbox tool is enabled, commands run inside this chat's isolated Docker container by default and any command is permitted there — the sandbox is created automatically on first use. The project directory ({{projectPath}}) is mounted at /workspace, so this chat's folder is under /workspace/chats/. Commands run in this chat's folder unless cwd says otherwise: leave cwd out (or make it relative) for work that belongs to this chat, and give an absolute cwd only to work on the user's own project files. The sandbox is a bare image of the OS the user chose (Debian by default); check /etc/os-release, then use apt-get (after \"apt-get update\") on Ubuntu or Debian and dnf on Amazon Linux or RHEL-family images.\n\nSet target: \"host\" to run on the user's own machine instead. Host commands require the user to approve them, and only commands from this allowed list may be used: {{allowedCommands}}. A host command must be one program with its arguments: chaining (;, &&, ||), pipes, redirection (>, <), backgrounding (&) and command substitution ($(...), backticks) are refused, so run each step as its own command. Prefer the sandbox unless the task genuinely needs the host (for example git operations on the real repository).\n\nSet detach: true to start a long-running process in the background and return immediately; read its output later with the dockerSandbox logs operation.";
 
 /// `ExecuteCommandTool`. Holds the host [`CommandService`], recreated whenever the
 /// resolved config (shell + agent allowlist) changes, like the TS module-level state.
@@ -124,6 +124,50 @@ impl ExecuteCommandTool {
     }
 }
 
+/// The host working directory for a command: an absolute `cwd` as given; otherwise the chat's
+/// folder (created first), joined with a relative `cwd`. Without a chat folder, the old
+/// behaviour: the given value, or the project folder when there is none.
+fn resolve_host_cwd(input: &Value, ctx: &ToolContext) -> String {
+    let given = input.get("cwd").and_then(Value::as_str).unwrap_or_default();
+    if std::path::Path::new(given).is_absolute() {
+        return given.to_string();
+    }
+    if let (Some(session), Some(_)) = (&ctx.session_id, &ctx.settings.chat_dir) {
+        if let Some(dir) = ctx.ensure_chat_dir(session) {
+            return dir.join(given).to_string_lossy().into_owned();
+        }
+    }
+    if given.is_empty() {
+        return ctx.settings.project_path.clone().unwrap_or_default();
+    }
+    given.to_string()
+}
+
+/// The sandbox working directory: an absolute `cwd` as given; otherwise the chat's folder as
+/// the container sees it (`/workspace/chats/<chat-name>`), joined with a relative `cwd`.
+fn resolve_sandbox_cwd(input: &Value, ctx: &ToolContext) -> Option<String> {
+    let given = input.get("cwd").and_then(Value::as_str).unwrap_or_default();
+    if given.starts_with('/') {
+        return Some(given.to_string());
+    }
+    let session = ctx.session_id.as_deref()?;
+    let project = ctx.settings.project_path.as_deref()?;
+    ctx.settings.chat_dir.as_ref()?;
+    let dir = ctx.ensure_chat_dir(session)?;
+    let relative = dir.strip_prefix(project).ok()?;
+    let mut cwd = String::from("/workspace");
+    for part in relative.components() {
+        cwd.push('/');
+        cwd.push_str(&part.as_os_str().to_string_lossy());
+    }
+    let given = given.trim_start_matches("./").trim_end_matches('/');
+    if !given.is_empty() && given != "." {
+        cwd.push('/');
+        cwd.push_str(given);
+    }
+    Some(cwd)
+}
+
 /// `{ success, name, message, result: { target, ...fields }, ...raw }`.
 fn build_result(message: String, target: &str, raw: &Value, inner_keys: &[&str]) -> Value {
     let mut inner = Map::new();
@@ -172,6 +216,7 @@ async fn sandbox_exec(
     sandbox: &dyn CommandSandbox,
     session_id: &str,
     input: &Value,
+    cwd: Option<String>,
 ) -> std::result::Result<Value, String> {
     let command = input
         .get("command")
@@ -182,11 +227,7 @@ async fn sandbox_exec(
             .get("service")
             .and_then(Value::as_str)
             .map(str::to_string),
-        cwd: input
-            .get("cwd")
-            .and_then(Value::as_str)
-            .filter(|c| c.starts_with('/'))
-            .map(str::to_string),
+        cwd,
         detach: input.get("detach").and_then(Value::as_bool),
     };
     let r = sandbox.exec(session_id, command, options).await?;
@@ -217,7 +258,7 @@ impl Tool for ExecuteCommandTool {
                 "type": "object",
                 "properties": {
                     "command": { "type": "string", "description": "The command to execute (used when starting a new process)" },
-                    "cwd": { "type": "string", "description": "The working directory for the command execution (used with command)" },
+                    "cwd": { "type": "string", "description": "The working directory for the command (used with command). Optional: relative paths, or none, mean this chat's folder." },
                     "pid": { "type": "number", "description": "Process ID to send input to (used when sending input to existing process)" },
                     "stdin": { "type": "string", "description": "Standard input to send to the process (used with pid)" },
                     "target": {
@@ -247,17 +288,16 @@ impl Tool for ExecuteCommandTool {
             if !input["stdin"].is_string() {
                 errors.push("Stdin must be a string".to_string());
             }
-        } else if has_key(input, "command") && has_key(input, "cwd") {
+        } else if has_key(input, "command") {
             if !truthy(input.get("command")) {
                 errors.push("Command is required".to_string());
             }
             if !input["command"].is_string() {
                 errors.push("Command must be a string".to_string());
             }
-            if !truthy(input.get("cwd")) {
-                errors.push("Working directory (cwd) is required".to_string());
-            }
-            if !input["cwd"].is_string() {
+            // cwd is optional: without one (or with a relative one) the command runs in the
+            // chat's folder, see `resolve_cwd`.
+            if has_key(input, "cwd") && !input["cwd"].is_string() && !input["cwd"].is_null() {
                 errors.push("Working directory must be a string".to_string());
             }
         } else {
@@ -306,7 +346,8 @@ impl Tool for ExecuteCommandTool {
                     extra(),
                 ));
             };
-            return sandbox_exec(sandbox.as_ref(), &session_id, &input)
+            let cwd = resolve_sandbox_cwd(&input, ctx);
+            return sandbox_exec(sandbox.as_ref(), &session_id, &input, cwd)
                 .await
                 .map(ToolOutput::Json)
                 .map_err(|m| ToolError::execution(m, NAME, Some(json!({})), extra()));
@@ -326,11 +367,11 @@ impl Tool for ExecuteCommandTool {
                 .get("command")
                 .and_then(Value::as_str)
                 .unwrap_or_default();
-            let cwd = input.get("cwd").and_then(Value::as_str).unwrap_or_default();
-            if let Err(denied) = Self::confirm_pattern(ctx, &config_allowed, command, cwd).await {
+            let cwd = resolve_host_cwd(&input, ctx);
+            if let Err(denied) = Self::confirm_pattern(ctx, &config_allowed, command, &cwd).await {
                 return Err(ToolError::permission_denied(denied, NAME, Some(command)));
             }
-            service.execute_command(command, cwd).await
+            service.execute_command(command, &cwd).await
         };
 
         match result {

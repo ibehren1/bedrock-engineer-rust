@@ -120,10 +120,6 @@ export interface SettingsContextType {
   thinkingMode?: ThinkingMode
   updateThinkingMode: (mode: ThinkingMode) => void
 
-  // Interleave Thinking Settings
-  interleaveThinking: boolean
-  setInterleaveThinking: (enabled: boolean) => void
-
   // Inference Parameters
   inferenceParams: InferenceParameters
   updateInferenceParams: (params: Partial<InferenceParameters>) => void
@@ -351,7 +347,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // recognizeImage Tool Settings
   const [recognizeImageModel, setStateRecognizeImageModel] = useState<string>(
-    'global.anthropic.claude-haiku-4-5-20251001-v1:0'
+    'global.anthropic.claude-haiku-5-5'
   )
 
   // generateImage Tool Settings
@@ -376,8 +372,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // LLM Settings
   const defaultModel = {
-    modelId: 'global.anthropic.claude-sonnet-4-6',
-    modelName: 'Claude Sonnet 4.6 (Global)',
+    modelId: 'global.anthropic.claude-sonnet-5-5',
+    modelName: 'Claude Sonnet 5.5 (Global)',
     toolUse: true,
     regions: BEDROCK_SUPPORTED_REGIONS,
     supportsThinking: true
@@ -390,9 +386,6 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [lightProcessingModel, setLightProcessingModel] = useState<LLM | null>(null)
 
   const [thinkingMode, setThinkingMode] = useState<ThinkingMode>()
-
-  // Interleave Thinking Settings
-  const [interleaveThinking, setStateInterleaveThinking] = useState<boolean>(false)
 
   const [bedrockSettings, setBedrockSettings] = useState<{
     enableRegionFailover: boolean
@@ -627,15 +620,6 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const thinkingMode = window.store.get('thinkingMode')
     if (thinkingMode) {
       setThinkingMode(thinkingMode)
-      if (thinkingMode.type === 'disabled') {
-        setInterleaveThinking(false)
-      }
-    }
-
-    // Load Interleave Thinking Settings
-    const storedInterleaveThinking = window.store.get('interleaveThinking')
-    if (storedInterleaveThinking !== undefined) {
-      setStateInterleaveThinking(storedInterleaveThinking)
     }
 
     // Load Bedrock Settings
@@ -1061,15 +1045,6 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const updateLLM = (selectedModel: LLM) => {
     setCurrentLLM(selectedModel)
     window.store.set('llm', selectedModel)
-
-    // Claude Sonnet 4とClaude Opus 4以外が選択された場合、インターリーブ思考をOFFにする
-    const isClaude4Model =
-      selectedModel.modelId.includes('claude-sonnet-4') ||
-      selectedModel.modelId.includes('claude-opus-4')
-
-    if (!isClaude4Model && interleaveThinking) {
-      setInterleaveThinking(false)
-    }
   }
 
   const updateLightProcessingModel = (model: LLM | null) => {
@@ -1086,11 +1061,6 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const updateThinkingMode = (mode: ThinkingMode) => {
     setThinkingMode(mode)
     window.store.set('thinkingMode', mode)
-  }
-
-  const setInterleaveThinking = (enabled: boolean) => {
-    setStateInterleaveThinking(enabled)
-    window.store.set('interleaveThinking', enabled)
   }
 
   const updateBedrockSettings = (settings: Partial<typeof bedrockSettings>) => {
@@ -2164,10 +2134,6 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // Thinking Mode Settings
     thinkingMode,
     updateThinkingMode,
-
-    // Interleave Thinking Settings
-    interleaveThinking,
-    setInterleaveThinking,
 
     // Inference Parameters
     inferenceParams,

@@ -8,7 +8,7 @@
 //! # Modules
 //!
 //! * [`settings`] — serde mirrors of the store keys the converse path reads (`aws`,
-//!   `inferenceParams`, `thinkingMode`, `interleaveThinking`, `guardrailSettings`,
+//!   `inferenceParams`, `thinkingMode`, `guardrailSettings`,
 //!   `bedrockSettings`).
 //! * [`client`] — `SdkConfig` / runtime client from the `aws` settings (static keys or named
 //!   profile, proxy, timeouts).

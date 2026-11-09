@@ -36,7 +36,11 @@ import {
   type FilesPanelContextValue
 } from '@renderer/contexts/FilesPanelContext'
 import { forgetMissing } from '@renderer/lib/workspaceFiles/pathResolver'
-import { subscribeTouchedFiles, useTouchedFiles } from '@renderer/lib/workspaceFiles/touchedFiles'
+import {
+  subscribeTouchedFiles,
+  tidyChatFiles,
+  useTouchedFiles
+} from '@renderer/lib/workspaceFiles/touchedFiles'
 import { usePanelAttention } from './components/RightPanel/usePanelAttention'
 import { useChatAttachments } from './hooks/useChatAttachments'
 import { useChatHistory } from '@renderer/contexts/ChatHistoryContext'
@@ -83,7 +87,14 @@ export default function ChatPage() {
 
   const inputFormRef = useRef<InputFormContainerRef>(null)
 
-  const { deleteMessage, getSession, updateSessionTitle, setUseMemoryItems } = useChatHistory()
+  const {
+    deleteMessage,
+    getSession,
+    getSessionField,
+    loadSession,
+    updateSessionTitle,
+    setUseMemoryItems
+  } = useChatHistory()
   const { getLightModelId } = useLightProcessingModel()
 
   // Help チャット。セッション自身の agentId から判定するので、履歴から開き直しても、
@@ -171,15 +182,21 @@ export default function ChatPage() {
 
   // 表示中のセッションが Help かどうかを追随させる。
   useEffect(() => {
-    const agentId = currentSessionId ? getSession(currentSessionId)?.agentId : undefined
+    const agentId = currentSessionId ? getSessionField(currentSessionId, 'agentId') : undefined
     setIsHelpSession(agentId === HELP_AGENT_ID)
-  }, [currentSessionId, getSession])
+  }, [currentSessionId, getSessionField])
+
+  // Opening a chat moves any files it left loose in the project folder into its own folder.
+  // Chats from before the per-chat folder wrote them wherever the model chose.
+  useEffect(() => {
+    void tidyChatFiles(currentSessionId)
+  }, [currentSessionId])
 
   // Load the chat's "Use Memory Items" setting; sessions without one (new chats) default to on.
   useEffect(() => {
-    const session = currentSessionId ? getSession(currentSessionId) : null
-    setUseMemory(session?.useMemoryItems ?? true)
-  }, [currentSessionId, getSession])
+    const value = currentSessionId ? getSessionField(currentSessionId, 'useMemoryItems') : undefined
+    setUseMemory(value ?? true)
+  }, [currentSessionId, getSessionField])
 
   const handleUseMemoryChange = useCallback(
     (value: boolean) => {
@@ -343,16 +360,26 @@ export default function ChatPage() {
   const resolveExportTitle = useCallback(async (): Promise<string> => {
     if (!currentSessionId) return 'Chat Export'
 
-    let session = getSession(currentSessionId)
-    if (session && session.title.startsWith('Chat ')) {
-      const newTitle = await generateSessionTitle(session, getLightModelId(), t)
+    // Only a default title needs the whole session (to generate one from the messages).
+    const title = getSessionField(currentSessionId, 'title')
+    if (title?.startsWith('Chat ') && (await loadSession(currentSessionId))) {
+      const session = getSession(currentSessionId)
+      const newTitle = session ? await generateSessionTitle(session, getLightModelId(), t) : null
       if (newTitle) {
         await updateSessionTitle(currentSessionId, newTitle)
-        session = getSession(currentSessionId)
+        return newTitle.trim() || 'Chat Export'
       }
     }
-    return session?.title?.trim() || 'Chat Export'
-  }, [currentSessionId, getSession, updateSessionTitle, getLightModelId, t])
+    return title?.trim() || 'Chat Export'
+  }, [
+    currentSessionId,
+    getSession,
+    getSessionField,
+    loadSession,
+    updateSessionTitle,
+    getLightModelId,
+    t
+  ])
 
   // チャットを Markdown にエクスポートするハンドラ
   const handleExportChat = useCallback(async () => {

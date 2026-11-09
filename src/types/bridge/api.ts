@@ -241,6 +241,15 @@ export type API = {
     removeAll: (sessionId: string) => Promise<any>
     removeEveryFolder: () => Promise<any>
     rename: (sessionId: string) => Promise<any>
+    /** Where this chat's files belong (`<project>/chats/<chat-name>`); creates nothing. */
+    folder: (sessionId: string) => Promise<{ directory: string; relative: string }>
+    /** Move an existing chat's loose files into its folder (run when the chat is opened). */
+    tidy: (sessionId: string) => Promise<{
+      directory?: string
+      moved: { from: string; to: string }[]
+      touched: string[]
+      changed: boolean
+    }>
     buildContext: (sessionId: string) => Promise<any>
     openFolder: (sessionId: string) => Promise<any>
   }

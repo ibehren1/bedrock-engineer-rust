@@ -79,9 +79,11 @@ async fn titan_batch_is_one_usage_event() {
     // A failed call fails the batch, but the calls that succeeded are still billed.
     sink.0.lock().unwrap().clear();
     let texts: Vec<String> = ["a", "fail"].map(String::from).to_vec();
-    assert!(embed::embed_titan(&c, model, &texts, InputType::Query, 2, 1)
-        .await
-        .is_err());
+    assert!(
+        embed::embed_titan(&c, model, &texts, InputType::Query, 2, 1)
+            .await
+            .is_err()
+    );
     let events = sink.0.lock().unwrap();
     assert_eq!(events.len(), 1);
     assert_eq!(events[0].calls, 1);

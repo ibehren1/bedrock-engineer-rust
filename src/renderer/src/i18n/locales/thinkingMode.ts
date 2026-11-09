@@ -34,10 +34,7 @@ export const thinkingMode = {
       'Especially useful for multi-step problems and policy compliance. The AI will automatically use this tool when needed for complex reasoning.',
     'Tool Categories.Thinking': 'Thinking',
     'Tool Categories.Thinking Description':
-      'Tools for enhanced reasoning and complex problem solving',
-    'interleaveThinking.label': 'Interleave',
-    'interleaveThinking.title':
-      'Toggle Interleaved Thinking (shows reasoning steps mixed with response)'
+      'Tools for enhanced reasoning and complex problem solving'
   },
   ja: {
     'Thinking Mode': '拡張思考モード',
@@ -74,8 +71,6 @@ export const thinkingMode = {
     'Especially useful for multi-step problems and policy compliance. The AI will automatically use this tool when needed for complex reasoning.':
       '特に複数ステップの問題やポリシー遵守に有効です。AIは複雑な推論が必要な場合、自動的にこのツールを使用します。',
     'Tool Categories.Thinking': '思考',
-    'Tool Categories.Thinking Description': '拡張された推論と複雑な問題解決のためのツール',
-    'interleaveThinking.label': 'インターリーブ',
-    'interleaveThinking.title': 'インターリーブ思考を切り替え（推論ステップと応答を混在表示）'
+    'Tool Categories.Thinking Description': '拡張された推論と複雑な問題解決のためのツール'
   }
 }

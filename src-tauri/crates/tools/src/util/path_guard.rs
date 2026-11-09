@@ -110,6 +110,21 @@ impl ToolSettings {
         let given = Path::new(path);
         let absolute = if given.is_absolute() {
             given.to_path_buf()
+        } else if let Some(chat) = self.chat_dir.as_deref().filter(|p| !p.is_empty()) {
+            // A chat's relative paths are its own folder's. A read of something that is not
+            // there but is in the project (`src/main.rs`) reads the project's file.
+            let in_chat = Path::new(chat).join(given);
+            match self.project_path.as_deref().filter(|p| !p.is_empty()) {
+                Some(project) if access == Access::Read && !in_chat.exists() => {
+                    let in_project = Path::new(project).join(given);
+                    if in_project.exists() {
+                        in_project
+                    } else {
+                        in_chat
+                    }
+                }
+                _ => in_chat,
+            }
         } else {
             match self.project_path.as_deref().filter(|p| !p.is_empty()) {
                 Some(project) => Path::new(project).join(given),
@@ -173,6 +188,37 @@ mod tests {
             user_data_path: user_data.map(|p| p.to_string_lossy().into_owned()),
             ..Default::default()
         }
+    }
+
+    #[test]
+    fn a_chats_relative_paths_are_its_folders_and_reads_fall_back_to_the_project() {
+        let project = tempfile::tempdir().unwrap();
+        let chat = project.path().join("chats").join("my-chat");
+        std::fs::create_dir_all(&chat).unwrap();
+        std::fs::create_dir_all(project.path().join("src")).unwrap();
+        std::fs::write(project.path().join("src/main.rs"), "fn main() {}").unwrap();
+        std::fs::write(chat.join("notes.md"), "n").unwrap();
+        let mut s = settings(project.path(), &[], None);
+        s.chat_dir = Some(chat.to_string_lossy().into_owned());
+
+        assert_eq!(
+            s.confine("out/report.md", Access::Write).unwrap(),
+            chat.join("out/report.md")
+        );
+        assert_eq!(
+            s.confine("notes.md", Access::Read).unwrap(),
+            chat.join("notes.md")
+        );
+        assert_eq!(
+            s.confine("src/main.rs", Access::Read).unwrap(),
+            project.path().join("src/main.rs")
+        );
+        // Writes stay in the chat folder even when the project has the name.
+        assert_eq!(
+            s.confine("src/main.rs", Access::Write).unwrap(),
+            chat.join("src/main.rs")
+        );
+        assert!(s.confine("../../../escape.txt", Access::Write).is_err());
     }
 
     #[test]

@@ -7,7 +7,7 @@
 //!   `AWS_SESSION_TOKEN`).
 //! * `AWS_REGION` — region for the smoke test (default `us-west-2`).
 //! * `BEDROCK_TEST_MODEL_ID` — model for the smoke test
-//!   (default `us.anthropic.claude-haiku-4-5-20251001-v1:0`).
+//!   (default `us.anthropic.claude-haiku-5-5`).
 //! * `BEDROCK_TEST_MODELS` — for the connectivity sweep: comma-separated `modelId@region` pairs.
 //!   When unset, the sweep covers every registry model (`allModels`) in every region of
 //!   `BEDROCK_TEST_REGIONS` (comma-separated; default: the 14 regions of the TS test).
@@ -43,7 +43,7 @@ fn aws_from_env(region: &str) -> AwsSettings {
 async fn converse_stream_smoke() {
     let region = std::env::var("AWS_REGION").unwrap_or_else(|_| "us-west-2".into());
     let model_id = std::env::var("BEDROCK_TEST_MODEL_ID")
-        .unwrap_or_else(|_| "us.anthropic.claude-haiku-4-5-20251001-v1:0".into());
+        .unwrap_or_else(|_| "us.anthropic.claude-haiku-5-5".into());
     let settings = ConverseSettings {
         aws: aws_from_env(&region),
         inference_params: InferenceConfig {
@@ -95,8 +95,7 @@ const TEST_REGIONS: [&str; 14] = [
 /// Same inference config rules as the TS test: maxTokens 10; no sampling fields for
 /// reasoning-effort / Kimi K3 models; no topP for Nova.
 fn connectivity_inference(model_id: &str) -> aws_sdk_bedrockruntime::types::InferenceConfiguration {
-    let skip_sampling = model_id.contains("openai.gpt-5")
-        || model_id.contains("openai.gpt-6")
+    let skip_sampling = model_id.contains("openai.gpt-6")
         || model_id.contains("xai.grok")
         || model_id.contains("kimi-k3");
     let mut b = aws_sdk_bedrockruntime::types::InferenceConfiguration::builder().max_tokens(10);

@@ -65,10 +65,14 @@ pub(crate) fn guarded(
     access: crate::util::path_guard::Access,
     tool: &str,
 ) -> crate::error::Result<String> {
-    ctx.settings
+    let confined = ctx
+        .settings
         .confine(path, access)
-        .map(|p| p.to_string_lossy().into_owned())
-        .map_err(|m| crate::error::ToolError::permission_denied(m, tool, Some(path)))
+        .map_err(|m| crate::error::ToolError::permission_denied(m, tool, Some(path)))?;
+    if access == crate::util::path_guard::Access::Write {
+        ctx.ensure_chat_dir_for(&confined);
+    }
+    Ok(confined.to_string_lossy().into_owned())
 }
 
 pub(crate) fn str_of<'a>(input: &'a Value, key: &str) -> &'a str {

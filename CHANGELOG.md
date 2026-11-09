@@ -24,6 +24,38 @@ overview of the fork with screenshots.
   updated for a reported SQLite vulnerability, and the MCP client is updated to fix two reported
   issues: an address check that could be bypassed when connecting to servers that sign in with
   OAuth, and unlimited memory use when a streamable HTTP server sends a very large response.
+- Every chat now keeps its files in one folder in your project, `chats/<chat-title>/`, named after
+  the chat and renamed with it. New work the agent does for a chat is saved there — code, notes,
+  diagrams, generated images, Code Interpreter output — and files you attach go in that folder's
+  `attachments/`. Before, each chat made up its own folder names at the top of your project folder,
+  so a day of chats left a pile of stray folders behind; now one chat is one folder, and deleting
+  the chat cleans it up. The agent still edits your project's own files whenever you ask it to.
+- Opening a chat from an older build moves the files it left scattered into its folder, and the
+  Files tab shows them at their new paths. Files that are not plainly that chat's own are left
+  exactly where they are: anything another chat also touched, anything git tracks, and anything
+  older than the chat. Nothing is ever overwritten.
+- The window no longer freezes for a moment while you work in a long chat history. The chat list's
+  check for which chats have attached files used to read and parse every saved conversation on the
+  main thread every fifteen seconds, and opening a big chat read it there too.
+- Long chats stay responsive while the agent works, and opening an older chat from the sidebar no
+  longer locks the window while it loads. Each saved message used to re-read the whole
+  conversation, every file the agent changed rewrote the saved chat on the spot, and switching
+  chats copied the whole conversation several times. Now the chat loads in the background, a new
+  message is added to the copy already in memory, and changed files are saved in batches (the
+  Files tab still marks them straight away).
+- Added Claude Fable 5.2, Anthropic's newest frontier model for technical work, with a 1M-token
+  context window, 128K output and always-on adaptive thinking. It is offered through the Global and
+  US routes. Bedrock has not published its price yet, so the cost shown uses Fable 5.1's rates until
+  it does.
+- Removed the Claude 4.x models (Haiku 4.5, Sonnet 4.6, Opus 4.6, 4.7 and 4.8) and the OpenAI GPT-5.6
+  models (Sol, Terra and Luna). If one was selected — as the chat model, the light-processing model,
+  the image recognition model, a scheduled background task's model or in your Visible Models list —
+  it now uses the closest current model on the same route: Haiku 5.5, Sonnet 5.5 or Opus 5.5 for
+  Claude, and GPT-6.1 Sol, GPT-6.1 Terra or GPT-6 Luna for GPT-5.6 Sol, Terra and Luna. Usage you
+  already recorded with these models keeps its price on the Accounting page. The chat's
+  **Interleave** toggle is gone with them, since only the Claude 4 models offered it; the Claude 5
+  models already interleave their thinking with their answers. Strands agents you export now use
+  Claude Sonnet 5.5 and no longer set temperature or top_p, which that model rejects.
 
 ### 2026-11-06
 

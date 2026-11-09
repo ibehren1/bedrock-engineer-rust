@@ -5,7 +5,6 @@ import toast from 'react-hot-toast'
 import { AgentSelector } from '../AgentSelector'
 import { ModelSelector } from '../ModelSelector'
 import { ThinkingModeSelector } from '../ThinkingModeSelector'
-import { InterleaveThinkingToggle } from '../InterleaveThinkingToggle'
 import { PlanActToggle } from './PlanActToggle'
 import { useSettings } from '@renderer/contexts/SettingsContext'
 import { AgentMentionPopup } from './AgentMentionPopup'
@@ -536,7 +535,6 @@ export const TextArea: React.FC<TextAreaProps> = ({
                 <ModelSelector openable={true} />
               </div>
               <ThinkingModeSelector label={t('inputControls.thinking')} />
-              <InterleaveThinkingToggle />
             </div>
           )}
 

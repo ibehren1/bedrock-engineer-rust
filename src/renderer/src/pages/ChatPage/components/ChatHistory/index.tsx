@@ -97,6 +97,7 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
   const {
     sessions,
     getSession,
+    loadSession,
     updateSessionTitle,
     deleteSession,
     deleteSessions,
@@ -389,7 +390,8 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
 
     try {
       // セッションの詳細を取得
-      const sessionDetails = getSession(session.id)
+      // Read without blocking: generating titles for every chat walks hundreds of them.
+      const sessionDetails = (await loadSession(session.id)) ? getSession(session.id) : null
       if (!sessionDetails) {
         throw new Error('Session not found')
       }

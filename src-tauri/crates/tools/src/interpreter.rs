@@ -7,8 +7,10 @@ use crate::context::ToolContext;
 use crate::error::{Result, ToolError};
 use crate::types::{ToolCategory, ToolOutput, ToolSpec};
 use async_trait::async_trait;
+use attachments::AttachmentPaths;
 use docker::interpreter::{tool as spec_source, CodeInterpreter, TOOL_DESCRIPTION, TOOL_NAME};
 use serde_json::Value;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 pub struct CodeInterpreterTool {
@@ -31,6 +33,29 @@ impl CodeInterpreterTool {
     }
 }
 
+/// The chat's folder, where code runs when the call comes from a chat with a project folder.
+/// `None` (the interpreter's own temporary workspace) otherwise, or when the folder can't be made.
+fn chat_workspace(ctx: &ToolContext) -> Option<PathBuf> {
+    let session_id = ctx.session_id.as_deref().filter(|s| !s.is_empty())?;
+    let project = ctx
+        .settings
+        .project_path
+        .as_deref()
+        .filter(|p| !p.is_empty())?;
+    let paths = AttachmentPaths::new(Some(project), ctx.settings.user_data_path.as_deref());
+    // Only a real chat has a folder (a background agent run's session is not a chat).
+    if !attachments::is_chat_session(&paths, session_id) {
+        return None;
+    }
+    match attachments::ensure_chat_dir(&paths, session_id) {
+        Ok(dir) => Some(dir),
+        Err(error) => {
+            tracing::warn!(%error, "Could not prepare the chat folder for Code Interpreter");
+            None
+        }
+    }
+}
+
 #[async_trait]
 impl Tool for CodeInterpreterTool {
     fn name(&self) -> &str {
@@ -50,10 +75,10 @@ impl Tool for CodeInterpreterTool {
         CodeInterpreter::validate_input(input).errors
     }
 
-    async fn execute_internal(&self, input: Value, _ctx: &ToolContext) -> Result<ToolOutput> {
+    async fn execute_internal(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
         let output = self
             .interpreter
-            .execute(input)
+            .execute_in(input, chat_workspace(ctx))
             .await
             .map_err(|e| ToolError::plain(e.to_string()))?;
         serde_json::to_value(&output)
@@ -161,5 +186,32 @@ mod tests {
         .unwrap()
         .into_value();
         assert_eq!(v["message"], "Task not found");
+    }
+
+    #[test]
+    fn code_runs_in_the_chat_folder_when_the_call_comes_from_a_chat() {
+        let project = tempfile::tempdir().unwrap();
+        let mut ctx = ToolContext::default();
+        assert_eq!(chat_workspace(&ctx), None);
+
+        ctx.session_id = Some("session_1".into());
+        assert_eq!(chat_workspace(&ctx), None, "no project folder");
+
+        ctx.settings.project_path = Some(project.path().to_string_lossy().into_owned());
+        let user_data = tempfile::tempdir().unwrap();
+        ctx.settings.user_data_path = Some(user_data.path().to_string_lossy().into_owned());
+        assert_eq!(chat_workspace(&ctx), None, "not a chat session");
+
+        // A chat the history has a session file for.
+        let sessions = user_data.path().join("chat-sessions");
+        std::fs::create_dir_all(&sessions).unwrap();
+        std::fs::write(
+            sessions.join("session_1.json"),
+            json!({"title": "My chat"}).to_string(),
+        )
+        .unwrap();
+        let dir = chat_workspace(&ctx).unwrap();
+        assert_eq!(dir, project.path().join("chats").join("my-chat"));
+        assert!(dir.join(attachments::MARKER_FILE).exists());
     }
 }

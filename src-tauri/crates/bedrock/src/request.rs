@@ -22,9 +22,6 @@ use serde_json::{json, Map, Value};
 pub const NOVA_SEQUENTIAL_TOOL_HINT: &str =
     "\n Do not run ToolUse in parallel, but proceed step by step.";
 
-/// Beta flag sent when interleaved thinking is on.
-pub const INTERLEAVED_THINKING_BETA: &str = "interleaved-thinking-2025-05-14";
-
 /// The request body the renderer sends today to `POST /converse/stream` and `POST /converse`
 /// (`CallConverseAPIProps` in `src/main/api/bedrock/types.ts`). Deserialize the command argument
 /// straight into this.
@@ -263,10 +260,10 @@ fn log_empty_text_fields(messages: &[Value]) {
 /// 4. Claude Fable 5: adaptive thinking always on, `temperature = 1`, no `topP`, forced tool
 ///    choice relaxed to `auto`;
 /// 5. thinking-capable models with thinking on (and not disabled, not forcing a tool): `thinking`
-///    field (enabled+budget or adaptive per model support), optional interleaved beta,
+///    field (enabled+budget or adaptive per model support),
 ///    `temperature = 1`, no `topP`;
-/// 6. OpenAI GPT-5.x/6 and xAI Grok: no sampling fields, `reasoning.effort` from the budget;
-/// 7. Kimi K3 and the Claude models that deprecated sampling (Opus 4.7 onwards): no sampling
+/// 6. OpenAI GPT-6 and xAI Grok: no sampling fields, `reasoning.effort` from the budget;
+/// 7. Kimi K3 and the Claude models that deprecated sampling (Claude 5 family): no sampling
 ///    fields;
 /// 8. Amazon Nova: `inferenceConfig.topK = 1`, `topP = temperature = 1`, sequential tool hint in
 ///    the system prompt;
@@ -309,8 +306,7 @@ pub fn prepare_request(
     let mut additional: Option<Value> = None;
     let mut system = req.system.clone();
 
-    let is_openai_reasoning =
-        model_id.contains("openai.gpt-5") || model_id.contains("openai.gpt-6");
+    let is_openai_reasoning = model_id.contains("openai.gpt-6");
     let is_grok_reasoning = model_id.contains("xai.grok");
     let is_reasoning_effort = is_openai_reasoning || is_grok_reasoning;
     let is_kimi_k3 = model_id.contains("kimi-k3");
@@ -372,9 +368,6 @@ pub fn prepare_request(
                 thinking.insert("budget_tokens".into(), json!(budget));
             }
             fields.insert("thinking".into(), Value::Object(thinking));
-        }
-        if settings.interleave_thinking {
-            fields.insert("anthropic_beta".into(), json!([INTERLEAVED_THINKING_BETA]));
         }
         additional = Some(Value::Object(fields));
         inference.top_p = None;
@@ -444,13 +437,8 @@ pub fn prepare_request(
 /// Claude models that reject `temperature` and `topP` on Converse ("`temperature` is deprecated
 /// for this model"). Both fields are dropped so the model default applies; the thinking path's
 /// `temperature = 1` is that default anyway. Fable 5 is handled on its own above.
-const SAMPLING_DEPRECATED_CLAUDE: &[&str] = &[
-    "claude-opus-4-7",
-    "claude-opus-4-8",
-    "claude-sonnet-5",
-    "claude-opus-5",
-    "claude-haiku-5-5",
-];
+const SAMPLING_DEPRECATED_CLAUDE: &[&str] =
+    &["claude-sonnet-5", "claude-opus-5", "claude-haiku-5-5"];
 
 /// True for model IDs Bedrock rejects any sampling field for. `claude-sonnet-5` and
 /// `claude-opus-5` also match their `-5-5` successors.
@@ -506,7 +494,7 @@ mod tests {
 
     fn claude_info() -> Info {
         Info {
-            thinking_ids: vec!["claude-sonnet-4", "claude-opus-5"],
+            thinking_ids: vec!["claude-thinking-test", "claude-opus-5"],
             types: vec![ThinkingType::Enabled],
             limit: Some(64000),
         }
@@ -540,7 +528,7 @@ mod tests {
     #[test]
     fn deserializes_renderer_body() {
         let r: ConverseRequest = serde_json::from_value(json!({
-            "modelId": "anthropic.claude-sonnet-4",
+            "modelId": "anthropic.claude-thinking-test",
             "system": [{ "text": "s" }],
             "messages": [{ "role": "user", "content": [{ "text": "hi" }] }],
             "toolConfig": { "tools": [] },
@@ -586,7 +574,7 @@ mod tests {
 
     #[test]
     fn request_inference_config_overrides_store_and_is_clamped() {
-        let mut r = req("anthropic.claude-sonnet-4");
+        let mut r = req("anthropic.claude-thinking-test");
         r.inference_config = Some(InferenceConfig {
             max_tokens: Some(128000),
             temperature: None,
@@ -609,7 +597,7 @@ mod tests {
     #[test]
     fn thinking_enabled_with_budget() {
         let p = prepare_request(
-            &req("us.anthropic.claude-sonnet-4-6"),
+            &req("us.anthropic.claude-thinking-test"),
             &settings(Some(("enabled", Some(4096)))),
             &claude_info(),
         );
@@ -622,23 +610,9 @@ mod tests {
     }
 
     #[test]
-    fn thinking_interleave_adds_beta() {
-        let mut s = settings(Some(("enabled", Some(1024))));
-        s.interleave_thinking = true;
-        let p = prepare_request(&req("anthropic.claude-sonnet-4"), &s, &claude_info());
-        assert_eq!(
-            p.additional_model_request_fields,
-            Some(json!({
-                "thinking": { "type": "enabled", "budget_tokens": 1024 },
-                "anthropic_beta": ["interleaved-thinking-2025-05-14"]
-            }))
-        );
-    }
-
-    #[test]
     fn thinking_enabled_without_budget_omits_budget_tokens() {
         let p = prepare_request(
-            &req("anthropic.claude-sonnet-4"),
+            &req("anthropic.claude-thinking-test"),
             &settings(Some(("enabled", None))),
             &claude_info(),
         );
@@ -667,7 +641,7 @@ mod tests {
 
         let enabled_only = claude_info();
         let p = prepare_request(
-            &req("anthropic.claude-sonnet-4"),
+            &req("anthropic.claude-thinking-test"),
             &settings(Some(("adaptive", Some(2048)))),
             &enabled_only,
         );
@@ -697,17 +671,21 @@ mod tests {
         let info = claude_info();
         // disabled mode
         let p = prepare_request(
-            &req("anthropic.claude-sonnet-4"),
+            &req("anthropic.claude-thinking-test"),
             &settings(Some(("disabled", None))),
             &info,
         );
         assert_eq!(p.additional_model_request_fields, None);
         assert_eq!(p.inference_config.temperature, Some(0.5));
         // no thinkingMode at all
-        let p = prepare_request(&req("anthropic.claude-sonnet-4"), &settings(None), &info);
+        let p = prepare_request(
+            &req("anthropic.claude-thinking-test"),
+            &settings(None),
+            &info,
+        );
         assert_eq!(p.additional_model_request_fields, None);
         // request-level disable (title generation)
-        let mut r = req("anthropic.claude-sonnet-4");
+        let mut r = req("anthropic.claude-thinking-test");
         r.disable_thinking = Some(true);
         let p = prepare_request(&r, &settings(Some(("enabled", Some(4096)))), &info);
         assert_eq!(p.additional_model_request_fields, None);
@@ -719,7 +697,7 @@ mod tests {
         );
         assert_eq!(p.additional_model_request_fields, None);
         // forced tool choice (structured output)
-        let mut r = req("anthropic.claude-sonnet-4");
+        let mut r = req("anthropic.claude-thinking-test");
         r.tool_config = Some(json!({ "tools": [], "toolChoice": { "tool": { "name": "out" } } }));
         let p = prepare_request(&r, &settings(Some(("enabled", Some(4096)))), &info);
         assert_eq!(p.additional_model_request_fields, None);
@@ -744,7 +722,7 @@ mod tests {
 
     #[test]
     fn reasoning_effort_models() {
-        for model in ["openai.gpt-5-1", "openai.gpt-6", "xai.grok-4-6"] {
+        for model in ["openai.gpt-6.1-sol", "openai.gpt-6", "xai.grok-4-6"] {
             let p = prepare_request(
                 &req(model),
                 &settings(Some(("enabled", Some(16384)))),
@@ -760,12 +738,12 @@ mod tests {
             );
         }
         let p = prepare_request(
-            &req("openai.gpt-5"),
+            &req("openai.gpt-6-luna"),
             &settings(Some(("disabled", None))),
             &NoInfo,
         );
         assert_eq!(p.additional_model_request_fields, None);
-        let mut r = req("openai.gpt-5");
+        let mut r = req("openai.gpt-6-luna");
         r.disable_thinking = Some(true);
         let p = prepare_request(&r, &settings(Some(("enabled", Some(40000)))), &NoInfo);
         assert_eq!(p.additional_model_request_fields, None);
@@ -805,8 +783,6 @@ mod tests {
             "global.anthropic.claude-opus-5-5",
             "global.anthropic.claude-sonnet-5",
             "us.anthropic.claude-opus-5",
-            "global.anthropic.claude-opus-4-8",
-            "global.anthropic.claude-opus-4-7",
         ] {
             // thinking off (title generation, structured output) and thinking on
             for thinking in [None, Some(("adaptive", None))] {
@@ -824,9 +800,9 @@ mod tests {
                 assert_eq!(p.inference_config.max_tokens, Some(64), "{model}");
             }
         }
-        // older Claude models still take the request's sampling fields
+        // Claude models outside that list still take the request's sampling fields
         let p = prepare_request(
-            &req("global.anthropic.claude-sonnet-4-6"),
+            &req("global.anthropic.claude-legacy-test"),
             &settings(None),
             &NoInfo,
         );
@@ -960,7 +936,7 @@ mod tests {
 
     #[test]
     fn prepared_request_converts_to_sdk() {
-        let mut r = req("anthropic.claude-sonnet-4");
+        let mut r = req("anthropic.claude-thinking-test");
         r.messages = vec![
             json!({ "role": "user", "content": [{ "text": "hi" }, { "image": { "format": "png", "source": { "bytes": { "0": 1 } } } }] }),
             json!({ "role": "assistant", "content": [

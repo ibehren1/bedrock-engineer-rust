@@ -31,22 +31,24 @@ export function useMentionGrants(
   agents: CustomAgent[],
   agentId: string | undefined
 ) {
-  const { getSession, setMentionGrants } = useChatHistory()
+  const { getSession, getSessionField, setMentionGrants } = useChatHistory()
   const [grants, setGrantsState] = useState<MentionGrants>(EMPTY_GRANTS)
   // The latest grants, so two changes in one tick (a toggle, then a send) build on each other
   const grantsRef = useRef<MentionGrants>(EMPTY_GRANTS)
 
   useEffect(() => {
-    const session = sessionId ? getSession(sessionId) : null
+    // The saved grants are one small field; only chats from before them need the messages.
+    const saved = sessionId ? getSessionField(sessionId, 'mentionGrants') : undefined
+    const session = sessionId && !saved ? getSession(sessionId) : null
     const loaded =
-      session?.mentionGrants ??
+      saved ??
       (session
         ? deriveGrants(previousUserPrompts(session.messages as Message[]), agents, agentId)
         : EMPTY_GRANTS)
     grantsRef.current = loaded
     setGrantsState(loaded)
     // Only on a session switch: agent edits mustn't reload (and lose) unsaved state
-  }, [sessionId, getSession])
+  }, [sessionId, getSession, getSessionField])
 
   const commit = useCallback(
     (next: MentionGrants) => {

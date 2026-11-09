@@ -4,7 +4,11 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Folder under the project directory that holds every chat's attachments folder.
+/// Folder under the project directory that holds every chat's folder.
+pub const CHATS_ROOT_DIRNAME: &str = "chats";
+
+/// Subfolder of a chat's folder that holds the files attached to the chat. Also the name of the
+/// earlier layout's root (`<project>/attachments/<chat>-<id>/`).
 pub const ATTACHMENTS_ROOT_DIRNAME: &str = "attachments";
 
 /// How a file is treated when the request context is assembled.

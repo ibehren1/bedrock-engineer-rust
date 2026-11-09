@@ -306,13 +306,20 @@ credentials.
   something on disk behind them without opening each one.
 - Streaming output auto-scrolls through the tool-use phase and then stops, and respects a manual
   scroll up.
+- **Every chat has one folder in your project**, `chats/<chat-title>/`, named after the chat and
+  renamed with it. New files the agent makes for the chat go there — code, notes, diagrams,
+  generated images, Code Interpreter output — instead of folders invented per task at the top of
+  your project; relative paths in the file tools, commands and Code Interpreter resolve to it, and
+  the agent still edits your project's own files when you ask. Opening a chat from an older build
+  moves the files it left loose into its folder (never a file another chat touched, a file git
+  tracks, or one older than the chat). Deleting the chat deletes the folder.
 - **Attachments are files in your project, per chat.** Drop, paste or pick a file and it is written
-  to `attachments/<chat-title>-<id>/` immediately — images included, so nothing is held in the
+  to the chat folder's `attachments/` immediately — images included, so nothing is held in the
   message box. A paperclip button next to the export buttons badges the file count and opens a menu
   to list, delete, add and reveal them. Their contents are rebuilt from the folder on every message,
   so editing or removing a file changes what the agent sees next without re-attaching; long files are
   trimmed with a pointer to read the rest, and formats nothing can extract are passed along as paths.
-  Deleting the chat deletes its attachments folder.
+  Deleting the chat deletes its folder.
 - Chat history supports multi-select delete.
 - Chat history has **folders**: create one from the Chat History menu, then drag chats onto it (or
   use a chat's Move to folder menu). Folders fold, can be renamed and reordered (drag one by its
@@ -497,12 +504,14 @@ context pointing at a remote daemon disables that tab and says why; the rest of 
 
 ### Models
 
-- Added Claude Fable 5.1, Fable 5, Opus 5.5, Opus 5, Sonnet 5.5, Sonnet 5, Haiku 5.5 and Opus 4.8, Kimi K3,
-  Kimi 2.5, xAI Grok 4.7 and 4.6, the OpenAI GPT-6.1 (Sol/Terra), GPT-6 (Astra/Sol/Luna) and GPT-5.6
-  (Sol/Terra/Luna) models, all served through the standard Bedrock Converse API.
+- Added Claude Fable 5.2, Fable 5.1, Fable 5, Opus 5.5, Opus 5, Sonnet 5.5, Sonnet 5 and Haiku 5.5,
+  Kimi K3, Kimi 2.5, xAI Grok 4.7 and 4.6, and the OpenAI GPT-6.1 (Sol/Terra) and GPT-6
+  (Astra/Sol/Luna) models, all served through the standard Bedrock Converse API. The Claude 4.x and
+  GPT-5.x models are retired: a saved setting that names one moves to its closest current model, and
+  usage already recorded with them stays priced.
 - Adaptive thinking for newer Claude models, with the thinking type translated per model so
   switching model generations doesn't 400. On models that expose reasoning-effort levels rather than
-  a thinking budget — Grok 4.7, Grok 4.6 and the GPT-6.1, GPT-6 and GPT-5.6 models — **Deeper** asks
+  a thinking budget — Grok 4.7, Grok 4.6 and the GPT-6.1 and GPT-6 models — **Deeper** asks
   for the highest effort the model offers.
 - Model pricing kept current, and per-model input/output pricing shown in the model dropdown.
 - **Max Tokens is capped per model.** Every request sends the lesser of your Max Tokens setting and

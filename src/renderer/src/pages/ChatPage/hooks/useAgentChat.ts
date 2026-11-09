@@ -62,6 +62,7 @@ import {
   withMentionedKnowledgeBaseTools,
   type MentionableKnowledgeBase
 } from '../utils/knowledgeMentions'
+import { loadChatFolderPrompt } from '../utils/chatFolderPrompt'
 
 /**
  * ターン単位のツール構成。
@@ -185,6 +186,8 @@ export const useAgentChat = (
   } = options || {} // デフォルトで履歴保存は有効
 
   const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(sessionId)
+  // Bumped on every session switch, so a chat still loading doesn't open after a later switch.
+  const switchSeq = useRef(0)
 
   // 実行中のターンの状態はセッション単位でReactの外（sessionRunners）に置く。
   // 別のチャットを開いてもターンは走り続け、戻ればその続きが表示される。
@@ -287,6 +290,8 @@ export const useAgentChat = (
   // ChatHistoryContext から操作関数を取得
   const {
     getSession,
+    getSessionField,
+    loadSession,
     createSession,
     addMessage,
     updateSessionTitle,
@@ -373,7 +378,8 @@ export const useAgentChat = (
   useEffect(() => {
     const initSession = async () => {
       if (sessionId) {
-        const session = getSession(sessionId)
+        // Read the session without blocking the window (it can be tens of MB).
+        const session = (await loadSession(sessionId)) ? getSession(sessionId) : null
         if (session) {
           // seedRunMessages は実行中のセッションでは何もしないので、
           // 走っているターンの新しいメッセージがストアの内容で上書きされることはない。
@@ -388,16 +394,22 @@ export const useAgentChat = (
     }
 
     initSession()
-  }, [sessionId, enableHistory, getSession, createSession])
+  }, [sessionId, enableHistory, getSession, loadSession, createSession])
 
   // currentSessionId が変わった時の処理
   useEffect(() => {
     if (currentSessionId) {
-      const session = getSession(currentSessionId)
-      if (session) {
-        seedRunMessages(currentSessionId, session.messages as IdentifiableMessage[])
-        setActiveSession(currentSessionId)
-      }
+      // Switching chats loads the session first (setSession), so this is usually a cache hit;
+      // either way the read doesn't block the window.
+      let cancelled = false
+      void loadSession(currentSessionId).then((found) => {
+        if (cancelled || !found) return
+        const session = getSession(currentSessionId)
+        if (session) {
+          seedRunMessages(currentSessionId, session.messages as IdentifiableMessage[])
+          setActiveSession(currentSessionId)
+        }
+      })
       // 表示をやめたセッションがアイドルなら、メッセージ配列を溜め込まないよう解放する。
       // Releasing only happens for idle sessions with no subscribers, so a run in flight
       // and the session currently on screen both survive. Queued as a microtask because
@@ -405,13 +417,14 @@ export const useAgentChat = (
       // the two isn't defined — releasing an entry that still has listeners would leave
       // the mounted subscriber attached to an orphaned entry.
       return () => {
+        cancelled = true
         // "Allow for this chat" must not outlive the chat it was granted in.
         clearHostApproval(currentSessionId)
         queueMicrotask(() => releaseRunner(currentSessionId))
       }
     }
     return undefined
-  }, [currentSessionId, getSession, setActiveSession])
+  }, [currentSessionId, getSession, loadSession, setActiveSession])
 
   // メッセージの永続化を行うラッパー関数。
   // ターン開始時のセッションIDを引数で受け取るので、途中で別のチャットに切り替えても
@@ -1105,7 +1118,7 @@ export const useAgentChat = (
             toolInput,
             window.store.get('projectPath')
           )
-          if (touched.length > 0) void recordTouchedFiles(turnSessionId, touched)
+          if (touched.length > 0) recordTouchedFiles(turnSessionId, touched)
         }
 
         // 実行中ツールセットから削除
@@ -1405,6 +1418,12 @@ export const useAgentChat = (
         const base = turnSystem(turnCtx)
         turnCtx.systemPrompt = base ? `${base}\n\n${kbBlock}` : kbBlock
       }
+      // Where this chat's files belong, so new files land in the chat's folder.
+      const folderBlock = await loadChatFolderPrompt(turnSessionId)
+      if (folderBlock) {
+        const base = turnSystem(turnCtx)
+        turnCtx.systemPrompt = base ? `${base}\n\n${folderBlock}` : folderBlock
+      }
 
       const imageContents: any =
         attachedImages?.map((image) => ({
@@ -1536,7 +1555,9 @@ export const useAgentChat = (
   const clearChat = useCallback(async () => {
     // 進行中のターンは中断しない。新しいセッションに移るだけで、
     // 前のチャットの応答はそのまま続き、戻れば結果が見られる。
+    const seq = ++switchSeq.current
     const newSessionId = await createSession('defaultAgent', modelId, systemPrompt)
+    if (seq !== switchSeq.current) return
     seedRunMessages(newSessionId, [])
     setCurrentSessionId(newSessionId)
   }, [modelId, systemPrompt, createSession])
@@ -1552,13 +1573,14 @@ export const useAgentChat = (
     titleGenerated.current.add(currentSessionId)
 
     try {
-      // セッションの詳細を取得
-      const session = getSession(currentSessionId)
-      if (!session) return
-
       // セッションのタイトルが既にカスタマイズされている場合は生成しない
       // "Chat "で始まるデフォルトタイトルのみ置き換える
-      if (!session.title.startsWith('Chat ')) return
+      // (checked on the title alone, so a titled chat never copies its whole session)
+      if (!getSessionField(currentSessionId, 'title')?.startsWith('Chat ')) return
+
+      // セッションの詳細を取得
+      const session = (await loadSession(currentSessionId)) ? getSession(currentSessionId) : null
+      if (!session) return
 
       // 軽量処理用モデルIDを取得
       const lightModelId = getLightModelId()
@@ -1571,7 +1593,16 @@ export const useAgentChat = (
     } catch (error) {
       console.error('Error generating title for current session:', error)
     }
-  }, [currentSessionId, modelId, t, enableHistory, getSession, updateSessionTitle])
+  }, [
+    currentSessionId,
+    modelId,
+    t,
+    enableHistory,
+    getSession,
+    getSessionField,
+    loadSession,
+    updateSessionTitle
+  ])
 
   // メッセージ数を監視してタイトル生成を実行
   useEffect(() => {
@@ -1600,14 +1631,20 @@ export const useAgentChat = (
 
       // 進行中のターンは中断しない。切り替え先を表示するだけで、
       // 元のチャットの応答は裏で続き、戻ればその続きが見られる。
-      setCurrentSessionId(newSessionId)
+      // Load the chat before showing it: a session not in the startup cache can be tens of MB,
+      // and reading it synchronously would freeze the window. The latest switch wins.
+      const seq = ++switchSeq.current
+      void loadSession(newSessionId).then(() => {
+        if (seq === switchSeq.current) setCurrentSessionId(newSessionId)
+      })
     },
     [
       messages.length,
       currentSessionId,
       MESSAGE_THRESHOLD,
       generateTitleForCurrentSession,
-      enableHistory
+      enableHistory,
+      loadSession
     ]
   )
 

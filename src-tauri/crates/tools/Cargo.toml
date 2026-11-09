@@ -21,6 +21,7 @@ bedrock = { path = "../bedrock" }
 mcp = { path = "../mcp" }
 docker = { path = "../docker" }
 common = { path = "../common" }
+attachments = { path = "../attachments" }
 base64 = "=0.22.1"
 futures-util = "=0.3.34"
 zip = { version = "=9.2.1", default-features = false, features = ["deflate-flate2-zlib-rs"] }

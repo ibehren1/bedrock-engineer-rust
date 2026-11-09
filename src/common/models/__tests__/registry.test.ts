@@ -7,7 +7,7 @@ import {
 } from '../models'
 import { PricingCalculator } from '../pricing'
 
-// OpenAI GPT-6 and GPT-5.6 models are served through the standard Bedrock
+// OpenAI GPT-6 models are served through the standard Bedrock
 // Converse API. They do NOT support on-demand invocation of the bare model ID,
 // so each is exposed only via cross-region inference profiles (global.* and
 // us.*). These cases guard registration, per-region availability, config
@@ -16,10 +16,7 @@ import { PricingCalculator } from '../pricing'
 const OPENAI_GPT_MODELS = [
   { base: 'gpt-6-astra', name: 'GPT-6 Astra' },
   { base: 'gpt-6-sol', name: 'GPT-6 Sol' },
-  { base: 'gpt-6-luna', name: 'GPT-6 Luna' },
-  { base: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' },
-  { base: 'gpt-5.6-terra', name: 'GPT-5.6 Terra' },
-  { base: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' }
+  { base: 'gpt-6-luna', name: 'GPT-6 Luna' }
 ]
 
 describe('OpenAI GPT model registry integration', () => {
@@ -40,10 +37,10 @@ describe('OpenAI GPT model registry integration', () => {
     }
   )
 
-  test('GPT-5.5 and GPT-5.4 are not registered (unavailable via Converse)', () => {
+  // GPT-5.4 and 5.5 were never reachable via Converse; GPT-5.6 was retired on 2026-11-09.
+  test('no GPT-5.x model is registered', () => {
     const ids = allModels.map((m) => m.modelId)
-    expect(ids.some((id) => id.includes('gpt-5.5'))).toBe(false)
-    expect(ids.some((id) => id.includes('gpt-5.4'))).toBe(false)
+    expect(ids.filter((id) => /\.gpt-5[.-]/.test(id))).toEqual([])
   })
 
   test('all OpenAI GPT models are available in the three US regions', () => {
@@ -72,13 +69,6 @@ describe('OpenAI GPT model registry integration', () => {
     }
   })
 
-  test('pricing calculator uses per-1K rates (GPT-5.6 Sol: $5.50/$33 per 1M)', () => {
-    const calc = new PricingCalculator('us.openai.gpt-5.6-sol')
-    // 1M input tokens = $5.50, 1M output tokens = $33.00
-    expect(calc.calculateInputCost(1_000_000)).toBeCloseTo(5.5, 5)
-    expect(calc.calculateOutputCost(1_000_000)).toBeCloseTo(33.0, 5)
-  })
-
   test('pricing calculator uses per-1K rates (GPT-6 Astra: $11/$55 per 1M)', () => {
     const calc = new PricingCalculator('us.openai.gpt-6-astra')
     // Short Context Window (272K) Geo CRIS rate: 1M input = $11.00, 1M output = $55.00
@@ -98,13 +88,11 @@ describe('OpenAI GPT model registry integration', () => {
     expect(calc.calculateOutputCost(1_000_000)).toBeCloseTo(0.5, 5)
   })
 
-  // The GPT-6 and GPT-5.6 tiers share suffixes (`sol`, `luna`), so config
-  // resolution must not cross them over — GPT-5.6 Sol costs 2.75x GPT-6 Sol.
-  test('GPT-6 and GPT-5.6 tiers with shared suffixes resolve distinctly', () => {
+  // The GPT-6 tiers share a prefix with GPT-6.1's, so config resolution must
+  // keep each tier on its own rates.
+  test('GPT-6 tiers resolve to their own rates', () => {
     expect(getModelConfig('us.openai.gpt-6-sol')?.name).toBe('GPT-6 Sol')
-    expect(getModelConfig('us.openai.gpt-5.6-sol')?.name).toBe('GPT-5.6 Sol')
     expect(getModelConfig('us.openai.gpt-6-luna')?.name).toBe('GPT-6 Luna')
-    expect(getModelConfig('us.openai.gpt-5.6-luna')?.name).toBe('GPT-5.6 Luna')
     expect(getModelConfig('us.openai.gpt-6-sol')?.pricing?.input).toBe(0.002)
     expect(getModelConfig('us.openai.gpt-6-luna')?.pricing?.input).toBe(0.0001)
   })
@@ -169,9 +157,8 @@ describe('OpenAI GPT-6.1 Sol registry integration', () => {
   })
 })
 
-// GPT-6.1 Terra, like GPT-6.1 Sol, has only the US geo and global profiles. Its
-// base ID sits next to GPT-5.6 Terra's, which costs twice as much, so config
-// resolution must keep the two apart.
+// GPT-6.1 Terra, like GPT-6.1 Sol, has only the US geo and global profiles, and
+// config resolution must keep it apart from GPT-6.1 Sol.
 describe('OpenAI GPT-6.1 Terra registry integration', () => {
   test('is exposed as the us.* and global.* profiles (no bare model ID)', () => {
     const ids = allModels.map((m) => m.modelId)
@@ -204,10 +191,9 @@ describe('OpenAI GPT-6.1 Terra registry integration', () => {
     }
   })
 
-  test('does not resolve to GPT-5.6 Terra or GPT-6.1 Sol', () => {
+  test('does not resolve to GPT-6.1 Sol', () => {
     expect(getModelConfig('us.openai.gpt-6.1-terra')?.name).toBe('GPT-6.1 Terra')
     expect(getModelConfig('global.openai.gpt-6.1-terra')?.name).toBe('GPT-6.1 Terra')
-    expect(getModelConfig('us.openai.gpt-5.6-terra')?.name).toBe('GPT-5.6 Terra')
     expect(getModelConfig('us.openai.gpt-6.1-sol')?.name).toBe('GPT-6.1 Sol')
   })
 
@@ -264,14 +250,69 @@ describe('Claude Opus 5.5 registry integration', () => {
     expect(getModelConfig('us.anthropic.claude-opus-5-5')?.name).toBe('Claude Opus 5.5')
     expect(getModelConfig('global.anthropic.claude-opus-5-5')?.name).toBe('Claude Opus 5.5')
     expect(getModelConfig('us.anthropic.claude-opus-5')?.name).toBe('Claude Opus 5')
-    // Same shape one generation earlier: Fable 5 vs Fable 5.1.
+    // Same shape in the Fable line: Fable 5 vs Fable 5.1 vs Fable 5.2.
+    expect(getModelConfig('us.anthropic.claude-fable-5-2')?.name).toBe('Claude Fable 5.2')
     expect(getModelConfig('us.anthropic.claude-fable-5-1')?.name).toBe('Claude Fable 5.1')
     expect(getModelConfig('global.anthropic.claude-fable-5')?.name).toBe('Claude Fable 5')
   })
 })
 
-// Claude Haiku 5.5 is offered only through inference profiles, and its
-// unsuffixed base ID must not resolve to Haiku 4.5's dated one.
+// Claude Fable 5.2 is offered only through the global endpoint and the US geo
+// profile (no bare model ID, no EU/JP geo).
+describe('Claude Fable 5.2 registry integration', () => {
+  test('is exposed as global/US profiles and no bare model ID', () => {
+    const ids = allModels.map((m) => m.modelId)
+    expect(ids).toContain('global.anthropic.claude-fable-5-2')
+    expect(ids).toContain('us.anthropic.claude-fable-5-2')
+    expect(ids).not.toContain('eu.anthropic.claude-fable-5-2')
+    expect(ids).not.toContain('jp.anthropic.claude-fable-5-2')
+    expect(ids).not.toContain('anthropic.claude-fable-5-2')
+  })
+
+  test('display names carry the routing suffix and capabilities are set', () => {
+    const globalModel = allModels.find((m) => m.modelId === 'global.anthropic.claude-fable-5-2')
+    expect(globalModel?.modelName).toBe('Claude Fable 5.2 (Global)')
+    expect(globalModel?.toolUse).toBe(true)
+    expect(globalModel?.supportsThinking).toBe(true)
+    expect(globalModel?.supportedThinkingTypes).toEqual(['adaptive'])
+    expect(globalModel?.maxTokensLimit).toBe(128000)
+    expect(globalModel?.regions).toContain('eu-west-1')
+    expect(globalModel?.regions).toContain('ap-northeast-1')
+  })
+
+  test('the global profile reaches Europe and APAC, the US geo only North America', () => {
+    const euIds = getModelsForRegion('eu-west-1').map((m) => m.modelId)
+    expect(euIds).toContain('global.anthropic.claude-fable-5-2')
+    expect(euIds).not.toContain('us.anthropic.claude-fable-5-2')
+    const caIds = getModelsForRegion('ca-central-1').map((m) => m.modelId)
+    expect(caIds).toContain('us.anthropic.claude-fable-5-2')
+  })
+
+  test('pricing uses per-1K rates ($10/$50 per 1M, cache read a tenth of input)', () => {
+    const calc = new PricingCalculator('global.anthropic.claude-fable-5-2')
+    expect(calc.calculateInputCost(1_000_000)).toBeCloseTo(10.0, 5)
+    expect(calc.calculateOutputCost(1_000_000)).toBeCloseTo(50.0, 5)
+    expect(calc.calculateCacheReadCost(1_000_000)).toBeCloseTo(1.0, 5)
+    expect(calc.calculateCacheWriteCost(1_000_000)).toBeCloseTo(12.5, 5)
+  })
+
+  test('prompt caching is declared on messages, system and tools', () => {
+    const cache = getModelConfig('us.anthropic.claude-fable-5-2')?.cache
+    expect(cache?.supported).toBe(true)
+    expect(cache?.cacheableFields).toEqual(['messages', 'system', 'tools'])
+  })
+})
+
+// The Claude 4.x family was retired on 2026-11-09; its prices live in
+// RETIRED_MODEL_PRICING and saved settings are migrated by the Rust store.
+describe('retired Claude 4.x models', () => {
+  test('no Claude 4.x model is registered', () => {
+    const ids = allModels.map((m) => m.modelId)
+    expect(ids.filter((id) => /claude-(sonnet|opus|haiku)-4/.test(id))).toEqual([])
+  })
+})
+
+// Claude Haiku 5.5 is offered only through inference profiles.
 describe('Claude Haiku 5.5 registry integration', () => {
   test('is exposed as global/US/EU/JP profiles and no bare model ID', () => {
     const ids = allModels.map((m) => m.modelId)
@@ -303,13 +344,6 @@ describe('Claude Haiku 5.5 registry integration', () => {
     const cache = getModelConfig('us.anthropic.claude-haiku-5-5')?.cache
     expect(cache?.supported).toBe(true)
     expect(cache?.cacheableFields).toEqual(['messages', 'system', 'tools'])
-  })
-
-  test('config resolution keeps Haiku 5.5 and Haiku 4.5 apart', () => {
-    expect(getModelConfig('global.anthropic.claude-haiku-5-5')?.name).toBe('Claude Haiku 5.5')
-    expect(getModelConfig('us.anthropic.claude-haiku-4-5-20251001-v1:0')?.name).toBe(
-      'Claude Haiku 4.5'
-    )
   })
 })
 
@@ -384,28 +418,15 @@ describe('xAI Grok model registry integration', () => {
     expect(globalModel?.modelName).toBe(`${name} (Global)`)
   })
 
-  // Grok 4.7 and Claude Opus 4.7 share a version number, and config resolution is
-  // substring-based, so pin that neither one resolves to the other: a mix-up here
-  // would silently send Grok's requests to Opus (or Opus's ceiling and thinking
-  // type to Grok).
-  test('Grok 4.7 and Claude Opus 4.7 never resolve to each other', () => {
+  // Config resolution is substring-based, so pin that every Grok 4.7 ID resolves
+  // to Grok 4.7's own ceiling and thinking type.
+  test('Grok 4.7 resolves to its own config', () => {
     for (const grokId of ['us.xai.grok-4.7', 'global.xai.grok-4.7', 'xai.grok-4.7']) {
       const config = getModelConfig(grokId)
       expect(config?.name).toBe('Grok 4.7')
       expect(config?.provider).toBe('xai')
       expect(config?.maxTokensLimit).toBe(32768)
       expect(config?.supportedThinkingTypes).toEqual(['enabled'])
-    }
-
-    for (const opusId of [
-      'us.anthropic.claude-opus-4-7',
-      'global.anthropic.claude-opus-4-7',
-      'jp.anthropic.claude-opus-4-7'
-    ]) {
-      const config = getModelConfig(opusId)
-      expect(config?.name).toBe('Claude Opus 4.7')
-      expect(config?.provider).toBe('anthropic')
-      expect(config?.supportedThinkingTypes).toEqual(['adaptive'])
     }
   })
 
@@ -473,10 +494,8 @@ describe('xAI Grok model registry integration', () => {
 // the selected model's own ceiling before it is sent.
 describe('clampMaxTokensToModelLimit', () => {
   test('lowers a request that exceeds the model ceiling', () => {
-    // Haiku 4.5 stops at 64000 even though the setting allows 128000.
-    expect(clampMaxTokensToModelLimit('us.anthropic.claude-haiku-4-5-20251001-v1:0', 128000)).toBe(
-      64000
-    )
+    // DeepSeek R1 stops at 32768 even though the setting allows 128000.
+    expect(clampMaxTokensToModelLimit('us.deepseek.r1-v1:0', 128000)).toBe(32768)
     // First-generation Nova models stop far lower.
     expect(clampMaxTokensToModelLimit('us.amazon.nova-lite-v1:0', 128000)).toBe(5120)
   })
@@ -515,14 +534,12 @@ describe('clampMaxTokensToModelLimit', () => {
 // "exceeds the model limit of N".
 describe('model output ceilings', () => {
   test.each([
-    ['us.anthropic.claude-haiku-4-5-20251001-v1:0', 64000],
     ['us.anthropic.claude-haiku-5-5', 128000],
-    ['us.anthropic.claude-sonnet-4-6', 64000],
-    ['us.anthropic.claude-opus-4-8', 128000],
     ['us.anthropic.claude-opus-5', 128000],
     ['us.anthropic.claude-opus-5-5', 128000],
     ['us.anthropic.claude-sonnet-5', 128000],
     ['us.anthropic.claude-sonnet-5-5', 128000],
+    ['global.anthropic.claude-fable-5-2', 128000],
     ['us.amazon.nova-lite-v1:0', 5120],
     ['us.amazon.nova-pro-v1:0', 5120],
     ['us.amazon.nova-2-lite-v1:0', 64000],
@@ -532,7 +549,6 @@ describe('model output ceilings', () => {
     ['us.openai.gpt-6.1-terra', 128000],
     ['us.openai.gpt-6-sol', 128000],
     ['us.openai.gpt-6-luna', 128000],
-    ['us.openai.gpt-5.6-sol', 128000],
     ['openai.gpt-oss-120b-1:0', 16384],
     ['openai.gpt-oss-20b-1:0', 16384],
     ['moonshotai.kimi-k2.5', 16384],

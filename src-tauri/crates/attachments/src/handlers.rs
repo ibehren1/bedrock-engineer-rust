@@ -100,6 +100,42 @@ pub fn rename(paths: &AttachmentPaths, session_id: &str) -> RenameResult {
     manager::rename_attachments_dir(paths, session_id)
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatFolder {
+    /// Absolute path of the chat's folder, which may not exist yet.
+    pub directory: String,
+    /// The same, relative to the project folder (`chats/<chat-name>`).
+    pub relative: String,
+}
+
+/// `chat-attachments-folder`: where this chat's files belong. Creates nothing (the file tools
+/// create the folder when they first write there).
+pub fn folder(paths: &AttachmentPaths, session_id: &str) -> Result<ChatFolder> {
+    let directory = crate::manager::resolve_chat_dir(paths, session_id)?;
+    let relative = paths
+        .project_path
+        .as_deref()
+        .and_then(|p| directory.strip_prefix(p).ok())
+        .map(|r| r.to_string_lossy().replace('\\', "/"))
+        .unwrap_or_default();
+    Ok(ChatFolder {
+        directory: directory.to_string_lossy().into_owned(),
+        relative,
+    })
+}
+
+/// `chat-attachments-tidy`: move the chat's files into its folder when an existing chat is
+/// opened, and keep its `touchedFiles` pointing at them. The caller supplies what only the chat
+/// history and git know (see [`crate::tidy::TidyInput`]).
+pub fn tidy(
+    paths: &AttachmentPaths,
+    session_id: &str,
+    input: &crate::tidy::TidyInput<'_>,
+) -> Result<crate::tidy::TidyResult> {
+    crate::tidy::tidy_chat_files(paths, session_id, input)
+}
+
 /// `chat-attachments-build-context`
 pub fn build_context(
     paths: &AttachmentPaths,

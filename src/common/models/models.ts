@@ -122,87 +122,6 @@ export interface ModelConfig {
  * Unified model registry
  */
 const MODEL_REGISTRY: ModelConfig[] = [
-  // Claude Haiku 4.5
-  {
-    baseId: 'claude-haiku-4-5-20251001-v1:0',
-    name: 'Claude Haiku 4.5',
-    provider: 'anthropic',
-    category: 'text',
-    toolUse: true,
-    maxTokensLimit: 64000,
-    supportsThinking: true,
-    supportedThinkingTypes: ['enabled'],
-    inferenceProfiles: [
-      {
-        type: 'global',
-        prefix: 'global',
-        regions: [
-          'us-east-1',
-          'us-east-2',
-          'us-west-1',
-          'us-west-2',
-          'eu-central-1',
-          'eu-central-2',
-          'eu-north-1',
-          'eu-south-1',
-          'eu-south-2',
-          'eu-west-1',
-          'eu-west-2',
-          'eu-west-3',
-          'ap-northeast-1',
-          'ap-northeast-2',
-          'ap-northeast-3',
-          'ap-south-1',
-          'ap-south-2',
-          'ap-southeast-1',
-          'ap-southeast-2',
-          'ap-southeast-3',
-          'ap-southeast-4',
-          'ca-central-1',
-          'sa-east-1'
-        ],
-        displaySuffix: '(Global)'
-      },
-      {
-        type: 'regional-us',
-        prefix: 'us',
-        regions: ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2'],
-        displaySuffix: '(US)'
-      },
-      {
-        type: 'regional-eu',
-        prefix: 'eu',
-        regions: [
-          'eu-central-1',
-          'eu-central-2',
-          'eu-north-1',
-          'eu-south-1',
-          'eu-south-2',
-          'eu-west-1',
-          'eu-west-2',
-          'eu-west-3'
-        ],
-        displaySuffix: '(EU)'
-      },
-      {
-        type: 'jp',
-        prefix: 'jp',
-        regions: ['ap-northeast-1', 'ap-northeast-3'],
-        displaySuffix: '(JP)'
-      }
-    ],
-    pricing: {
-      input: 0.001,
-      output: 0.005,
-      cacheRead: 0.0001,
-      cacheWrite: 0.00125
-    },
-    cache: {
-      supported: true,
-      cacheableFields: ['messages', 'system', 'tools']
-    }
-  },
-
   // Claude Haiku 5.5
   // The fastest model in the Claude 5.5 family (launched 2026-10-07), and the
   // first Haiku with effort controls. 1M context window, 128K max output,
@@ -296,63 +215,6 @@ const MODEL_REGISTRY: ModelConfig[] = [
     pricingRules: {
       profileMultiplier: { us: 1.1, eu: 1.1, jp: 1.1 },
       longContext: { thresholdTokens: 100000, input: 5, output: 5, cacheRead: 5, cacheWrite: 5 }
-    },
-    cache: {
-      supported: true,
-      cacheableFields: ['messages', 'system', 'tools']
-    }
-  },
-
-  // Claude Sonnet 4.6
-  {
-    baseId: 'claude-sonnet-4-6',
-    name: 'Claude Sonnet 4.6',
-    provider: 'anthropic',
-    category: 'text',
-    toolUse: true,
-    maxTokensLimit: 64000,
-    supportsThinking: true,
-    supportedThinkingTypes: ['adaptive'],
-    inferenceProfiles: [
-      {
-        type: 'jp',
-        prefix: 'jp',
-        regions: ['ap-northeast-1', 'ap-northeast-3'],
-        displaySuffix: '(JP)'
-      },
-      {
-        type: 'global',
-        prefix: 'global',
-        regions: ['us-west-2', 'us-east-1', 'us-east-2', 'eu-west-1', 'ap-northeast-1'],
-        displaySuffix: '(Global)'
-      },
-      {
-        type: 'regional-us',
-        prefix: 'us',
-        regions: ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2'],
-        displaySuffix: '(US)'
-      },
-      {
-        type: 'regional-eu',
-        prefix: 'eu',
-        regions: [
-          'eu-central-1',
-          'eu-central-2',
-          'eu-north-1',
-          'eu-south-1',
-          'eu-south-2',
-          'eu-west-1',
-          'eu-west-2',
-          'eu-west-3'
-        ],
-        displaySuffix: '(EU)'
-      }
-    ],
-    pricing: {
-      input: 0.003,
-      output: 0.015,
-      cacheRead: 0.0003,
-      cacheWrite: 0.00375
     },
     cache: {
       supported: true,
@@ -482,132 +344,13 @@ const MODEL_REGISTRY: ModelConfig[] = [
     }
   },
 
-  // Claude Opus 4.6
-  {
-    baseId: 'claude-opus-4-6-v1',
-    name: 'Claude Opus 4.6',
-    provider: 'anthropic',
-    category: 'text',
-    toolUse: true,
-    maxTokensLimit: 128000,
-    supportsThinking: true,
-    supportedThinkingTypes: ['adaptive'],
-    inferenceProfiles: [
-      {
-        type: 'global',
-        prefix: 'global',
-        regions: ['us-west-2', 'us-east-1', 'us-east-2', 'eu-west-1', 'ap-northeast-1'],
-        displaySuffix: '(Global)'
-      },
-      {
-        type: 'regional-us',
-        prefix: 'us',
-        regions: ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2'],
-        displaySuffix: '(US)'
-      }
-    ],
-    pricing: {
-      input: 0.005,
-      output: 0.025,
-      cacheRead: 0.0005,
-      cacheWrite: 0.00625
-    },
-    cache: {
-      supported: true,
-      cacheableFields: ['messages', 'system', 'tools']
-    }
-  },
-
-  // Claude Opus 4.7
-  {
-    baseId: 'claude-opus-4-7',
-    name: 'Claude Opus 4.7',
-    provider: 'anthropic',
-    category: 'text',
-    toolUse: true,
-    maxTokensLimit: 128000,
-    supportsThinking: true,
-    supportedThinkingTypes: ['adaptive'],
-    inferenceProfiles: [
-      {
-        type: 'global',
-        prefix: 'global',
-        regions: ['us-west-2', 'us-east-1', 'us-east-2', 'eu-west-1', 'ap-northeast-1'],
-        displaySuffix: '(Global)'
-      },
-      {
-        type: 'jp',
-        prefix: 'jp',
-        regions: ['ap-northeast-1', 'ap-northeast-3'],
-        displaySuffix: '(JP)'
-      },
-      {
-        type: 'regional-us',
-        prefix: 'us',
-        regions: ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2'],
-        displaySuffix: '(US)'
-      }
-    ],
-    pricing: {
-      input: 0.005,
-      output: 0.025,
-      cacheRead: 0.0005,
-      cacheWrite: 0.00625
-    },
-    cache: {
-      supported: true,
-      cacheableFields: ['messages', 'system', 'tools']
-    }
-  },
-
-  // Claude Opus 4.8
-  {
-    baseId: 'claude-opus-4-8',
-    name: 'Claude Opus 4.8',
-    provider: 'anthropic',
-    category: 'text',
-    toolUse: true,
-    maxTokensLimit: 128000,
-    supportsThinking: true,
-    supportedThinkingTypes: ['adaptive'],
-    inferenceProfiles: [
-      {
-        type: 'global',
-        prefix: 'global',
-        regions: ['us-west-2', 'us-east-1', 'us-east-2', 'eu-west-1', 'ap-northeast-1'],
-        displaySuffix: '(Global)'
-      },
-      {
-        type: 'jp',
-        prefix: 'jp',
-        regions: ['ap-northeast-1', 'ap-northeast-3'],
-        displaySuffix: '(JP)'
-      },
-      {
-        type: 'regional-us',
-        prefix: 'us',
-        regions: ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2'],
-        displaySuffix: '(US)'
-      }
-    ],
-    pricing: {
-      input: 0.005,
-      output: 0.025,
-      cacheRead: 0.0005,
-      cacheWrite: 0.00625
-    },
-    cache: {
-      supported: true,
-      cacheableFields: ['messages', 'system', 'tools']
-    }
-  },
-
   // Claude Opus 5
   // Anthropic's most advanced Opus model (launched 2026-07-24). 1M context window,
   // 128K max output, adaptive thinking on by default. Model ID has no version suffix:
   // invoked as e.g. `global.anthropic.claude-opus-5`.
   // NOTE: Opus 5 pricing is not yet published on the Bedrock pricing page; the values
-  // below mirror Claude Opus 4.8 as a placeholder and should be updated once available.
+  // below are the previous Opus rate ($5/$25 per 1M) as a placeholder and should be
+  // updated once available.
   {
     baseId: 'claude-opus-5',
     name: 'Claude Opus 5',
@@ -845,6 +588,78 @@ const MODEL_REGISTRY: ModelConfig[] = [
         type: 'regional-us',
         prefix: 'us',
         regions: ['us-east-1'],
+        displaySuffix: '(US)'
+      }
+    ],
+    pricing: {
+      input: 0.01,
+      output: 0.05,
+      cacheRead: 0.001,
+      cacheWrite: 0.0125
+    },
+    cache: {
+      supported: true,
+      cacheableFields: ['messages', 'system', 'tools']
+    }
+  },
+
+  // Claude Fable 5.2
+  // Anthropic's frontier model for technical work (launched 2026-11-09): coding,
+  // finance and the sciences, long-running ambiguous problems, self-verification
+  // and subagent orchestration. Same always-on adaptive thinking (not
+  // disableable; effort low/medium/high/xhigh/max), 1M context and 128K max
+  // output as Fable 5.1. Text and image input, text output.
+  // Bedrock offers no in-region invocation of the bare model ID, so there is no
+  // `base` profile — only the global endpoint and the US geo profile (which also
+  // serves the Canadian source regions). Prompt caching: 512-token minimum per
+  // checkpoint, up to 4 checkpoints over system, messages and tools.
+  // NOTE: Fable 5.2 pricing is not yet published on the Bedrock pricing page; the
+  // values below mirror Claude Fable 5.1 as a placeholder and should be updated
+  // once available (including any geo-profile premium or long-context tier).
+  {
+    baseId: 'claude-fable-5-2',
+    name: 'Claude Fable 5.2',
+    provider: 'anthropic',
+    category: 'text',
+    toolUse: true,
+    maxTokensLimit: 128000,
+    supportsThinking: true,
+    supportedThinkingTypes: ['adaptive'],
+    inferenceProfiles: [
+      {
+        type: 'global',
+        prefix: 'global',
+        regions: [
+          'us-east-1',
+          'us-east-2',
+          'us-west-1',
+          'us-west-2',
+          'ca-central-1',
+          'eu-central-1',
+          'eu-central-2',
+          'eu-north-1',
+          'eu-south-1',
+          'eu-south-2',
+          'eu-west-1',
+          'eu-west-2',
+          'eu-west-3',
+          'ap-northeast-1',
+          'ap-northeast-2',
+          'ap-northeast-3',
+          'ap-south-1',
+          'ap-south-2',
+          'ap-southeast-1',
+          'ap-southeast-2',
+          'ap-southeast-3',
+          'ap-southeast-4',
+          'sa-east-1'
+        ],
+        displaySuffix: '(Global)'
+      },
+      {
+        type: 'regional-us',
+        prefix: 'us',
+        regions: ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2', 'ca-central-1'],
         displaySuffix: '(US)'
       }
     ],
@@ -1145,7 +960,7 @@ const MODEL_REGISTRY: ModelConfig[] = [
   },
 
   // OpenAI GPT-6.1 Terra
-  // Launched 2026-10-26: the Terra line's successor to GPT-5.6 Terra, with
+  // Launched 2026-10-26: the newest model in the Terra line, with
   // visual reasoning, computer use and factuality approaching GPT-6 Astra at
   // under half GPT-6.1 Sol's price.
   // On bedrock-runtime, Converse is reachable only through a cross-region
@@ -1268,115 +1083,6 @@ const MODEL_REGISTRY: ModelConfig[] = [
       output: 0.0005,
       cacheRead: 0.00001,
       cacheWrite: 0.000125
-    }
-  },
-
-  // OpenAI GPT-5.6 Sol
-  // Invoked through the Bedrock Converse API via a cross-region inference
-  // profile (`us.openai.gpt-5.6-sol` / `global.openai.gpt-5.6-sol`); on-demand
-  // invocation of the bare model ID is not supported. Most capable of the
-  // GPT-5.6 family; frontier reasoning + agentic performance.
-  // Pricing: $5.50/$33.00 per 1M in/out (stored per 1K).
-  {
-    baseId: 'gpt-5.6-sol',
-    name: 'GPT-5.6 Sol',
-    provider: 'openai',
-    category: 'text',
-    toolUse: true,
-    maxTokensLimit: 128000,
-    supportsThinking: true,
-    supportedThinkingTypes: ['enabled'],
-    inferenceProfiles: [
-      {
-        type: 'global',
-        prefix: 'global',
-        regions: ['us-east-1', 'us-east-2', 'us-west-2'],
-        displaySuffix: '(Global)'
-      },
-      {
-        type: 'regional-us',
-        prefix: 'us',
-        regions: ['us-east-1', 'us-east-2', 'us-west-2'],
-        displaySuffix: '(US)'
-      }
-    ],
-    pricing: {
-      input: 0.0055,
-      output: 0.033,
-      cacheRead: 0.00055,
-      cacheWrite: 0.00688
-    }
-  },
-
-  // OpenAI GPT-5.6 Terra
-  // Invoked through the Bedrock Converse API via a cross-region inference
-  // profile (`us.openai.gpt-5.6-terra` / `global.openai.gpt-5.6-terra`).
-  // Balanced everyday model.
-  // Pricing: $2.20/$13.20 per 1M in/out (stored per 1K).
-  {
-    baseId: 'gpt-5.6-terra',
-    name: 'GPT-5.6 Terra',
-    provider: 'openai',
-    category: 'text',
-    toolUse: true,
-    maxTokensLimit: 128000,
-    supportsThinking: true,
-    supportedThinkingTypes: ['enabled'],
-    inferenceProfiles: [
-      {
-        type: 'global',
-        prefix: 'global',
-        regions: ['us-east-1', 'us-east-2', 'us-west-2'],
-        displaySuffix: '(Global)'
-      },
-      {
-        type: 'regional-us',
-        prefix: 'us',
-        regions: ['us-east-1', 'us-east-2', 'us-west-2'],
-        displaySuffix: '(US)'
-      }
-    ],
-    pricing: {
-      input: 0.0022,
-      output: 0.0132,
-      cacheRead: 0.00022,
-      cacheWrite: 0.00275
-    }
-  },
-
-  // OpenAI GPT-5.6 Luna
-  // Invoked through the Bedrock Converse API via a cross-region inference
-  // profile (`us.openai.gpt-5.6-luna` / `global.openai.gpt-5.6-luna`).
-  // Fast/affordable; high-volume classification, summarization, routing.
-  // Pricing: $0.22/$1.32 per 1M in/out (stored per 1K).
-  {
-    baseId: 'gpt-5.6-luna',
-    name: 'GPT-5.6 Luna',
-    provider: 'openai',
-    category: 'text',
-    toolUse: true,
-    maxTokensLimit: 128000,
-    supportsThinking: true,
-    supportedThinkingTypes: ['enabled'],
-    inferenceProfiles: [
-      {
-        type: 'global',
-        prefix: 'global',
-        regions: ['us-east-1', 'us-east-2', 'us-west-2'],
-        displaySuffix: '(Global)'
-      },
-      {
-        type: 'regional-us',
-        prefix: 'us',
-        regions: ['us-east-1', 'us-east-2', 'us-west-2'],
-        displaySuffix: '(US)'
-      }
-    ],
-    pricing: {
-      input: 0.00022,
-      output: 0.00132,
-      cacheRead: 0.000022,
-      cacheWrite: 0.000275
     }
   },
 
@@ -1552,7 +1258,7 @@ const MODEL_REGISTRY: ModelConfig[] = [
   // 500K context window. Reasoning is always active; the effort level (low,
   // medium, high, xhigh) is set through `additionalModelRequestFields.reasoning`
   // rather than an Anthropic-style `thinking` field, and the model rejects
-  // temperature/topP the way the GPT-5.x models do — see converseService.
+  // temperature/topP the way the GPT-6 models do — see converseService.
   // On bedrock-runtime the model is only reachable through cross-region
   // inference profiles (`us.xai.grok-4.6` / `global.xai.grok-4.6`); in-region
   // invocation of the bare model ID is not supported, so no `base` profile.
@@ -1628,7 +1334,7 @@ const MODEL_REGISTRY: ModelConfig[] = [
   // window, text and image input, and the same always-on reasoning with a
   // configurable effort level (low, medium, high, xhigh) set through
   // `additionalModelRequestFields.reasoning`; it rejects temperature/topP the way
-  // Grok 4.6 and the GPT-5.x models do — see converseService.
+  // Grok 4.6 and the GPT-6 models do — see converseService.
   // Reachable only through cross-region inference profiles on bedrock-runtime
   // (`us.xai.grok-4.7` / `global.xai.grok-4.7`), so no `base` profile. Unlike
   // Grok 4.6, Bedrock lists structured output as supported for this model.
@@ -1899,6 +1605,46 @@ export const RETIRED_MODEL_PRICING: RetiredModelPricing[] = [
     baseId: 'amazon.nova-premier-v1:0',
     name: 'Amazon Nova Premier',
     pricing: { input: 0.0025, output: 0.0125, cacheRead: 0.000625, cacheWrite: 0 }
+  },
+  {
+    baseId: 'anthropic.claude-haiku-4-5-20251001-v1:0',
+    name: 'Claude Haiku 4.5',
+    pricing: { input: 0.001, output: 0.005, cacheRead: 0.0001, cacheWrite: 0.00125 }
+  },
+  {
+    baseId: 'anthropic.claude-sonnet-4-6',
+    name: 'Claude Sonnet 4.6',
+    pricing: { input: 0.003, output: 0.015, cacheRead: 0.0003, cacheWrite: 0.00375 }
+  },
+  {
+    baseId: 'anthropic.claude-opus-4-6-v1',
+    name: 'Claude Opus 4.6',
+    pricing: { input: 0.005, output: 0.025, cacheRead: 0.0005, cacheWrite: 0.00625 }
+  },
+  {
+    baseId: 'anthropic.claude-opus-4-7',
+    name: 'Claude Opus 4.7',
+    pricing: { input: 0.005, output: 0.025, cacheRead: 0.0005, cacheWrite: 0.00625 }
+  },
+  {
+    baseId: 'anthropic.claude-opus-4-8',
+    name: 'Claude Opus 4.8',
+    pricing: { input: 0.005, output: 0.025, cacheRead: 0.0005, cacheWrite: 0.00625 }
+  },
+  {
+    baseId: 'openai.gpt-5.6-sol',
+    name: 'GPT-5.6 Sol',
+    pricing: { input: 0.0055, output: 0.033, cacheRead: 0.00055, cacheWrite: 0.00688 }
+  },
+  {
+    baseId: 'openai.gpt-5.6-terra',
+    name: 'GPT-5.6 Terra',
+    pricing: { input: 0.0022, output: 0.0132, cacheRead: 0.00022, cacheWrite: 0.00275 }
+  },
+  {
+    baseId: 'openai.gpt-5.6-luna',
+    name: 'GPT-5.6 Luna',
+    pricing: { input: 0.00022, output: 0.00132, cacheRead: 0.000022, cacheWrite: 0.000275 }
   }
 ]
 
@@ -2071,7 +1817,7 @@ export const getModelConfig = (modelId: string): ModelConfig | undefined => {
  * caller asked for and the model's own output ceiling.
  *
  * Max Output Tokens is a single global setting, but the ceiling is per model —
- * 128000 is valid for Opus 5 and rejected by Haiku 4.5, which stops at 64000.
+ * 128000 is valid for Opus 5 and rejected by Nova Pro, which stops at 5120.
  * Rather than making the user re-tune the setting per model, every request is
  * clamped here.
  *

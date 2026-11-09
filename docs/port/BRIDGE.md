@@ -64,7 +64,7 @@ the renderer needs to change.
 | Cache | Command | Used by |
 | ----- | ------- | ------- |
 | `window.store.get` (sync) | `store_all` → whole config object | everything |
-| `window.chatHistory.getSession` / `getAllSessionMetadata` / `getRecentSessions` / `getActiveSessionId` (sync) | `chat_history_snapshot` → `{ activeSessionId: string \| null, metadata: SessionMetadata[], recent: SessionMetadata[], sessions: Record<id, ChatSession> }` | `ChatHistoryContext`, `ChatPage` |
+| `window.chatHistory.getSession` / `getSessionField` / `getTouchedFiles` / `isSessionLoaded` / `getAllSessionMetadata` / `getRecentSessions` / `getActiveSessionId` (sync) | `chat_history_snapshot` → `{ activeSessionId: string \| null, metadata: SessionMetadata[], recent: SessionMetadata[], sessions: Record<id, ChatSession> }` | `ChatHistoryContext`, `ChatPage` |
 | `window.api.tools.getToolSpecs` (sync) | `tools_get_tool_specs` → `Tool[]` (same as `ToolMetadataCollector.getToolSpecs()`) | `SettingsContext`, tool settings modal |
 
 `metadata` and `recent` must be what `ChatSessionManager.getAllSessionMetadata()` and
@@ -72,7 +72,17 @@ the renderer needs to change.
 sorted by `updatedAt` descending). `sessions` holds full sessions keyed by id: the active session
 plus the recent ones (a real history can be hundreds of MB, so not all of them).
 
-`getSession(id)` for an id not in the cache reads it **synchronously** with a sync
+Sessions can be tens of MB, so the cache is read cheaply where it can be:
+`getSessionField(id, key)` copies one field (for a session not in the cache only the list
+metadata's fields are known, the rest is `undefined`), `getTouchedFiles(id)` copies the saved
+`touchedFiles`, and `getSession(id)` copies the whole session. `loadSession(id)` (async, →
+whether the session exists) reads a session into the cache with `chat_history_get_session
+{ sessionId }`, sharing one read between concurrent callers; a session deleted while it loads
+isn't cached. The renderer loads a chat this way before opening it (`useAgentChat`'s session
+switch) and before reading a whole session elsewhere.
+
+As a last resort, `getSession(id)` for an id still not in the cache reads it **synchronously**
+(and logs a warning, since it blocks the window) with a sync
 `XMLHttpRequest` to the `chathistory` URI scheme registered in `src-tauri/app`
 (`convertFileSrc(id, 'chathistory')`, i.e. `chathistory://localhost/<id>`, or
 `http://chathistory.localhost/<id>` on Windows). It answers `200` with the session JSON or `404`
@@ -115,10 +125,18 @@ Store safety (the bridge side of the Rust store's re-read-before-write):
   `store_flush_done { token }`. The window is destroyed (or the app exits) then, or after 3 s.
 
 After each async chat-history mutation (and in the background after the sync ones:
-`deleteSession`, `deleteSessions`, `deleteAllSessions`, `setActiveSession`), the shim re-reads:
+`deleteSession`, `deleteSessions`, `deleteAllSessions`), the shim re-reads the list-level state:
 `chat_history_get_all_session_metadata`, `chat_history_get_recent_sessions`,
-`chat_history_get_active_session_id` and, for the mutated session, `chat_history_get_session
-{ sessionId }` (→ `ChatSession | null`).
+`chat_history_get_active_session_id` and `chat_history_get_folders`. It doesn't re-read the
+mutated session: `addMessage`, `updateMessageContent`, `deleteMessage`, `updateSessionTitle`,
+`setUseMemoryItems`, `setMentionGrants` and `addTouchedFiles` patch the cached copy the way the
+backend changes the file (a failed `addMessage` takes its message back out). Only
+`createSession` reads the new (empty) session with `chat_history_get_session { sessionId }`
+(→ `ChatSession | null`).
+
+`addTouchedFiles` rewrites the whole session file, so `recordTouchedFiles`
+(`lib/workspaceFiles/touchedFiles.ts`) batches it: the Files panel hears about new paths at once,
+the backend gets them at most every 2 s and when a turn's file tracking stops.
 
 Implemented in the renderer, no command needed: `api.bedrock.getImageGenerationModelsForRegion`
 (shared model table), `api.bedrock.convertInferenceProfileToLLM` (copy of
@@ -357,7 +375,7 @@ Notes on the file commands (`src-tauri/app/src/commands/{file,agent_files}.rs`):
 | `chatHistory.*` (refresh) | `chat_history_get_all_session_metadata` | — |
 | `chatHistory.*` (refresh) | `chat_history_get_recent_sessions` | — |
 | `chatHistory.*` (refresh) | `chat_history_get_active_session_id` | — |
-| `chatHistory.*` (refresh) | `chat_history_get_session` | `{ sessionId }` |
+| `chatHistory.createSession` (refresh), `chatHistory.loadSession` | `chat_history_get_session` | `{ sessionId }` |
 | `chatHistory.createSession` | `chat_history_create_session` | `{ agentId, modelId, systemPrompt, title }` |
 | `chatHistory.addMessage` | `chat_history_add_message` | `{ sessionId, message }` |
 | `chatHistory.updateSessionTitle` | `chat_history_update_session_title` | `{ sessionId, title }` |
@@ -524,6 +542,8 @@ Notes on the file commands (`src-tauri/app/src/commands/{file,agent_files}.rs`):
 | `api.chatAttachments.removeAll` | `chat_attachments_remove_all` | `{ sessionId }` |
 | `api.chatAttachments.removeEveryFolder` | `chat_attachments_remove_every_folder` | — |
 | `api.chatAttachments.rename` | `chat_attachments_rename` | `{ sessionId }` |
+| `api.chatAttachments.folder` | `chat_attachments_folder` | `{ sessionId }` (→ the chat's folder; creates nothing) |
+| `api.chatAttachments.tidy` | `chat_attachments_tidy` | `{ sessionId }` (moves an existing chat's loose files into `chats/<chat>/`) |
 | `api.chatAttachments.buildContext` | `chat_attachments_build_context` | `{ sessionId }` |
 | `api.chatAttachments.openFolder` | `chat_attachments_open_folder` | `{ sessionId }` |
 | `api.help.prepareUserGuide` | `help_prepare_user_guide` | `{ sessionId }` (attaches the whole guide; the renderer no longer calls it) |

@@ -8114,6 +8114,7 @@ name = "tools"
 version = "2026.930.0"
 dependencies = [
  "async-trait",
+ "attachments",
  "base64 0.22.1",
  "bedrock",
  "chrono",

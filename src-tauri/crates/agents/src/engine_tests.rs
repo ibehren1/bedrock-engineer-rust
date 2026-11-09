@@ -446,14 +446,14 @@ async fn continues_an_existing_session() {
 
 #[tokio::test]
 async fn prompt_cache_points_are_added_when_enabled() {
-    const HAIKU_4_5: &str = "us.anthropic.claude-haiku-4-5-20251001-v1:0";
+    const HAIKU_5_5: &str = "us.anthropic.claude-haiku-5-5";
     let f = fixture(
         Scripted::new(vec![text_response("x")]),
         json!([agent("a", &["readFiles"])]),
         json!({ "agentChatConfig": { "enablePromptCache": true } }),
     );
     let mut cfg = config("a");
-    cfg.model_id = HAIKU_4_5.into();
+    cfg.model_id = HAIKU_5_5.into();
     f.engine
         .chat("s", &cfg, "Go", &AgentRunOptions::default())
         .await

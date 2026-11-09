@@ -1,21 +1,26 @@
-//! Per-chat attachments folders (port of `attachmentsManager.ts` and `chatSessionTitle.ts`).
+//! Per-chat folders and the attachments inside them (port of `attachmentsManager.ts` and
+//! `chatSessionTitle.ts`, with a new layout).
+//!
+//! ## Layout
+//!
+//! Every chat has one folder in the project directory, `chats/<chat-name>/`, named after the
+//! chat title ([`to_chat_folder_name`]) and renamed when the title changes. The agent saves the
+//! files it makes for the chat there, and files the user attaches go in its `attachments/`
+//! subfolder. When two chats' titles give the same name, the later one is `<name>-2`, `-3`, ...
 //!
 //! ## Folder ownership
 //!
-//! Folders are named `<title-slug>-<shortId>` where `shortId` is only 6 hex chars of a hash, so
-//! two chats (or a folder the user made) can share a suffix. The TS code picked "the first folder
-//! ending in `-<shortId>`" and renamed / deleted it. Here a folder counts as a chat's only when
-//! it is proven to be:
+//! The name alone proves nothing (titles repeat, and the user can make folders too). A folder
+//! belongs to a chat only when it holds a [`MARKER_FILE`] (`.chat-session.json`,
+//! `{"sessionId": ...}`) naming the chat. Only such folders are renamed or deleted.
 //!
-//! - it holds a [`MARKER_FILE`] (`.chat-session.json`, `{"sessionId": ...}`) naming the chat —
-//!   written whenever this build creates or uses the folder (dotfiles are ignored by listings,
-//!   request context and the Electron build); or
-//! - it has no marker (made by the Electron build) and its name is exactly the one the chat's
-//!   current title gives ([`to_folder_name`]); the marker is written once that matches.
+//! ## Earlier layout
 //!
-//! A marker-less folder carrying an old title can't be proven and is left alone (the chat gets a
-//! new folder). "Delete all" removes only folders with a marker or whose name has the app's exact
-//! shape ([`is_app_folder_name`]); anything else under `attachments/` is kept.
+//! Builds before this one kept only attachments, in `attachments/<title-slug>-<shortId>/`
+//! (marker inside, or no marker for Electron-era folders whose name matches the chat's title
+//! exactly, see [`find_legacy_folder`]). The first time a chat's folder is looked up, its old
+//! folder is moved to `chats/<chat-name>/attachments/`; the `attachments/` root goes away once
+//! nothing of the app's is left in it.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -25,7 +30,7 @@ use crate::error::{Error, Result};
 use crate::file_naming::{
     resolve_inside, resolve_lexically, sanitize_attachment_name, unique_name_in,
 };
-use crate::folder_naming::{slugify_title, to_folder_name, to_short_id};
+use crate::folder_naming::{to_chat_folder_name, to_folder_name, to_short_id};
 use crate::image_validation::{is_image_extension, validate_image_bytes};
 use crate::types::*;
 use common::json_file::{is_safe_file_id, parse_lenient, write_atomic};
@@ -36,7 +41,7 @@ use common::json_file::{is_safe_file_id, parse_lenient, write_atomic};
 /// immediately, as it did in Electron.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AttachmentPaths {
-    /// Project directory; attachments live at `<project>/attachments/`.
+    /// Project directory; chat folders live at `<project>/chats/`.
     pub project_path: Option<PathBuf>,
     /// App user-data directory; chat titles are read from `<userData>/chat-sessions/<id>.json`.
     pub user_data_path: Option<PathBuf>,
@@ -61,8 +66,15 @@ fn path_string(path: &Path) -> String {
     path.to_string_lossy().into_owned()
 }
 
+/// How much of a session file is read looking for its `title` before parsing the whole file.
+const TITLE_PREFIX_BYTES: u64 = 64 * 1024;
+
 /// Read a chat's current title from the session file the chat history writes.
+///
+/// Session files can be tens of megabytes and the title sits near the top, so the start of the
+/// file is scanned first ([`top_level_title`]); the whole file is parsed only when that fails.
 pub fn read_chat_title(paths: &AttachmentPaths, session_id: &str) -> Option<String> {
+    use std::io::Read;
     if !is_safe_file_id(session_id) {
         return None;
     }
@@ -70,12 +82,92 @@ pub fn read_chat_title(paths: &AttachmentPaths, session_id: &str) -> Option<Stri
     let file = user_data
         .join("chat-sessions")
         .join(format!("{session_id}.json"));
+    let mut prefix = Vec::new();
+    fs::File::open(&file)
+        .ok()?
+        .take(TITLE_PREFIX_BYTES)
+        .read_to_end(&mut prefix)
+        .ok()?;
+    if let Some(title) = top_level_title(&prefix) {
+        return Some(title);
+    }
     let raw = fs::read_to_string(file).ok()?;
     let parsed: serde_json::Value = parse_lenient(&raw).ok()?;
     parsed.get("title")?.as_str().map(str::to_string)
 }
 
-/// Ownership marker inside each chat folder this build creates or verifies.
+/// The value of the top-level `"title"` key in the (possibly cut-off) JSON object `bytes`,
+/// when it is a string that ends within `bytes`.
+fn top_level_title(bytes: &[u8]) -> Option<String> {
+    let mut depth = 0usize;
+    let mut i = 0;
+    // Whether the next string at depth 1 is an object key.
+    let mut expect_key = false;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'{' => {
+                depth += 1;
+                expect_key = depth == 1;
+            }
+            b'[' => depth += 1,
+            b'}' | b']' => depth = depth.checked_sub(1)?,
+            b',' if depth == 1 => expect_key = true,
+            b'"' => {
+                let end = string_end(bytes, i)?;
+                if depth == 1 && expect_key {
+                    expect_key = false;
+                    if &bytes[i..=end] == b"\"title\"" {
+                        let mut j = end + 1;
+                        while j < bytes.len()
+                            && (bytes[j].is_ascii_whitespace() || bytes[j] == b':')
+                        {
+                            j += 1;
+                        }
+                        if bytes.get(j) != Some(&b'"') {
+                            return None;
+                        }
+                        let value_end = string_end(bytes, j)?;
+                        let literal = std::str::from_utf8(&bytes[j..=value_end]).ok()?;
+                        return parse_lenient::<String>(literal).ok();
+                    }
+                }
+                i = end;
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    None
+}
+
+/// Index of the closing quote of the JSON string opening at `start`.
+fn string_end(bytes: &[u8], start: usize) -> Option<usize> {
+    let mut i = start + 1;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'\\' => i += 2,
+            b'"' => return Some(i),
+            _ => i += 1,
+        }
+    }
+    None
+}
+
+/// Whether `session_id` names a chat the chat history has a session file for. Runs that are
+/// not chats (background agents keep their own sessions elsewhere) have no chat folder.
+pub fn is_chat_session(paths: &AttachmentPaths, session_id: &str) -> bool {
+    if !is_safe_file_id(session_id) {
+        return false;
+    }
+    paths.user_data_path.as_deref().is_some_and(|user_data| {
+        user_data
+            .join("chat-sessions")
+            .join(format!("{session_id}.json"))
+            .exists()
+    })
+}
+
+/// Ownership marker inside each chat folder.
 pub const MARKER_FILE: &str = ".chat-session.json";
 
 /// The `sessionId` recorded in a folder's marker, if it has a readable one.
@@ -99,8 +191,8 @@ fn ensure_marker(directory: &Path, session_id: &str) {
     }
 }
 
-/// True for names [`to_folder_name`] can produce: `<slug>-<6 hex>`, where the slug is 1-40 of
-/// `[a-z0-9]` in dash-separated runs (no leading, trailing or doubled dash).
+/// True for names the earlier layout's [`to_folder_name`] can produce: `<slug>-<6 hex>`, where
+/// the slug is 1-40 of `[a-z0-9]` in dash-separated runs (no leading, trailing or doubled dash).
 pub fn is_app_folder_name(name: &str) -> bool {
     let Some((slug, short)) = name.rsplit_once('-') else {
         return false;
@@ -123,9 +215,8 @@ fn is_real_dir(path: &Path) -> bool {
     fs::symlink_metadata(path).is_ok_and(|m| m.is_dir())
 }
 
-/// Folder names under `root` ending in `-<shortId>` (real directories only), in name order.
-fn suffix_candidates(root: &Path, session_id: &str) -> Vec<String> {
-    let suffix = format!("-{}", to_short_id(session_id));
+/// Names of the real directories (not symlinks) directly inside `root`, in name order.
+fn dir_names(root: &Path) -> Vec<String> {
     let Ok(entries) = fs::read_dir(root) else {
         return Vec::new();
     };
@@ -133,17 +224,177 @@ fn suffix_candidates(root: &Path, session_id: &str) -> Vec<String> {
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_ok_and(|t| t.is_dir()))
         .map(|e| e.file_name().to_string_lossy().into_owned())
-        .filter(|n| n.ends_with(&suffix))
         .collect();
     names.sort();
     names
 }
 
-/// The folder proven to belong to `session_id` (see the module docs), writing the marker into a
-/// verified legacy folder. `expected` is the name the chat's current title gives.
-fn find_owned_folder(root: &Path, session_id: &str, expected: &str) -> Option<PathBuf> {
+// ---------------------------------------------------------------------------------------------
+// Chat folders: `<project>/chats/<chat-name>/`
+// ---------------------------------------------------------------------------------------------
+
+/// `<projectPath>/chats`. Errors when no project directory is configured.
+pub fn get_chats_root(paths: &AttachmentPaths) -> Result<PathBuf> {
+    Ok(paths.project_path()?.join(CHATS_ROOT_DIRNAME))
+}
+
+/// What the `chats/` root's `.gitignore` keeps out of the user's repository: the attached
+/// files and the ownership markers. What the agent makes in a chat's folder is left visible.
+const CHATS_GITIGNORE: &str = "# Chat folders made by Bedrock Engineer.\n# Files attached to a chat stay out of version control; what the agent makes does not.\n*/attachments/\n.chat-session.json\n";
+
+/// Create the root and its `.gitignore` (written once, so the user can edit it).
+fn ensure_chats_root(paths: &AttachmentPaths) -> Result<PathBuf> {
+    let root = get_chats_root(paths)?;
+    fs::create_dir_all(&root)?;
+    let gitignore = root.join(".gitignore");
+    if !gitignore.exists() {
+        fs::write(&gitignore, CHATS_GITIGNORE)?;
+    }
+    Ok(root)
+}
+
+/// The folder under `root` whose marker names `session_id`.
+fn find_chat_folder(root: &Path, session_id: &str) -> Option<PathBuf> {
+    dir_names(root)
+        .into_iter()
+        .map(|name| root.join(name))
+        .find(|dir| read_marker(dir).as_deref() == Some(session_id))
+}
+
+/// The name for a chat's folder: `desired`, or — when a folder of that name exists but belongs
+/// to someone else — `<desired>-<n>` for the first free (or already ours) `n`.
+fn claim_chat_folder_name(root: &Path, session_id: &str, desired: &str) -> String {
+    let free_or_ours = |name: &str| {
+        let dir = root.join(name);
+        !dir.exists() || (is_real_dir(&dir) && read_marker(&dir).as_deref() == Some(session_id))
+    };
+    if free_or_ours(desired) {
+        return desired.to_string();
+    }
+    (2..)
+        .map(|n| format!("{desired}-{n}"))
+        .find(|name| free_or_ours(name))
+        .expect("an unused name")
+}
+
+/// The folder a chat's files live in, renamed to follow the current chat title when the two
+/// disagree, and with the chat's attachments moved in from the earlier layout. Creates no folder
+/// for a chat that has none yet: the path is where it will be.
+pub fn resolve_chat_dir(paths: &AttachmentPaths, session_id: &str) -> Result<PathBuf> {
+    let root = get_chats_root(paths)?;
+    let title = read_chat_title(paths, session_id);
+    let desired = to_chat_folder_name(session_id, title.as_deref());
+
+    let existing = find_chat_folder(&root, session_id)
+        .or_else(|| migrate_legacy_folder(paths, &root, session_id, &desired));
+    let Some(existing) = existing else {
+        return Ok(root.join(claim_chat_folder_name(&root, session_id, &desired)));
+    };
+
+    let target = root.join(claim_chat_folder_name(&root, session_id, &desired));
+    if resolve_lexically(&existing) == resolve_lexically(&target) {
+        return Ok(existing);
+    }
+    match fs::rename(&existing, &target) {
+        Ok(()) => Ok(target),
+        Err(e) => {
+            tracing::warn!(from = %existing.display(), to = %target.display(), error = %e, "Failed to rename chat folder");
+            Ok(existing)
+        }
+    }
+}
+
+/// [`resolve_chat_dir`] plus creating the folder and its marker.
+pub fn ensure_chat_dir(paths: &AttachmentPaths, session_id: &str) -> Result<PathBuf> {
+    ensure_chats_root(paths)?;
+    let directory = resolve_chat_dir(paths, session_id)?;
+    fs::create_dir_all(&directory)?;
+    ensure_marker(&directory, session_id);
+    Ok(directory)
+}
+
+/// Rename a chat's folder to follow its title (the title-change path). Not renamed when the
+/// chat has no folder yet.
+pub fn rename_chat_dir(paths: &AttachmentPaths, session_id: &str) -> RenameResult {
+    let not_renamed = RenameResult {
+        renamed: false,
+        directory: None,
+    };
+    let Ok(root) = get_chats_root(paths) else {
+        return not_renamed;
+    };
+    let before = find_chat_folder(&root, session_id);
+    let Ok(after) = resolve_chat_dir(paths, session_id) else {
+        return not_renamed;
+    };
+    if !after.exists() {
+        return not_renamed;
+    }
+    RenameResult {
+        renamed: before.is_some_and(|b| resolve_lexically(&b) != resolve_lexically(&after)),
+        directory: Some(path_string(&after)),
+    }
+}
+
+/// Delete a chat's folder (with everything in it), used when the chat itself is deleted. Only
+/// a folder proven to be the chat's is deleted; an unmoved folder of the earlier layout goes too.
+pub fn remove_chat_dir(paths: &AttachmentPaths, session_id: &str) -> Result<RemovedFolder> {
+    let Ok(root) = get_chats_root(paths) else {
+        return Ok(RemovedFolder { removed: false });
+    };
+    let mut removed = false;
+    if let Some(directory) = find_chat_folder(&root, session_id) {
+        fs::remove_dir_all(&directory)?;
+        removed = true;
+    }
+    if let Some(legacy) = find_legacy_folder(paths, session_id) {
+        fs::remove_dir_all(&legacy)?;
+        removed = true;
+        remove_legacy_root_if_empty(paths);
+    }
+    Ok(RemovedFolder { removed })
+}
+
+/// Delete every chat folder (for "delete all chats"), working off the folders on disk so chats
+/// the sidebar hides are reached too. Folders without a marker naming a chat are kept, and so
+/// are files at the root (the `.gitignore`) and symlinks. Folders of the earlier layout go too.
+pub fn remove_every_chat_dir(paths: &AttachmentPaths) -> Result<RemovedFolders> {
+    let mut removed = 0;
+    if let Ok(root) = get_chats_root(paths) {
+        for name in dir_names(&root) {
+            let dir = root.join(&name);
+            if read_marker(&dir).is_none() {
+                tracing::info!(folder = %name, "Keeping a folder the app did not create");
+                continue;
+            }
+            fs::remove_dir_all(&dir)?;
+            removed += 1;
+        }
+    }
+    removed += remove_every_legacy_folder(paths)?;
+    Ok(RemovedFolders { removed })
+}
+
+// ---------------------------------------------------------------------------------------------
+// The earlier layout: `<project>/attachments/<title-slug>-<shortId>/`
+// ---------------------------------------------------------------------------------------------
+
+fn legacy_root(paths: &AttachmentPaths) -> Result<PathBuf> {
+    Ok(paths.project_path()?.join(ATTACHMENTS_ROOT_DIRNAME))
+}
+
+/// The earlier layout's folder proven to belong to `session_id`: the one whose marker names the
+/// chat, or a marker-less one (Electron era) named exactly as the chat's current title gives.
+fn find_legacy_folder(paths: &AttachmentPaths, session_id: &str) -> Option<PathBuf> {
+    let root = legacy_root(paths).ok()?;
+    let title = read_chat_title(paths, session_id);
+    let expected = to_folder_name(session_id, title.as_deref());
+    let suffix = format!("-{}", to_short_id(session_id));
     let mut legacy_match = None;
-    for name in suffix_candidates(root, session_id) {
+    for name in dir_names(&root)
+        .into_iter()
+        .filter(|n| n.ends_with(&suffix))
+    {
         let dir = root.join(&name);
         match read_marker(&dir) {
             Some(owner) if owner == session_id => return Some(dir),
@@ -152,85 +403,97 @@ fn find_owned_folder(root: &Path, session_id: &str, expected: &str) -> Option<Pa
             None => {}
         }
     }
-    let dir = legacy_match?;
-    ensure_marker(&dir, session_id);
-    Some(dir)
+    legacy_match
 }
 
-/// The name for a chat's folder: [`to_folder_name`], or — when a folder of that name exists
-/// but belongs to someone else — `<slug>-<n>-<shortId>` for the first free `n`.
-fn claim_folder_name(root: &Path, session_id: &str, title: Option<&str>) -> String {
-    let desired = to_folder_name(session_id, title);
-    let free_or_ours = |name: &str| {
-        let dir = root.join(name);
-        !dir.exists() || (is_real_dir(&dir) && read_marker(&dir).as_deref() == Some(session_id))
+/// Move the chat's earlier-layout folder to `<root>/<name>/attachments/`, returning the new chat
+/// folder. `None` when there is nothing to move or the move failed (the old folder stays put).
+fn migrate_legacy_folder(
+    paths: &AttachmentPaths,
+    root: &Path,
+    session_id: &str,
+    desired: &str,
+) -> Option<PathBuf> {
+    let legacy = find_legacy_folder(paths, session_id)?;
+    let moved = (|| -> Result<PathBuf> {
+        ensure_chats_root(paths)?;
+        let chat_dir = root.join(claim_chat_folder_name(root, session_id, desired));
+        fs::create_dir_all(&chat_dir)?;
+        ensure_marker(&chat_dir, session_id);
+        let target = chat_dir.join(ATTACHMENTS_ROOT_DIRNAME);
+        if target.exists() {
+            return Err(Error::Io(std::io::Error::other(format!(
+                "{} already exists",
+                target.display()
+            ))));
+        }
+        fs::rename(&legacy, &target)?;
+        let _ = fs::remove_file(target.join(MARKER_FILE));
+        Ok(chat_dir)
+    })();
+    match moved {
+        Ok(chat_dir) => {
+            tracing::info!(from = %legacy.display(), to = %chat_dir.display(), "Moved a chat's attachments into its chat folder");
+            remove_legacy_root_if_empty(paths);
+            Some(chat_dir)
+        }
+        Err(e) => {
+            tracing::warn!(folder = %legacy.display(), error = %e, "Failed to move a chat's attachments into its chat folder");
+            find_chat_folder(root, session_id)
+        }
+    }
+}
+
+/// Remove the earlier layout's `attachments/` root once only its `.gitignore` is left.
+fn remove_legacy_root_if_empty(paths: &AttachmentPaths) {
+    let Ok(root) = legacy_root(paths) else {
+        return;
     };
-    if free_or_ours(&desired) {
-        return desired;
+    let Ok(entries) = fs::read_dir(&root) else {
+        return;
+    };
+    let names: Vec<String> = entries
+        .filter_map(|e| e.ok())
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .collect();
+    if names.iter().all(|n| n == ".gitignore" || n == ".DS_Store") {
+        let _ = fs::remove_dir_all(&root);
     }
-    let slug = title.map(slugify_title).filter(|s| !s.is_empty());
-    let slug = slug.as_deref().unwrap_or("session");
-    let short = to_short_id(session_id);
-    (2..)
-        .map(|n| format!("{slug}-{n}-{short}"))
-        .find(|name| free_or_ours(name))
-        .expect("an unused name")
 }
 
-/// `<projectPath>/attachments`. Errors when no project directory is configured.
-pub fn get_attachments_root(paths: &AttachmentPaths) -> Result<PathBuf> {
-    Ok(paths.project_path()?.join(ATTACHMENTS_ROOT_DIRNAME))
-}
-
-/// Create the root and a self-ignoring `.gitignore` (written once) so attachments stay out of
-/// the user's repository.
-fn ensure_attachments_root(paths: &AttachmentPaths) -> Result<PathBuf> {
-    let root = get_attachments_root(paths)?;
-    fs::create_dir_all(&root)?;
-
-    let gitignore = root.join(".gitignore");
-    if !gitignore.exists() {
-        fs::write(
-            &gitignore,
-            "# Chat-scoped attachments saved by Bedrock Engineer.\n*\n",
-        )?;
+/// "Delete all" for the earlier layout: folders with a marker or with the app's exact name
+/// shape ([`is_app_folder_name`]); anything else under `attachments/` is kept.
+fn remove_every_legacy_folder(paths: &AttachmentPaths) -> Result<usize> {
+    let Ok(root) = legacy_root(paths) else {
+        return Ok(0);
+    };
+    let mut removed = 0;
+    for name in dir_names(&root) {
+        let dir = root.join(&name);
+        if read_marker(&dir).is_none() && !is_app_folder_name(&name) {
+            tracing::info!(folder = %name, "Keeping a folder the app did not create");
+            continue;
+        }
+        fs::remove_dir_all(&dir)?;
+        removed += 1;
     }
-    Ok(root)
+    remove_legacy_root_if_empty(paths);
+    Ok(removed)
 }
 
-/// The folder a chat's attachments live in, renamed to follow the current chat title when the
-/// two disagree. Creates nothing.
+// ---------------------------------------------------------------------------------------------
+// Attachments: `<chat folder>/attachments/`
+// ---------------------------------------------------------------------------------------------
+
+/// The folder a chat's attachments live in (`<chat folder>/attachments`). Creates nothing.
 pub fn resolve_attachments_dir(paths: &AttachmentPaths, session_id: &str) -> Result<PathBuf> {
-    let root = get_attachments_root(paths)?;
-    let title = read_chat_title(paths, session_id);
-    let expected = to_folder_name(session_id, title.as_deref());
-    let Some(existing) = find_owned_folder(&root, session_id, &expected) else {
-        // New folder: the title's name unless another chat (or the user) already has it.
-        return Ok(root.join(claim_folder_name(&root, session_id, title.as_deref())));
-    };
-    let desired = root.join(expected);
-
-    if resolve_lexically(&existing) == resolve_lexically(&desired) {
-        return Ok(existing);
-    }
-
-    // A collision means another chat already owns that name; leave this folder alone.
-    if desired.exists() {
-        return Ok(existing);
-    }
-
-    match fs::rename(&existing, &desired) {
-        Ok(()) => Ok(desired),
-        Err(_) => Ok(existing),
-    }
+    Ok(resolve_chat_dir(paths, session_id)?.join(ATTACHMENTS_ROOT_DIRNAME))
 }
 
-/// [`resolve_attachments_dir`] plus creating the folders themselves.
+/// [`resolve_attachments_dir`] plus creating the chat folder and its attachments folder.
 pub fn ensure_attachments_dir(paths: &AttachmentPaths, session_id: &str) -> Result<PathBuf> {
-    ensure_attachments_root(paths)?;
-    let directory = resolve_attachments_dir(paths, session_id)?;
+    let directory = ensure_chat_dir(paths, session_id)?.join(ATTACHMENTS_ROOT_DIRNAME);
     fs::create_dir_all(&directory)?;
-    ensure_marker(&directory, session_id);
     Ok(directory)
 }
 
@@ -420,96 +683,68 @@ pub fn remove_attachment(
     })
 }
 
-/// Explicit rename hook for the title-change path.
-pub fn rename_attachments_dir(paths: &AttachmentPaths, session_id: &str) -> RenameResult {
-    let not_renamed = RenameResult {
-        renamed: false,
-        directory: None,
-    };
-    let Ok(root) = get_attachments_root(paths) else {
-        return not_renamed;
-    };
-    let title = read_chat_title(paths, session_id);
-    let expected = to_folder_name(session_id, title.as_deref());
-    let Some(before) = find_owned_folder(&root, session_id, &expected) else {
-        return not_renamed;
-    };
-
-    let after = resolve_attachments_dir(paths, session_id).unwrap_or_else(|_| before.clone());
-    RenameResult {
-        renamed: resolve_lexically(&after) != resolve_lexically(&before),
-        directory: Some(path_string(&after)),
-    }
-}
-
-/// Delete a chat's attachments folder, used when the chat itself is deleted. Only a folder
-/// proven to be the chat's (see the module docs) is deleted.
-pub fn remove_all_attachments(paths: &AttachmentPaths, session_id: &str) -> Result<RemovedFolder> {
-    let Ok(root) = get_attachments_root(paths) else {
-        return Ok(RemovedFolder { removed: false });
-    };
-    let title = read_chat_title(paths, session_id);
-    let expected = to_folder_name(session_id, title.as_deref());
-    let Some(directory) = find_owned_folder(&root, session_id, &expected) else {
-        return Ok(RemovedFolder { removed: false });
-    };
-    if !directory.exists() {
-        return Ok(RemovedFolder { removed: false });
-    }
-    fs::remove_dir_all(&directory)?;
-    Ok(RemovedFolder { removed: true })
-}
-
 /// Of the given chats, which ones have at least one (non-hidden) attached file, in the order
 /// asked for. Errors (no project directory, vanished folder) just mean "no files".
+///
+/// The sidebar asks this for every chat on a timer, so it is one read-only pass: the chat
+/// folders are listed once and matched by their markers; nothing is renamed or moved, and no
+/// session file is read. Earlier-layout folders count only when they carry a marker.
 pub fn list_session_ids_with_attachments(
     paths: &AttachmentPaths,
     session_ids: &[String],
 ) -> Vec<String> {
+    let has_visible_entry = |dir: &Path| match fs::read_dir(dir) {
+        Ok(entries) => entries
+            .filter_map(|e| e.ok())
+            .any(|e| !e.file_name().to_string_lossy().starts_with('.')),
+        Err(_) => false,
+    };
+    let mut with_files = std::collections::HashSet::new();
+    if let Ok(root) = get_chats_root(paths) {
+        for name in dir_names(&root) {
+            let dir = root.join(name);
+            if let Some(owner) = read_marker(&dir) {
+                if has_visible_entry(&dir.join(ATTACHMENTS_ROOT_DIRNAME)) {
+                    with_files.insert(owner);
+                }
+            }
+        }
+    }
+    if let Ok(root) = legacy_root(paths) {
+        for name in dir_names(&root) {
+            let dir = root.join(name);
+            if let Some(owner) = read_marker(&dir) {
+                if has_visible_entry(&dir) {
+                    with_files.insert(owner);
+                }
+            }
+        }
+    }
     session_ids
         .iter()
-        .filter(|session_id| {
-            // Renames a stale folder to follow the chat title, which is wanted here anyway.
-            let Ok(directory) = resolve_attachments_dir(paths, session_id) else {
-                return false;
-            };
-            match fs::read_dir(&directory) {
-                Ok(entries) => entries
-                    .filter_map(|e| e.ok())
-                    .any(|e| !e.file_name().to_string_lossy().starts_with('.')),
-                Err(_) => false,
-            }
-        })
+        .filter(|id| with_files.contains(id.as_str()))
         .cloned()
         .collect()
 }
 
-/// Delete every attachments folder (for "delete all chats"), working off the folders on disk so
-/// chats the sidebar hides are reached too. Files at the root (the `.gitignore`), symlinks, and
-/// folders that neither carry a [`MARKER_FILE`] nor have the app's exact name shape
-/// ([`is_app_folder_name`]) are kept.
-pub fn remove_every_attachments_folder(paths: &AttachmentPaths) -> Result<RemovedFolders> {
-    let Ok(root) = get_attachments_root(paths) else {
-        return Ok(RemovedFolders { removed: 0 });
-    };
-    if !root.exists() {
-        return Ok(RemovedFolders { removed: 0 });
-    }
+/// Old name of [`rename_chat_dir`], kept for the `chat-attachments-rename` handler.
+pub fn rename_attachments_dir(paths: &AttachmentPaths, session_id: &str) -> RenameResult {
+    rename_chat_dir(paths, session_id)
+}
 
-    let mut removed = 0;
-    for entry in sorted_entries(&root)? {
-        if !entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
-            continue;
-        }
-        let name = entry.file_name().to_string_lossy().into_owned();
-        if read_marker(&entry.path()).is_none() && !is_app_folder_name(&name) {
-            tracing::info!(folder = %name, "Keeping a folder the app did not create");
-            continue;
-        }
-        fs::remove_dir_all(entry.path())?;
-        removed += 1;
-    }
-    Ok(RemovedFolders { removed })
+/// Old name of [`remove_chat_dir`]: deleting a chat deletes its whole folder.
+pub fn remove_all_attachments(paths: &AttachmentPaths, session_id: &str) -> Result<RemovedFolder> {
+    remove_chat_dir(paths, session_id)
+}
+
+/// Old name of [`remove_every_chat_dir`].
+pub fn remove_every_attachments_folder(paths: &AttachmentPaths) -> Result<RemovedFolders> {
+    remove_every_chat_dir(paths)
+}
+
+/// The earlier layout's `attachments/` root, kept for callers that still name it.
+pub fn get_attachments_root(paths: &AttachmentPaths) -> Result<PathBuf> {
+    legacy_root(paths)
 }
 
 #[cfg(test)]
@@ -552,8 +787,13 @@ pub(crate) mod tests {
             .unwrap();
         }
 
+        /// The earlier layout's root, `<project>/attachments`.
         pub fn attachments_root(&self) -> PathBuf {
             self.project.path().join("attachments")
+        }
+
+        pub fn chats_root(&self) -> PathBuf {
+            self.project.path().join("chats")
         }
 
         pub fn add(&self, session_id: &str, files: &[(&str, &[u8])]) -> AttachmentAddResult {
@@ -584,32 +824,46 @@ pub(crate) mod tests {
         use super::*;
 
         #[test]
-        fn names_a_folder_after_the_chat_title_plus_the_chat_short_id() {
+        fn names_the_chat_folder_after_the_title_and_puts_attachments_inside_it() {
             let fx = Fixture::new();
             fx.set_chat_title(SESSION_ID, "Fix the auth bug");
             let dir = ensure_attachments_dir(&fx.paths, SESSION_ID).unwrap();
             assert_eq!(
-                basename(&dir),
-                format!("fix-the-auth-bug-{}", to_short_id(SESSION_ID))
+                dir,
+                fx.chats_root().join("fix-the-auth-bug").join("attachments")
+            );
+            assert_eq!(
+                ensure_chat_dir(&fx.paths, SESSION_ID).unwrap(),
+                fx.chats_root().join("fix-the-auth-bug")
             );
         }
 
         #[test]
         fn falls_back_to_the_short_id_when_the_chat_has_no_title_yet() {
             let fx = Fixture::new();
-            let dir = ensure_attachments_dir(&fx.paths, SESSION_ID).unwrap();
-            assert_eq!(
-                basename(&dir),
-                format!("session-{}", to_short_id(SESSION_ID))
-            );
+            let dir = ensure_chat_dir(&fx.paths, SESSION_ID).unwrap();
+            assert_eq!(basename(&dir), format!("chat-{}", to_short_id(SESSION_ID)));
         }
 
         #[test]
-        fn writes_a_self_ignoring_gitignore_at_the_attachments_root_once() {
+        fn resolving_creates_nothing_for_a_chat_without_a_folder() {
+            let fx = Fixture::new();
+            fx.set_chat_title(SESSION_ID, "Not yet");
+            let dir = resolve_chat_dir(&fx.paths, SESSION_ID).unwrap();
+            assert_eq!(dir, fx.chats_root().join("not-yet"));
+            assert!(!fx.chats_root().exists());
+        }
+
+        #[test]
+        fn writes_a_gitignore_for_attachments_and_markers_at_the_chats_root_once() {
             let fx = Fixture::new();
             ensure_attachments_dir(&fx.paths, SESSION_ID).unwrap();
-            let gitignore = fx.attachments_root().join(".gitignore");
-            assert!(fs::read_to_string(&gitignore).unwrap().contains('*'));
+            let gitignore = fx.chats_root().join(".gitignore");
+            let body = fs::read_to_string(&gitignore).unwrap();
+            assert!(
+                body.contains("*/attachments/") && body.contains(MARKER_FILE),
+                "{body}"
+            );
 
             fs::write(&gitignore, "edited by hand").unwrap();
             ensure_attachments_dir(&fx.paths, SESSION_ID).unwrap();
@@ -621,19 +875,35 @@ pub(crate) mod tests {
             let fx = Fixture::new();
             fx.set_chat_title(SESSION_ID, "First title");
             fx.add(SESSION_ID, &[("notes.txt", b"hello")]);
+            let chat = ensure_chat_dir(&fx.paths, SESSION_ID).unwrap();
+            fs::write(chat.join("report.md"), "made by the agent").unwrap();
 
             fx.set_chat_title(SESSION_ID, "Second title");
             let result = rename_attachments_dir(&fx.paths, SESSION_ID);
 
             assert!(result.renamed);
-            assert_eq!(
-                basename(Path::new(result.directory.as_deref().unwrap())),
-                format!("second-title-{}", to_short_id(SESSION_ID))
-            );
+            let renamed = PathBuf::from(result.directory.unwrap());
+            assert_eq!(renamed, fx.chats_root().join("second-title"));
+            assert!(renamed.join("report.md").exists());
             assert_eq!(
                 names(&list_attachments(&fx.paths, SESSION_ID)),
                 ["notes.txt"]
             );
+        }
+
+        #[test]
+        fn finds_a_folder_the_user_renamed_and_names_it_after_the_title_again() {
+            let fx = Fixture::new();
+            fx.set_chat_title(SESSION_ID, "Planning");
+            fx.add(SESSION_ID, &[("a.txt", b"a")]);
+            fs::rename(
+                fx.chats_root().join("planning"),
+                fx.chats_root().join("whatever"),
+            )
+            .unwrap();
+
+            assert_eq!(names(&list_attachments(&fx.paths, SESSION_ID)), ["a.txt"]);
+            assert!(fx.chats_root().join("planning").exists());
         }
 
         #[test]
@@ -647,25 +917,23 @@ pub(crate) mod tests {
         }
 
         #[test]
-        fn leaves_the_folder_alone_when_the_target_name_is_already_taken() {
+        fn numbers_the_folder_when_the_title_name_is_already_taken() {
             let fx = Fixture::new();
             fx.set_chat_title(SESSION_ID, "Mine");
             fx.add(SESSION_ID, &[("a.txt", b"a")]);
 
             fx.set_chat_title(SESSION_ID, "Taken");
-            fs::create_dir(
-                fx.attachments_root()
-                    .join(format!("taken-{}", to_short_id(SESSION_ID))),
-            )
-            .unwrap();
+            fs::create_dir_all(fx.chats_root().join("taken")).unwrap();
 
             let result = rename_attachments_dir(&fx.paths, SESSION_ID);
-            assert!(!result.renamed);
+            assert!(result.renamed);
             assert_eq!(
-                basename(Path::new(result.directory.as_deref().unwrap())),
-                format!("mine-{}", to_short_id(SESSION_ID))
+                PathBuf::from(result.directory.unwrap()),
+                fx.chats_root().join("taken-2")
             );
             assert_eq!(list_attachments(&fx.paths, SESSION_ID).files.len(), 1);
+            // A second look keeps the numbered name rather than flipping back and forth.
+            assert!(!rename_attachments_dir(&fx.paths, SESSION_ID).renamed);
         }
 
         #[test]
@@ -801,7 +1069,7 @@ pub(crate) mod tests {
                 remove_every_attachments_folder(&fx.paths).unwrap(),
                 RemovedFolders { removed: 2 }
             );
-            let left: Vec<_> = fs::read_dir(fx.attachments_root())
+            let left: Vec<_> = fs::read_dir(fx.chats_root())
                 .unwrap()
                 .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
                 .collect();
@@ -824,7 +1092,7 @@ pub(crate) mod tests {
         #[test]
         fn new_folders_carry_a_marker_naming_the_chat() {
             let fx = Fixture::new();
-            let dir = ensure_attachments_dir(&fx.paths, SESSION_ID).unwrap();
+            let dir = ensure_chat_dir(&fx.paths, SESSION_ID).unwrap();
             assert_eq!(read_marker(&dir).as_deref(), Some(SESSION_ID));
             // The marker is not an attachment.
             fx.add(SESSION_ID, &[("a.txt", b"a")]);
@@ -872,7 +1140,7 @@ pub(crate) mod tests {
         }
 
         #[test]
-        fn a_legacy_folder_matching_the_title_is_adopted() {
+        fn a_legacy_folder_matching_the_title_moves_into_the_chat_folder() {
             let fx = Fixture::new();
             fx.set_chat_title(SESSION_ID, "From Electron");
             let legacy = fx
@@ -880,10 +1148,15 @@ pub(crate) mod tests {
                 .join(format!("from-electron-{}", to_short_id(SESSION_ID)));
             fs::create_dir_all(&legacy).unwrap();
             fs::write(legacy.join("old.txt"), "old").unwrap();
+            fs::write(fx.attachments_root().join(".gitignore"), "*\n").unwrap();
 
             assert_eq!(names(&list_attachments(&fx.paths, SESSION_ID)), ["old.txt"]);
-            assert_eq!(read_marker(&legacy).as_deref(), Some(SESSION_ID));
-            // Once adopted it follows title changes like any other folder.
+            let chat = fx.chats_root().join("from-electron");
+            assert_eq!(read_marker(&chat).as_deref(), Some(SESSION_ID));
+            assert!(chat.join("attachments/old.txt").exists());
+            // Nothing of the app's is left in the old root, so it goes.
+            assert!(!fx.attachments_root().exists());
+            // Once moved it follows title changes like any other folder.
             fx.set_chat_title(SESSION_ID, "Renamed");
             assert!(rename_attachments_dir(&fx.paths, SESSION_ID).renamed);
             assert_eq!(
@@ -893,36 +1166,68 @@ pub(crate) mod tests {
         }
 
         #[test]
-        fn a_new_folder_does_not_move_into_another_chats_folder() {
+        fn a_marked_legacy_folder_moves_and_its_marker_moves_up() {
             let fx = Fixture::new();
-            fx.set_chat_title(SESSION_ID, "Fix bug");
-            let taken = fx
+            fx.set_chat_title(SESSION_ID, "Current title");
+            let legacy = fx
                 .attachments_root()
-                .join(format!("fix-bug-{}", to_short_id(SESSION_ID)));
-            mark(&taken, "session_someone_else");
+                .join(format!("older-title-{}", to_short_id(SESSION_ID)));
+            mark(&legacy, SESSION_ID);
+            fs::write(legacy.join("a.txt"), "a").unwrap();
+            // Someone else's folder keeps the old root alive.
+            let theirs = fx.attachments_root().join("theirs-abcdef");
+            mark(&theirs, "session_someone_else");
 
-            let dir = ensure_attachments_dir(&fx.paths, SESSION_ID).unwrap();
-            assert_eq!(
-                basename(&dir),
-                format!("fix-bug-2-{}", to_short_id(SESSION_ID))
-            );
-            assert_eq!(read_marker(&taken).as_deref(), Some("session_someone_else"));
-            // And it is found again afterwards.
-            fx.add(SESSION_ID, &[("a.txt", b"a")]);
-            assert_eq!(
-                list_attachments(&fx.paths, SESSION_ID).directory,
-                dir.to_string_lossy()
-            );
+            let chat = ensure_chat_dir(&fx.paths, SESSION_ID).unwrap();
+            assert_eq!(chat, fx.chats_root().join("current-title"));
+            assert!(chat.join("attachments/a.txt").exists());
+            assert!(!chat.join("attachments").join(MARKER_FILE).exists());
+            assert!(theirs.exists());
         }
 
         #[test]
-        fn delete_all_keeps_folders_the_app_did_not_make() {
+        fn a_new_folder_does_not_move_into_another_chats_folder() {
+            let fx = Fixture::new();
+            fx.set_chat_title(SESSION_ID, "Fix bug");
+            let taken = fx.chats_root().join("fix-bug");
+            mark(&taken, "session_someone_else");
+
+            let dir = ensure_chat_dir(&fx.paths, SESSION_ID).unwrap();
+            assert_eq!(basename(&dir), "fix-bug-2");
+            assert_eq!(read_marker(&taken).as_deref(), Some("session_someone_else"));
+            // And it is found again afterwards.
+            let added = fx.add(SESSION_ID, &[("a.txt", b"a")]);
+            assert_eq!(added.directory, dir.join("attachments").to_string_lossy());
+        }
+
+        #[test]
+        fn delete_all_keeps_chat_folders_the_app_did_not_make() {
             let fx = Fixture::new();
             fx.add(SESSION_ID, &[("a.txt", b"a")]);
+            fs::create_dir_all(fx.chats_root().join("my-own-folder")).unwrap();
+
+            assert_eq!(
+                remove_every_attachments_folder(&fx.paths).unwrap(),
+                RemovedFolders { removed: 1 }
+            );
+            let mut left: Vec<_> = fs::read_dir(fx.chats_root())
+                .unwrap()
+                .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+                .collect();
+            left.sort();
+            assert_eq!(left, [".gitignore", "my-own-folder"]);
+        }
+
+        #[test]
+        fn delete_all_keeps_legacy_folders_the_app_did_not_make() {
+            let fx = Fixture::new();
             let root = fx.attachments_root();
+            fs::create_dir_all(&root).unwrap();
+            fs::write(root.join(".gitignore"), "*\n").unwrap();
             // Electron-made folders (no marker, app name shape) go.
             fs::create_dir_all(root.join("old-chat-a1b2c3")).unwrap();
             fs::create_dir_all(root.join("session-00ff99")).unwrap();
+            mark(&root.join("marked-whatever"), "session_x");
             // Anything else stays.
             for keep in [
                 "Photos",
@@ -990,6 +1295,49 @@ pub(crate) mod tests {
             ] {
                 assert!(!is_app_folder_name(bad), "{bad}");
             }
+        }
+
+        #[test]
+        fn reads_the_title_from_the_start_of_a_big_session_file() {
+            let fx = Fixture::new();
+            let dir = fx.user_data.path().join("chat-sessions");
+            fs::create_dir_all(&dir).unwrap();
+            let big = "x".repeat(200 * 1024);
+            fs::write(
+                dir.join(format!("{SESSION_ID}.json")),
+                format!(
+                    r#"{{"id":"{SESSION_ID}","meta":{{"title":"nested"}},"title":"Say \"hi\"","messages":["{big}"]}}"#
+                ),
+            )
+            .unwrap();
+            assert_eq!(
+                read_chat_title(&fx.paths, SESSION_ID).as_deref(),
+                Some("Say \"hi\"")
+            );
+            // Title after the scanned prefix: the whole file is parsed.
+            fs::write(
+                dir.join(format!("{SESSION_ID}.json")),
+                format!(r#"{{"messages":["{big}"],"title":"Late"}}"#),
+            )
+            .unwrap();
+            assert_eq!(
+                read_chat_title(&fx.paths, SESSION_ID).as_deref(),
+                Some("Late")
+            );
+        }
+
+        #[test]
+        fn top_level_title_ignores_nested_and_string_contents() {
+            assert_eq!(
+                top_level_title(br#"{"a":"\"title\": \"no\"","title":"yes""#).as_deref(),
+                Some("yes")
+            );
+            assert_eq!(
+                top_level_title(br#"{"a":{"title":"no"},"b":["title"],"title" : "ok"}"#).as_deref(),
+                Some("ok")
+            );
+            assert_eq!(top_level_title(br#"{"title":"cut off"#), None);
+            assert_eq!(top_level_title(br#"{"title":null}"#), None);
         }
 
         #[test]
@@ -1122,17 +1470,15 @@ pub(crate) mod tests {
             fx.set_chat_title(session_id, "Old title");
             fx.add(session_id, &[("a.txt", b"a")]);
 
-            // Renamed chat, stale folder: the lookup keys on the short id, so it still matches.
+            // Renamed chat, stale folder: the lookup keys on the marker, so it still matches,
+            // and (being read-only) leaves the folder for the chat itself to rename.
             fx.set_chat_title(session_id, "New title");
 
             assert_eq!(
                 list_session_ids_with_attachments(&fx.paths, &ids(&[session_id])),
                 ids(&[session_id])
             );
-            assert!(fx
-                .attachments_root()
-                .join(format!("new-title-{}", to_short_id(session_id)))
-                .exists());
+            assert!(fx.chats_root().join("old-title").exists());
         }
     }
 }

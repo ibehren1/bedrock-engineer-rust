@@ -11,7 +11,7 @@ use crate::state::HistoryState;
 use history::Snapshot;
 use serde_json::Value;
 use tauri::http::{header, Request, Response, StatusCode};
-use tauri::{AppHandle, Manager, State, UriSchemeContext, Wry};
+use tauri::{AppHandle, Manager, State, UriSchemeContext, UriSchemeResponder, Wry};
 
 type History<'a> = State<'a, HistoryState>;
 
@@ -254,11 +254,21 @@ pub async fn chat_history_move_sessions_to_folder(
 /// Any other (or no) origin gets `403` without CORS headers.
 pub const SESSION_PROTOCOL: &str = "chathistory";
 
+/// Serve one session as JSON. Sessions reach tens of megabytes, so the read and the
+/// serialization run on the blocking pool: on the main thread they freeze the window.
 pub fn session_protocol(
     ctx: UriSchemeContext<'_, Wry>,
     request: Request<Vec<u8>>,
-) -> Response<Vec<u8>> {
-    let dev_url = crate::security::dev_url(ctx.app_handle());
+    responder: UriSchemeResponder,
+) {
+    let app = ctx.app_handle().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        responder.respond(session_response(&app, &request));
+    });
+}
+
+fn session_response(app: &AppHandle, request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
+    let dev_url = crate::security::dev_url(app);
     let origin = request
         .headers()
         .get(header::ORIGIN)
@@ -287,9 +297,11 @@ pub fn session_protocol(
     let Some(session_id) = session_id_from_path(request.uri().path()) else {
         return respond(StatusCode::BAD_REQUEST, b"null".to_vec());
     };
-    let state = ctx.app_handle().state::<HistoryState>();
-    let session = match state.lock() {
-        Ok(manager) => manager.get_session(&session_id),
+    let state = app.state::<HistoryState>();
+    // Serializing a big session under the lock would block every history write; take the
+    // value out first and drop the guard.
+    let session = match state.lock().map(|manager| manager.get_session(&session_id)) {
+        Ok(session) => session,
         Err(e) => {
             tracing::error!(category = "chat:history", error = %e, "session protocol");
             return respond(StatusCode::INTERNAL_SERVER_ERROR, b"null".to_vec());

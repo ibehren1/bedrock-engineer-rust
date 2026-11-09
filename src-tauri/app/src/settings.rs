@@ -7,7 +7,7 @@ use bedrock::{AwsSettings, ConverseSettings};
 use serde_json::Value;
 
 /// `ConverseService`'s store reads (`aws`, `inferenceParams`, `thinkingMode`,
-/// `interleaveThinking`, `guardrailSettings`, `bedrockSettings`). Malformed keys fall back to
+/// `guardrailSettings`, `bedrockSettings`). Malformed keys fall back to
 /// their defaults one by one instead of failing the call.
 pub fn converse_settings(store: &Value) -> ConverseSettings {
     tools::converse_settings_from_store(store)
@@ -123,7 +123,6 @@ mod tests {
             },
             "inferenceParams": { "maxTokens": 4096.0, "temperature": 0.5, "topP": 0.9 },
             "thinkingMode": { "type": "enabled", "budget_tokens": 2048 },
-            "interleaveThinking": true,
             "guardrailSettings": {
                 "enabled": true, "guardrailIdentifier": "gr", "guardrailVersion": "1", "trace": "enabled"
             },
@@ -141,7 +140,6 @@ mod tests {
         assert_eq!(s.inference_params.max_tokens, Some(4096));
         assert_eq!(s.inference_params.top_p, Some(0.9));
         assert_eq!(s.thinking_mode.unwrap().budget_tokens, Some(2048));
-        assert!(s.interleave_thinking);
         assert_eq!(s.guardrail_settings.unwrap().guardrail_identifier, "gr");
         assert_eq!(
             s.bedrock_settings.unwrap().available_failover_regions,

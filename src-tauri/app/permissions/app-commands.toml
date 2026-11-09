@@ -94,6 +94,8 @@ permissions = [
   "allow-chat-attachments-remove-all",
   "allow-chat-attachments-remove-every-folder",
   "allow-chat-attachments-rename",
+  "allow-chat-attachments-tidy",
+  "allow-chat-attachments-folder",
   "allow-chat-attachments-build-context",
   "allow-chat-attachments-open-folder",
   "allow-help-prepare-user-guide",

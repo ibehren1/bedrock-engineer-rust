@@ -776,3 +776,27 @@ fn rebuilt_metadata_keeps_folder_ids() {
     let m = ChatSessionManager::new(d.path()).unwrap();
     assert_eq!(folder_of(&m, RICH).as_deref(), Some(folder.as_str()));
 }
+
+#[test]
+fn touched_files_can_be_replaced_and_read_from_overlapping_chats() {
+    let d = TempDir::new().unwrap();
+    let m = ChatSessionManager::new(d.path()).unwrap();
+    let paths = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+    let a = m.create_session("a", "m", None, Some("A"));
+    // Ids are millisecond timestamps.
+    std::thread::sleep(std::time::Duration::from_millis(5));
+    let b = m.create_session("a", "m", None, Some("B"));
+    m.add_touched_files(&a, &paths(&["x.md", "y.md"]));
+    m.add_touched_files(&b, &paths(&["z.md"]));
+    m.set_touched_files(&a, &paths(&["chats/a/x.md"]));
+    assert_eq!(m.touched_files(&a), paths(&["chats/a/x.md"]));
+
+    let (created, updated) = m.session_times(&a).unwrap();
+    let others = m.touched_files_of_overlapping_sessions(&a, created, updated + 60_000.0);
+    assert!(others.contains("z.md"));
+    assert!(!others.contains("chats/a/x.md"));
+    // Chats that were not active in the window are not read.
+    assert!(m
+        .touched_files_of_overlapping_sessions(&a, updated + 1e9, updated + 2e9)
+        .is_empty());
+}

@@ -109,7 +109,12 @@ impl Tool for ApplyDiffEditTool {
     }
 
     async fn execute_internal(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
-        let path = &super::guarded(ctx, str_of(&input, "path"), crate::util::path_guard::Access::Write, NAME)?;
+        let path = &super::guarded(
+            ctx,
+            str_of(&input, "path"),
+            crate::util::path_guard::Access::Write,
+            NAME,
+        )?;
         let original = str_of(&input, "originalText");
         let updated = str_of(&input, "updatedText");
         let fail = |e: NodeIoError| {

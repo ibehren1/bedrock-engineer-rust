@@ -34,7 +34,7 @@ fn ledger() -> (tempfile::TempDir, Arc<UsageLedger>) {
     (dir, ledger)
 }
 
-const SONNET: &str = "us.anthropic.claude-sonnet-4-6";
+const SONNET: &str = "us.anthropic.claude-sonnet-5-5";
 
 fn month(m: &str) -> UsageQuery {
     UsageQuery {
@@ -68,8 +68,8 @@ fn groups_by_day_month_model_and_feature() {
             .collect::<Vec<_>>(),
         vec![("2026-10-01", 2), ("2026-10-02", 1)]
     );
-    // 3000 input at $0.003/1k + 1000 output at $0.015/1k
-    assert!((days[0].cost_usd - (0.009 + 0.015)).abs() < 1e-12);
+    // 3000 input at $0.002/1k + 1000 output at $0.01/1k
+    assert!((days[0].cost_usd - (0.006 + 0.01)).abs() < 1e-12);
     assert_eq!(days[1].cost_usd, 0.0);
     assert_eq!(days[1].unpriced_calls, 1);
 
@@ -88,7 +88,7 @@ fn groups_by_day_month_model_and_feature() {
     let models = l.summary(&month("2026-10"), GroupBy::Model).unwrap();
     let sonnet = models
         .iter()
-        .find(|r| r.key == "anthropic.claude-sonnet-4-6")
+        .find(|r| r.key == "anthropic.claude-sonnet-5-5")
         .unwrap();
     assert_eq!(sonnet.calls, 2);
     assert_ne!(sonnet.label, sonnet.key, "label is the catalog name");
@@ -126,7 +126,7 @@ fn filters_and_lists_events_newest_first() {
     assert_eq!(l.events(&q, 1, 1).unwrap()[0].local_day, "2026-10-01");
 
     let q = UsageQuery {
-        model_id: Some("anthropic.claude-sonnet-4-6".into()),
+        model_id: Some("anthropic.claude-sonnet-5-5".into()),
         ..month("2026-10")
     };
     assert_eq!(l.summary(&q, GroupBy::Model).unwrap()[0].calls, 2);
@@ -141,7 +141,7 @@ fn price_is_kept_with_the_row() {
         .with_conn(|c| c.query_row("SELECT price_snapshot FROM usage_events", [], |r| r.get(0)))
         .unwrap();
     let v: serde_json::Value = serde_json::from_str(&snapshot).unwrap();
-    assert_eq!(v["input"], 0.003);
+    assert_eq!(v["input"], 0.002);
 }
 
 #[test]
@@ -233,9 +233,9 @@ fn reopening_prices_rows_that_had_no_price() {
     let rows = l.summary(&month("2026-10"), GroupBy::Model).unwrap();
     let sonnet = rows
         .iter()
-        .find(|r| r.key == "anthropic.claude-sonnet-4-6")
+        .find(|r| r.key == "anthropic.claude-sonnet-5-5")
         .unwrap();
-    assert!((sonnet.cost_usd - 0.003).abs() < 1e-12);
+    assert!((sonnet.cost_usd - 0.002).abs() < 1e-12);
     assert_ne!(sonnet.label, "x");
     assert_eq!(
         rows.iter()
@@ -253,7 +253,7 @@ fn month_cost_and_budget_alerts() {
         .unwrap();
     l.record_now(&event("2026-11-01", SONNET, "chat", 2000, 0))
         .unwrap();
-    assert!((l.month_cost("2026-10").unwrap() - 0.003).abs() < 1e-12);
+    assert!((l.month_cost("2026-10").unwrap() - 0.002).abs() < 1e-12);
     assert_eq!(l.month_cost("2026-12").unwrap(), 0.0);
 
     assert!(l.budget_alerts_sent("2026-10").unwrap().is_empty());
@@ -292,7 +292,7 @@ fn agents_sessions_and_cache_savings() {
     let mut a = event("2026-10-01", SONNET, "chat", 1000, 0);
     a.context.agent_id = Some("dev".into());
     a.context.session_id = Some("s1".into());
-    // 10k cache reads save (0.003 - 0.0003) * 10 = $0.027; 1k writes cost (0.00375 - 0.003) more.
+    // 10k cache reads save (0.002 - 0.0002) * 10 = $0.018; 1k writes cost (0.0025 - 0.002) more.
     a.cache_read_tokens = 10_000;
     a.cache_write_tokens = 1_000;
     l.record_now(&a).unwrap();
@@ -315,7 +315,7 @@ fn agents_sessions_and_cache_savings() {
         ..month("2026-10")
     };
     let dev = &l.summary(&q, GroupBy::Month).unwrap()[0];
-    assert!((dev.cache_savings_usd - (0.027 - 0.00075)).abs() < 1e-12);
+    assert!((dev.cache_savings_usd - (0.018 - 0.0005)).abs() < 1e-12);
 
     let costs = l
         .session_costs(&[
@@ -336,7 +336,7 @@ fn agents_sessions_and_cache_savings() {
         .unwrap();
     assert_eq!(costs[0].calls, 2);
     assert_eq!(costs[1].calls, 1);
-    assert!((costs[1].cost_usd - 0.006).abs() < 1e-12);
+    assert!((costs[1].cost_usd - 0.004).abs() < 1e-12);
     assert_eq!(costs[2].calls, 0);
 }
 

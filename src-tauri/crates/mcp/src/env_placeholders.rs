@@ -127,7 +127,12 @@ mod tests {
     }
 
     fn env_of(e: &ExpandedServer) -> Vec<(String, String)> {
-        e.config.env.clone().unwrap_or_default().into_iter().collect()
+        e.config
+            .env
+            .clone()
+            .unwrap_or_default()
+            .into_iter()
+            .collect()
     }
 
     fn pairs(items: &[(&str, &str)]) -> Vec<(String, String)> {

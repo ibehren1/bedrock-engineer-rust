@@ -599,6 +599,19 @@ export interface IPCChannelDefinitions {
     params: { sessionId: string }
     result: { renamed: boolean; directory?: string }
   }
+  'chat-attachments-folder': {
+    params: { sessionId: string }
+    result: { directory: string; relative: string }
+  }
+  'chat-attachments-tidy': {
+    params: { sessionId: string }
+    result: {
+      directory?: string
+      moved: { from: string; to: string }[]
+      touched: string[]
+      changed: boolean
+    }
+  }
   'chat-attachments-build-context': {
     params: { sessionId: string }
     result: any // AttachmentContextResult

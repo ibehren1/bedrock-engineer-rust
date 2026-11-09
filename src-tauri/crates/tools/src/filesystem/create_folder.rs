@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use serde_json::{json, Value};
 
 const NAME: &str = "createFolder";
-const DESCRIPTION: &str = "Create a new folder at the specified path. Use this when you need to create a new directory in the project structure.\n\nCreate directories in your project. Use absolute paths starting from {{projectPath}}.";
+const DESCRIPTION: &str = "Create a new folder at the specified path. Use this when you need to create a new directory in the project structure.\n\nRelative paths are created in this chat's folder, where new work for the chat belongs. Use an absolute path under {{projectPath}} only to change the user's own project structure.";
 
 /// `CreateFolderTool`.
 pub struct CreateFolderTool;
@@ -50,7 +50,12 @@ impl Tool for CreateFolderTool {
     }
 
     async fn execute_internal(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
-        let path = &super::guarded(ctx, str_of(&input, "path"), crate::util::path_guard::Access::Write, NAME)?;
+        let path = &super::guarded(
+            ctx,
+            str_of(&input, "path"),
+            crate::util::path_guard::Access::Write,
+            NAME,
+        )?;
         tracing::debug!("Creating folder: {path}");
         match mkdir_recursive(path).await {
             Ok(()) => Ok(ToolOutput::Text(format!("Folder created: {path}"))),
