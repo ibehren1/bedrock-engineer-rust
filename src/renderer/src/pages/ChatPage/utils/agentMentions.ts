@@ -34,26 +34,30 @@ export function getMentionableAgents(agents: CustomAgent[], selfAgentId?: string
 /** Something that can be @mentioned: the text after the `@`, a unique key and the item. */
 export type MentionCandidate<T> = { mention: string; key: string; value: T }
 
+/** One @mention occurrence: where its `@` sits in the text, and what it names. */
+export type MentionSpan<T> = { index: number; key: string; value: T }
+
 /**
- * The candidates @mentioned in `text`, in first-mention order, each once.
+ * Every @mention occurrence in `text`, in text order (a candidate mentioned twice appears
+ * twice).
  *
  * Names are matched longest-first so that `@Software Architect` wins over a hypothetical
  * `@Software`, and so that names containing spaces work. A span taken by a longer name is not
  * matched again, so `@Writer Pro` is only "Writer Pro" and `@Agent/Notes` is not also `@Agent`.
  */
-export function matchMentions<T>(text: string, candidates: MentionCandidate<T>[]): T[] {
+export function findMentionSpans<T>(
+  text: string,
+  candidates: MentionCandidate<T>[]
+): MentionSpan<T>[] {
   if (!text || !text.includes('@')) return []
 
   const sorted = candidates
     .filter((c) => !!c.mention)
     .sort((a, b) => b.mention.length - a.mention.length)
 
-  const matches: Array<{ index: number; value: T }> = []
-  const claimedKeys = new Set<string>()
-  const claimedSpans: Array<[number, number]> = []
-
+  const spans: Array<MentionSpan<T> & { end: number }> = []
   const overlapsClaimed = (start: number, end: number) =>
-    claimedSpans.some(([from, to]) => start < to && end > from)
+    spans.some((span) => start < span.end && end > span.index)
 
   for (const candidate of sorted) {
     // (?![\w-]) keeps `@Review` from matching the text `@Reviewer`
@@ -69,17 +73,23 @@ export function matchMentions<T>(text: string, candidates: MentionCandidate<T>[]
       const end = match.index + match[0].length
 
       if (overlapsClaimed(start, end)) continue
-
-      claimedSpans.push([start, end])
-
-      if (!claimedKeys.has(candidate.key)) {
-        claimedKeys.add(candidate.key)
-        matches.push({ index: start, value: candidate.value })
-      }
+      spans.push({ index: start, end, key: candidate.key, value: candidate.value })
     }
   }
 
-  return matches.sort((a, b) => a.index - b.index).map((m) => m.value)
+  return spans
+    .sort((a, b) => a.index - b.index)
+    .map(({ index, key, value }) => ({ index, key, value }))
+}
+
+/** The candidates @mentioned in `text`, in first-mention order, each once. */
+export function matchMentions<T>(text: string, candidates: MentionCandidate<T>[]): T[] {
+  const seen = new Set<string>()
+  return findMentionSpans(text, candidates).flatMap((span) => {
+    if (seen.has(span.key)) return []
+    seen.add(span.key)
+    return [span.value]
+  })
 }
 
 /** Agents as mention candidates. */
@@ -103,7 +113,7 @@ export function parseAgentMentions(
 }
 
 /**
- * Constrain the `invokeAgent` tool to the agents mentioned in this turn.
+ * Constrain the `invokeAgent` tool to the agents this chat may delegate to.
  *
  * Returns the input array unchanged when the tool is not enabled, and drops the
  * tool entirely when nothing was mentioned — an empty enum is rejected by some

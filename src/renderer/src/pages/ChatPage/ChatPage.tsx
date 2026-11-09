@@ -139,7 +139,9 @@ export default function ChatPage() {
     setCurrentSessionId,
     clearChat,
     setMessages,
-    stopGeneration
+    stopGeneration,
+    mentionGrants,
+    delegationAvailable
   } = useAgentChat(activeModelId, activeSystemPrompt, activeAgentId, undefined, {
     prepareTurn: isHelpSession ? helpPrepareTurn : undefined
   })
@@ -902,6 +904,16 @@ export default function ChatPage() {
                 isExportingPdf={isExportingPdf}
                 onStopGeneration={stopGeneration}
                 hasMessages={messages.length > 0}
+                chatGrants={
+                  isHelpSession
+                    ? undefined
+                    : {
+                        agents,
+                        agentId: activeAgentId,
+                        control: mentionGrants,
+                        delegationAvailable
+                      }
+                }
                 memoryToggle={
                   isHelpSession
                     ? undefined

@@ -53,6 +53,17 @@ export interface ChatSession {
   useMemoryItems?: boolean
   /** Project-relative paths the agent created or changed in this chat (Files panel). */
   touchedFiles?: string[]
+  /**
+   * Agents and knowledge bases on for this chat (from @mentions or the grant buttons). Missing
+   * on chats from before it existed; those derive it from their messages.
+   */
+  mentionGrants?: MentionGrants
+}
+
+/** The agents a chat may delegate to and the knowledge bases it searches. */
+export type MentionGrants = {
+  agentIds: string[]
+  knowledgeBases: { agentId: string; kbId: string }[]
 }
 
 export interface ChatHistoryStore {

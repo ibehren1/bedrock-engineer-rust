@@ -2029,7 +2029,7 @@ Used by:
 - [aws-smithy-xml 0.64.0](https://github.com/smithy-lang/smithy-rs)
 - [aws-types 1.7.0](https://github.com/smithy-lang/smithy-rs)
 - [gl 0.14.0](https://github.com/brendanzab/gl-rs/)
-- [rmcp 3.6.0](https://github.com/modelcontextprotocol/rust-sdk/)
+- [rmcp 3.9.0](https://github.com/modelcontextprotocol/rust-sdk/)
 - [ryu 1.0.23](https://github.com/dtolnay/ryu)
 - [serial2 0.2.38](https://github.com/de-vri-es/serial2-rs)
 - [sync_wrapper 1.0.2](https://github.com/Actyx/sync_wrapper)
@@ -4107,8 +4107,8 @@ DEALINGS IN THE SOFTWARE.
 
 Used by:
 
-- [libsqlite3-sys 0.38.2](https://github.com/rusqlite/rusqlite)
-- [rusqlite 0.40.2](https://github.com/rusqlite/rusqlite)
+- [libsqlite3-sys 0.39.1](https://github.com/rusqlite/rusqlite)
+- [rusqlite 0.41.1](https://github.com/rusqlite/rusqlite)
 
 ```text
 Copyright (c) 2014 The rusqlite developers

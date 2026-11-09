@@ -288,6 +288,33 @@ fn recent_list_is_capped_at_ten() {
 }
 
 #[test]
+fn set_mention_grants_persists_the_grants() {
+    let d = electron_user_data();
+    let m = ChatSessionManager::new(d.path()).unwrap();
+    let grants = MentionGrants {
+        agent_ids: vec!["writer".into()],
+        knowledge_bases: vec![KnowledgeBaseGrant {
+            agent_id: "writer".into(),
+            kb_id: "kb1".into(),
+        }],
+    };
+    m.set_mention_grants(NO_PROMPT, &grants);
+    let s = m.get_session(NO_PROMPT).unwrap();
+    assert_eq!(
+        s["mentionGrants"],
+        json!({ "agentIds": ["writer"], "knowledgeBases": [{ "agentId": "writer", "kbId": "kb1" }] })
+    );
+    assert_eq!(s["updatedAt"], 1790000100000_i64);
+    let reopened = ChatSessionManager::new(d.path()).unwrap();
+    assert_eq!(
+        reopened.get_session(NO_PROMPT).unwrap()["mentionGrants"],
+        s["mentionGrants"]
+    );
+    m.set_mention_grants("nope", &grants);
+    assert!(!d.path().join(SESSIONS_DIR).join("nope.json").exists());
+}
+
+#[test]
 fn set_use_memory_items_persists_the_flag() {
     let d = electron_user_data();
     let m = ChatSessionManager::new(d.path()).unwrap();

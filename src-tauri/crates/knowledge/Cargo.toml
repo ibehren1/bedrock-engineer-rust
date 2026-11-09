@@ -21,7 +21,7 @@ tools = { path = "../tools" }
 mcp = { path = "../mcp" }
 rusqlite.workspace = true
 sqlite-vec = "=0.1.9"
-rmcp = { version = "=3.6.0", default-features = false, features = ["server"] }
+rmcp = { version = "=3.9.0", default-features = false, features = ["server"] }
 tokio = { version = "=1.54.1", features = ["sync", "rt", "macros", "time", "fs", "io-util"] }
 tokio-util = "=0.7.20"
 async-trait = "=0.1.92"

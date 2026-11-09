@@ -31,12 +31,30 @@
 //!   is treated as an unknown session, so it can never address a file outside `chat-sessions/`.
 
 use common::json_file::{is_safe_file_id, parse_lenient};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+/// A knowledge base the user turned on for a chat, by owning agent and id.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KnowledgeBaseGrant {
+    pub agent_id: String,
+    pub kb_id: String,
+}
+
+/// The agents and knowledge bases a chat may use, kept as the session's `mentionGrants`.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MentionGrants {
+    #[serde(default)]
+    pub agent_ids: Vec<String>,
+    #[serde(default)]
+    pub knowledge_bases: Vec<KnowledgeBaseGrant>,
+}
 
 pub mod meta;
 pub use meta::MetaFile;
@@ -331,6 +349,19 @@ impl ChatSessionManager {
         };
         if let Some(obj) = session.as_object_mut() {
             obj.insert("useMemoryItems".into(), json!(value));
+        }
+        self.write_session_file(session_id, &session);
+    }
+
+    /// Sets the session's top-level `mentionGrants`: the agents and knowledge bases the user
+    /// turned on for this chat by @mentioning them (or with the chat's grant buttons). Like the
+    /// title, it doesn't touch `updatedAt` or the recent list. Unknown sessions are a no-op.
+    pub fn set_mention_grants(&self, session_id: &str, grants: &MentionGrants) {
+        let Some(mut session) = self.read_session_file(session_id) else {
+            return;
+        };
+        if let Some(obj) = session.as_object_mut() {
+            obj.insert("mentionGrants".into(), json!(grants));
         }
         self.write_session_file(session_id, &session);
     }

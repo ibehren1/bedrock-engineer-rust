@@ -5,6 +5,7 @@ import { AttachmentsButton } from './AttachmentsButton'
 import { DirectorySelector } from './DirectorySelector'
 import { SandboxButton } from './SandboxButton'
 import { MemoryToggle, type MemoryToggleProps } from './MemoryToggle'
+import { ChatGrantsButtons, type ChatGrantsButtonsProps } from './ChatGrantsButtons'
 import type { ChatSandboxStatus } from '../../hooks/useChatSandbox'
 import type { ChatAttachment } from '../../hooks/useChatAttachments'
 import { SendMsgKey } from '@/types/agent-chat'
@@ -73,6 +74,8 @@ type InputFormProps = {
   }
   /** The per-chat "Use Memory Items" toggle; hidden when not given. */
   memoryToggle?: MemoryToggleProps
+  /** The chat's agents and knowledge bases buttons. */
+  chatGrants?: ChatGrantsButtonsProps
 }
 
 export const InputForm: React.FC<InputFormProps> = ({
@@ -99,7 +102,8 @@ export const InputForm: React.FC<InputFormProps> = ({
   filesPanel,
   terminal,
   attachments,
-  memoryToggle
+  memoryToggle,
+  chatGrants
 }) => {
   const [isComposing, setIsComposing] = useState(false)
   const { t } = useTranslation()
@@ -122,6 +126,7 @@ export const InputForm: React.FC<InputFormProps> = ({
           {/* right */}
           <div className="flex items-end mb-1 gap-2">
             {/* Before the first message too: the setting is per chat and starts on. */}
+            {chatGrants && <ChatGrantsButtons {...chatGrants} />}
             {memoryToggle && <MemoryToggle {...memoryToggle} />}
             {terminal && (
               <button

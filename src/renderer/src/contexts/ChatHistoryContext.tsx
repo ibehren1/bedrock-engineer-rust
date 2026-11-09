@@ -1,5 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { SessionMetadata, ChatSession, ChatMessage, ChatFolder } from '@/types/chat/history'
+import {
+  SessionMetadata,
+  ChatSession,
+  ChatMessage,
+  ChatFolder,
+  MentionGrants
+} from '@/types/chat/history'
 import { clearHostApproval } from '@renderer/pages/ChatPage/lib/hostCommandApproval'
 
 interface ChatHistoryContextType {
@@ -25,6 +31,7 @@ interface ChatHistoryContextType {
   deleteMessage: (sessionId: string, messageIndex: number) => Promise<void>
   /** Persist the chat's "Use Memory Items" checkbox. */
   setUseMemoryItems: (sessionId: string, value: boolean) => Promise<void>
+  setMentionGrants: (sessionId: string, grants: MentionGrants) => Promise<void>
   /** Record project-relative paths the agent created or changed in this chat. */
   addTouchedFiles: (sessionId: string, paths: string[]) => Promise<void>
   createFolder: (name: string) => Promise<string>
@@ -227,6 +234,12 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
     []
   )
 
+  const setMentionGrants = useCallback(
+    (sessionId: string, grants: MentionGrants): Promise<void> =>
+      window.chatHistory.setMentionGrants(sessionId, grants),
+    []
+  )
+
   const addTouchedFiles = useCallback(
     (sessionId: string, paths: string[]): Promise<void> =>
       window.chatHistory.addTouchedFiles(sessionId, paths),
@@ -296,6 +309,7 @@ export const ChatHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ c
     updateMessageContent,
     deleteMessage,
     setUseMemoryItems,
+    setMentionGrants,
     addTouchedFiles,
     createFolder,
     renameFolder,

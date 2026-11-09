@@ -372,6 +372,7 @@ Notes on the file commands (`src-tauri/app/src/commands/{file,agent_files}.rs`):
 | `memory.add` | `memory_add` | `{ content, kind?, source? }` → `MemoryItem` (`kind` defaults to `'memory'`, `source` to `'manual'`; blank content rejects) |
 | `memory.update` | `memory_update` | `{ id, content?, kind?, enabled? }` → `MemoryItem` (bumps `updatedAt`; unknown id rejects) |
 | `memory.delete` | `memory_delete` | `{ id }` → `boolean` (`true` if removed) |
+| `chatHistory.setMentionGrants` | `chat_history_set_mention_grants` | `{ sessionId, grants: { agentIds, knowledgeBases: [{ agentId, kbId }] } }` (sets the session's top-level `mentionGrants`, the agents and knowledge bases on for the chat; unknown session = no-op) |
 | `chatHistory.addTouchedFiles` | `chat_history_add_touched_files` | `{ sessionId, paths }` (merges project-relative paths into the session's top-level `touchedFiles: string[]`, deduplicated, first-seen order; unknown session = no-op) |
 | `chatHistory.getFolders` | `chat_history_get_folders` | → `ChatFolder[]` (`{ id, name, createdAt }`, creation order; the bridge serves it from the cache, hydrated by the snapshot's `folders`) |
 | `chatHistory.createFolder` | `chat_history_create_folder` | `{ name }` → folder id (`folder_<ms>`; empty name rejects) |

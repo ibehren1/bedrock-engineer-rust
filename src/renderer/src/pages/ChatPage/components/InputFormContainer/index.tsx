@@ -5,6 +5,7 @@ import { SendMsgKey } from '@/types/agent-chat'
 import type { ChatSandboxStatus } from '../../hooks/useChatSandbox'
 import type { ChatAttachment } from '../../hooks/useChatAttachments'
 import type { MemoryToggleProps } from '../InputForm/MemoryToggle'
+import type { ChatGrantsButtonsProps } from '../InputForm/ChatGrantsButtons'
 
 // InputFormContainer の参照タイプを定義
 export type InputFormContainerRef = {
@@ -63,6 +64,7 @@ type InputFormContainerProps = {
     onAddFiles: (files: File[]) => Promise<void>
   }
   memoryToggle?: MemoryToggleProps
+  chatGrants?: ChatGrantsButtonsProps
 }
 
 /**
@@ -93,7 +95,8 @@ const InputFormContainer = React.forwardRef<InputFormContainerRef, InputFormCont
       filesPanel,
       terminal,
       attachments,
-      memoryToggle
+      memoryToggle,
+      chatGrants
     },
     ref
   ) => {
@@ -145,6 +148,7 @@ const InputFormContainer = React.forwardRef<InputFormContainerRef, InputFormCont
         terminal={terminal}
         attachments={attachments}
         memoryToggle={memoryToggle}
+        chatGrants={chatGrants}
       />
     )
   }

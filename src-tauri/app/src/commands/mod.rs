@@ -82,6 +82,7 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         chat_history::chat_history_update_message_content,
         chat_history::chat_history_delete_message,
         chat_history::chat_history_set_use_memory_items,
+        chat_history::chat_history_set_mention_grants,
         chat_history::chat_history_add_touched_files,
         chat_history::chat_history_get_folders,
         chat_history::chat_history_create_folder,

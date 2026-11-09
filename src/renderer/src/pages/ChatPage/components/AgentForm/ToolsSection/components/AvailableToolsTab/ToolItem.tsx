@@ -1,6 +1,6 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { ToggleSwitch } from 'flowbite-react'
+import { OnOffToggle } from '@renderer/components/OnOffToggle'
 import { FiServer } from 'react-icons/fi'
 import { getOriginalMcpToolName, ToolName } from '@/types/tools'
 import { toolIcons } from '@renderer/components/icons/ToolIcons'
@@ -64,10 +64,10 @@ export const ToolItem: React.FC<ToolItemProps> = ({ tool, isMcp, serverInfo, onT
       <div className="shrink-0" onClick={preventEventPropagation}>
         {isMcp ? (
           <div className="flex items-center">
-            <ToggleSwitch checked={true} onChange={() => {}} disabled={true} label="" />
+            <OnOffToggle checked={true} onChange={() => {}} disabled={true} />
           </div>
         ) : (
-          <ToggleSwitch checked={tool.enabled} onChange={() => onToggle(toolName)} label="" />
+          <OnOffToggle checked={tool.enabled} onChange={() => onToggle(toolName)} />
         )}
       </div>
     </div>

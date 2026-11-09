@@ -50,7 +50,9 @@ export const chatPage = {
         toolDisabled:
           'You mentioned an agent, but "{{agent}}" does not have the invokeAgent tool enabled, so it cannot delegate.',
         unavailableInPlanMode:
-          'Delegation is unavailable in Plan mode. Switch to Act mode to use it.'
+          'Delegation is unavailable in Plan mode. Switch to Act mode to use it.',
+        disabledForChat:
+          '"{{name}}" is off for this chat. Mention @{{name}} again to turn it back on.'
       },
       invokeAgentResult: {
         depth: 'depth {{depth}}',
@@ -290,7 +292,9 @@ export const chatPage = {
         toolDisabled:
           'エージェントをメンションしましたが、「{{agent}}」では invokeAgent ツールが有効になっていないため委譲できません。',
         unavailableInPlanMode:
-          'Plan モードでは委譲を利用できません。Act モードに切り替えてください。'
+          'Plan モードでは委譲を利用できません。Act モードに切り替えてください。',
+        disabledForChat:
+          'このチャットでは「{{name}}」をオフにしました。もう一度 @{{name}} とメンションするとオンに戻ります。'
       },
       invokeAgentResult: {
         depth: '深さ {{depth}}',

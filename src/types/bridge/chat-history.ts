@@ -1,6 +1,12 @@
 // `window.chatHistory`, installed by src/renderer/src/lib/tauriBridge.ts. The synchronous getters
 // read a cache hydrated at startup (docs/port/BRIDGE.md, "Startup and synchronous methods").
-import type { ChatFolder, ChatMessage, ChatSession, SessionMetadata } from '../chat/history'
+import type {
+  ChatFolder,
+  ChatMessage,
+  ChatSession,
+  MentionGrants,
+  SessionMetadata
+} from '../chat/history'
 
 export type ChatHistoryApi = {
   createSession(agentId: string, modelId: string, systemPrompt?: string): Promise<string>
@@ -21,6 +27,8 @@ export type ChatHistoryApi = {
   ): Promise<void>
   deleteMessage(sessionId: string, messageIndex: number): Promise<void>
   setUseMemoryItems(sessionId: string, value: boolean): Promise<void>
+  /** Save the agents and knowledge bases on for the chat. */
+  setMentionGrants(sessionId: string, grants: MentionGrants): Promise<void>
   /** Merge project-relative paths into the session's `touchedFiles` (deduplicated). */
   addTouchedFiles(sessionId: string, paths: string[]): Promise<void>
   /** The chat history's folders, in display order (from the startup cache). */

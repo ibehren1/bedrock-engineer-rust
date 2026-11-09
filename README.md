@@ -216,9 +216,12 @@ Agents page.
 Type `@` followed by an agent name to hand one step of a task to that agent. The other agent runs
 with its own tools and system prompt, and its result comes back to the agent you are talking to — no
 switching back and forth. For example, `use @email to find the email from Kevin and compose a reply`.
+A mentioned agent stays on for the rest of the chat; write `disable @email` to turn it off again, or
+use the robot button above the message box, which lists the agents with an on / off switch each.
 
 The same `@` list offers every agent's local knowledge bases. Mentioning one makes the knowledge base
-tools search only the mentioned knowledge bases for that message, even another agent's.
+tools search only the mentioned knowledge bases for the rest of the chat, even another agent's. The
+database button next to the robot button turns them on and off, and so does `disable @Name`.
 
 ![agent-mention](./assets/agent-mention.png)
 

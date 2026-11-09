@@ -48,6 +48,7 @@ import { limitContextLength } from '@renderer/lib/contextLength'
 import { IdentifiableMessage } from '@/types/chat/message'
 import { PromptCacheManager } from '@common/models/promptCache'
 import { PricingCalculator } from '@common/models/pricing'
+import { useMentionGrants } from './useMentionGrants'
 import {
   applyDelegationAllowlist,
   hasInvokeAgentTool,
@@ -81,21 +82,9 @@ type TurnContext = {
   systemPrompt?: string
 }
 
-/** The text of the user's earlier prompts in a conversation (not tool results), oldest first. */
-export function previousUserPrompts(messages: Message[]): string[] {
-  return messages
-    .filter((m) => m.role === 'user')
-    .map((m) =>
-      (m.content ?? [])
-        .map(
-          (c) =>
-            ('text' in c && c.text) || ('guardContent' in c && c.guardContent?.text?.text) || ''
-        )
-        .join(' ')
-        .trim()
-    )
-    .filter(Boolean)
-}
+import { previousUserPrompts } from '../utils/userPrompts'
+
+export { previousUserPrompts }
 
 // メッセージの送信時に、Trace を全て載せると InputToken が逼迫するので取り除く
 function removeTraces(messages) {
@@ -287,6 +276,13 @@ export const useAgentChat = (
 
   // Plan/Act モードに基づいてツールをフィルタリング
   const enabledTools = useAgentTools(rawEnabledTools)
+
+  // The agents and knowledge bases on for this chat
+  const { control: mentionGrants, applyPrompt: applyMentionGrants } = useMentionGrants(
+    currentSessionId,
+    agents,
+    agentId
+  )
 
   // ChatHistoryContext から操作関数を取得
   const {
@@ -1319,19 +1315,30 @@ export const useAgentChat = (
       return toast.error('Please select a model')
     }
 
-    // @メンションからこのターンだけの委譲許可リストを導出する。
-    // enabledTools は静的な仕様のままなので、ここでターン専用のツール構成を作る
-    const mentions = parseMentions(userInput, agents, agentId)
-    const mentionedAgents = mentions.agents
-    const mentionedKnowledgeBases = mentions.knowledgeBases
+    // Fold this message's @mentions into the chat's grants: a mention turns its agent or
+    // knowledge base on for the rest of the chat, `disable @Name` turns it off. enabledTools
+    // stays the static spec, so this builds the turn's own tool config.
+    const { resolved: granted, disabled } = applyMentionGrants(userInput)
+    const mentionedAgents = parseMentions(userInput, agents, agentId).agents.filter(
+      (agent) => !disabled.some((d) => d.kind === 'agent' && d.agent.id === agent.id)
+    )
+    const mentionedKnowledgeBases = granted.knowledgeBases
     const turnCtx: TurnContext = {
       tools: withMentionedKnowledgeBaseTools(
-        applyDelegationAllowlist(enabledTools, mentionedAgents),
+        applyDelegationAllowlist(enabledTools, granted.agents),
         mentionedKnowledgeBases
       ),
-      allowedAgentIds: mentionedAgents.map((agent) => agent.id!),
+      allowedAgentIds: granted.agents.map((agent) => agent.id!),
       mentionedKnowledgeBases,
       attachments: []
+    }
+
+    for (const item of disabled) {
+      toast(
+        t('delegation.disabledForChat', {
+          name: item.kind === 'agent' ? item.agent.name : item.kb.mention
+        })
+      )
     }
 
     if (mentionedAgents.length > 0 && !hasInvokeAgentTool(enabledTools)) {
@@ -1621,6 +1628,10 @@ export const useAgentChat = (
       [runKey]
     ),
     currentSessionId,
+    /** The agents and knowledge bases on for this chat, and the switch for the grant buttons. */
+    mentionGrants,
+    /** The chat's agent can hand work to the granted agents (it has `invokeAgent`). */
+    delegationAvailable: hasInvokeAgentTool(enabledTools),
     setCurrentSessionId: setSession, // 中断処理付きのセッション切り替え関数を返す
     clearChat,
     stopGeneration // 停止ボタン用の関数をエクスポート

@@ -24,6 +24,7 @@ permissions = [
   "allow-chat-history-update-message-content",
   "allow-chat-history-delete-message",
   "allow-chat-history-set-use-memory-items",
+  "allow-chat-history-set-mention-grants",
   "allow-chat-history-add-touched-files",
   "allow-chat-history-get-folders",
   "allow-chat-history-create-folder",

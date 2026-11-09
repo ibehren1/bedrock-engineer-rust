@@ -1951,12 +1951,25 @@ agent that has every tool and a system prompt trying to cover every situation. A
 writer agent and an email agent, each good at one thing, work better together than one agent with all
 their tools bolted on.
 
+Once you have mentioned an agent, it stays on for the rest of the chat: later messages can say "now
+have it summarize the note" without repeating the `@`. To turn it off again, write `disable @`
+followed by its name (for example `disable @email`); a notice confirms it. Mentioning the agent again
+turns it back on. A new chat starts with nothing on.
+
+The robot button next to the brain button above the message box shows the agents you can hand work
+to, with the ones on for this chat first and a count on the button. Each has an on / off switch, so
+you can also turn agents on and off there without typing. The agent you are chatting with needs the
+`invokeAgent` tool for any of this to work; the list says so when it is missing.
+
 This is the same mechanism as the `invokeAgent` tool, so an agent can also delegate on its own
 initiative if you give it that tool and mention in its system prompt when it should.
 
 The same `@` list also shows your **knowledge bases**, from every agent. Mentioning one tells the
-agent to search it for that message, without handing the work to another agent
-([Section 24.4](#244-how-the-agent-uses-a-knowledge-base)).
+agent to search it, without handing the work to another agent
+([Section 24.4](#244-how-the-agent-uses-a-knowledge-base)). Like agents, a mentioned knowledge base
+stays on for the rest of the chat, and while any is on the agent searches only the ones that are on.
+`disable @` and its name turns it off, and the database button next to the robot button lists them
+with the same on / off switches.
 
 ---
 
@@ -2980,9 +2993,11 @@ Tips for good results:
 **Pointing the agent at a knowledge base with `@`.** Type `@` in the message box: below the agents,
 the list shows **Knowledge bases**, those of the agent you are talking to first, then every other
 agent's, with the owning agent's name on the right. Pick one (or type its name after the `@`) and,
-for that message, the agent searches only the knowledge bases you mentioned, even ones that belong to
-another agent or when the current agent has none of its own. Mention several to search them
-together. When two knowledge bases share a name, or a knowledge base has an agent's name, the other
+for the rest of the chat, the agent searches only the knowledge bases you mentioned, even ones that
+belong to another agent or when the current agent has none of its own. Mention several to search them
+together. Write `disable @` and the name to turn one off again, or use the database button above the
+message box, which lists them with an on / off switch each; with none on, the agent is back to its
+own knowledge bases. When two knowledge bases share a name, or a knowledge base has an agent's name, the other
 agent's one is written `@Agent name/Knowledge base name`.
 
 ### 24.5 How the website crawler behaves

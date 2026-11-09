@@ -45,7 +45,13 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { getImageGenerationModelsForRegion } from '@common/models/models'
 import { captureCameraFrame, type CameraFrameRequest } from './cameraCapture'
-import type { ChatFolder, ChatMessage, ChatSession, SessionMetadata } from '@/types/chat/history'
+import type {
+  ChatFolder,
+  ChatMessage,
+  ChatSession,
+  MentionGrants,
+  SessionMetadata
+} from '@/types/chat/history'
 import type { MemoryItem } from '@/types/bridge/memory'
 import type {
   WorkspaceExistsResult,
@@ -519,6 +525,16 @@ function createChatHistory(): Window['chatHistory'] {
       await call(`${M}.setUseMemoryItems`, 'chat_history_set_use_memory_items', {
         sessionId,
         value
+      })
+      await refreshChat(sessionId)
+    },
+    async setMentionGrants(sessionId: string, grants: MentionGrants) {
+      // Cache first, like setUseMemoryItems, so a getSession right after sees the change.
+      const cached = chat.sessions[sessionId]
+      if (cached) cached.mentionGrants = grants
+      await call(`${M}.setMentionGrants`, 'chat_history_set_mention_grants', {
+        sessionId,
+        grants
       })
       await refreshChat(sessionId)
     },

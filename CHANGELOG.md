@@ -7,6 +7,24 @@ dated section here for anything user-visible.
 See the [README](./README.md#whats-different-in-this-fork) for a feature-by-feature
 overview of the fork with screenshots.
 
+### 2026-11-09
+
+- The `@mention` list in the message box now opens above the line you are typing on, tall enough
+  to show the whole list (it scrolls past about ten rows), instead of squeezing into the strip near the
+  bottom of the window.
+- The tool switches on an agent's Tools tab are larger and color-coded, a soft green when the tool
+  is on and a soft red when it is off, so they are easy to spot and read at a glance.
+- An agent or knowledge base you `@mention` now stays on for the rest of the chat. Before, a mention
+  only lasted for the message it was in, so a follow-up such as "now move the note" left the agent
+  unable to reach the other agent. Write `disable @` and the name to turn one off again for that
+  chat; mentioning it again turns it back on. Two new buttons next to the brain button above the
+  message box, a robot for agents and a database for knowledge bases, show how many are on and list
+  them with an on / off switch each, so you can also turn them on and off there.
+- Security updates: the built-in SQLite (used by local knowledge bases and the usage ledger) is
+  updated for a reported SQLite vulnerability, and the MCP client is updated to fix two reported
+  issues: an address check that could be bypassed when connecting to servers that sign in with
+  OAuth, and unlimited memory use when a streamable HTTP server sends a very large response.
+
 ### 2026-11-06
 
 - Chat history folders can be put in any order: drag a folder by its name above or below another

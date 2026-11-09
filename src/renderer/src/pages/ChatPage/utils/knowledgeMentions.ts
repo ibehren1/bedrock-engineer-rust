@@ -1,11 +1,10 @@
 /**
  * @mentions of local knowledgebases.
  *
- * Like agent mentions (`agentMentions.ts`), they are read from the submitted text, not kept as
- * state. Any agent's knowledgebase can be mentioned. A mention points the model at those
- * knowledgebases for that turn: the knowledgebase tools search only them, through
- * `knowledge_search_granted`, with the grants taken from the user's text (never the model's
- * tool input).
+ * Any agent's knowledgebase can be mentioned. A mention turns it on for the rest of the chat
+ * (`mentionGrants.ts`): while any are on, the knowledgebase tools search only them, through
+ * `knowledge_search_granted`, with the grants taken from the user's text or the chat's grant
+ * buttons (never the model's tool input).
  */
 
 import type { CustomAgent, ToolState } from '@/types/agent-chat'
@@ -85,6 +84,32 @@ export type ParsedMentions = {
   knowledgeBases: MentionableKnowledgeBase[]
 }
 
+/** An @mention target: an agent or a knowledgebase. */
+export type MentionItem =
+  { kind: 'agent'; agent: CustomAgent } | { kind: 'kb'; kb: MentionableKnowledgeBase }
+
+/** Agents and knowledgebases as mention candidates, matched together. */
+export function mentionCandidates(
+  agents: CustomAgent[],
+  selfAgentId?: string
+): MentionCandidate<MentionItem>[] {
+  return [
+    ...agentMentionCandidates(agents, selfAgentId).map((c) => ({
+      ...c,
+      value: { kind: 'agent' as const, agent: c.value }
+    })),
+    ...getMentionableKnowledgeBases(agents, selfAgentId).map((kb) => ({
+      mention: kb.mention,
+      key: kbGrantKey(kb),
+      value: { kind: 'kb' as const, kb }
+    }))
+  ]
+}
+
+/** The mention key of a knowledgebase, also used to compare grants. */
+export const kbGrantKey = (kb: { agentId: string; kbId: string }): string =>
+  `kb:${kb.agentId}:${kb.kbId}`
+
 /**
  * The agents and knowledgebases @mentioned in a message, each in first-mention order. Both
  * are matched in one pass, so `@Agent/Notes` is the knowledgebase only.
@@ -94,19 +119,7 @@ export function parseMentions(
   agents: CustomAgent[],
   selfAgentId?: string
 ): ParsedMentions {
-  type Item = { kind: 'agent'; agent: CustomAgent } | { kind: 'kb'; kb: MentionableKnowledgeBase }
-  const candidates: MentionCandidate<Item>[] = [
-    ...agentMentionCandidates(agents, selfAgentId).map((c) => ({
-      ...c,
-      value: { kind: 'agent' as const, agent: c.value }
-    })),
-    ...getMentionableKnowledgeBases(agents, selfAgentId).map((kb) => ({
-      mention: kb.mention,
-      key: `kb:${kb.agentId}:${kb.kbId}`,
-      value: { kind: 'kb' as const, kb }
-    }))
-  ]
-  const found = matchMentions(text, candidates)
+  const found = matchMentions(text, mentionCandidates(agents, selfAgentId))
   return {
     agents: found.flatMap((f) => (f.kind === 'agent' ? [f.agent] : [])),
     knowledgeBases: found.flatMap((f) => (f.kind === 'kb' ? [f.kb] : []))
@@ -142,7 +155,7 @@ export function withMentionedKnowledgeBaseTools(
       schema.properties.knowledgeBase = {
         type: 'string',
         enum: [...new Set(names)],
-        description: 'Only this one of the knowledge bases the user mentioned. Omit for all.'
+        description: 'Only this one of the knowledge bases the user turned on. Omit for all.'
       }
     }
     return {
@@ -151,7 +164,7 @@ export function withMentionedKnowledgeBaseTools(
         name: t.name,
         description: t.description.replace(
           /this agent's local knowledge bases/i,
-          'the local knowledge bases the user mentioned in this message'
+          'the local knowledge bases the user turned on for this chat'
         ),
         inputSchema: { json: schema }
       }
@@ -166,13 +179,13 @@ export function buildMentionedKnowledgeBasesPrompt(kbs: MentionableKnowledgeBase
   if (kbs.length === 0) return ''
   return [
     '<mentioned_knowledge_bases>',
-    'The user pointed you at these local knowledge bases for this message:',
+    'The user turned on these local knowledge bases for this chat:',
     ...kbs.map((kb) => {
       const owner = kb.isOwn ? '' : ` (from the agent "${kb.agentName}")`
       const description = (kb.description ?? '').trim()
       return `- ${kb.kbName}${owner}${description ? `: ${description}` : ''}`
     }),
-    'Search them with the searchKnowledgeBase tool before answering; for this message the knowledge base tools reach only these. Cite inline: put a passage\'s "Cite as" link right after each sentence or bullet that uses a fact from it, not in a list at the end, and never state a fact from a knowledge base without its link.',
+    'Search them with the searchKnowledgeBase tool before answering; the knowledge base tools reach only these. Cite inline: put a passage\'s "Cite as" link right after each sentence or bullet that uses a fact from it, not in a list at the end, and never state a fact from a knowledge base without its link.',
     '</mentioned_knowledge_bases>'
   ].join('\n')
 }

@@ -161,6 +161,17 @@ pub async fn chat_history_set_use_memory_items(
     Ok(())
 }
 
+/// Sets the session's `mentionGrants` (the agents and knowledge bases on for the chat).
+#[tauri::command]
+pub async fn chat_history_set_mention_grants(
+    state: History<'_>,
+    session_id: String,
+    grants: history::MentionGrants,
+) -> Result<(), String> {
+    state.lock()?.set_mention_grants(&session_id, &grants);
+    Ok(())
+}
+
 /// Merges `paths` (project-relative) into the session's `touchedFiles` list, deduplicated and in
 /// first-seen order.
 #[tauri::command]

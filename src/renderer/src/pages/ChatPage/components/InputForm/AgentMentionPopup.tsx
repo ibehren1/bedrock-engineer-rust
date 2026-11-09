@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { TbRobot } from 'react-icons/tb'
 import { FiDatabase } from 'react-icons/fi'
 import { useTranslation } from 'react-i18next'
@@ -21,8 +22,8 @@ const CARET_GAP = 4
 /** Keep the popup this far from the window edges. */
 const VIEWPORT_MARGIN = 8
 const POPUP_WIDTH = 288
-const MAX_POPUP_HEIGHT = 256
-/** Below this the list is too cramped to be useful, so flip to the other side. */
+const MAX_POPUP_HEIGHT = 320
+/** Never shrink the list below this, even when neither side has room. */
 const MIN_USABLE_HEIGHT = 96
 
 type Placement = {
@@ -43,10 +44,11 @@ const renderIcon = (agent: CustomAgent) => (
 /**
  * Caret-anchored agent and knowledge base picker for `@` mentions.
  *
- * Positioned `fixed` against the viewport rather than absolutely inside the
- * textarea's container: the chat input sits at the bottom of the window, so an
- * absolutely-placed popup is clipped by ancestors and runs off screen. Fixed
- * positioning lets it flip above the caret and clamp to the viewport.
+ * Rendered into `document.body` and positioned `fixed` against the viewport:
+ * the chat input sits at the bottom of the window, so a popup placed inside the
+ * textarea's container is clipped (or offset) by its ancestors. It opens above
+ * the caret whenever the whole list fits there, and only drops below the caret
+ * when that side has more room.
  *
  * Keyboard handling lives in the textarea (it owns the key events), so this is
  * presentational: it renders the list, keeps the active row in view, and
@@ -61,6 +63,7 @@ export const AgentMentionPopup: React.FC<AgentMentionPopupProps> = ({
 }) => {
   const { t } = useTranslation()
   const activeItemRef = useRef<HTMLButtonElement>(null)
+  const popupRef = useRef<HTMLDivElement>(null)
   const [placement, setPlacement] = useState<Placement | null>(null)
 
   const measure = useCallback(() => {
@@ -74,11 +77,15 @@ export const AgentMentionPopup: React.FC<AgentMentionPopupProps> = ({
     const spaceBelow = window.innerHeight - caretBottom - CARET_GAP - VIEWPORT_MARGIN
     const spaceAbove = caretTop - CARET_GAP - VIEWPORT_MARGIN
 
-    // Prefer below, but flip above when below is too cramped — which is the
-    // normal case, since the chat input is anchored to the bottom of the window.
-    const placeBelow = spaceBelow >= MIN_USABLE_HEIGHT || spaceBelow >= spaceAbove
+    // Full list height (scrollHeight ignores the current max-height)
+    const contentHeight = popupRef.current?.scrollHeight ?? MAX_POPUP_HEIGHT
+    const desired = Math.min(MAX_POPUP_HEIGHT, contentHeight)
+
+    // The input is anchored to the bottom of the window, so open above the
+    // caret when the list fits there; otherwise use whichever side is roomier.
+    const placeBelow = spaceAbove < desired && spaceBelow > spaceAbove
     const available = placeBelow ? spaceBelow : spaceAbove
-    const maxHeight = Math.max(MIN_USABLE_HEIGHT, Math.min(MAX_POPUP_HEIGHT, available))
+    const maxHeight = Math.max(MIN_USABLE_HEIGHT, Math.min(desired, available))
 
     const top = placeBelow ? caretBottom + CARET_GAP : caretTop - CARET_GAP - maxHeight
 
@@ -112,8 +119,9 @@ export const AgentMentionPopup: React.FC<AgentMentionPopupProps> = ({
     activeItemRef.current?.scrollIntoView({ block: 'nearest' })
   }, [activeIndex])
 
-  return (
+  return createPortal(
     <div
+      ref={popupRef}
       className="fixed z-50 overflow-y-auto overscroll-contain rounded-container border border-subtle
         bg-surface py-1 shadow-lg border-subtle"
       style={{
@@ -179,6 +187,7 @@ export const AgentMentionPopup: React.FC<AgentMentionPopupProps> = ({
           </React.Fragment>
         )
       })}
-    </div>
+    </div>,
+    document.body
   )
 }
