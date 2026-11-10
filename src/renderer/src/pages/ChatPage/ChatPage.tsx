@@ -45,7 +45,7 @@ import { usePanelAttention } from './components/RightPanel/usePanelAttention'
 import { useChatAttachments } from './hooks/useChatAttachments'
 import { useChatHistory } from '@renderer/contexts/ChatHistoryContext'
 import { useLocation, useNavigate } from 'react-router'
-import { useStreamingAutoScroll } from '@renderer/hooks/useStreamingAutoScroll'
+import { streamScrollKeys, useStreamingAutoScroll } from '@renderer/hooks/useStreamingAutoScroll'
 import { useLightProcessingModel } from '@renderer/lib/modelSelection'
 import { generateSessionTitle } from './utils/titleGenerator'
 import { buildChatMarkdown } from './utils/chatExport'
@@ -627,11 +627,15 @@ export default function ChatPage() {
   // Streaming auto-scroll: follows tool-use output, then stops when the answer's first line
   // reaches the top. The signature changes on every streamed update so the hook re-evaluates.
   const messageAreaRef = useRef<HTMLDivElement>(null)
-  const lastMessage = messages[messages.length - 1]
-  const lastTextBlock = lastMessage?.content?.find((c) => 'text' in c) as
-    { text?: string } | undefined
-  const scrollSignature = `${messages.length}:${lastMessage?.content?.length ?? 0}:${lastTextBlock?.text?.length ?? 0}`
-  useStreamingAutoScroll(messageAreaRef, { signature: scrollSignature, loading })
+  const { blockKey: scrollBlockKey, signature: scrollSignature } = streamScrollKeys(
+    messages.length,
+    messages[messages.length - 1]
+  )
+  useStreamingAutoScroll(messageAreaRef, {
+    blockKey: scrollBlockKey,
+    signature: scrollSignature,
+    loading
+  })
 
   const handleSessionSelect = (sessionId: string) => {
     setCurrentSessionId(sessionId)

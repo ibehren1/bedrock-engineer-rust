@@ -7,6 +7,13 @@ dated section here for anything user-visible.
 See the [README](./README.md#whats-different-in-this-fork) for a feature-by-feature
 overview of the fork with screenshots.
 
+### 2026-11-10
+
+- The chat scrolls to each new response again. After a long answer had stopped with its first
+  line at the top, the next message you sent was no longer followed. The chat now also follows
+  thinking text and tool input as they stream, and no longer pulls you back to the start of the
+  answer when you scroll down while it is still being written.
+
 ### 2026-11-09
 
 - The `@mention` list in the message box now opens above the line you are typing on, tall enough
