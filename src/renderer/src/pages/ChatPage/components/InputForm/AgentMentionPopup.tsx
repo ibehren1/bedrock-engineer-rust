@@ -178,9 +178,9 @@ export const AgentMentionPopup: React.FC<AgentMentionPopupProps> = ({
                 )}
               </span>
               <span className="truncate text-ink">{label}</span>
-              {item.kind === 'kb' && (
+              {item.kind === 'kb' && item.kb.attached && (
                 <span className="ml-auto shrink-0 max-w-[45%] truncate text-xs text-ink-muted">
-                  {item.kb.isOwn ? t('textarea.mention.thisAgent') : item.kb.agentName}
+                  {t('textarea.mention.attached')}
                 </span>
               )}
             </button>

@@ -1,7 +1,7 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { SettingSection } from '../SettingSection'
-import { SettingNumberInput } from '../SettingNumberInput'
+import { SettingSection } from '@renderer/pages/SettingPage/components/SettingSection'
+import { SettingNumberInput } from '@renderer/pages/SettingPage/components/SettingNumberInput'
 import { KnowledgeCheckbox } from './KnowledgeCrawlerSection'
 import { KnowledgeSettings } from '@/types/knowledge'
 

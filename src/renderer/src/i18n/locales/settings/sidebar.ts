@@ -14,7 +14,8 @@ export const sidebarSettings = {
         'Website Generator': 'Website Generator',
         'Step Functions Generator': 'Step Functions Generator',
         'Diagram Generator': 'Diagram Generator',
-        Accounting: 'Accounting'
+        Accounting: 'Accounting',
+        'Knowledge Bases': 'Knowledge Bases'
       }
     }
   },
@@ -33,7 +34,8 @@ export const sidebarSettings = {
         'Website Generator': 'ウェブサイトジェネレーター',
         'Step Functions Generator': 'Step Functions ジェネレーター',
         'Diagram Generator': 'ダイアグラムジェネレーター',
-        Accounting: 'コスト'
+        Accounting: 'コスト',
+        'Knowledge Bases': 'ナレッジベース'
       }
     }
   }

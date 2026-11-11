@@ -34,7 +34,7 @@ const HomePage = {
   tour: {
     chat: 'Chat with an AI agent. It can read and write files in your project folder, run commands, search the web and use whatever tools you enable for it.',
     myAgents:
-      'Create and edit your own agents: their system prompt, tools, MCP servers and local knowledge bases.',
+      'Create and edit your own agents: their system prompt, tools, MCP servers and the local knowledge bases they use.',
     memory:
       'Rules and facts the agent remembers across chats. Ask it to remember something, or add and edit entries here.',
     agentDirectory:
@@ -48,6 +48,8 @@ const HomePage = {
       'Generate AWS architecture, software and business process diagrams from a description.',
     accounting:
       'See what your Amazon Bedrock usage costs by day, model and feature, and set a monthly budget.',
+    knowledgeBases:
+      'Build local knowledge bases from files, folders and websites, choose which agents use each one, and set how they are indexed and searched.',
     help: 'The user guide, available offline. You can also ask it questions. Tip: {{shortcut}} opens the command palette from anywhere.'
   },
   'set your aws credential':

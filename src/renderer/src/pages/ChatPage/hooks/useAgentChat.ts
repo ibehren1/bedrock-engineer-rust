@@ -29,6 +29,7 @@ import {
 } from '../runners/sessionRunners'
 import { generateSessionTitle } from '../utils/titleGenerator'
 import { useSettings } from '@renderer/contexts/SettingsContext'
+import { useKnowledgeBaseList } from '@renderer/contexts/KnowledgeBasesContext'
 import { useChatHistory } from '@renderer/contexts/ChatHistoryContext'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
@@ -281,9 +282,11 @@ export const useAgentChat = (
   const enabledTools = useAgentTools(rawEnabledTools)
 
   // The agents and knowledge bases on for this chat
+  const { knowledgeBases } = useKnowledgeBaseList()
   const { control: mentionGrants, applyPrompt: applyMentionGrants } = useMentionGrants(
     currentSessionId,
     agents,
+    knowledgeBases,
     agentId
   )
 
@@ -1100,7 +1103,7 @@ export const useAgentChat = (
           }
         }
 
-        // A turn that @mentions knowledgebases searches only those (any agent's), with the
+        // A turn that @mentions knowledgebases searches only those (any of them), with the
         // grants from the user's message rather than the model's input.
         const toolResult =
           turnCtx.mentionedKnowledgeBases.length > 0 && isMentionedKnowledgeBaseTool(toolInput.type)
@@ -1332,7 +1335,7 @@ export const useAgentChat = (
     // knowledge base on for the rest of the chat, `disable @Name` turns it off. enabledTools
     // stays the static spec, so this builds the turn's own tool config.
     const { resolved: granted, disabled } = applyMentionGrants(userInput)
-    const mentionedAgents = parseMentions(userInput, agents, agentId).agents.filter(
+    const mentionedAgents = parseMentions(userInput, agents, knowledgeBases, agentId).agents.filter(
       (agent) => !disabled.some((d) => d.kind === 'agent' && d.agent.id === agent.id)
     )
     const mentionedKnowledgeBases = granted.knowledgeBases

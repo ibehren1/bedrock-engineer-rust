@@ -1,5 +1,5 @@
-//! `window.api.knowledge.*` → `knowledge_*`: agents' local knowledgebases
-//! ([`knowledge::service::KnowledgeService`]). Main window only (`capabilities/main-window.json`).
+//! `window.api.knowledge.*` → `knowledge_*`: the local knowledgebases, shared by every agent
+//! that attaches them ([`knowledge::service::KnowledgeService`]). Main window only (`capabilities/main-window.json`).
 //! Files are added only through the native picker ([`knowledge_pick_files`]), so the renderer
 //! never names a path to read.
 //!
@@ -13,95 +13,59 @@ use knowledge::types::{
     JobInfo, KbGrant, KbInfo, SearchHit, SearchOrigin, SourceInfo, StorageOverview, UrlOptions,
 };
 use serde_json::Value;
-use std::collections::HashSet;
+use std::collections::HashMap;
 use tauri::{AppHandle, Emitter, State, WebviewWindow};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
 #[tauri::command]
-pub async fn knowledge_list(
-    backend: State<'_, Backend>,
-    agent_id: String,
-) -> Result<Vec<KbInfo>, String> {
-    backend.knowledge.list(&agent_id)
+pub async fn knowledge_list(backend: State<'_, Backend>) -> Result<Vec<KbInfo>, String> {
+    backend.knowledge.list()
 }
 
 /// Created with the current global embedding and chunking settings.
 #[tauri::command]
 pub async fn knowledge_create(
     backend: State<'_, Backend>,
-    agent_id: String,
     name: String,
     description: Option<String>,
 ) -> Result<KbInfo, String> {
     backend
         .knowledge
-        .create(&agent_id, &name, description.as_deref().unwrap_or_default())
+        .create(&name, description.as_deref().unwrap_or_default())
 }
 
 #[tauri::command]
 pub async fn knowledge_update(
     backend: State<'_, Backend>,
-    agent_id: String,
     kb_id: String,
     name: String,
     description: Option<String>,
 ) -> Result<KbInfo, String> {
-    backend.knowledge.update(
-        &agent_id,
-        &kb_id,
-        &name,
-        description.as_deref().unwrap_or_default(),
-    )
-}
-
-#[tauri::command]
-pub async fn knowledge_delete(
-    backend: State<'_, Backend>,
-    agent_id: String,
-    kb_id: String,
-) -> Result<(), String> {
-    backend.knowledge.delete(&agent_id, &kb_id).await
-}
-
-/// Every knowledgebase of an agent (agent deleted, or a new agent discarded).
-#[tauri::command]
-pub async fn knowledge_delete_agent(
-    backend: State<'_, Backend>,
-    agent_id: String,
-) -> Result<(), String> {
-    backend.knowledge.delete_agent(&agent_id).await
-}
-
-/// Copies for a duplicated agent; returns the copies.
-#[tauri::command]
-pub async fn knowledge_copy_agent(
-    backend: State<'_, Backend>,
-    from_agent_id: String,
-    to_agent_id: String,
-) -> Result<Vec<KbInfo>, String> {
     backend
         .knowledge
-        .copy_agent(&from_agent_id, &to_agent_id)
-        .await
+        .update(&kb_id, &name, description.as_deref().unwrap_or_default())
+}
+
+#[tauri::command]
+pub async fn knowledge_delete(backend: State<'_, Backend>, kb_id: String) -> Result<(), String> {
+    backend.knowledge.delete(&kb_id).await
 }
 
 /// Re-embed with the current global embedding model. Returns the job id.
 #[tauri::command]
 pub async fn knowledge_rebuild(
     backend: State<'_, Backend>,
-    agent_id: String,
     kb_id: String,
 ) -> Result<String, String> {
-    backend.knowledge.rebuild(&agent_id, &kb_id)
+    backend.knowledge.rebuild(&kb_id)
 }
 
 #[tauri::command]
 pub async fn knowledge_list_sources(
     backend: State<'_, Backend>,
-    agent_id: String,
     kb_id: String,
 ) -> Result<Vec<SourceInfo>, String> {
-    backend.knowledge.list_sources(&agent_id, &kb_id)
+    backend.knowledge.list_sources(&kb_id)
 }
 
 /// Pick files in the native dialog and add them; `[]` when canceled.
@@ -109,7 +73,6 @@ pub async fn knowledge_list_sources(
 pub async fn knowledge_pick_files(
     window: WebviewWindow,
     backend: State<'_, Backend>,
-    agent_id: String,
     kb_id: String,
 ) -> Result<Vec<SourceInfo>, String> {
     let extensions = knowledge::extract::supported_extensions();
@@ -128,7 +91,7 @@ pub async fn knowledge_pick_files(
     if paths.is_empty() {
         return Ok(Vec::new());
     }
-    backend.knowledge.add_files(&agent_id, &kb_id, &paths)
+    backend.knowledge.add_files(&kb_id, &paths)
 }
 
 /// Pick a folder in the native dialog and add it as one source that follows the folder's
@@ -137,7 +100,6 @@ pub async fn knowledge_pick_files(
 pub async fn knowledge_pick_folder(
     window: WebviewWindow,
     backend: State<'_, Backend>,
-    agent_id: String,
     kb_id: String,
 ) -> Result<Option<SourceInfo>, String> {
     let Some(dir) = window
@@ -174,7 +136,7 @@ pub async fn knowledge_pick_folder(
                 .parent(&window)
                 .blocking_show()
         };
-        svc.add_folder(&agent_id, &kb_id, &dir, confirm)
+        svc.add_folder(&kb_id, &dir, confirm)
     })
     .await
     .map_err(|e| e.to_string())?
@@ -183,7 +145,6 @@ pub async fn knowledge_pick_folder(
 #[tauri::command]
 pub async fn knowledge_add_url(
     backend: State<'_, Backend>,
-    agent_id: String,
     kb_id: String,
     url: String,
     options: Option<UrlOptions>,
@@ -196,56 +157,48 @@ pub async fn knowledge_add_url(
             path_prefix_only: true,
         }
     });
-    backend.knowledge.add_url(&agent_id, &kb_id, &url, options)
+    backend.knowledge.add_url(&kb_id, &url, options)
 }
 
 /// New crawl options for a website source (used from its next sync).
 #[tauri::command]
 pub async fn knowledge_update_source_options(
     backend: State<'_, Backend>,
-    agent_id: String,
     kb_id: String,
     source_id: String,
     options: UrlOptions,
 ) -> Result<SourceInfo, String> {
     backend
         .knowledge
-        .update_source_options(&agent_id, &kb_id, &source_id, options)
+        .update_source_options(&kb_id, &source_id, options)
 }
 
 /// Returns the job id.
 #[tauri::command]
 pub async fn knowledge_resync_source(
     backend: State<'_, Backend>,
-    agent_id: String,
     kb_id: String,
     source_id: String,
 ) -> Result<String, String> {
-    backend
-        .knowledge
-        .resync_source(&agent_id, &kb_id, &source_id)
+    backend.knowledge.resync_source(&kb_id, &source_id)
 }
 
 #[tauri::command]
 pub async fn knowledge_remove_source(
     backend: State<'_, Backend>,
-    agent_id: String,
     kb_id: String,
     source_id: String,
 ) -> Result<(), String> {
-    backend
-        .knowledge
-        .remove_source(&agent_id, &kb_id, &source_id)
-        .await
+    backend.knowledge.remove_source(&kb_id, &source_id).await
 }
 
-/// Running and queued jobs, optionally for one agent.
+/// Running and queued jobs, optionally of one knowledgebase.
 #[tauri::command]
 pub async fn knowledge_jobs(
     backend: State<'_, Backend>,
-    agent_id: Option<String>,
+    kb_id: Option<String>,
 ) -> Result<Vec<JobInfo>, String> {
-    Ok(backend.knowledge.jobs(agent_id.as_deref()))
+    Ok(backend.knowledge.jobs(kb_id.as_deref()))
 }
 
 #[tauri::command]
@@ -256,29 +209,31 @@ pub async fn knowledge_cancel_job(
     Ok(backend.knowledge.cancel_job(&job_id))
 }
 
-/// The search the agent's MCP tool runs, for trying a knowledgebase out.
+/// The search the agents' MCP tool runs, for trying knowledgebases out: one (`kbId`) or all.
 #[tauri::command]
 pub async fn knowledge_search(
     backend: State<'_, Backend>,
-    agent_id: String,
     kb_id: Option<String>,
     query: String,
     top_k: Option<usize>,
 ) -> Result<Vec<SearchHit>, String> {
-    backend
-        .knowledge
-        .search(
-            &agent_id,
-            kb_id.as_deref(),
-            &query,
-            top_k,
-            knowledge::types::SearchOrigin::Test,
-        )
-        .await
+    let svc = &backend.knowledge;
+    let scope = match kb_id.as_deref() {
+        Some(kb) => vec![kb.to_string()],
+        None => svc.kb_ids(),
+    };
+    svc.search(
+        &scope,
+        kb_id.as_deref(),
+        &query,
+        top_k,
+        knowledge::types::SearchOrigin::Test,
+    )
+    .await
 }
 
 /// The `searchKnowledgeBase` tool for a chat turn that `@mentions` knowledgebases: searches
-/// only the granted ones (any agent's) and returns the same text as the built-in server. The
+/// only the granted ones and returns the same text as the built-in server. The
 /// renderer builds `grants` from the user's message, never from the model's input.
 #[tauri::command]
 pub async fn knowledge_search_granted(
@@ -311,8 +266,8 @@ pub async fn knowledge_list_sources_granted(
 ) -> Result<String, String> {
     let svc = backend.knowledge.clone();
     let mut out = String::new();
-    for (agent_id, kb) in svc.granted(&grants, knowledge_base.as_deref())? {
-        let sources = svc.list_sources(&agent_id, &kb.id)?;
+    for kb in svc.granted(&grants, knowledge_base.as_deref())? {
+        let sources = svc.list_sources(&kb.id)?;
         out.push_str(&knowledge::mcp_server::format_sources(&kb.name, &sources));
     }
     Ok(out)
@@ -350,33 +305,40 @@ pub async fn knowledge_open_source(
 #[tauri::command]
 pub async fn knowledge_stats(
     backend: State<'_, Backend>,
-    agent_id: String,
     kb_id: String,
 ) -> Result<knowledge::types::KbStats, String> {
-    backend.knowledge.stats(&agent_id, &kb_id)
+    backend.knowledge.stats(&kb_id)
 }
 
 /// Compact the file, merge the keyword index and run an integrity check.
 #[tauri::command]
 pub async fn knowledge_optimize(
     backend: State<'_, Backend>,
-    agent_id: String,
     kb_id: String,
 ) -> Result<knowledge::types::OptimizeResult, String> {
-    backend.knowledge.optimize(&agent_id, &kb_id).await
+    backend.knowledge.optimize(&kb_id).await
 }
 
-/// Ids in `customAgents`: knowledgebases of any other agent are orphans.
-fn known_agents(app: &AppHandle) -> HashSet<String> {
-    store_snapshot(app)
+/// Knowledgebase id → the ids of the agents in `customAgents` that attach it.
+pub fn attachments(store: &Value) -> HashMap<String, Vec<String>> {
+    let mut out: HashMap<String, Vec<String>> = HashMap::new();
+    for agent in store
         .get("customAgents")
         .and_then(Value::as_array)
-        .map(|a| {
-            a.iter()
-                .filter_map(|x| x.get("id").and_then(Value::as_str).map(String::from))
-                .collect()
-        })
-        .unwrap_or_default()
+        .into_iter()
+        .flatten()
+    {
+        let Some(agent_id) = agent.get("id").and_then(Value::as_str) else {
+            continue;
+        };
+        for kb in crate::backend::attached_kb_ids(agent) {
+            let agents = out.entry(kb).or_default();
+            if !agents.iter().any(|a| a == agent_id) {
+                agents.push(agent_id.to_string());
+            }
+        }
+    }
+    out
 }
 
 #[tauri::command]
@@ -384,21 +346,9 @@ pub async fn knowledge_storage_overview(
     app: AppHandle,
     backend: State<'_, Backend>,
 ) -> Result<StorageOverview, String> {
-    Ok(backend.knowledge.storage_overview(&known_agents(&app)))
-}
-
-/// Deletes the knowledgebases of agents that no longer exist; returns how many.
-#[tauri::command]
-pub async fn knowledge_purge_orphans(
-    app: AppHandle,
-    backend: State<'_, Backend>,
-) -> Result<usize, String> {
-    let known = known_agents(&app);
-    if known.is_empty() && store_snapshot(&app).get("customAgents").is_none() {
-        // Settings not readable: don't treat every knowledgebase as an orphan.
-        return Err("Agent settings are not available".into());
-    }
-    backend.knowledge.purge_orphans(&known).await
+    Ok(backend
+        .knowledge
+        .storage_overview(&attachments(&store_snapshot(&app))))
 }
 
 #[tauri::command]

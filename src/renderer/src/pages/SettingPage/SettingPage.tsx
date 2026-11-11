@@ -1,18 +1,17 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from 'react-router'
+import { Navigate, useNavigate, useParams } from 'react-router'
 import { SettingsSidebar } from './components/SettingsSidebar'
 import {
   AwsTab,
   ChatTab,
   GeneralTab,
-  KnowledgeBaseTab,
   ModelsTab,
   SandboxTab,
   UpdatesTab,
   WorkspaceTab
 } from './components/tabs'
-import { resolveSettingTab, SettingTabId } from './settingTabs'
+import { movedSettingTab, resolveSettingTab, SettingTabId } from './settingTabs'
 
 const TAB_PANELS: Record<SettingTabId, React.FC> = {
   general: GeneralTab,
@@ -21,7 +20,6 @@ const TAB_PANELS: Record<SettingTabId, React.FC> = {
   chat: ChatTab,
   workspace: WorkspaceTab,
   sandbox: SandboxTab,
-  knowledgebase: KnowledgeBaseTab,
   updates: UpdatesTab
 }
 
@@ -33,11 +31,15 @@ export const SettingPage: React.FC = () => {
   // 不明なタブ（プレーンな /setting も含む）は最初のタブにフォールバックする
   const activeTab = resolveSettingTab(tab)
   const ActivePanel = TAB_PANELS[activeTab]
+  const movedTo = movedSettingTab(tab)
 
   const handleTabChange = (nextTab: SettingTabId) => {
     // replace: タブの切り替えで履歴を積み上げない
     navigate(`/setting/${nextTab}`, { replace: true })
   }
+
+  // A tab that became its own page (Knowledge Base → the Knowledge Bases page).
+  if (movedTo) return <Navigate to={movedTo} replace />
 
   return (
     <div className="flex flex-col h-full text-ink">

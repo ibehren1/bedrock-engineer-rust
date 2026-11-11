@@ -23,6 +23,7 @@ import useSetting from './hooks/useSetting'
 import { ChatHistoryProvider } from './contexts/ChatHistoryContext'
 import { AgentDirectoryProvider } from './contexts/AgentDirectoryContext'
 import { MemoryProvider } from './contexts/MemoryContext'
+import { KnowledgeBasesProvider } from './contexts/KnowledgeBasesContext'
 import { AppUpdateProvider } from './contexts/AppUpdateContext'
 import { UpdateBanner } from './components/UpdateBanner'
 import { TourProvider, useTour } from '@reactour/tour'
@@ -239,12 +240,14 @@ function App(): React.JSX.Element {
           <ChatHistoryProvider>
             <AgentDirectoryProvider>
               <MemoryProvider>
-                <AppUpdateProvider>
-                  <div>
-                    <Toaster {...ToastService.getToasterConfig()} />
-                    <RouterProvider router={router} />
-                  </div>
-                </AppUpdateProvider>
+                <KnowledgeBasesProvider>
+                  <AppUpdateProvider>
+                    <div>
+                      <Toaster {...ToastService.getToasterConfig()} />
+                      <RouterProvider router={router} />
+                    </div>
+                  </AppUpdateProvider>
+                </KnowledgeBasesProvider>
               </MemoryProvider>
             </AgentDirectoryProvider>
           </ChatHistoryProvider>

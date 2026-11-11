@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
-import { SettingSection } from '../SettingSection'
-import { SettingSelect } from '../SettingSelect'
+import { SettingSection } from '@renderer/pages/SettingPage/components/SettingSection'
+import { SettingSelect } from '@renderer/pages/SettingPage/components/SettingSelect'
 import {
   BEDROCK_EMBEDDING_MODELS,
   EmbeddingProvider,

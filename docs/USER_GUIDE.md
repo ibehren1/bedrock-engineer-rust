@@ -164,19 +164,20 @@ Try: _"List the files in my project folder and tell me what this project seems t
 Every screen in the app is reachable from the icon strip down the left edge. The icons have no text
 labels; hover over one to see its name and its keyboard shortcut.
 
-| Icon           | Page                         | What it is for                                                                                                                                      |
-| -------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| House          | **Home**                     | The starting screen.                                                                                                                                |
-| Speech bubbles | **Chat**                     | The main workspace. Talk to an agent, which uses tools to get things done.                                                                          |
-| Robot          | **My Agents**                | Create, edit, arrange and hide your agents.                                                                                                         |
-| Brain          | **Memory**                   | Rules and facts every chat can use. See [Section 25](#25-memory-rules-and-facts-every-chat-knows).                                                  |
-| Book           | **Agent Directory**          | Browse ready-made agents other people have shared, and add them to your own list.                                                                   |
-| Pulse          | **Background Agent**         | Set an agent to run automatically on a schedule.                                                                                                    |
-| Feather        | **Website Generator**        | Describe a web page and watch it get built, with a live preview.                                                                                    |
-| Merging arrows | **Step Functions Generator** | Build an AWS Step Functions workflow from a description.                                                                                            |
-| Layout         | **Diagram Generator**        | Turn a description into an AWS architecture diagram.                                                                                                |
-| Dollar sign    | **Accounting**               | Estimated Bedrock cost by month, day, model, feature and agent, and a monthly budget. See [Section 26](#26-accounting-what-bedrock-is-costing-you). |
-| Gear           | **Settings**                 | Everything configurable.                                                                                                                            |
+| Icon           | Page                         | What it is for                                                                                                                                                  |
+| -------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| House          | **Home**                     | The starting screen.                                                                                                                                            |
+| Speech bubbles | **Chat**                     | The main workspace. Talk to an agent, which uses tools to get things done.                                                                                      |
+| Robot          | **My Agents**                | Create, edit, arrange and hide your agents.                                                                                                                     |
+| Brain          | **Memory**                   | Rules and facts every chat can use. See [Section 25](#25-memory-rules-and-facts-every-chat-knows).                                                              |
+| Book           | **Agent Directory**          | Browse ready-made agents other people have shared, and add them to your own list.                                                                               |
+| Pulse          | **Background Agent**         | Set an agent to run automatically on a schedule.                                                                                                                |
+| Feather        | **Website Generator**        | Describe a web page and watch it get built, with a live preview.                                                                                                |
+| Merging arrows | **Step Functions Generator** | Build an AWS Step Functions workflow from a description.                                                                                                        |
+| Layout         | **Diagram Generator**        | Turn a description into an AWS architecture diagram.                                                                                                            |
+| Dollar sign    | **Accounting**               | Estimated Bedrock cost by month, day, model, feature and agent, and a monthly budget. See [Section 26](#26-accounting-what-bedrock-is-costing-you).             |
+| Database       | **Knowledge Bases**          | Documents, folders and websites your agents can search, and their settings. See [Section 24](#24-local-knowledge-bases-letting-an-agent-search-your-documents). |
+| Gear           | **Settings**                 | Everything configurable.                                                                                                                                        |
 
 You can hide any icon you never use: **Settings → General → Sidebar Settings**. Hiding an icon does
 not disable the feature; the page still exists at its address, and its keyboard shortcut still works.
@@ -602,10 +603,10 @@ connecting without the proxy. Restart the app after changing the proxy.
 
 ![settings-sidebar](../assets/settings-sidebar.png)
 
-Settings are split into eight tabs listed down the left: **General**, **AWS**, **Models**, **Chat**,
-**Workspace**, **Sandbox**, **Knowledge Base** and **Updates**. Each tab has its own web-style
+Settings are split into seven tabs listed down the left: **General**, **AWS**, **Models**, **Chat**,
+**Workspace**, **Sandbox** and **Updates**. Each tab has its own web-style
 address, so a link can point at one directly (for example `#/setting/aws`). Open Settings with the
-gear at the bottom of the sidebar's page list, or `Cmd` + `,` on a Mac.
+gear in the sidebar's page list, or `Cmd` + `,` on a Mac.
 
 Settings save as you change them; there is no Save button.
 
@@ -713,22 +714,13 @@ The limits apply to every service in every sandbox. Existing sandboxes pick up n
 recreated. The **Docker Sandbox** entry in the chat's **Tools** button shows a one-line summary of these
 settings with an **Open sandbox settings** button that brings you here.
 
-### 5.7 Knowledge Base tab
+### 5.7 Knowledge base settings
 
-Settings for [local knowledge bases](#24-local-knowledge-bases-letting-an-agent-search-your-documents),
-the documents and websites an agent can search. The tab has five sections:
-
-- **Overview** — every knowledge base on this computer, with totals, health, **Optimize all** and a way
-  to delete knowledge bases whose agent no longer exists.
-- **Embedding model** — which model turns text into searchable form for new knowledge bases: Amazon
-  Titan Text Embeddings V2 or Cohere Embed through Bedrock, or the on-device multilingual-e5-small,
-  with its download button.
-- **Chunking and retrieval** — passage size, results per search, and the balance between meaning and
-  keyword matches.
-- **Automatic re-sync** — whether file and folder sources pick up changes on their own, and how often.
-- **Website crawler** — defaults for new website sources.
-
-Each section is explained in [Section 24.6](#246-the-knowledge-base-settings-tab).
+Settings no longer has a Knowledge Base tab. The settings for
+[local knowledge bases](#24-local-knowledge-bases-letting-an-agent-search-your-documents) — the
+overview, embedding model, chunking and retrieval, automatic re-sync and website crawler — are on the
+**Settings** tab of the **Knowledge Bases** page in the sidebar, explained in
+[Section 24.6](#246-knowledge-base-settings). An old link to `#/setting/knowledgebase` opens that page.
 
 ### 5.8 Updates tab
 
@@ -1202,16 +1194,16 @@ Open **My Agents** from the sidebar. This is home base for agents.
 
 Each agent's **⋮** menu has, depending on the kind of agent:
 
-| Item                      | What it does                                                                                                                                     |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Edit**                  | Opens the agent editor ([8.3](#83-the-agent-editor)). For agents you made.                                                                       |
-| **Duplicate**             | Makes your own editable copy, including copies of its [local knowledge bases](#24-local-knowledge-bases-letting-an-agent-search-your-documents). |
-| **Download YAML**         | Saves the agent to a file you choose ([8.5](#85-sharing-an-agent)).                                                                              |
-| **Convert to Strands**    | Exports the agent as a starter project for the Strands Agents framework, so it can run as your own Python program outside this app.              |
-| **Save as File**          | Shares the agent with everyone who opens your project folder ([8.5](#85-sharing-an-agent)).                                                      |
-| **Share to Organization** | Uploads the agent to your organization's shared agent collection ([13.1](#131-sharing-inside-your-organization)).                                |
-| **Delete Shared File**    | On an agent that came from a project file: removes that file ([8.5](#85-sharing-an-agent)).                                                      |
-| **Delete** / **Hide**     | Agents **you** created are deleted for real, together with their local knowledge bases. Built-in agents can only be hidden.                      |
+| Item                      | What it does                                                                                                                                 |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Edit**                  | Opens the agent editor ([8.3](#83-the-agent-editor)). For agents you made.                                                                   |
+| **Duplicate**             | Makes your own editable copy, which uses the same [local knowledge bases](#24-local-knowledge-bases-letting-an-agent-search-your-documents). |
+| **Download YAML**         | Saves the agent to a file you choose ([8.5](#85-sharing-an-agent)).                                                                          |
+| **Convert to Strands**    | Exports the agent as a starter project for the Strands Agents framework, so it can run as your own Python program outside this app.          |
+| **Save as File**          | Shares the agent with everyone who opens your project folder ([8.5](#85-sharing-an-agent)).                                                  |
+| **Share to Organization** | Uploads the agent to your organization's shared agent collection ([13.1](#131-sharing-inside-your-organization)).                            |
+| **Delete Shared File**    | On an agent that came from a project file: removes that file ([8.5](#85-sharing-an-agent)).                                                  |
+| **Delete** / **Hide**     | Agents **you** created are deleted for real; the local knowledge bases they used are kept. Built-in agents can only be hidden.               |
 
 **Import Agent**, at the top next to Add New Agent, reads an agent file someone sent you. See
 [8.6](#86-importing-an-agent).
@@ -1248,16 +1240,18 @@ someone else to pick up.
 
 Connect external tool servers. See [Section 11](#11-mcp-servers-adding-tools-from-outside-the-app).
 
-When the agent has local knowledge bases, a read-only **local-knowledgebase** card marked **Built-in**
+When the agent uses local knowledge bases, a read-only **local-knowledgebase** card marked **Built-in**
 sits above your own servers. It is added automatically, lists the knowledge base tools with their
 descriptions, and has a **Test connection** button that should report "Connected: 3 tools available".
-You cannot edit or remove it here; it goes away when the agent has no knowledge bases left.
+You cannot edit or remove it here; it goes away when the agent uses no knowledge bases.
 
 #### Tab 3 — Knowledge Base
 
-The agent's own searchable library of documents and websites, stored on your computer. Create a
-knowledge base, add files, a folder or a website to it, and the agent gets a tool to search it. This tab is
-explained step by step in [Section 24.3](#243-the-knowledge-base-tab-in-the-agent-editor).
+Which [local knowledge bases](#24-local-knowledge-bases-letting-an-agent-search-your-documents) this
+agent searches: one checkbox per knowledge base, saved with the agent. Tick at least one and the agent
+gets a tool to search them. Knowledge bases are created and filled on the **Knowledge Bases** page, which
+the **Manage knowledge bases** link opens (save the agent first). See
+[Section 24.3](#243-the-knowledge-bases-page).
 
 #### Tab 4 — Tools
 
@@ -1310,8 +1304,6 @@ The rule of thumb for tools: **give an agent the fewest tools it needs.** Fewer 
 go wrong, lower cost per message (the tool list is sent with every request), and a model that stays
 focused.
 
-If you cancel a new agent before saving it, any knowledge bases you created for it are deleted.
-
 ### 8.4 Writing a good system prompt
 
 The system prompt is standing instructions the agent reads before every single message. A good one
@@ -1339,7 +1331,7 @@ covers:
 | `{{allowedCameras}}`  | Cameras it may use                                               |
 
 You do not need a placeholder for [local knowledge bases](#24-local-knowledge-bases-letting-an-agent-search-your-documents):
-the app adds their names and descriptions to the prompt by itself.
+the app adds the names and descriptions of the ones the agent uses to the prompt by itself.
 
 **Helpers in the editor:**
 
@@ -1372,8 +1364,8 @@ Neither way includes the agent's
 your computer; the person you share with has to build their own. **Share to Organization** leaves them
 out too.
 
-A shared agent loaded from a project file is edited by editing that file, and cannot have local
-knowledge bases of its own. If you want to change it
+A shared agent loaded from a project file is edited by editing that file, and cannot use local
+knowledge bases. If you want to change it
 just for yourself, **duplicate** it first, or use **Import Agent** on the copy you downloaded.
 
 **Un-sharing.** On an agent that came from a project file, the **⋮** menu also has **Delete Shared
@@ -1397,7 +1389,8 @@ not the read-only kind you get from a project's shared folder. Details worth kno
   you which of the three is absent. Nothing half-built lands in your list.
 - MCP servers listed in the file come across as configuration. The tools each server provides are
   discovered when the agent runs, so they are not stored in the file.
-- An imported agent starts with no local knowledge bases; agent files never contain them.
+- An imported agent starts with no local knowledge bases; agent files never contain them. Tick the
+  ones it should use on its Knowledge Base tab.
 
 To hand an agent to someone else, **Download YAML** and send them the file.
 
@@ -1604,17 +1597,18 @@ are off in Plan mode. See [Section 11](#11-mcp-servers-adding-tools-from-outside
 
 ### 9.10 Local knowledge base tools
 
-An agent with at least one
+An agent that uses at least one
 [local knowledge base](#24-local-knowledge-bases-letting-an-agent-search-your-documents) gets these
 three tools automatically, from a built-in MCP server called **local-knowledgebase**. There is nothing
-to tick: they appear in the MCP category of the Tools tab as soon as the agent has a knowledge base,
-and go away when it has none.
+to tick: they appear in the MCP category of the Tools tab as soon as the agent uses a knowledge base,
+and go away when it uses none. They only ever see the knowledge bases the agent uses (or, in a chat,
+the ones you `@` mentioned); with none, they reply "This agent has no knowledge bases attached."
 
-| Tool                       | What it does                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `searchKnowledgeBase`      | Searches the agent's knowledge bases and returns the most relevant passages, ranked by both meaning and keyword matches, each with its title, section heading, the knowledge base it came from and its source (file path or page URL). It takes a question or key terms, and optionally one knowledge base (by name) and how many passages to return (1–20; the default comes from **Settings → Knowledge Base → Results per search**). |
-| `listKnowledgeBases`       | Lists the agent's knowledge bases with their descriptions and sizes.                                                                                                                                                                                                                                                                                                                                                                    |
-| `listKnowledgeBaseSources` | Lists the files, folders and websites in the agent's knowledge bases, or in one of them.                                                                                                                                                                                                                                                                                                                                                |
+| Tool                       | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `searchKnowledgeBase`      | Searches the agent's knowledge bases and returns the most relevant passages, ranked by both meaning and keyword matches, each with its title, section heading, the knowledge base it came from and its source (file path or page URL). It takes a question or key terms, and optionally one knowledge base (by name) and how many passages to return (1–20; the default is **Results per search** on the Knowledge Bases page's Settings tab). |
+| `listKnowledgeBases`       | Lists the knowledge bases the agent uses, with their descriptions and sizes.                                                                                                                                                                                                                                                                                                                                                                   |
+| `listKnowledgeBaseSources` | Lists the files, folders and websites in the knowledge bases the agent uses, or in one of them.                                                                                                                                                                                                                                                                                                                                                |
 
 **How to tell they are being used.** Each search shows up in the chat as a `searchKnowledgeBase` tool
 call. Expand it to see the query the agent used and the passages it got back. The agent is asked to
@@ -1622,7 +1616,7 @@ cite each passage inline: every result carries a ready-made link to its file or 
 puts that link right after each sentence or bullet that uses it, so you can check every claim where
 you read it instead of in a list at the end. Click a link to open the web page, or the file with its
 default app (only files that are in one of your knowledge bases open this way). The
-**System prompt** tab shows a `<local_knowledge_bases>` block listing each knowledge base by name and
+**System prompt** tab shows a `<local_knowledge_bases>` block listing each knowledge base it uses by name and
 description, with the instruction to search them before answering questions they may cover.
 
 The same tools are available to the agent when it runs as a background task or as a sub-agent
@@ -1879,7 +1873,7 @@ For the exact configuration format, see the
 [MCP Server Configuration Guide](./mcp-server/MCP_SERVER_CONFIGURATION.md).
 
 One MCP server is built into the app: **local-knowledgebase**, which an agent gets automatically when
-it has [local knowledge bases](#24-local-knowledge-bases-letting-an-agent-search-your-documents). It
+it uses [local knowledge bases](#24-local-knowledge-bases-letting-an-agent-search-your-documents). It
 runs inside the app, needs no configuration, and appears on the MCP Servers tab as a read-only card
 marked **Built-in**.
 
@@ -2003,12 +1997,13 @@ you can also turn agents on and off there without typing. The agent you are chat
 This is the same mechanism as the `invokeAgent` tool, so an agent can also delegate on its own
 initiative if you give it that tool and mention in its system prompt when it should.
 
-The same `@` list also shows your **knowledge bases**, from every agent. Mentioning one tells the
+The same `@` list also shows your **knowledge bases**, all of them. Mentioning one tells the
 agent to search it, without handing the work to another agent
 ([Section 24.4](#244-how-the-agent-uses-a-knowledge-base)). Like agents, a mentioned knowledge base
 stays on for the rest of the chat, and while any is on the agent searches only the ones that are on.
 `disable @` and its name turns it off, and the database button next to the robot button lists them
-with the same on / off switches.
+with the same on / off switches. A knowledge base is mentioned by its name, or as `@kb/Name` when an
+agent has the same name.
 
 ---
 
@@ -2055,7 +2050,7 @@ Open **Background Agent** in the sidebar and click **Create Task**.
 | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Task Name**                   | Something you will recognize in the list.                                                                                                                                     |
 | **Schedule**                    | When to run, as a cron expression. Presets are provided.                                                                                                                      |
-| **Agent**                       | Which agent runs. It uses that agent's tools, including its MCP servers and local knowledge bases.                                                                            |
+| **Agent**                       | Which agent runs. It uses that agent's tools, including its MCP servers and the local knowledge bases it uses.                                                                |
 | **Project Directory**           | Optional. Which folder it works in.                                                                                                                                           |
 | **Model**                       | Which model it uses. Scheduled tasks are a good place to use a cheaper model.                                                                                                 |
 | **Max Output Tokens**           | The longest reply allowed.                                                                                                                                                    |
@@ -2268,13 +2263,15 @@ On a Mac:
   usage/usage.db           ← the cost ledger behind the Accounting page (every Bedrock call)
   docker-sandboxes/<project>-<id>/<chat>-<id>/  ← compose file and mapped data for a chat's container
   knowledgebases/
-    <agent id>/<kb id>.db  ← one file per local knowledge base
+    kbs/<kb id>.db         ← one file per local knowledge base
+    layout.json            ← notes the one-time move from the older per-agent folders
     .models/               ← the on-device embedding model, once downloaded
 ```
 
 On Windows the folder is `%APPDATA%\Bedrock Engineer\`, and on Linux `~/.config/Bedrock Engineer/`.
 The exact path for your machine is shown in **Settings → Workspace → Config Directory**, and the
-knowledge base folder and its total size at the top of **Settings → Knowledge Base**.
+knowledge base folder and its total size at the top of the **Settings** tab of the **Knowledge
+Bases** page.
 
 Note the folder is named after the app's display name (`Bedrock Engineer`), not
 `bedrock-engineer`. If someone gives you a support instruction referring to a `bedrock-engineer`
@@ -2390,6 +2387,8 @@ the conversation.
 - _…have one agent ask another for help?_ → [Section 12](#12-handing-work-to-another-agent-with-)
 - _…let an agent search my own documents or a website?_ → a local knowledge base,
   [Section 24](#24-local-knowledge-bases-letting-an-agent-search-your-documents)
+- _…choose which knowledge bases an agent searches?_ → **Used by** on the Knowledge Bases page, or
+  the agent editor's Knowledge Base tab, [Section 24.3](#243-the-knowledge-bases-page)
 - _…check whether the agent actually searched its knowledge base?_ →
   [Section 24.4](#244-how-the-agent-uses-a-knowledge-base)
 - _…make the assistant remember something in every chat?_ →
@@ -2657,7 +2656,8 @@ Everything else on the Sandbox tab — state, services, ports and the activity l
 
 ### The agent does not use its knowledge base, or knowledge base errors
 
-See [Section 24.9](#249-knowledge-base-troubleshooting) for the common causes: Plan mode, a model not
+See [Section 24.9](#249-knowledge-base-troubleshooting) for the common causes: the agent not using
+that knowledge base, Plan mode, a model not
 enabled in your region, an access error, the on-device model not downloaded, and websites that cannot
 be crawled.
 
@@ -2775,7 +2775,7 @@ cost to search it. Search works two ways:
 
 - **By keyword**, always. This needs nothing beyond the app.
 - **By meaning as well**, if you have downloaded the on-device model for local knowledge bases
-  (**Settings → Knowledge Base**, [Section 24](#24-local-knowledge-bases-letting-an-agent-search-your-documents)).
+  (the **Settings** tab of the **Knowledge Bases** page, [Section 24](#24-local-knowledge-bases-letting-an-agent-search-your-documents)).
   Then a question finds the right section even when it uses different words from the guide.
 
 When the app is updated, the index is replaced along with the guide. If the index ever can't be
@@ -2815,19 +2815,26 @@ enabled, or read the AWS documentation.
 
 ### 24.1 What a local knowledge base is
 
-A **local knowledge base** is a searchable library you give one agent: documents from your computer
-and pages from websites. The agent gets a search tool for it, so it can answer from _your_ material —
-a product manual, a policy folder, a documentation site — and say which file or page each answer came
+A **local knowledge base** is a searchable library of documents from your computer and pages from
+websites. An agent that uses it gets a search tool for it, so it can answer from _your_ material — a
+product manual, a policy folder, a documentation site — and say which file or page each answer came
 from, instead of answering from general knowledge.
 
 "Local" means the knowledge base is built and stored on your computer by the app itself. You do not
 need to set anything up in AWS. (Amazon Bedrock Knowledge Bases, which live in your AWS account and
 are searched with the `retrieve` tool, are a separate feature; see [Section 9.4](#94-ai-services-tools).)
 
-Each agent has its own knowledge bases, and an agent can have several — say one for the product docs
-and one for the support handbook. Knowledge bases are set up on the **Knowledge Base** tab of the agent
-editor ([24.3](#243-the-knowledge-base-tab-in-the-agent-editor)), and the app-wide choices are on
-**Settings → Knowledge Base** ([24.6](#246-the-knowledge-base-settings-tab)).
+Knowledge bases have their own page: **Knowledge Bases** in the sidebar (the database icon, above
+Settings). That is where you create them, fill them with files, folders and websites, and choose
+which agents use each one ([24.3](#243-the-knowledge-bases-page)). A knowledge base belongs to no
+agent: several agents can use the same one, and one agent can use several — say one for the product
+docs and one for the support handbook. The page's **Settings** tab holds the choices that apply to all
+of them ([24.6](#246-knowledge-base-settings)).
+
+An agent searches **only the knowledge bases it uses** — the ones ticked for it on the Knowledge
+Bases page or on the **Knowledge Base** tab of the agent editor. In a chat you can also point the
+agent at any other knowledge base with an `@` mention
+([24.4](#244-how-the-agent-uses-a-knowledge-base)).
 
 Use attachments ([Section 7](#7-attachments-giving-the-agent-your-files)) for a file you want the agent
 to read in one chat. Use a knowledge base for a body of material the agent should be able to look
@@ -2845,56 +2852,83 @@ flowchart LR
 ```
 
 1. **Adding a source.** When you add files, a folder or a website, the app reads the text out of each
-   document and splits it into **passages** of a few hundred words (the chunk size in Settings),
+   document and splits it into **passages** of a few hundred words (the chunk size in the settings),
    overlapping a little so nothing is cut in half.
 2. **Embedding.** Each passage is turned into a **vector** — a list of numbers that captures what it
    means — by an **embedding model**. That is either a model on Amazon Bedrock (Amazon Titan Text
    Embeddings V2 or Cohere Embed) or a small model that runs on your own computer
-   (multilingual-e5-small). See [24.6](#246-the-knowledge-base-settings-tab).
+   (multilingual-e5-small). See [24.6](#246-knowledge-base-settings).
 3. **Searching.** When the agent searches, its question is embedded the same way, and the app looks for
    passages close in meaning. It also runs a keyword search, so exact names, codes and error messages
    are found even when the meaning-based search misses them, and combines the two rankings. The balance
    between them is a setting.
 
 Each knowledge base is a single file on your computer:
-`<app data folder>/knowledgebases/<agent id>/<knowledge base id>.db`, where the app data folder is the
-one shown in **Settings → Workspace → Config Directory**. The on-device embedding model, once
-downloaded, is kept in `knowledgebases/.models/`.
+`<app data folder>/knowledgebases/kbs/<knowledge base id>.db`, where the app data folder is the one
+shown in **Settings → Workspace → Config Directory**. The on-device embedding model, once downloaded,
+is kept in `knowledgebases/.models/`.
 
 Files you add are **read where they are, not copied**. The knowledge base stores the passages it took
 from them; the original files are never changed. Edits to files and folders are picked up by the
-automatic re-sync (hourly by default, see [24.6](#246-the-knowledge-base-settings-tab)) or when you
-re-sync the source yourself. If you move or delete a file, its source reports it as missing at the next
-sync and keeps the passages it already has until you remove it.
+automatic re-sync (hourly by default, see [24.6](#246-knowledge-base-settings)) or when you re-sync
+the source yourself. If you move or delete a file, its source reports it as missing at the next sync
+and keeps the passages it already has until you remove it.
 
-What happens to knowledge bases when you change the agent:
+Knowledge base names are unique: creating or renaming one to a name another knowledge base already has
+(ignoring upper and lower case) is refused with "A knowledge base named … already exists". That keeps
+`@` mentions unambiguous.
 
-- **Duplicate** an agent and its knowledge bases are copied to the new agent.
-- **Delete** an agent and its knowledge bases are deleted with it. So does cancelling a new agent before
-  you first save it.
+What happens to knowledge bases when you change an agent, or the other way round:
+
+- **Duplicate** an agent and the copy uses the same knowledge bases. Nothing is copied; untick one on
+  either agent and the other keeps it.
+- **Delete** an agent and its knowledge bases stay, for the other agents that use them and for `@`
+  mentions. Cancelling a new agent before you first save it deletes nothing either.
+- **Delete** a knowledge base and every agent that used it loses it. **Rename** one and every agent
+  that uses it shows the new name.
 - **Download YAML**, **Save as File**, **Share to Organization** and **Import Agent** never include
-  knowledge bases. They stay on your computer, so whoever you share an agent with has to add their own.
-- Agents shared through a project file, and built-in agents, cannot have local knowledge bases.
-  Duplicate the agent and add them to your copy.
+  knowledge bases. They stay on your computer, so whoever you share an agent with has to build their
+  own.
+- Agents shared through a project file, and built-in agents, cannot use local knowledge bases.
+  Duplicate the agent and choose them for your copy.
 
-### 24.3 The Knowledge Base tab in the agent editor
+**Coming from an older version.** Older builds kept each knowledge base inside the agent it was made
+for. The first time this version starts, it moves them to the shared folder by itself — the files are
+moved, not rebuilt, so nothing is embedded again — and each agent keeps using the knowledge bases it
+had. Two cases get a new name so that names stay unique: a copy made by duplicating an agent (which
+used to copy its knowledge bases), and a knowledge base with the same name as another agent's. The one
+found later is kept as a separate knowledge base with ` (<agent name>)` added to its name, and that
+agent uses the renamed one. Old chats' `@` mentions keep working. If a knowledge base could not be
+moved (because another program had the file open, say), the Overview on the Settings tab says so and
+the app tries again at the next start. An older build of the app, if you go back to one, does not see
+the moved knowledge bases.
 
-Open **My Agents**, edit an agent, and choose **Knowledge Base** in the editor's side tabs (between MCP
-Servers and Tools). The tab works for a new agent too, before you save it.
+### 24.3 The Knowledge Bases page
+
+Open **Knowledge Bases** in the sidebar. The page has two tabs at the top right: **Knowledge bases**,
+described here, and **Settings** ([24.6](#246-knowledge-base-settings)).
+
+On the **Knowledge bases** tab, the list on the left shows every knowledge base with how many agents
+use it ("Used by 2 agents", or "Not attached") and its size. Click one to open its card on the right,
+with the **Used by** panel below it.
 
 **Creating a knowledge base**
 
-1. Click **New knowledge base**.
+1. Click **New knowledge base** above the list.
 2. Enter a **Name** (for example "Product docs") and a **Description** of what it contains. The
    description matters: the agent sees it and uses it to decide when to search this knowledge base.
-3. Click **Create**. The form shows which embedding model it will use — the one chosen in Settings at
-   that moment. A knowledge base keeps that model for good, unless you rebuild it.
+3. Click **Create**. The form shows which embedding model it will use — the one chosen on the Settings
+   tab at that moment. A knowledge base keeps that model for good, unless you rebuild it.
 
-Each knowledge base is a card. Its header shows the name, a health badge, the description and the
-embedding model; collapsed, it also shows the number of passages and its size. The pencil button
-**renames** it (name and description), and the red trash button **deletes** it after asking. Deleting
-removes only the knowledge base's indexed content from your computer; the original files, folders and websites
-are not touched.
+The new knowledge base is selected, ready for sources. Nobody uses it yet: tick agents under **Used
+by**, or pick it in an agent's editor.
+
+**The card**
+
+The card's header shows the name, a health badge, the description and the embedding model. The pencil
+button **renames** it (name and description), and the red trash button **deletes** it after asking.
+Deleting removes only the knowledge base's indexed content from your computer, and takes it away from
+every agent that used it; the original files, folders and websites are not touched.
 
 **Adding files**
 
@@ -2929,11 +2963,11 @@ embedding tokens.
 Type the start address into the website box (for example `https://docs.example.com/guide/`), adjust
 the options if you want, and click **Add website**:
 
-| Option                   | What it does                                                                                                           |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| **Link depth**           | How many links away from the start page the crawler goes (0–10). 0 is just the start page. Default from Settings: 2.   |
-| **Max pages**            | The most pages it will add from this site (1–1,000). Default from Settings: 50.                                        |
-| **Stay under this path** | On by default. Only follow links below the start address's folder — so starting at `/guide/` keeps it out of `/blog/`. |
+| Option                   | What it does                                                                                                             |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| **Link depth**           | How many links away from the start page the crawler goes (0–10). 0 is just the start page. Default from the settings: 2. |
+| **Max pages**            | The most pages it will add from this site (1–1,000). Default from the settings: 50.                                      |
+| **Stay under this path** | On by default. Only follow links below the start address's folder — so starting at `/guide/` keeps it out of `/blog/`.   |
 
 How the crawler behaves is in [24.5](#245-how-the-website-crawler-behaves).
 
@@ -2968,7 +3002,7 @@ the next time.
 Once a knowledge base has passages, **Try a search** lets you type a question ("Ask something the
 documents answer") and see exactly what the agent would get back: each passage with its title, section,
 source and score. Use it to check that a document went in properly and that your question finds it.
-These test searches do not count towards the agent's search statistics.
+These test searches do not count towards the agents' search statistics.
 
 **The statistics tiles**
 
@@ -2976,11 +3010,12 @@ These test searches do not count towards the agent's search statistics.
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Passages**                | How many passages it holds, from how many documents, files, folders and websites.                                                                                                                               |
 | **Storage**                 | The size of the file on disk, with a meter of how much of it is free space that **Optimize** would give back (or **Compact** if there is none to speak of). The meter turns to a warning colour at 20% or more. |
-| **Agent searches, 30 days** | How many times the agent searched it over the last 30 days, with a small per-day chart (hover over a day for its count), and when it was last used — or "Not used by the agent yet".                            |
+| **Agent searches, 30 days** | How many times agents searched it over the last 30 days, with a small per-day chart (hover over a day for its count), and when it was last used — or "Not used by the agent yet".                               |
 | **Typical search time**     | The median time to embed the question and search, over the last 30 days, and the time 95% of searches came in under.                                                                                            |
 
-A knowledge base the agent never searches is worth a look: the description may not tell the agent what
-it is for, or the agent may not have been asked anything it covers.
+A knowledge base no agent ever searches is worth a look: no agent may be using it (see **Used by**),
+the description may not tell the agent what it is for, or the agent may not have been asked anything
+it covers.
 
 **The health badge and the Maintenance panel**
 
@@ -2991,23 +3026,38 @@ last optimized and how long its last update took, lists anything that needs atte
 
 **Rebuilding with a different embedding model**
 
-If you change the embedding model in Settings, existing knowledge bases keep the model they were built
+If you change the embedding model on the Settings tab, existing knowledge bases keep the model they were built
 with — searches have to use the same model the passages were embedded with. The card then says "Built
 with … ; Settings now use …" and offers **Rebuild**, which re-embeds every passage with the new model.
 The passages themselves are kept as they are (a new chunk size is not applied), so a rebuild does not
 need the original files. It can take a while and, with a Bedrock model, costs embedding tokens.
 
+**Choosing which agents use it**
+
+The **Used by** panel under the card has a checkbox for each of your own agents. A ticked agent
+searches this knowledge base in every chat. Changes are saved right away.
+
+The same choice is on the agent's side: open **My Agents**, edit an agent, and choose **Knowledge
+Base** in the editor's side tabs (between MCP Servers and Tools). It lists every knowledge base with a
+checkbox, its description, passages and size. Tick the ones this agent should use; the choice is saved
+with the rest of the agent when you click **Save**. Knowledge bases are not created or filled there:
+**Manage knowledge bases** opens this page (save the agent first, or its unsaved changes are lost).
+Agents shared through a project file show a notice instead, since they cannot use local knowledge
+bases.
+
 ### 24.4 How the agent uses a knowledge base
 
-As soon as an agent has a knowledge base, it gets the built-in **local-knowledgebase** MCP server and
+As soon as an agent uses a knowledge base, it gets the built-in **local-knowledgebase** MCP server and
 its three tools — `searchKnowledgeBase`, `listKnowledgeBases` and `listKnowledgeBaseSources`
-([Section 9.10](#910-local-knowledge-base-tools)). You do not have to tick anything. You can see them:
+([Section 9.10](#910-local-knowledge-base-tools)). You do not have to tick anything on the Tools tab.
+The tools see only the knowledge bases the agent uses; ticking or unticking one takes effect from the
+next search, without restarting anything. You can see them:
 
 - on the agent editor's **MCP Servers** tab, as a read-only **Built-in** card with **Test connection**;
 - on its **Tools** tab, in the MCP category with the agent's other MCP tools.
 
 The app also adds a `<local_knowledge_bases>` block to the agent's system prompt, listing each
-knowledge base by name and description and telling the agent to search them before answering
+knowledge base it uses by name and description and telling the agent to search them before answering
 questions they may cover, and to cite each passage inline, right after the fact it supports. Every
 search result is tagged with its source: the document title and section, the file path or page URL,
 the knowledge base it came from, its position in the document and a ready-made **Cite as** link the
@@ -3029,14 +3079,14 @@ Tips for good results:
   not in **Plan mode**, where MCP tools are off (an `@` mention still works there, see below).
 
 **Pointing the agent at a knowledge base with `@`.** Type `@` in the message box: below the agents,
-the list shows **Knowledge bases**, those of the agent you are talking to first, then every other
-agent's, with the owning agent's name on the right. Pick one (or type its name after the `@`) and,
-for the rest of the chat, the agent searches only the knowledge bases you mentioned, even ones that
-belong to another agent or when the current agent has none of its own. Mention several to search them
-together. Write `disable @` and the name to turn one off again, or use the database button above the
-message box, which lists them with an on / off switch each; with none on, the agent is back to its
-own knowledge bases. When two knowledge bases share a name, or a knowledge base has an agent's name, the other
-agent's one is written `@Agent name/Knowledge base name`.
+the list shows **Knowledge bases** — every one on the Knowledge Bases page, those the agent you are
+talking to uses first, marked **Used by this agent**. Pick one (or type `@` and its name) and, for the
+rest of the chat, the agent searches only the knowledge bases you mentioned, including ones it does not
+use and when it uses none at all. Mention several to search them together. Write `disable @` and the
+name to turn one off again, or use the database button above the message box, which lists them with
+an on / off switch each; with none on, the agent is back to the knowledge bases it uses. When an agent
+has the same name as a knowledge base, the knowledge base is written `@kb/Name`. Mentions in chats
+from older versions keep working.
 
 ### 24.5 How the website crawler behaves
 
@@ -3048,8 +3098,8 @@ to the sites it visits:
   redirects off the site is skipped.
 - It follows links **breadth first** up to the link depth, and stops at the page limit.
 - It **honours robots.txt**. If the site's robots.txt does not allow the start page, the crawl stops
-  with "robots.txt does not allow crawling this URL". This can be turned off in Settings, for sites you
-  run yourself.
+  with "robots.txt does not allow crawling this URL". This can be turned off on the Settings tab, for sites
+  you run yourself.
 - It **reads sitemap.xml** (or the sitemaps robots.txt names) to find pages that links alone would miss.
 - It **waits between requests** — 500 ms by default, or longer if the site's robots.txt asks for a
   crawl delay (up to 10 seconds).
@@ -3067,30 +3117,36 @@ cannot be fetched, the whole crawl fails.
 Websites change, so **re-sync** them now and then: unlike files and folders, they are never re-synced
 automatically. A website not synced for 30 days is flagged in the health checks.
 
-### 24.6 The Knowledge Base settings tab
+### 24.6 Knowledge base settings
 
-**Settings → Knowledge Base** has four sections.
+The **Settings** tab of the **Knowledge Bases** page has five sections. (These used to be a Knowledge
+Base tab in Settings; old links to it open this page.)
 
 **Overview**
 
 The top line says how much space knowledge bases take and where they are stored. Then:
 
-- **Tiles** with the totals: how many knowledge bases, for how many agents; passages and documents;
-  storage, with how much could be reclaimed; and agent searches over 30 days, with a typical search
-  time and a per-day chart.
-- A **table** with one row per knowledge base: its name, agent (or "Agent deleted") and embedding
-  model; passages and sources; storage; agent searches over 30 days; search time (median and 95%);
-  when it was last used; and its health (hover for the issues). Each row has an **Optimize** and a
-  **Delete** button.
-- **Refresh**, **Optimize all** (optimizes them one after another) and, when there are any, **Delete
-  orphaned knowledge bases** — knowledge bases left behind by an agent that no longer exists. A line
-  above the table says how many knowledge bases need attention.
+- **Tiles** with the totals: how many knowledge bases, used by how many agents; passages and
+  documents; storage, with how much could be reclaimed; and agent searches over 30 days, with a
+  typical search time and a per-day chart.
+- A **table** with one row per knowledge base: its name, the agents using it ("Attached to …", or
+  "Not attached") and embedding model; passages and sources; storage; agent searches over 30 days;
+  search time (median and 95%); when it was last used; and its health (hover for the issues). Each row
+  has an **Optimize** and a **Delete** button.
+- **Refresh** and **Optimize all** (optimizes them one after another). A line above the table says how
+  many knowledge bases need attention.
+- If knowledge bases from an older version could not be moved yet
+  ([24.2](#242-how-it-works)), a warning names their old folders; the app tries again at the next
+  start.
+
+A knowledge base no agent uses is not a problem: it stays searchable with an `@` mention, and you can
+attach it whenever you like.
 
 **Embedding model**
 
 The model that turns text into vectors. New knowledge bases use the model chosen here; existing ones
 keep the model they were built with until you rebuild them
-([24.3](#243-the-knowledge-base-tab-in-the-agent-editor)).
+([24.3](#243-the-knowledge-bases-page)).
 
 | Provider                     | Model                                             | Notes                                                                                                                                        |
 | ---------------------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -3144,17 +3200,17 @@ Defaults for new website sources ([24.5](#245-how-the-website-crawler-behaves)):
 ### 24.7 Health checks and maintenance
 
 The app checks each knowledge base and shows the result as its health badge, in the Maintenance panel
-and in the Settings overview:
+and in the overview on the Settings tab:
 
-| Check                          | Badge               | What it means and what to do                                                                                                                                       |
-| ------------------------------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Sources failed to sync         | **Problem**         | One or more sources ended in an error. Read the error on the source, then **Re-sync** or **Remove** it.                                                            |
-| Local model missing            | **Problem**         | The knowledge base was built with the on-device model, which is not downloaded (or was deleted). Searches fail until you download it in Settings → Knowledge Base. |
-| Websites not synced in 30 days | **Needs attention** | The site may have changed since. **Re-sync** it.                                                                                                                   |
-| Different embedding model      | **Suggestion**      | Settings now name a different model than the one it was built with. It still works; **Rebuild** if you want to switch.                                             |
-| Free space in the file         | **Suggestion**      | At least 1 MB, and 20% or more of the file, is free space left by removed or updated passages. **Optimize** gives it back.                                         |
+| Check                          | Badge               | What it means and what to do                                                                                                                              |
+| ------------------------------ | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sources failed to sync         | **Problem**         | One or more sources ended in an error. Read the error on the source, then **Re-sync** or **Remove** it.                                                   |
+| Local model missing            | **Problem**         | The knowledge base was built with the on-device model, which is not downloaded (or was deleted). Searches fail until you download it on the Settings tab. |
+| Websites not synced in 30 days | **Needs attention** | The site may have changed since. **Re-sync** it.                                                                                                          |
+| Different embedding model      | **Suggestion**      | Settings now name a different model than the one it was built with. It still works; **Rebuild** if you want to switch.                                    |
+| Free space in the file         | **Suggestion**      | At least 1 MB, and 20% or more of the file, is free space left by removed or updated passages. **Optimize** gives it back.                                |
 
-**Optimize** (on the card, per row in Settings, or **Optimize all**) tidies the keyword index, checks the
+**Optimize** (on the card, per row in the overview, or **Optimize all**) tidies the keyword index, checks the
 file for errors, and compacts the file to give free space back. It reports the size before and after,
 or that the integrity check failed — in which case remove and re-add the sources, or delete and
 recreate the knowledge base. It waits for any job already running on that knowledge base.
@@ -3204,7 +3260,7 @@ model. Changing the model only affects new knowledge bases; **Rebuild** existing
 **"AWS authentication failed. Please check your credentials."** — the same credential problems as for
 chat; see [Section 22](#22-troubleshooting).
 
-**"The local embedding model is not downloaded yet"** — download it in **Settings → Knowledge Base**,
+**"The local embedding model is not downloaded yet"** — download it on the **Settings** tab of the **Knowledge Bases** page,
 or switch the provider to Amazon Bedrock. A knowledge base built with the on-device model needs it for
 every search, so its health badge shows **Problem** until it is back.
 
@@ -3221,14 +3277,21 @@ that is not connected. Reconnect the drive and **Re-sync**, or remove the source
 from its new place.
 
 **Edits to a file don't show up in answers yet** — automatic re-sync checks every hour by default.
-**Re-sync** the source to pick them up now, or shorten the interval in **Settings → Knowledge Base →
-Automatic re-sync**. Websites are never re-synced automatically.
+**Re-sync** the source to pick them up now, or shorten the interval under **Automatic re-sync** on the
+Knowledge Bases page's **Settings** tab. Websites are never re-synced automatically.
 
-**The agent answers without searching** — check that you are in **Act** mode (the knowledge base tools
+**The agent answers without searching** — check that the agent uses the knowledge base (its
+**Knowledge Base** tab, or **Used by** on the Knowledge Bases page), that you are in **Act** mode (the knowledge base tools
 are off in Plan mode), that the knowledge base has passages and a description that matches the
 question, and the `<local_knowledge_bases>` block on the **System prompt** tab. Telling the agent in
-its system prompt to search first helps. **Try a search** on the Knowledge Base tab shows whether the
+its system prompt to search first helps. **Try a search** on the knowledge base's card shows whether the
 question finds anything at all.
+
+**"This agent has no knowledge bases attached."** — the agent called a knowledge base tool but uses
+none. Tick knowledge bases for it ([24.3](#243-the-knowledge-bases-page)), or `@` mention one.
+
+**"A knowledge base named … already exists"** — names are unique (upper and lower case count as the
+same). Pick another name.
 
 **Searches return the wrong passages** — try a lower **Semantic vs. keyword weight** for exact terms,
 more **Results per search**, or a smaller chunk size (for new knowledge bases).

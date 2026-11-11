@@ -32,9 +32,9 @@ import {
   relativeTime
 } from '@renderer/components/KnowledgeBase/KbStatsWidgets'
 import { NumberInput } from '@renderer/components/KnowledgeBase/NumberInput'
-import { jobKey, useLocalKnowledgeBases } from './useLocalKnowledgeBases'
+import { jobKey, useKnowledgeBases } from '../useKnowledgeBases'
 
-type Kb = ReturnType<typeof useLocalKnowledgeBases>
+type Kb = ReturnType<typeof useKnowledgeBases>
 
 const buttonClass =
   'inline-flex items-center gap-1 text-xs px-2 py-1 rounded-control border border-subtle text-ink hover:bg-raised disabled:opacity-50'
@@ -43,7 +43,7 @@ const accentButtonClass =
 const inputClass =
   'bg-surface border border-strong text-ink text-sm rounded-control focus:ring-accent focus:border-accent block w-full px-2 py-1.5'
 
-/** Enter in an input inside the agent form must not submit the form. */
+/** Enter in an input must not submit an enclosing form. */
 const noSubmit = (onEnter?: () => void) => (e: React.KeyboardEvent) => {
   if (e.key === 'Enter') {
     e.preventDefault()
@@ -411,9 +411,11 @@ export const KnowledgeBaseCard: React.FC<{
   actions: Kb
   currentSpec: EmbeddingSpec
   crawlerDefaults: KnowledgeSettings['crawler']
-}> = ({ kb, sources, jobs, actions, currentSpec, crawlerDefaults }) => {
+  /** Start expanded. */
+  defaultOpen?: boolean
+}> = ({ kb, sources, jobs, actions, currentSpec, crawlerDefaults, defaultOpen }) => {
   const { t } = useTranslation()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(!!defaultOpen)
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(kb.name)
   const [description, setDescription] = useState(kb.description)
@@ -422,10 +424,10 @@ export const KnowledgeBaseCard: React.FC<{
   const [stats, setStats] = useState<KbStats | null>(null)
   const reloadStats = useCallback(() => {
     window.api.knowledge
-      .stats(kb.agentId, kb.id)
+      .stats(kb.id)
       .then(setStats)
       .catch(() => setStats(null))
-  }, [kb.agentId, kb.id])
+  }, [kb.id])
   // Counts and size change whenever the knowledgebase does.
   useEffect(reloadStats, [reloadStats, kb.bytes, kb.chunkCount, kb.sourceCount, sources])
 
@@ -462,8 +464,9 @@ export const KnowledgeBaseCard: React.FC<{
                   className={accentButtonClass}
                   disabled={!name.trim()}
                   onClick={async () => {
-                    await actions.update(kb.id, name, description)
-                    setEditing(false)
+                    // Stays open on an error (another knowledgebase has the name, say).
+                    if (await actions.update(kb.id, name.trim(), description.trim()))
+                      setEditing(false)
                   }}
                 >
                   {t('knowledgeBase.save')}
@@ -546,7 +549,11 @@ export const KnowledgeBaseCard: React.FC<{
               type="button"
               className={buttonClass}
               title={t('knowledgeBase.rename')}
-              onClick={() => setEditing(true)}
+              onClick={() => {
+                setName(kb.name)
+                setDescription(kb.description)
+                setEditing(true)
+              }}
             >
               <FiEdit2 className="w-3 h-3" />
             </button>

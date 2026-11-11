@@ -1,53 +1,23 @@
-import React, { useCallback, useState } from 'react'
+import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { FiDatabase, FiPlus } from 'react-icons/fi'
+import { Link } from 'react-router'
+import { FiDatabase, FiExternalLink } from 'react-icons/fi'
 import type { LocalKnowledgeBaseRef } from '@/types/agent-chat'
-import useSetting from '@renderer/hooks/useSetting'
-import {
-  currentEmbeddingSpec,
-  embeddingLabel,
-  useKnowledgeSettings
-} from '@renderer/components/KnowledgeBase/knowledgeSettings'
-import { KnowledgeBaseCard } from './KnowledgeBaseCard'
-import { useLocalKnowledgeBases } from './useLocalKnowledgeBases'
-
-const inputClass =
-  'bg-surface border border-strong text-ink text-sm rounded-control focus:ring-accent focus:border-accent block w-full px-2 py-1.5'
+import { useKnowledgeBaseList } from '@renderer/contexts/KnowledgeBasesContext'
+import { setKnowledgeRef } from '@renderer/contexts/knowledgeRefs'
+import { formatBytes } from '@renderer/components/KnowledgeBase/knowledgeSettings'
 
 /**
- * The agent form's Knowledge Base tab: the agent's local knowledgebases, their sources and a
- * search tester. Changes happen right away (they are files on disk, not form state); the agent's
- * `localKnowledgeBases` list follows them, in the form and, for a saved agent, in the store.
+ * The agent form's Knowledge Base tab: which of the local knowledgebases (managed on the
+ * Knowledge Bases page) this agent uses. The choice is form state, saved with the agent.
  */
 export const LocalKnowledgeBaseSection: React.FC<{
-  agentId: string
   isShared?: boolean
   value?: LocalKnowledgeBaseRef[]
   onChange: (refs: LocalKnowledgeBaseRef[]) => void
-}> = ({ agentId, isShared, value, onChange }) => {
+}> = ({ isShared, value, onChange }) => {
   const { t } = useTranslation()
-  const { customAgents, saveCustomAgents } = useSetting()
-  const [settings] = useKnowledgeSettings()
-  const spec = currentEmbeddingSpec(settings)
-
-  // A saved agent gets the new list right away, so the chat sees new knowledgebases without
-  // the form being saved (and a cancelled edit doesn't leave a stale list).
-  const handleRefs = useCallback(
-    (refs: LocalKnowledgeBaseRef[]) => {
-      onChange(refs)
-      if (customAgents.some((a) => a.id === agentId)) {
-        saveCustomAgents(
-          customAgents.map((a) => (a.id === agentId ? { ...a, localKnowledgeBases: refs } : a))
-        )
-      }
-    },
-    [agentId, customAgents, onChange, saveCustomAgents]
-  )
-
-  const kb = useLocalKnowledgeBases(agentId, value, handleRefs)
-  const [creating, setCreating] = useState(false)
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
+  const { knowledgeBases, loading } = useKnowledgeBaseList()
 
   if (isShared) {
     return (
@@ -57,21 +27,7 @@ export const LocalKnowledgeBaseSection: React.FC<{
     )
   }
 
-  const create = async () => {
-    if (!name.trim()) return
-    const created = await kb.create(name.trim(), description.trim())
-    if (created) {
-      setCreating(false)
-      setName('')
-      setDescription('')
-    }
-  }
-  const onEnter = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      create()
-    }
-  }
+  const attached = new Set((value ?? []).map((ref) => ref.id))
 
   return (
     <div className="space-y-3">
@@ -81,87 +37,52 @@ export const LocalKnowledgeBaseSection: React.FC<{
             <FiDatabase className="w-4 h-4" />
             {t('knowledgeBase.title')}
           </h3>
-          <p className="text-xs text-ink-muted mt-0.5">{t('knowledgeBase.description')}</p>
+          <p className="text-xs text-ink-muted mt-0.5">{t('knowledgeBase.pickerDescription')}</p>
         </div>
-        {!creating && (
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-control border border-accent bg-accent-tint hover:bg-accent-tint-strong text-accent whitespace-nowrap"
-            onClick={() => setCreating(true)}
-          >
-            <FiPlus className="w-3 h-3" />
-            {t('knowledgeBase.create')}
-          </button>
-        )}
+        <Link
+          to="/knowledge-bases"
+          className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-control border border-subtle text-ink hover:bg-raised whitespace-nowrap"
+          title={t('knowledgeBase.manageHint')}
+        >
+          <FiExternalLink className="w-3 h-3" />
+          {t('knowledgeBase.manage')}
+        </Link>
       </div>
 
-      {creating && (
-        <div className="border border-accent rounded-container p-2.5 space-y-2 bg-surface">
-          <h4 className="text-sm font-medium text-ink">{t('knowledgeBase.createTitle')}</h4>
-          <label className="block text-xs text-ink">
-            {t('knowledgeBase.name')}
-            <input
-              className={`${inputClass} mt-0.5`}
-              placeholder={t('knowledgeBase.namePlaceholder')}
-              value={name}
-              autoFocus
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={onEnter}
-            />
-          </label>
-          <label className="block text-xs text-ink">
-            {t('knowledgeBase.descriptionLabel')}
-            <input
-              className={`${inputClass} mt-0.5`}
-              placeholder={t('knowledgeBase.descriptionPlaceholder')}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              onKeyDown={onEnter}
-            />
-          </label>
-          <p className="text-xs text-ink-muted">
-            {t('knowledgeBase.embeddingModel', { model: embeddingLabel(spec) })}.{' '}
-            {t('knowledgeBase.embeddingFromSettings')}
-          </p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className="text-xs px-2 py-1 rounded-control border border-accent bg-accent-tint hover:bg-accent-tint-strong text-accent disabled:opacity-50"
-              disabled={!name.trim()}
-              onClick={create}
-            >
-              {t('knowledgeBase.createButton')}
-            </button>
-            <button
-              type="button"
-              className="text-xs px-2 py-1 rounded-control border border-subtle text-ink hover:bg-raised"
-              onClick={() => setCreating(false)}
-            >
-              {t('knowledgeBase.cancel')}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {!kb.loading && kb.kbs.length === 0 && !creating && (
+      {!loading && knowledgeBases.length === 0 && (
         <div className="text-center p-2.5 border border-subtle rounded-control">
-          <p className="text-sm text-ink-muted">{t('knowledgeBase.empty')}</p>
+          <p className="text-sm text-ink-muted">{t('knowledgeBase.pickerEmpty')}</p>
         </div>
       )}
 
-      <div className="space-y-3">
-        {kb.kbs.map((info) => (
-          <KnowledgeBaseCard
-            key={info.id}
-            kb={info}
-            sources={kb.sources[info.id] ?? []}
-            jobs={kb.jobs}
-            actions={kb}
-            currentSpec={spec}
-            crawlerDefaults={settings.crawler}
-          />
-        ))}
-      </div>
+      {knowledgeBases.length > 0 && (
+        <ul className="border border-subtle rounded-container divide-y divide-subtle">
+          {knowledgeBases.map((kb) => {
+            const inputId = `agent-kb-${kb.id}`
+            return (
+              <li key={kb.id} className="flex items-start gap-2 px-3 py-2">
+                <input
+                  type="checkbox"
+                  id={inputId}
+                  checked={attached.has(kb.id)}
+                  onChange={(e) => onChange(setKnowledgeRef(value, kb, e.target.checked))}
+                  className="mt-0.5 h-4 w-4 rounded-control border-strong text-accent focus:ring-accent"
+                />
+                <label htmlFor={inputId} className="flex-1 min-w-0 cursor-pointer">
+                  <span className="block text-sm text-ink truncate">{kb.name}</span>
+                  {kb.description && (
+                    <span className="block text-xs text-ink-muted">{kb.description}</span>
+                  )}
+                  <span className="block text-xs text-ink-muted">
+                    {t('knowledgeBase.passages', { count: kb.chunkCount })} ·{' '}
+                    {formatBytes(kb.bytes)}
+                  </span>
+                </label>
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </div>
   )
 }

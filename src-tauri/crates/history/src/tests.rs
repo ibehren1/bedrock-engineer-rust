@@ -293,16 +293,22 @@ fn set_mention_grants_persists_the_grants() {
     let m = ChatSessionManager::new(d.path()).unwrap();
     let grants = MentionGrants {
         agent_ids: vec!["writer".into()],
-        knowledge_bases: vec![KnowledgeBaseGrant {
-            agent_id: "writer".into(),
-            kb_id: "kb1".into(),
-        }],
+        knowledge_bases: vec![
+            KnowledgeBaseGrant {
+                kb_id: "kb1".into(),
+                agent_id: None,
+            },
+            KnowledgeBaseGrant {
+                kb_id: "kb_old".into(),
+                agent_id: Some("writer".into()),
+            },
+        ],
     };
     m.set_mention_grants(NO_PROMPT, &grants);
     let s = m.get_session(NO_PROMPT).unwrap();
     assert_eq!(
         s["mentionGrants"],
-        json!({ "agentIds": ["writer"], "knowledgeBases": [{ "agentId": "writer", "kbId": "kb1" }] })
+        json!({ "agentIds": ["writer"], "knowledgeBases": [{ "kbId": "kb1" }, { "kbId": "kb_old", "agentId": "writer" }] })
     );
     assert_eq!(s["updatedAt"], 1790000100000_i64);
     let reopened = ChatSessionManager::new(d.path()).unwrap();
@@ -312,6 +318,17 @@ fn set_mention_grants_persists_the_grants() {
     );
     m.set_mention_grants("nope", &grants);
     assert!(!d.path().join(SESSIONS_DIR).join("nope.json").exists());
+}
+
+#[test]
+fn knowledge_base_grants_read_with_and_without_agent() {
+    let g: MentionGrants = serde_json::from_value(json!({
+        "knowledgeBases": [{ "kbId": "a" }, { "agentId": "x", "kbId": "b" }]
+    }))
+    .unwrap();
+    assert_eq!(g.knowledge_bases[0].agent_id, None);
+    assert_eq!(g.knowledge_bases[1].agent_id.as_deref(), Some("x"));
+    assert!(g.agent_ids.is_empty());
 }
 
 #[test]

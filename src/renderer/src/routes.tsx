@@ -1,5 +1,5 @@
 import { IconType } from 'react-icons'
-import { FiHome, FiFeather, FiSettings, FiDollarSign } from 'react-icons/fi'
+import { FiHome, FiFeather, FiSettings, FiDollarSign, FiDatabase } from 'react-icons/fi'
 import { LuCombine, LuBookDown, LuBrain } from 'react-icons/lu'
 import { HiOutlineChatAlt2 } from 'react-icons/hi'
 import { BsLayoutWtf } from 'react-icons/bs'
@@ -15,6 +15,7 @@ import { AgentDirectoryPage } from './pages/AgentDirectoryPage/AgentDirectoryPag
 import { MyAgentsPage } from './pages/MyAgentsPage/MyAgentsPage'
 import { MemoryPage } from './pages/MemoryPage/MemoryPage'
 import { AccountingPage } from './pages/AccountingPage/AccountingPage'
+import { KnowledgeBasesPage } from './pages/KnowledgeBasesPage/KnowledgeBasesPage'
 import { HelpPage } from './pages/HelpPage/HelpPage'
 import BackgroundAgentPage from './pages/BackgroundAgentPage/BackgroundAgentPage'
 import TaskExecutionHistoryPage from './pages/BackgroundAgentPage/TaskExecutionHistoryPage'
@@ -99,6 +100,13 @@ export const routes: AppRoute[] = [
     icon: FiDollarSign,
     position: 'top',
     element: <AccountingPage />
+  },
+  {
+    name: 'Knowledge Bases',
+    href: '/knowledge-bases',
+    icon: FiDatabase,
+    position: 'top',
+    element: <KnowledgeBasesPage />
   },
   {
     name: 'Settings',

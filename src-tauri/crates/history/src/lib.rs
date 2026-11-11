@@ -38,12 +38,15 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-/// A knowledge base the user turned on for a chat, by owning agent and id.
+/// A knowledge base the user turned on for a chat, by id. Grants saved before knowledge bases
+/// were shared also name the agent that owned it (kept so the knowledge base service can find
+/// one whose id changed when it moved).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KnowledgeBaseGrant {
-    pub agent_id: String,
     pub kb_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_id: Option<String>,
 }
 
 /// The agents and knowledge bases a chat may use, kept as the session's `mentionGrants`.

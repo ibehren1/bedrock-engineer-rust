@@ -74,11 +74,8 @@ export const useAgentCrud = () => {
         return
       }
 
+      // Its local knowledgebases stay: they belong to no agent, and others may use them.
       saveCustomAgents(customAgents.filter((a) => a.id !== id))
-      // Its local knowledgebases go with it (a no-op for an agent without any).
-      window.api.knowledge
-        .deleteAgent(id)
-        .catch((error) => console.error('Failed to delete knowledge bases of agent:', error))
     },
     [customAgents, hideDefaultAgent, saveCustomAgents]
   )
@@ -93,21 +90,7 @@ export const useAgentCrud = () => {
         // 共有プロパティを削除（複製されたエージェントは通常のカスタムエージェントとして扱う）
         isShared: undefined,
         organizationId: undefined
-      }
-      // The copy gets its own copies of the local knowledgebases.
-      if (agent.localKnowledgeBases?.length) {
-        try {
-          const copies = await window.api.knowledge.copyAgent(agent.id, newAgent.id)
-          newAgent.localKnowledgeBases = copies.map(({ id, name, description }) => ({
-            id,
-            name,
-            description
-          }))
-        } catch (error) {
-          console.error('Failed to copy knowledge bases:', error)
-          toast.error(String(error instanceof Error ? error.message : error))
-          newAgent.localKnowledgeBases = undefined
-        }
+        // localKnowledgeBases is copied as is: the copy uses the same knowledgebases.
       }
       saveCustomAgents([...customAgents, newAgent])
     },

@@ -1,7 +1,9 @@
 //! The knowledgebase service behind the `knowledge_*` commands and the built-in MCP server.
 //!
-//! Layout: `<root>/<agentId>/<kbId>.db`, one SQLite file per knowledgebase (see [`crate::store`]);
-//! the on-device model lives in `<root>/.models` (a name no agent id can have).
+//! Layout: `<root>/kbs/<kbId>.db`, one SQLite file per knowledgebase (see [`crate::store`] and
+//! [`crate::layout`]), shared by every agent that attaches it; the on-device model lives in
+//! `<root>/.models`. Agents attach knowledgebases by id (`localKnowledgeBases` on the agent), and
+//! the service asks the host which ids an agent has ([`KnowledgeHost::attached_kbs`]).
 //!
 //! Ingestion runs as background jobs, one at a time per knowledgebase (a per-knowledgebase
 //! lock), each with its own cancellation token. Progress goes out as `knowledge:progress`
@@ -60,9 +62,11 @@ pub trait KnowledgeHost: Send + Sync {
     /// HTTP client for crawling (with the app's proxy).
     fn http_client(&self) -> reqwest::Client;
     fn emit(&self, event: &str, payload: Value);
+    /// Ids of the knowledgebases the agent attaches (its `localKnowledgeBases`).
+    fn attached_kbs(&self, agent_id: &str) -> Vec<String>;
 }
 
-type Key = (String, String);
+type Key = String;
 
 struct ActiveJob {
     info: JobInfo,
@@ -98,7 +102,7 @@ fn now() -> String {
     chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
 }
 
-fn new_id(prefix: &str) -> String {
+pub(crate) fn new_id(prefix: &str) -> String {
     format!(
         "{prefix}_{}",
         &uuid::Uuid::new_v4().simple().to_string()[..12]
@@ -188,12 +192,13 @@ impl KnowledgeService {
         self.host.settings()
     }
 
-    fn agent_dir(&self, agent_id: &str) -> PathBuf {
-        self.root.join(agent_id)
+    fn kb_path(&self, kb_id: &str) -> PathBuf {
+        crate::layout::kb_file(&self.root, kb_id)
     }
 
-    fn kb_path(&self, agent_id: &str, kb_id: &str) -> PathBuf {
-        self.agent_dir(agent_id).join(format!("{kb_id}.db"))
+    /// Ids of the knowledgebases an agent attaches.
+    pub fn attached(&self, agent_id: &str) -> Vec<String> {
+        self.host.attached_kbs(agent_id)
     }
 
     fn emit_progress(&self, info: &JobInfo) {
@@ -203,59 +208,40 @@ impl KnowledgeService {
         );
     }
 
-    fn emit_changed(&self, agent_id: &str, kb_id: &str) {
-        self.host
-            .emit(CHANGED_EVENT, json!({ "agentId": agent_id, "kbId": kb_id }));
+    fn emit_changed(&self, kb_id: &str) {
+        self.host.emit(CHANGED_EVENT, json!({ "kbId": kb_id }));
     }
 
-    fn kb_lock(&self, agent_id: &str, kb_id: &str) -> Arc<tokio::sync::Mutex<()>> {
-        lock(&self.locks)
-            .entry((agent_id.into(), kb_id.into()))
-            .or_default()
-            .clone()
+    fn kb_lock(&self, kb_id: &str) -> Arc<tokio::sync::Mutex<()>> {
+        lock(&self.locks).entry(kb_id.into()).or_default().clone()
     }
 
     /// The open store for a knowledgebase (opened on first use).
-    fn store(&self, agent_id: &str, kb_id: &str) -> Result<Arc<KbStore>, String> {
-        validate_id("agent", agent_id)?;
+    fn store(&self, kb_id: &str) -> Result<Arc<KbStore>, String> {
         validate_id("knowledge base", kb_id)?;
-        let key = (agent_id.to_string(), kb_id.to_string());
+        let key = kb_id.to_string();
         if let Some(s) = lock(&self.handles).get(&key) {
             return Ok(s.clone());
         }
-        let s = Arc::new(KbStore::open(&self.kb_path(agent_id, kb_id))?);
+        let s = Arc::new(KbStore::open(&self.kb_path(kb_id))?);
         Ok(lock(&self.handles).entry(key).or_insert(s).clone())
     }
 
-    fn close(&self, agent_id: &str, kb_id: &str) {
-        lock(&self.handles).remove(&(agent_id.to_string(), kb_id.to_string()));
+    fn close(&self, kb_id: &str) {
+        lock(&self.handles).remove(kb_id);
     }
 
-    fn kb_ids(&self, agent_id: &str) -> Result<Vec<String>, String> {
-        validate_id("agent", agent_id)?;
-        let dir = self.agent_dir(agent_id);
-        let Ok(rd) = std::fs::read_dir(&dir) else {
-            return Ok(Vec::new());
-        };
-        let mut ids: Vec<String> = rd
-            .flatten()
-            .filter_map(|e| {
-                let name = e.file_name().to_string_lossy().into_owned();
-                let id = name.strip_suffix(".db")?.to_string();
-                common::json_file::is_safe_file_id(&id).then_some(id)
-            })
-            .collect();
-        ids.sort();
-        Ok(ids)
+    /// Every knowledgebase id in `kbs/`, sorted.
+    pub fn kb_ids(&self) -> Vec<String> {
+        crate::layout::db_ids(&crate::layout::kbs_dir(&self.root))
     }
 
-    fn info(&self, agent_id: &str, kb_id: &str) -> Result<KbInfo, String> {
-        let s = self.store(agent_id, kb_id)?;
+    fn info(&self, kb_id: &str) -> Result<KbInfo, String> {
+        let s = self.store(kb_id)?;
         let meta = s.meta()?;
         let counts = s.counts()?;
         Ok(KbInfo {
             id: kb_id.into(),
-            agent_id: agent_id.into(),
             name: meta.name,
             description: meta.description,
             embedding: meta.embedding,
@@ -271,14 +257,14 @@ impl KnowledgeService {
 
     // ---- knowledgebases ----
 
-    /// The agent's knowledgebases, oldest first. Unreadable files are skipped (logged).
-    pub fn list(&self, agent_id: &str) -> Result<Vec<KbInfo>, String> {
+    /// Every knowledgebase, oldest first. Unreadable files are skipped (logged).
+    pub fn list(&self) -> Result<Vec<KbInfo>, String> {
         let mut out = Vec::new();
-        for id in self.kb_ids(agent_id)? {
-            match self.info(agent_id, &id) {
+        for id in self.kb_ids() {
+            match self.info(&id) {
                 Ok(i) => out.push(i),
                 Err(e) => {
-                    tracing::warn!(agent_id, kb_id = %id, error = %e, "Skipping unreadable knowledge base")
+                    tracing::warn!(kb_id = %id, error = %e, "Skipping unreadable knowledge base")
                 }
             }
         }
@@ -287,23 +273,23 @@ impl KnowledgeService {
     }
 
     /// Create a knowledgebase with the current global embedding and chunking settings.
-    pub fn create(&self, agent_id: &str, name: &str, description: &str) -> Result<KbInfo, String> {
-        validate_id("agent", agent_id)?;
+    pub fn create(&self, name: &str, description: &str) -> Result<KbInfo, String> {
         let name = name.trim();
         if name.is_empty() {
             return Err("Knowledge base name is required".into());
         }
+        self.check_name_free(name, None)?;
         let settings = self.host.settings();
         let spec = settings.embedding.spec();
         if spec.provider == Provider::Local && !crate::local::is_installed(&self.models_dir()) {
             return Err(
-                "The local embedding model is not downloaded yet. Download it in Settings > Knowledge Base, or switch to Bedrock embeddings."
+                "The local embedding model is not downloaded yet. Download it in the settings on the Knowledge Bases page, or switch to Bedrock embeddings."
                     .into(),
             );
         }
         let kb_id = new_id("kb");
         KbStore::create(
-            &self.kb_path(agent_id, &kb_id),
+            &self.kb_path(&kb_id),
             &KbMeta {
                 name: name.into(),
                 description: description.trim().into(),
@@ -313,25 +299,34 @@ impl KnowledgeService {
                 created_at: now(),
             },
         )?;
-        self.emit_changed(agent_id, &kb_id);
-        self.info(agent_id, &kb_id)
+        self.emit_changed(&kb_id);
+        self.info(&kb_id)
     }
 
-    pub fn update(
-        &self,
-        agent_id: &str,
-        kb_id: &str,
-        name: &str,
-        description: &str,
-    ) -> Result<KbInfo, String> {
+    pub fn update(&self, kb_id: &str, name: &str, description: &str) -> Result<KbInfo, String> {
         let name = name.trim();
         if name.is_empty() {
             return Err("Knowledge base name is required".into());
         }
-        self.store(agent_id, kb_id)?
-            .set_name(name, description.trim())?;
-        self.emit_changed(agent_id, kb_id);
-        self.info(agent_id, kb_id)
+        self.store(kb_id)?;
+        self.check_name_free(name, Some(kb_id))?;
+        self.store(kb_id)?.set_name(name, description.trim())?;
+        self.emit_changed(kb_id);
+        self.info(kb_id)
+    }
+
+    /// Names are unique (case-insensitive), so `@mentions` and the model can pick a
+    /// knowledgebase by name.
+    fn check_name_free(&self, name: &str, except: Option<&str>) -> Result<(), String> {
+        let taken = self
+            .list()?
+            .iter()
+            .any(|k| Some(k.id.as_str()) != except && k.name.trim().eq_ignore_ascii_case(name));
+        if taken {
+            Err(format!("A knowledge base named \"{name}\" already exists"))
+        } else {
+            Ok(())
+        }
     }
 
     fn cancel_where(&self, f: impl Fn(&JobInfo) -> bool) {
@@ -343,72 +338,32 @@ impl KnowledgeService {
     }
 
     /// Delete a knowledgebase. Running jobs are cancelled first.
-    pub async fn delete(&self, agent_id: &str, kb_id: &str) -> Result<(), String> {
-        validate_id("agent", agent_id)?;
+    pub async fn delete(&self, kb_id: &str) -> Result<(), String> {
         validate_id("knowledge base", kb_id)?;
-        self.cancel_where(|j| j.agent_id == agent_id && j.kb_id == kb_id);
-        let kb_lock = self.kb_lock(agent_id, kb_id);
+        self.cancel_where(|j| j.kb_id == kb_id);
+        let kb_lock = self.kb_lock(kb_id);
         let _guard = kb_lock.lock().await;
-        self.close(agent_id, kb_id);
-        for f in db_files(&self.kb_path(agent_id, kb_id)) {
+        self.close(kb_id);
+        for f in db_files(&self.kb_path(kb_id)) {
             match std::fs::remove_file(&f) {
                 Ok(()) => {}
                 Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
                 Err(e) => return Err(format!("Cannot delete {}: {e}", f.display())),
             }
         }
-        let dir = self.agent_dir(agent_id);
-        if std::fs::read_dir(&dir).is_ok_and(|mut d| d.next().is_none()) {
-            let _ = std::fs::remove_dir(&dir);
-        }
-        self.emit_changed(agent_id, kb_id);
+        self.emit_changed(kb_id);
         Ok(())
-    }
-
-    /// Delete every knowledgebase of an agent (agent deleted, or a new agent discarded).
-    pub async fn delete_agent(&self, agent_id: &str) -> Result<(), String> {
-        for kb in self.kb_ids(agent_id)? {
-            self.delete(agent_id, &kb).await?;
-        }
-        let dir = self.agent_dir(agent_id);
-        if dir.exists() {
-            std::fs::remove_dir_all(&dir)
-                .map_err(|e| format!("Cannot delete {}: {e}", dir.display()))?;
-        }
-        Ok(())
-    }
-
-    /// Copy an agent's knowledgebases to another agent (agent duplicated). Ids are kept.
-    pub async fn copy_agent(&self, from: &str, to: &str) -> Result<Vec<KbInfo>, String> {
-        validate_id("agent", to)?;
-        if from == to {
-            return Err("Source and target agent are the same".into());
-        }
-        for kb in self.kb_ids(from)? {
-            let dest = self.kb_path(to, &kb);
-            if dest.exists() {
-                return Err(format!(
-                    "Knowledge base {kb} already exists for the target agent"
-                ));
-            }
-            let s = self.store(from, &kb)?;
-            blocking(move || s.copy_to(&dest)).await?;
-        }
-        for kb in self.kb_ids(to)? {
-            self.emit_changed(to, &kb);
-        }
-        self.list(to)
     }
 
     // ---- sources ----
 
     /// Sources with their status. A source left queued or processing by an earlier run of
     /// the app (no job for it now) shows as interrupted.
-    pub fn list_sources(&self, agent_id: &str, kb_id: &str) -> Result<Vec<SourceInfo>, String> {
-        let mut sources = self.store(agent_id, kb_id)?.list_sources()?;
+    pub fn list_sources(&self, kb_id: &str) -> Result<Vec<SourceInfo>, String> {
+        let mut sources = self.store(kb_id)?.list_sources()?;
         let active: HashSet<String> = lock(&self.jobs)
             .values()
-            .filter(|j| j.info.agent_id == agent_id && j.info.kb_id == kb_id)
+            .filter(|j| j.info.kb_id == kb_id)
             .filter_map(|j| j.info.source_id.clone())
             .collect();
         for s in &mut sources {
@@ -426,11 +381,10 @@ impl KnowledgeService {
     /// one is unusable.
     pub fn add_files(
         self: &Arc<Self>,
-        agent_id: &str,
         kb_id: &str,
         paths: &[String],
     ) -> Result<Vec<SourceInfo>, String> {
-        let store = self.store(agent_id, kb_id)?;
+        let store = self.store(kb_id)?;
         let existing: HashSet<String> = store.list_sources()?.into_iter().map(|s| s.uri).collect();
         let mut files = Vec::new();
         for p in paths {
@@ -458,12 +412,12 @@ impl KnowledgeService {
         for (uri, title) in files {
             let id = new_id("src");
             store.add_source(&id, SourceKind::File, &uri, &title, None, &now())?;
-            self.spawn(agent_id, kb_id, JobKind::Source(id.clone()));
+            self.spawn(kb_id, JobKind::Source(id.clone()));
             if let Some(s) = store.source(&id)? {
                 out.push(s);
             }
         }
-        self.emit_changed(agent_id, kb_id);
+        self.emit_changed(kb_id);
         Ok(out)
     }
 
@@ -473,12 +427,11 @@ impl KnowledgeService {
     /// returned when it declines. The walk runs here, so call it from a blocking thread.
     pub fn add_folder(
         self: &Arc<Self>,
-        agent_id: &str,
         kb_id: &str,
         path: &str,
         confirm: impl FnOnce(usize) -> bool,
     ) -> Result<Option<SourceInfo>, String> {
-        let store = self.store(agent_id, kb_id)?;
+        let store = self.store(kb_id)?;
         let dir = PathBuf::from(path);
         if !dir.is_absolute() {
             return Err(format!("Not an absolute path: {path}"));
@@ -503,8 +456,8 @@ impl KnowledgeService {
             .unwrap_or_else(|| uri.clone());
         let id = new_id("src");
         store.add_source(&id, SourceKind::Folder, &uri, &title, None, &now())?;
-        self.spawn(agent_id, kb_id, JobKind::Source(id.clone()));
-        self.emit_changed(agent_id, kb_id);
+        self.spawn(kb_id, JobKind::Source(id.clone()));
+        self.emit_changed(kb_id);
         store
             .source(&id)?
             .map(Some)
@@ -514,12 +467,11 @@ impl KnowledgeService {
     /// Add a website and queue its crawl.
     pub fn add_url(
         self: &Arc<Self>,
-        agent_id: &str,
         kb_id: &str,
         url: &str,
         options: UrlOptions,
     ) -> Result<SourceInfo, String> {
-        let store = self.store(agent_id, kb_id)?;
+        let store = self.store(kb_id)?;
         let parsed = url::Url::parse(url.trim()).map_err(|e| format!("Invalid URL: {e}"))?;
         if !matches!(parsed.scheme(), "http" | "https") || parsed.host_str().is_none() {
             return Err("Only http and https URLs can be crawled".into());
@@ -538,92 +490,80 @@ impl KnowledgeService {
             Some(&options.clamped()),
             &now(),
         )?;
-        self.spawn(agent_id, kb_id, JobKind::Source(id.clone()));
-        self.emit_changed(agent_id, kb_id);
+        self.spawn(kb_id, JobKind::Source(id.clone()));
+        self.emit_changed(kb_id);
         store.source(&id)?.ok_or_else(|| "Source not found".into())
     }
 
     /// Re-ingest a source (unchanged documents are skipped). Returns the job id; a source
     /// that is already being processed keeps its current job.
-    pub fn resync_source(
-        self: &Arc<Self>,
-        agent_id: &str,
-        kb_id: &str,
-        source_id: &str,
-    ) -> Result<String, String> {
-        let store = self.store(agent_id, kb_id)?;
+    pub fn resync_source(self: &Arc<Self>, kb_id: &str, source_id: &str) -> Result<String, String> {
+        let store = self.store(kb_id)?;
         if store.source(source_id)?.is_none() {
             return Err("Source not found".into());
         }
-        if let Some(job) = lock(&self.jobs).values().find(|j| {
-            j.info.agent_id == agent_id
-                && j.info.kb_id == kb_id
-                && j.info.source_id.as_deref() == Some(source_id)
-        }) {
+        if let Some(job) = lock(&self.jobs)
+            .values()
+            .find(|j| j.info.kb_id == kb_id && j.info.source_id.as_deref() == Some(source_id))
+        {
             return Ok(job.info.job_id.clone());
         }
         store.set_source_status(source_id, SourceStatus::Queued, None)?;
-        let id = self.spawn(agent_id, kb_id, JobKind::Source(source_id.into()));
-        self.emit_changed(agent_id, kb_id);
+        let id = self.spawn(kb_id, JobKind::Source(source_id.into()));
+        self.emit_changed(kb_id);
         Ok(id)
     }
 
     /// Change a website source's crawl options; they apply from its next sync.
     pub fn update_source_options(
         &self,
-        agent_id: &str,
         kb_id: &str,
         source_id: &str,
         options: UrlOptions,
     ) -> Result<SourceInfo, String> {
-        let store = self.store(agent_id, kb_id)?;
+        let store = self.store(kb_id)?;
         store.set_source_options(source_id, &options.clamped())?;
-        self.emit_changed(agent_id, kb_id);
+        self.emit_changed(kb_id);
         store
             .source(source_id)?
             .ok_or_else(|| "Source not found".into())
     }
 
     /// Remove a source and its indexed content (cancelling its job).
-    pub async fn remove_source(
-        &self,
-        agent_id: &str,
-        kb_id: &str,
-        source_id: &str,
-    ) -> Result<(), String> {
-        let store = self.store(agent_id, kb_id)?;
-        self.cancel_where(|j| {
-            j.agent_id == agent_id && j.kb_id == kb_id && j.source_id.as_deref() == Some(source_id)
-        });
-        let kb_lock = self.kb_lock(agent_id, kb_id);
+    pub async fn remove_source(&self, kb_id: &str, source_id: &str) -> Result<(), String> {
+        let store = self.store(kb_id)?;
+        self.cancel_where(|j| j.kb_id == kb_id && j.source_id.as_deref() == Some(source_id));
+        let kb_lock = self.kb_lock(kb_id);
         let _guard = kb_lock.lock().await;
         let id = source_id.to_string();
         blocking(move || store.remove_source(&id)).await?;
-        self.emit_changed(agent_id, kb_id);
+        self.emit_changed(kb_id);
         Ok(())
     }
 
     /// Re-embed every chunk with the current global embedding model.
-    pub fn rebuild(self: &Arc<Self>, agent_id: &str, kb_id: &str) -> Result<String, String> {
-        self.store(agent_id, kb_id)?;
+    pub fn rebuild(self: &Arc<Self>, kb_id: &str) -> Result<String, String> {
+        self.store(kb_id)?;
         let spec = self.host.settings().embedding.spec();
         if spec.provider == Provider::Local && !crate::local::is_installed(&self.models_dir()) {
             return Err("The local embedding model is not downloaded yet.".into());
         }
-        if lock(&self.jobs).values().any(|j| {
-            j.info.agent_id == agent_id && j.info.kb_id == kb_id && j.info.source_id.is_none()
-        }) {
+        if lock(&self.jobs)
+            .values()
+            .any(|j| j.info.kb_id == kb_id && j.info.source_id.is_none())
+        {
             return Err("A rebuild is already running".into());
         }
-        Ok(self.spawn(agent_id, kb_id, JobKind::Rebuild(spec)))
+        Ok(self.spawn(kb_id, JobKind::Rebuild(spec)))
     }
 
     // ---- jobs ----
 
-    pub fn jobs(&self, agent_id: Option<&str>) -> Vec<JobInfo> {
+    /// Running and queued jobs, optionally of one knowledgebase.
+    pub fn jobs(&self, kb_id: Option<&str>) -> Vec<JobInfo> {
         let mut v: Vec<JobInfo> = lock(&self.jobs)
             .values()
-            .filter(|j| agent_id.is_none_or(|a| j.info.agent_id == a))
+            .filter(|j| kb_id.is_none_or(|k| j.info.kb_id == k))
             .map(|j| j.info.clone())
             .collect();
         v.sort_by(|a, b| a.job_id.cmp(&b.job_id));
@@ -683,20 +623,16 @@ impl KnowledgeService {
     /// Queue a re-sync of every file and folder source whose files changed; returns how many.
     pub fn auto_sync_pass(self: &Arc<Self>) -> usize {
         let mut queued = 0;
-        for agent in self.agent_ids() {
-            for kb in self.kb_ids(&agent).unwrap_or_default() {
-                let Ok(store) = self.store(&agent, &kb) else {
+        for kb in self.kb_ids() {
+            let Ok(store) = self.store(&kb) else {
+                continue;
+            };
+            for src in store.list_sources().unwrap_or_default() {
+                if matches!(src.status, SourceStatus::Queued | SourceStatus::Processing) {
                     continue;
-                };
-                for src in store.list_sources().unwrap_or_default() {
-                    if matches!(src.status, SourceStatus::Queued | SourceStatus::Processing) {
-                        continue;
-                    }
-                    if self.source_changed(&store, &src)
-                        && self.resync_source(&agent, &kb, &src.id).is_ok()
-                    {
-                        queued += 1;
-                    }
+                }
+                if self.source_changed(&store, &src) && self.resync_source(&kb, &src.id).is_ok() {
+                    queued += 1;
                 }
             }
         }
@@ -733,30 +669,11 @@ impl KnowledgeService {
         current != known
     }
 
-    /// Agent folders under the root (not the user guide's index).
-    fn agent_ids(&self) -> Vec<String> {
-        let Ok(rd) = std::fs::read_dir(&self.root) else {
-            return Vec::new();
-        };
-        let mut agents: Vec<String> = rd
-            .flatten()
-            .filter(|e| e.path().is_dir())
-            .map(|e| e.file_name().to_string_lossy().into_owned())
-            .filter(|n| common::json_file::is_safe_file_id(n))
-            // The user guide's index belongs to the app (restored from the bundle), not to
-            // the user: never listed, never purged.
-            .filter(|n| n != crate::help::HELP_OWNER)
-            .collect();
-        agents.sort();
-        agents
-    }
-
-    fn spawn(self: &Arc<Self>, agent_id: &str, kb_id: &str, kind: JobKind) -> String {
+    fn spawn(self: &Arc<Self>, kb_id: &str, kind: JobKind) -> String {
         let job_id = new_id("job");
         let token = CancellationToken::new();
         let info = JobInfo {
             job_id: job_id.clone(),
-            agent_id: agent_id.into(),
             kb_id: kb_id.into(),
             source_id: match &kind {
                 JobKind::Source(s) => Some(s.clone()),
@@ -780,20 +697,16 @@ impl KnowledgeService {
             job_id: job_id.clone(),
             token,
         };
-        let (agent, kb) = (agent_id.to_string(), kb_id.to_string());
+        let kb = kb_id.to_string();
         self.runtime.spawn(async move {
-            reporter
-                .svc
-                .clone()
-                .run_job(reporter, agent, kb, kind)
-                .await;
+            reporter.svc.clone().run_job(reporter, kb, kind).await;
         });
         job_id
     }
 
-    async fn run_job(self: Arc<Self>, rep: Reporter, agent: String, kb: String, kind: JobKind) {
+    async fn run_job(self: Arc<Self>, rep: Reporter, kb: String, kind: JobKind) {
         let started = std::time::Instant::now();
-        let kb_lock = self.kb_lock(&agent, &kb);
+        let kb_lock = self.kb_lock(&kb);
         let guard = tokio::select! {
             g = kb_lock.lock() => Some(g),
             _ = rep.token.cancelled() => None,
@@ -805,7 +718,7 @@ impl KnowledgeService {
         let ran = guard.is_some();
         let result = match guard {
             None => Err(CANCELLED.to_string()),
-            Some(_) => match self.store(&agent, &kb) {
+            Some(_) => match self.store(&kb) {
                 Err(e) => Err(e),
                 Ok(store) => match &kind {
                     JobKind::Source(src) => self.run_source(&rep, &store, src).await,
@@ -814,7 +727,7 @@ impl KnowledgeService {
             },
         };
         // The source may be gone (removed while queued); status updates are best effort.
-        let store = self.store(&agent, &kb).ok();
+        let store = self.store(&kb).ok();
         match &result {
             Ok(msg) => {
                 if let (Some(store), Some(src)) = (&store, &source_id) {
@@ -830,7 +743,7 @@ impl KnowledgeService {
                 rep.update(JobPhase::Cancelled, 0, 0, CANCELLED);
             }
             Err(e) => {
-                tracing::warn!(agent_id = %agent, kb_id = %kb, error = %e, "Knowledge base job failed");
+                tracing::warn!(kb_id = %kb, error = %e, "Knowledge base job failed");
                 if let (Some(store), Some(src)) = (&store, &source_id) {
                     let _ = store.set_source_status(src, SourceStatus::Error, Some(e));
                 }
@@ -842,7 +755,7 @@ impl KnowledgeService {
                 .await;
         }
         lock(&self.jobs).remove(&rep.job_id);
-        self.emit_changed(&agent, &kb);
+        self.emit_changed(&kb);
     }
 
     /// Log the job, fold the WAL back in, and optimize when enough space is free.
@@ -1123,10 +1036,11 @@ impl KnowledgeService {
 
     // ---- search ----
 
-    /// Search an agent's knowledgebases. `kb` narrows to one, by id or (case-insensitive) name.
+    /// Search the knowledgebases in `scope` (ids). `kb` narrows to one, by id or
+    /// (case-insensitive) name.
     pub async fn search(
         &self,
-        agent_id: &str,
+        scope: &[String],
         kb: Option<&str>,
         query: &str,
         top_k: Option<usize>,
@@ -1135,48 +1049,63 @@ impl KnowledgeService {
         if query.trim().is_empty() {
             return Err("Query is empty".into());
         }
-        let mut kbs = self.list(agent_id)?;
+        let kbs = self.select(scope, kb)?;
         if kbs.is_empty() {
-            return Err("This agent has no knowledge bases".into());
+            return Err("There are no knowledge bases to search".into());
         }
+        self.search_targets(kbs, query, top_k, origin).await
+    }
+
+    /// The knowledgebases in `scope` (ids) that exist, oldest first. `kb` narrows to one, by
+    /// id or (case-insensitive) name.
+    pub fn select(&self, scope: &[String], kb: Option<&str>) -> Result<Vec<KbInfo>, String> {
+        let mut kbs = self.list()?;
+        kbs.retain(|k| scope.contains(&k.id));
         if let Some(sel) = kb.map(str::trim).filter(|s| !s.is_empty()) {
             kbs.retain(|k| k.id == sel || k.name.eq_ignore_ascii_case(sel));
             if kbs.is_empty() {
                 return Err(format!("No knowledge base named \"{sel}\""));
             }
         }
-        let targets = kbs.into_iter().map(|k| (agent_id.to_string(), k)).collect();
-        self.search_targets(targets, query, top_k, origin).await
+        Ok(kbs)
     }
 
-    /// The granted knowledgebases that still exist, with their agent ids. `kb` narrows to the
-    /// ones with that id or (case-insensitive) name; naming one outside the grants is an error
-    /// that lists the allowed names.
-    pub fn granted(
-        &self,
-        grants: &[KbGrant],
-        kb: Option<&str>,
-    ) -> Result<Vec<(String, KbInfo)>, String> {
-        let mut out: Vec<(String, KbInfo)> = Vec::new();
+    /// The knowledgebase a grant names. Grants saved before knowledgebases were shared carry
+    /// the old owner agent; one whose id changed in the move maps to its new id.
+    fn grant_kb_id(g: &KbGrant, renamed: &[(String, String, String)]) -> String {
+        g.agent_id
+            .as_deref()
+            .and_then(|a| {
+                renamed
+                    .iter()
+                    .find(|(agent, old, _)| agent == a && old == &g.kb_id)
+                    .map(|(_, _, new)| new.clone())
+            })
+            .unwrap_or_else(|| g.kb_id.clone())
+    }
+
+    /// The granted knowledgebases that still exist. `kb` narrows to the ones with that id or
+    /// (case-insensitive) name; naming one outside the grants is an error that lists the
+    /// allowed names.
+    pub fn granted(&self, grants: &[KbGrant], kb: Option<&str>) -> Result<Vec<KbInfo>, String> {
+        let renamed = crate::layout::renamed(&self.root);
+        let all = self.list().unwrap_or_default();
+        let mut out: Vec<KbInfo> = Vec::new();
         for g in grants {
-            if out.iter().any(|(a, k)| a == &g.agent_id && k.id == g.kb_id) {
+            let id = Self::grant_kb_id(g, &renamed);
+            if out.iter().any(|k| k.id == id) {
                 continue;
             }
-            if let Some(info) = self
-                .list(&g.agent_id)
-                .unwrap_or_default()
-                .into_iter()
-                .find(|k| k.id == g.kb_id)
-            {
-                out.push((g.agent_id.clone(), info));
+            if let Some(info) = all.iter().find(|k| k.id == id) {
+                out.push(info.clone());
             }
         }
         if out.is_empty() {
             return Err("The knowledge bases mentioned in this message no longer exist".into());
         }
         if let Some(sel) = kb.map(str::trim).filter(|s| !s.is_empty()) {
-            let names: Vec<String> = out.iter().map(|(_, k)| format!("\"{}\"", k.name)).collect();
-            out.retain(|(_, k)| k.id == sel || k.name.eq_ignore_ascii_case(sel));
+            let names: Vec<String> = out.iter().map(|k| format!("\"{}\"", k.name)).collect();
+            out.retain(|k| k.id == sel || k.name.eq_ignore_ascii_case(sel));
             if out.is_empty() {
                 return Err(format!(
                     "\"{sel}\" is not one of the knowledge bases mentioned in this message. Use one of: {}",
@@ -1203,21 +1132,17 @@ impl KnowledgeService {
         self.search_targets(targets, query, top_k, origin).await
     }
 
-    /// Whether `uri` is a document or source in any agent's knowledgebase.
+    /// Whether `uri` is a document or source in any knowledgebase.
     pub fn is_known_uri(&self, uri: &str) -> bool {
-        self.agent_ids().iter().any(|agent| {
-            self.kb_ids(agent).unwrap_or_default().iter().any(|kb| {
-                self.store(agent, kb)
-                    .and_then(|s| s.has_uri(uri))
-                    .unwrap_or(false)
-            })
-        })
+        self.kb_ids()
+            .iter()
+            .any(|kb| self.store(kb).and_then(|s| s.has_uri(uri)).unwrap_or(false))
     }
 
-    /// Hybrid search over `(agent id, knowledgebase)` targets, best `top_k` overall.
+    /// Hybrid search over the given knowledgebases, best `top_k` overall.
     async fn search_targets(
         &self,
-        targets: Vec<(String, KbInfo)>,
+        targets: Vec<KbInfo>,
         query: &str,
         top_k: Option<usize>,
         origin: SearchOrigin,
@@ -1228,7 +1153,7 @@ impl KnowledgeService {
         // One query embedding per distinct model.
         let mut query_vectors: HashMap<EmbeddingSpec, Vec<f32>> = HashMap::new();
         let mut hits = Vec::new();
-        for (agent_id, info) in targets {
+        for info in targets {
             if info.chunk_count == 0 {
                 continue;
             }
@@ -1249,7 +1174,7 @@ impl KnowledgeService {
                     v
                 }
             };
-            let store = self.store(&agent_id, &info.id)?;
+            let store = self.store(&info.id)?;
             let (q, weight) = (query.to_string(), settings.hybrid_weight);
             let found = blocking(move || {
                 let found = hybrid_search(&store, &qv, &q, top_k, weight)?;
@@ -1279,50 +1204,53 @@ impl KnowledgeService {
 
     // ---- storage ----
 
-    /// Every knowledgebase on disk; `known_agents` are the ids in `customAgents`.
-    pub fn storage_overview(&self, known_agents: &HashSet<String>) -> StorageOverview {
+    /// Every knowledgebase on disk; `attachments` maps knowledgebase ids to the agents that
+    /// attach them.
+    pub fn storage_overview(&self, attachments: &HashMap<String, Vec<String>>) -> StorageOverview {
         let mut entries = Vec::new();
-        for agent in self.agent_ids() {
-            for kb in self.kb_ids(&agent).unwrap_or_default() {
-                let path = self.kb_path(&agent, &kb);
-                let stats = self.stats(&agent, &kb).ok();
-                let (name, sources, chunks, embedding) = match &stats {
-                    Some(st) => (
-                        st.info.name.clone(),
-                        st.info.source_count,
-                        st.info.chunk_count,
-                        Some(st.info.embedding.clone()),
-                    ),
-                    None => (kb.clone(), 0, 0, None),
-                };
-                entries.push(StorageEntry {
-                    orphan: !known_agents.contains(&agent),
-                    agent_id: agent.clone(),
-                    kb_id: kb,
-                    name,
-                    bytes: db_size(&path),
-                    source_count: sources,
-                    chunk_count: chunks,
-                    embedding,
-                    stats,
-                });
-            }
+        for kb in self.kb_ids() {
+            let path = self.kb_path(&kb);
+            let stats = self.stats(&kb).ok();
+            let (name, sources, chunks, embedding) = match &stats {
+                Some(st) => (
+                    st.info.name.clone(),
+                    st.info.source_count,
+                    st.info.chunk_count,
+                    Some(st.info.embedding.clone()),
+                ),
+                None => (kb.clone(), 0, 0, None),
+            };
+            entries.push(StorageEntry {
+                attached_to: attachments.get(&kb).cloned().unwrap_or_default(),
+                kb_id: kb,
+                name,
+                bytes: db_size(&path),
+                source_count: sources,
+                chunk_count: chunks,
+                embedding,
+                stats,
+            });
         }
+        let legacy_leftovers = crate::layout::legacy_folders(&self.root)
+            .into_iter()
+            .map(|f| self.root.join(f).to_string_lossy().into_owned())
+            .collect();
         StorageOverview {
             root: self.root.to_string_lossy().into_owned(),
             total_bytes: entries.iter().map(|e| e.bytes).sum(),
             knowledge_bases: entries,
+            legacy_leftovers,
         }
     }
 
     // ---- usage, health and maintenance ----
 
     /// Usage over the last [`USAGE_DAYS`] days and health checks for one knowledgebase.
-    pub fn stats(&self, agent_id: &str, kb_id: &str) -> Result<KbStats, String> {
-        let info = self.info(agent_id, kb_id)?;
-        let store = self.store(agent_id, kb_id)?;
+    pub fn stats(&self, kb_id: &str) -> Result<KbStats, String> {
+        let info = self.info(kb_id)?;
+        let store = self.store(kb_id)?;
         let usage = store.usage(now_ms(), USAGE_DAYS)?;
-        let sources = self.list_sources(agent_id, kb_id)?;
+        let sources = self.list_sources(kb_id)?;
         let (page, pages, free) = store.pages()?;
         let reclaimable = page * free;
         let wal_bytes = db_files(store.path())
@@ -1389,9 +1317,9 @@ impl KnowledgeService {
     }
 
     /// Compact and check a knowledgebase (waits for its running job).
-    pub async fn optimize(&self, agent_id: &str, kb_id: &str) -> Result<OptimizeResult, String> {
-        let store = self.store(agent_id, kb_id)?;
-        let kb_lock = self.kb_lock(agent_id, kb_id);
+    pub async fn optimize(&self, kb_id: &str) -> Result<OptimizeResult, String> {
+        let store = self.store(kb_id)?;
+        let kb_lock = self.kb_lock(kb_id);
         let _guard = kb_lock.lock().await;
         let started = std::time::Instant::now();
         let s = store.clone();
@@ -1416,25 +1344,8 @@ impl KnowledgeService {
         };
         let s = store.clone();
         blocking(move || s.log_job(&entry)).await?;
-        self.emit_changed(agent_id, kb_id);
+        self.emit_changed(kb_id);
         Ok(result)
-    }
-
-    /// Delete the knowledgebases of agents that no longer exist. Returns how many.
-    pub async fn purge_orphans(&self, known_agents: &HashSet<String>) -> Result<usize, String> {
-        let orphans: HashSet<String> = self
-            .storage_overview(known_agents)
-            .knowledge_bases
-            .into_iter()
-            .filter(|e| e.orphan)
-            .map(|e| e.agent_id)
-            .collect();
-        let mut n = 0;
-        for agent in orphans {
-            n += self.kb_ids(&agent)?.len();
-            self.delete_agent(&agent).await?;
-        }
-        Ok(n)
     }
 }
 
@@ -1553,6 +1464,8 @@ mod tests {
     pub struct TestHost {
         pub settings: Mutex<KnowledgeSettings>,
         pub events: Mutex<Vec<(String, Value)>>,
+        /// Agent id -> attached knowledgebase ids.
+        pub attached: Mutex<HashMap<String, Vec<String>>>,
     }
 
     impl KnowledgeHost for TestHost {
@@ -1565,6 +1478,12 @@ mod tests {
         fn emit(&self, event: &str, payload: Value) {
             lock(&self.events).push((event.into(), payload));
         }
+        fn attached_kbs(&self, agent_id: &str) -> Vec<String> {
+            lock(&self.attached)
+                .get(agent_id)
+                .cloned()
+                .unwrap_or_default()
+        }
     }
 
     fn service(dir: &Path) -> (Arc<KnowledgeService>, Arc<TestHost>) {
@@ -1576,6 +1495,7 @@ mod tests {
         let host = Arc::new(TestHost {
             settings: Mutex::new(settings),
             events: Mutex::new(Vec::new()),
+            attached: Mutex::new(HashMap::new()),
         });
         let svc = KnowledgeService::new(
             dir.join("knowledgebases"),
@@ -1600,43 +1520,34 @@ mod tests {
     async fn granted_search_spans_agents_and_stays_inside_the_grants() {
         let dir = tempfile::tempdir().unwrap();
         let (svc, _) = service(dir.path());
-        let mine = svc.create("agent1", "Manuals", "").unwrap();
-        let theirs = svc.create("agent2", "Recipes", "").unwrap();
-        let hidden = svc.create("agent2", "Secrets", "").unwrap();
-        for (agent, kb, name, text) in [
-            (
-                "agent1",
-                &mine.id,
-                "m.md",
-                "Press the red button to launch rockets.",
-            ),
-            (
-                "agent2",
-                &theirs.id,
-                "r.md",
-                "Bake the red velvet cake for an hour.",
-            ),
-            ("agent2", &hidden.id, "s.md", "The red key opens the vault."),
+        let mine = svc.create("Manuals", "").unwrap();
+        let theirs = svc.create("Recipes", "").unwrap();
+        let hidden = svc.create("Secrets", "").unwrap();
+        for (kb, name, text) in [
+            (&mine.id, "m.md", "Press the red button to launch rockets."),
+            (&theirs.id, "r.md", "Bake the red velvet cake for an hour."),
+            (&hidden.id, "s.md", "The red key opens the vault."),
         ] {
             let f = dir.path().join(name);
             std::fs::write(&f, text).unwrap();
-            svc.add_files(agent, kb, &[f.to_string_lossy().into_owned()])
+            svc.add_files(kb, &[f.to_string_lossy().into_owned()])
                 .unwrap();
         }
         wait_idle(&svc).await;
 
+        // A current grant (no agent) and a legacy one (with its old owner).
         let grants = [
             KbGrant {
-                agent_id: "agent1".into(),
                 kb_id: mine.id.clone(),
+                agent_id: None,
             },
             KbGrant {
-                agent_id: "agent2".into(),
                 kb_id: theirs.id.clone(),
+                agent_id: Some("agent2".into()),
             },
             KbGrant {
-                agent_id: "agent2".into(),
                 kb_id: "kb_gone".into(),
+                agent_id: None,
             },
         ];
         let hits = svc
@@ -1662,6 +1573,34 @@ mod tests {
         assert!(err.contains("\"Manuals\", \"Recipes\""), "{err}");
         assert!(svc.granted(&grants[2..], None).is_err());
 
+        // A legacy grant for a knowledgebase whose id changed in the layout migration.
+        let root = dir.path().join("knowledgebases");
+        let journal = serde_json::json!({
+            "version": 1, "state": "done", "refs": {},
+            "moves": [{ "folder": "agent9", "oldId": "kb_old", "newId": hidden.id,
+                        "name": "Secrets", "description": "" }]
+        });
+        std::fs::write(root.join(crate::layout::JOURNAL_FILE), journal.to_string()).unwrap();
+        let legacy = [KbGrant {
+            kb_id: "kb_old".into(),
+            agent_id: Some("agent9".into()),
+        }];
+        let found = svc.granted(&legacy, None).unwrap();
+        assert_eq!(found[0].id, hidden.id);
+        // Another agent's grant for the same old id is not remapped.
+        let other = [KbGrant {
+            kb_id: "kb_old".into(),
+            agent_id: Some("agent1".into()),
+        }];
+        assert!(svc.granted(&other, None).is_err());
+        // Wire shape: agentId only when present.
+        assert_eq!(
+            serde_json::to_value(&grants[0]).unwrap(),
+            json!({ "kbId": mine.id })
+        );
+        let parsed: KbGrant = serde_json::from_value(json!({ "kbId": "k" })).unwrap();
+        assert_eq!(parsed.agent_id, None);
+
         // Only indexed documents count as known sources.
         let doc = dir.path().join("r.md").to_string_lossy().into_owned();
         assert!(svc.is_known_uri(&doc));
@@ -1672,11 +1611,23 @@ mod tests {
     async fn file_lifecycle() {
         let dir = tempfile::tempdir().unwrap();
         let (svc, host) = service(dir.path());
-        assert!(svc.create("../x", "n", "").is_err());
-        assert!(svc.create("agent1", " ", "").is_err());
-        let kb = svc.create("agent1", "Manuals", "product manuals").unwrap();
+        assert!(svc.create(" ", "").is_err());
+        let kb = svc.create("Manuals", "product manuals").unwrap();
         assert_eq!(kb.embedding.dimensions, 256);
-        assert_eq!(svc.list("agent1").unwrap().len(), 1);
+        assert_eq!(svc.list().unwrap().len(), 1);
+        // Names are unique, case-insensitive; renaming to its own name is fine.
+        let err = svc.create(" manuals ", "").unwrap_err();
+        assert!(err.contains("already exists"), "{err}");
+        let second = svc.create("Recipes", "").unwrap();
+        assert!(svc.update(&second.id, "MANUALS", "").is_err());
+        assert_eq!(
+            svc.update(&kb.id, "Manuals", "product manuals")
+                .unwrap()
+                .name,
+            "Manuals"
+        );
+        svc.delete(&second.id).await.unwrap();
+        assert_eq!(svc.list().unwrap().len(), 1);
 
         let f = dir.path().join("guide.md");
         std::fs::write(
@@ -1685,21 +1636,19 @@ mod tests {
         )
         .unwrap();
         let path = f.to_string_lossy().into_owned();
-        assert!(svc
-            .add_files("agent1", &kb.id, &["relative.md".into()])
-            .is_err());
+        assert!(svc.add_files(&kb.id, &["relative.md".into()]).is_err());
         let added = svc
-            .add_files("agent1", &kb.id, &[path.clone(), path.clone()])
+            .add_files(&kb.id, &[path.clone(), path.clone()])
             .unwrap();
         assert_eq!(added.len(), 1);
         wait_idle(&svc).await;
 
-        let src = &svc.list_sources("agent1", &kb.id).unwrap()[0];
+        let src = &svc.list_sources(&kb.id).unwrap()[0];
         assert_eq!(src.status, SourceStatus::Ready, "{src:?}");
         assert_eq!(src.chunk_count, 2);
         let hits = svc
             .search(
-                "agent1",
+                &svc.kb_ids(),
                 None,
                 "red button rockets",
                 Some(1),
@@ -1713,7 +1662,7 @@ mod tests {
         assert_eq!(hits[0].kb_name, "Manuals");
         assert!(svc
             .search(
-                "agent1",
+                &svc.kb_ids(),
                 Some("manuals"),
                 "widget",
                 None,
@@ -1722,16 +1671,23 @@ mod tests {
             .await
             .is_ok());
         assert!(svc
-            .search("agent1", Some("nope"), "widget", None, SearchOrigin::Test)
+            .search(
+                &svc.kb_ids(),
+                Some("nope"),
+                "widget",
+                None,
+                SearchOrigin::Test
+            )
             .await
             .is_err());
+        // Outside the scope: nothing to search.
         assert!(svc
-            .search("agent2", None, "widget", None, SearchOrigin::Test)
+            .search(&[], None, "widget", None, SearchOrigin::Test)
             .await
             .is_err());
 
         // Unchanged re-sync is skipped; a missing file is an error on the source.
-        svc.resync_source("agent1", &kb.id, &src.id).unwrap();
+        svc.resync_source(&kb.id, &src.id).unwrap();
         wait_idle(&svc).await;
         let done = lock(&host.events)
             .iter()
@@ -1741,32 +1697,56 @@ mod tests {
             .unwrap();
         assert_eq!(done.1["message"], "Unchanged");
         std::fs::remove_file(&f).unwrap();
-        svc.resync_source("agent1", &kb.id, &src.id).unwrap();
+        svc.resync_source(&kb.id, &src.id).unwrap();
         wait_idle(&svc).await;
-        let src = &svc.list_sources("agent1", &kb.id).unwrap()[0];
+        let src = &svc.list_sources(&kb.id).unwrap()[0];
         assert_eq!(src.status, SourceStatus::Error);
         assert!(src.error.as_deref().unwrap().contains("moved or deleted"));
 
-        // Copy, then delete.
-        let copied = svc.copy_agent("agent1", "agent2").await.unwrap();
-        assert_eq!(copied.len(), 1);
-        assert_eq!(copied[0].chunk_count, 2);
-        let known: HashSet<String> = ["agent1".to_string()].into();
-        let overview = svc.storage_overview(&known);
+        // The storage overview names the agents that attach each knowledgebase.
+        let other = svc.create("Other", "").unwrap();
+        let attachments: HashMap<String, Vec<String>> = [(
+            kb.id.clone(),
+            vec!["agent1".to_string(), "agent2".to_string()],
+        )]
+        .into();
+        let overview = svc.storage_overview(&attachments);
         assert_eq!(overview.knowledge_bases.len(), 2);
-        assert!(overview
-            .knowledge_bases
+        let entry = |id: &str| {
+            overview
+                .knowledge_bases
+                .iter()
+                .find(|e| e.kb_id == id)
+                .unwrap()
+                .clone()
+        };
+        assert_eq!(entry(&kb.id).attached_to, ["agent1", "agent2"]);
+        assert!(entry(&other.id).attached_to.is_empty());
+        assert!(overview.legacy_leftovers.is_empty());
+        let wire = serde_json::to_value(&overview).unwrap();
+        assert!(wire.get("legacyLeftovers").is_none());
+        let wire_entry = wire["knowledgeBases"]
+            .as_array()
+            .unwrap()
             .iter()
-            .any(|e| e.agent_id == "agent2" && e.orphan));
-        assert_eq!(svc.purge_orphans(&known).await.unwrap(), 1);
-        assert!(svc.list("agent2").unwrap().is_empty());
+            .find(|e| e["kbId"] == kb.id.as_str())
+            .unwrap();
+        assert_eq!(wire_entry["attachedTo"], json!(["agent1", "agent2"]));
+        assert!(wire_entry.get("agentId").is_none() && wire_entry.get("orphan").is_none());
+        svc.delete(&other.id).await.unwrap();
 
-        svc.remove_source("agent1", &kb.id, &src.id).await.unwrap();
-        assert_eq!(svc.list("agent1").unwrap()[0].chunk_count, 0);
-        svc.delete("agent1", &kb.id).await.unwrap();
-        assert!(svc.list("agent1").unwrap().is_empty());
-        assert!(!dir.path().join("knowledgebases").join("agent1").exists());
-        assert!(lock(&host.events).iter().any(|(e, _)| e == CHANGED_EVENT));
+        svc.remove_source(&kb.id, &src.id).await.unwrap();
+        assert_eq!(svc.list().unwrap()[0].chunk_count, 0);
+        svc.delete(&kb.id).await.unwrap();
+        assert!(svc.list().unwrap().is_empty());
+        assert!(dir.path().join("knowledgebases").join("kbs").is_dir());
+        let changed = lock(&host.events)
+            .iter()
+            .rev()
+            .find(|(e, _)| e == CHANGED_EVENT)
+            .cloned()
+            .unwrap();
+        assert_eq!(changed.1, json!({ "kbId": kb.id }));
     }
 
     /// Write `body` to `path` and give it a modification time `secs` after the epoch, so
@@ -1795,7 +1775,7 @@ mod tests {
     async fn folder_source_follows_the_folder() {
         let dir = tempfile::tempdir().unwrap();
         let (svc, host) = service(dir.path());
-        let kb = svc.create("agent1", "Docs", "").unwrap();
+        let kb = svc.create("Docs", "").unwrap();
         let folder = dir.path().join("docs");
         write_at(
             &folder.join("a.md"),
@@ -1812,22 +1792,19 @@ mod tests {
         let uri = folder.to_string_lossy().into_owned();
 
         let yes = |_: usize| true;
-        assert!(svc.add_folder("agent1", &kb.id, "relative", yes).is_err());
+        assert!(svc.add_folder(&kb.id, "relative", yes).is_err());
         let empty = dir.path().join("empty");
         std::fs::create_dir_all(&empty).unwrap();
         assert!(svc
-            .add_folder("agent1", &kb.id, &empty.to_string_lossy(), yes)
+            .add_folder(&kb.id, &empty.to_string_lossy(), yes)
             .unwrap_err()
             .contains("no supported files"));
-        let src = svc
-            .add_folder("agent1", &kb.id, &uri, yes)
-            .unwrap()
-            .unwrap();
+        let src = svc.add_folder(&kb.id, &uri, yes).unwrap().unwrap();
         assert_eq!(src.kind, SourceKind::Folder);
         assert_eq!(src.title, "docs");
-        assert!(svc.add_folder("agent1", &kb.id, &uri, yes).is_err());
+        assert!(svc.add_folder(&kb.id, &uri, yes).is_err());
         wait_idle(&svc).await;
-        let s = svc.list_sources("agent1", &kb.id).unwrap().remove(0);
+        let s = svc.list_sources(&kb.id).unwrap().remove(0);
         assert_eq!(s.status, SourceStatus::Ready, "{s:?}");
         // The unreadable PDF is a placeholder: not counted, no passages.
         assert_eq!(s.document_count, 2);
@@ -1850,17 +1827,23 @@ mod tests {
             last_done_message(&host),
             "3 files, 2 updated, 1 removed, 1 skipped"
         );
-        let s = svc.list_sources("agent1", &kb.id).unwrap().remove(0);
+        let s = svc.list_sources(&kb.id).unwrap().remove(0);
         assert_eq!(s.document_count, 2);
         let hits = svc
-            .search("agent1", None, "gizmos hum", Some(1), SearchOrigin::Test)
+            .search(
+                &svc.kb_ids(),
+                None,
+                "gizmos hum",
+                Some(1),
+                SearchOrigin::Test,
+            )
             .await
             .unwrap();
         assert!(hits[0].text.contains("Gamma"), "{hits:?}");
         assert_eq!(svc.auto_sync_pass(), 0);
 
         // A manual re-sync skips unmodified files but retries the one that failed.
-        svc.resync_source("agent1", &kb.id, &s.id).unwrap();
+        svc.resync_source(&kb.id, &s.id).unwrap();
         wait_idle(&svc).await;
         assert_eq!(last_done_message(&host), "3 files, 0 updated, 1 skipped");
 
@@ -1868,7 +1851,7 @@ mod tests {
         std::fs::remove_dir_all(&folder).unwrap();
         assert_eq!(svc.auto_sync_pass(), 1);
         wait_idle(&svc).await;
-        let s = svc.list_sources("agent1", &kb.id).unwrap().remove(0);
+        let s = svc.list_sources(&kb.id).unwrap().remove(0);
         assert_eq!(s.status, SourceStatus::Error);
         assert_eq!(svc.auto_sync_pass(), 0);
     }
@@ -1877,7 +1860,7 @@ mod tests {
     async fn large_folders_ask_first() {
         let dir = tempfile::tempdir().unwrap();
         let (svc, _host) = service(dir.path());
-        let kb = svc.create("agent1", "Docs", "").unwrap();
+        let kb = svc.create("Docs", "").unwrap();
         let folder = dir.path().join("many");
         std::fs::create_dir_all(&folder).unwrap();
         for i in 0..LARGE_FOLDER_FILES {
@@ -1886,19 +1869,17 @@ mod tests {
         let uri = folder.to_string_lossy().into_owned();
         let mut asked = None;
         let declined = svc
-            .add_folder("agent1", &kb.id, &uri, |n| {
+            .add_folder(&kb.id, &uri, |n| {
                 asked = Some(n);
                 false
             })
             .unwrap();
         assert!(declined.is_none());
         assert_eq!(asked, Some(LARGE_FOLDER_FILES));
-        assert!(svc.list_sources("agent1", &kb.id).unwrap().is_empty());
+        assert!(svc.list_sources(&kb.id).unwrap().is_empty());
         // Small folders are added without asking.
         std::fs::remove_file(folder.join("0.txt")).unwrap();
-        let added = svc
-            .add_folder("agent1", &kb.id, &uri, |_| panic!("asked"))
-            .unwrap();
+        let added = svc.add_folder(&kb.id, &uri, |_| panic!("asked")).unwrap();
         assert!(added.is_some());
         svc.cancel_all();
     }
@@ -1907,10 +1888,10 @@ mod tests {
     async fn file_source_skips_unmodified_files() {
         let dir = tempfile::tempdir().unwrap();
         let (svc, host) = service(dir.path());
-        let kb = svc.create("agent1", "Docs", "").unwrap();
+        let kb = svc.create("Docs", "").unwrap();
         let f = dir.path().join("notes.md");
         write_at(&f, "# Notes\nOne fish.\n", 1_000);
-        svc.add_files("agent1", &kb.id, &[f.to_string_lossy().into_owned()])
+        svc.add_files(&kb.id, &[f.to_string_lossy().into_owned()])
             .unwrap();
         wait_idle(&svc).await;
         assert_eq!(svc.auto_sync_pass(), 0);
@@ -1924,7 +1905,7 @@ mod tests {
         assert_eq!(svc.auto_sync_pass(), 1);
         wait_idle(&svc).await;
         assert_eq!(last_done_message(&host), "Indexed");
-        let src = svc.list_sources("agent1", &kb.id).unwrap().remove(0);
+        let src = svc.list_sources(&kb.id).unwrap().remove(0);
         assert_eq!(src.status, SourceStatus::Ready);
     }
 
@@ -1957,10 +1938,9 @@ mod tests {
         .await;
         let dir = tempfile::tempdir().unwrap();
         let (svc, host) = service(dir.path());
-        let kb = svc.create("a", "Web", "").unwrap();
+        let kb = svc.create("Web", "").unwrap();
         let src = svc
             .add_url(
-                "a",
                 &kb.id,
                 &format!("{}/docs/", srv.base),
                 UrlOptions {
@@ -1972,24 +1952,23 @@ mod tests {
             .unwrap();
         assert!(svc
             .add_url(
-                "a",
                 &kb.id,
                 &format!("{}/docs/", srv.base),
                 UrlOptions::default()
             )
             .is_err());
         assert!(svc
-            .add_url("a", &kb.id, "file:///etc/passwd", UrlOptions::default())
+            .add_url(&kb.id, "file:///etc/passwd", UrlOptions::default())
             .is_err());
         wait_idle(&svc).await;
-        let s = svc.list_sources("a", &kb.id).unwrap().remove(0);
+        let s = svc.list_sources(&kb.id).unwrap().remove(0);
         assert_eq!(s.status, SourceStatus::Ready, "{s:?}");
         assert_eq!(s.document_count, 2);
         assert_eq!(s.title, "Docs Home");
         assert_eq!(s.id, src.id);
         let hits = svc
             .search(
-                "a",
+                &svc.kb_ids(),
                 None,
                 "installer admin rights",
                 Some(1),
@@ -2002,14 +1981,14 @@ mod tests {
         // Rebuild with another model size.
         lock(&host.settings).embedding.bedrock_model_id = "cohere.embed-v4:0".into();
         lock(&host.settings).embedding.dimensions = 512;
-        svc.rebuild("a", &kb.id).unwrap();
+        svc.rebuild(&kb.id).unwrap();
         wait_idle(&svc).await;
-        let info = svc.list("a").unwrap().remove(0);
+        let info = svc.list().unwrap().remove(0);
         assert_eq!(info.embedding.dimensions, 512);
         assert_eq!(info.embedding.model_id, "cohere.embed-v4:0");
         let hits = svc
             .search(
-                "a",
+                &svc.kb_ids(),
                 None,
                 "installer admin rights",
                 Some(1),
@@ -2024,20 +2003,20 @@ mod tests {
     async fn cancel_marks_source_cancelled() {
         let dir = tempfile::tempdir().unwrap();
         let (svc, _) = service(dir.path());
-        let kb = svc.create("a", "K", "").unwrap();
+        let kb = svc.create("K", "").unwrap();
         // Hold the knowledge base lock so the job stays queued, then cancel it.
-        let kb_lock = svc.kb_lock("a", &kb.id);
+        let kb_lock = svc.kb_lock(&kb.id);
         let guard = kb_lock.lock().await;
         let f = dir.path().join("n.txt");
         std::fs::write(&f, "hello").unwrap();
-        svc.add_files("a", &kb.id, &[f.to_string_lossy().into_owned()])
+        svc.add_files(&kb.id, &[f.to_string_lossy().into_owned()])
             .unwrap();
-        let jobs = svc.jobs(Some("a"));
+        let jobs = svc.jobs(Some(&kb.id));
         assert_eq!(jobs.len(), 1);
         assert!(svc.cancel_job(&jobs[0].job_id));
         wait_idle(&svc).await;
         drop(guard);
-        let s = svc.list_sources("a", &kb.id).unwrap().remove(0);
+        let s = svc.list_sources(&kb.id).unwrap().remove(0);
         assert_eq!(s.status, SourceStatus::Cancelled);
     }
 
@@ -2045,8 +2024,8 @@ mod tests {
     async fn usage_health_and_optimize() {
         let dir = tempfile::tempdir().unwrap();
         let (svc, _) = service(dir.path());
-        let kb = svc.create("a", "K", "").unwrap();
-        let st = svc.stats("a", &kb.id).unwrap();
+        let kb = svc.create("K", "").unwrap();
+        let st = svc.stats(&kb.id).unwrap();
         assert_eq!(st.usage.searches_in_period, 0);
         assert_eq!(st.usage.daily_searches.len(), USAGE_DAYS);
         assert!(st.health.issues.iter().any(|i| i.kind == "empty"));
@@ -2056,7 +2035,6 @@ mod tests {
         let f2 = dir.path().join("gone.txt");
         std::fs::write(&f2, "temporary").unwrap();
         svc.add_files(
-            "a",
             &kb.id,
             &[
                 f.to_string_lossy().into_owned(),
@@ -2065,17 +2043,23 @@ mod tests {
         )
         .unwrap();
         wait_idle(&svc).await;
-        svc.search("a", None, "gamma delta", None, SearchOrigin::Agent)
+        svc.search(
+            &svc.kb_ids(),
+            None,
+            "gamma delta",
+            None,
+            SearchOrigin::Agent,
+        )
+        .await
+        .unwrap();
+        svc.search(&svc.kb_ids(), None, "alpha", None, SearchOrigin::Agent)
             .await
             .unwrap();
-        svc.search("a", None, "alpha", None, SearchOrigin::Agent)
-            .await
-            .unwrap();
-        svc.search("a", None, "beta", None, SearchOrigin::Test)
+        svc.search(&svc.kb_ids(), None, "beta", None, SearchOrigin::Test)
             .await
             .unwrap();
 
-        let st = svc.stats("a", &kb.id).unwrap();
+        let st = svc.stats(&kb.id).unwrap();
         assert_eq!(
             st.usage.searches_in_period, 2,
             "test searches are counted apart"
@@ -2090,14 +2074,14 @@ mod tests {
         // A broken source is a critical issue.
         std::fs::remove_file(&f2).unwrap();
         let gone = svc
-            .list_sources("a", &kb.id)
+            .list_sources(&kb.id)
             .unwrap()
             .into_iter()
             .find(|s| s.title == "gone.txt")
             .unwrap();
-        svc.resync_source("a", &kb.id, &gone.id).unwrap();
+        svc.resync_source(&kb.id, &gone.id).unwrap();
         wait_idle(&svc).await;
-        let st = svc.stats("a", &kb.id).unwrap();
+        let st = svc.stats(&kb.id).unwrap();
         let err = st
             .health
             .issues
@@ -2108,16 +2092,16 @@ mod tests {
 
         // Removing the big source leaves free pages; optimize gives them back.
         let big = svc
-            .list_sources("a", &kb.id)
+            .list_sources(&kb.id)
             .unwrap()
             .into_iter()
             .find(|s| s.title == "big.txt")
             .unwrap();
-        svc.remove_source("a", &kb.id, &big.id).await.unwrap();
-        let r = svc.optimize("a", &kb.id).await.unwrap();
+        svc.remove_source(&kb.id, &big.id).await.unwrap();
+        let r = svc.optimize(&kb.id).await.unwrap();
         assert_eq!(r.integrity, "ok");
         assert!(r.bytes_after <= r.bytes_before, "{r:?}");
-        let st = svc.stats("a", &kb.id).unwrap();
+        let st = svc.stats(&kb.id).unwrap();
         assert!(st.usage.last_optimized_at.is_some());
         assert!(!st.health.issues.iter().any(|i| i.kind == "reclaimable"));
         assert_eq!(st.usage.searches_total, 2, "the log survives optimize");
@@ -2127,12 +2111,12 @@ mod tests {
     async fn interrupted_sources_show_as_errors() {
         let dir = tempfile::tempdir().unwrap();
         let (svc, _) = service(dir.path());
-        let kb = svc.create("a", "K", "").unwrap();
-        svc.store("a", &kb.id)
+        let kb = svc.create("K", "").unwrap();
+        svc.store(&kb.id)
             .unwrap()
             .add_source("s", SourceKind::File, "/x.txt", "x.txt", None, "t")
             .unwrap();
-        let s = svc.list_sources("a", &kb.id).unwrap().remove(0);
+        let s = svc.list_sources(&kb.id).unwrap().remove(0);
         assert_eq!(s.status, SourceStatus::Error);
         assert!(s.error.unwrap().contains("Interrupted"));
     }

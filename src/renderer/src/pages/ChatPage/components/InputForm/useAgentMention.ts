@@ -9,6 +9,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import type { CustomAgent } from '@/types/agent-chat'
 import { useSettings } from '@renderer/contexts/SettingsContext'
+import { useKnowledgeBaseList } from '@renderer/contexts/KnowledgeBasesContext'
 import { getMentionableAgents } from '../../utils/agentMentions'
 import {
   getMentionableKnowledgeBases,
@@ -27,7 +28,7 @@ export type MentionItem =
   { kind: 'agent'; agent: CustomAgent } | { kind: 'kb'; kb: MentionableKnowledgeBase }
 
 export const mentionItemKey = (item: MentionItem): string =>
-  item.kind === 'agent' ? `agent:${item.agent.id}` : `kb:${item.kb.agentId}:${item.kb.kbId}`
+  item.kind === 'agent' ? `agent:${item.agent.id}` : `kb:${item.kb.kbId}`
 
 /** The text a row inserts after the `@`. */
 const mentionText = (item: MentionItem): string =>
@@ -58,6 +59,7 @@ export function useAgentMention(
   onChange: (value: string) => void
 ) {
   const { agents, selectedAgentId } = useSettings()
+  const { knowledgeBases: allKnowledgeBases } = useKnowledgeBaseList()
   const [state, setState] = useState<MentionState | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
 
@@ -66,11 +68,11 @@ export function useAgentMention(
     [agents, selectedAgentId]
   )
   const knowledgeBases = useMemo(
-    () => getMentionableKnowledgeBases(agents, selectedAgentId),
-    [agents, selectedAgentId]
+    () => getMentionableKnowledgeBases(allKnowledgeBases, agents, selectedAgentId),
+    [allKnowledgeBases, agents, selectedAgentId]
   )
 
-  // Agents first, then knowledge bases (the current agent's own ones first).
+  // Agents first, then knowledge bases (the ones the current agent uses first).
   const items = useMemo((): MentionItem[] => {
     if (!state) return []
     const query = state.query.toLowerCase()
@@ -88,13 +90,11 @@ export function useAgentMention(
       (agent) => agent.name
     ).map((agent): MentionItem => ({ kind: 'agent', agent }))
     const kbItems = rank(
-      knowledgeBases.filter(
-        (kb) => !query || has(kb.mention) || has(kb.description) || has(kb.agentName)
-      ),
+      knowledgeBases.filter((kb) => !query || has(kb.mention) || has(kb.description)),
       query,
       (kb) => kb.kbName
     )
-      .sort((a, b) => Number(b.isOwn) - Number(a.isOwn))
+      .sort((a, b) => Number(b.attached) - Number(a.attached))
       .map((kb): MentionItem => ({ kind: 'kb', kb }))
 
     return [...agentItems, ...kbItems].slice(0, MAX_MENTION_SUGGESTIONS)

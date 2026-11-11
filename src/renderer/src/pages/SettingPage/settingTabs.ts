@@ -1,16 +1,9 @@
 import { IconType } from 'react-icons'
 import { FaAws, FaDocker } from 'react-icons/fa'
-import {
-  FiCpu,
-  FiDatabase,
-  FiDownloadCloud,
-  FiFolder,
-  FiMessageSquare,
-  FiSliders
-} from 'react-icons/fi'
+import { FiCpu, FiDownloadCloud, FiFolder, FiMessageSquare, FiSliders } from 'react-icons/fi'
 
 export type SettingTabId =
-  'general' | 'aws' | 'models' | 'chat' | 'workspace' | 'sandbox' | 'knowledgebase' | 'updates'
+  'general' | 'aws' | 'models' | 'chat' | 'workspace' | 'sandbox' | 'updates'
 
 export interface SettingTab {
   id: SettingTabId
@@ -31,9 +24,19 @@ export const SETTING_TABS: SettingTab[] = [
   { id: 'chat', labelKey: 'settingTabs.chat', icon: FiMessageSquare },
   { id: 'workspace', labelKey: 'settingTabs.workspace', icon: FiFolder },
   { id: 'sandbox', labelKey: 'settingTabs.sandbox', icon: FaDocker },
-  { id: 'knowledgebase', labelKey: 'settingTabs.knowledgebase', icon: FiDatabase },
   { id: 'updates', labelKey: 'settingTabs.updates', icon: FiDownloadCloud }
 ]
+
+/** Tabs that became pages of their own: old links to them go to the page instead. */
+const MOVED_SETTING_TABS: Record<string, string> = {
+  knowledgebase: '/knowledge-bases'
+}
+
+/** Where an old `:tab` segment moved to, if it did. */
+export const movedSettingTab = (raw?: string): string | undefined =>
+  raw && Object.prototype.hasOwnProperty.call(MOVED_SETTING_TABS, raw)
+    ? MOVED_SETTING_TABS[raw]
+    : undefined
 
 export const DEFAULT_SETTING_TAB: SettingTabId = 'general'
 

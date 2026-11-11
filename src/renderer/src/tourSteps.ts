@@ -17,6 +17,7 @@ export const TOUR_STOPS: readonly { href: string; content: string }[] = [
   { href: '/step-functions-generator', content: 'tour.stepFunctionsGenerator' },
   { href: '/diagram-generator', content: 'tour.diagramGenerator' },
   { href: '/accounting', content: 'tour.accounting' },
+  { href: '/knowledge-bases', content: 'tour.knowledgeBases' },
   { href: '/help', content: 'tour.help' }
 ]
 

@@ -81,9 +81,9 @@ export const LOCAL_EMBEDDING_MODEL = {
   dimensions: 384
 }
 
+/** Knowledgebases are central: any custom agent attaches one by listing its id. Names are unique. */
 export type KbInfo = {
   id: string
-  agentId: string
   name: string
   description: string
   embedding: EmbeddingSpec
@@ -126,7 +126,6 @@ export type JobPhase =
 /** `knowledge:progress` payload. */
 export type KnowledgeJob = {
   jobId: string
-  agentId: string
   kbId: string
   /** Absent for a rebuild of the whole knowledgebase. */
   sourceId?: string
@@ -149,8 +148,11 @@ export type KnowledgeSearchHit = {
   score: number
 }
 
-/** A knowledgebase of any agent that the user `@mentioned` for one chat turn. */
-export type KnowledgeBaseGrant = { agentId: string; kbId: string }
+/**
+ * A knowledgebase the user `@mentioned` for one chat turn. Grants saved by older builds also carry
+ * the agent that owned the knowledgebase; only `kbId` decides the match.
+ */
+export type KnowledgeBaseGrant = { kbId: string; agentId?: string }
 
 /** A finished ingestion / rebuild / optimize job. */
 export type KnowledgeJobLog = {
@@ -206,15 +208,14 @@ export type KbStats = {
 export type KnowledgeOptimizeResult = { bytesBefore: number; bytesAfter: number; integrity: string }
 
 export type KnowledgeStorageEntry = {
-  agentId: string
   kbId: string
   name: string
   bytes: number
   sourceCount: number
   chunkCount: number
   embedding: EmbeddingSpec | null
-  /** The owning agent no longer exists. */
-  orphan: boolean
+  /** Ids of the custom agents that attach this knowledgebase; empty when none does. */
+  attachedTo: string[]
   stats: KbStats | null
 }
 
@@ -222,10 +223,12 @@ export type KnowledgeStorageOverview = {
   root: string
   totalBytes: number
   knowledgeBases: KnowledgeStorageEntry[]
+  /** Folders of the old per-agent layout that could not be moved yet. */
+  legacyLeftovers?: string[]
 }
 
 /** `knowledge:changed` payload. */
-export type KnowledgeChanged = { agentId: string; kbId: string }
+export type KnowledgeChanged = { kbId: string }
 
 export type LocalModelStatus = {
   installed: boolean
@@ -247,37 +250,27 @@ export type LocalModelDownload = {
 }
 
 export type KnowledgeApi = {
-  list: (agentId: string) => Promise<KbInfo[]>
-  create: (agentId: string, name: string, description?: string) => Promise<KbInfo>
-  update: (agentId: string, kbId: string, name: string, description?: string) => Promise<KbInfo>
-  delete: (agentId: string, kbId: string) => Promise<void>
-  deleteAgent: (agentId: string) => Promise<void>
-  copyAgent: (fromAgentId: string, toAgentId: string) => Promise<KbInfo[]>
+  list: () => Promise<KbInfo[]>
+  /** Rejects when another knowledgebase already has the name (case-insensitive). */
+  create: (name: string, description?: string) => Promise<KbInfo>
+  /** Rejects when another knowledgebase already has the name (case-insensitive). */
+  update: (kbId: string, name: string, description?: string) => Promise<KbInfo>
+  delete: (kbId: string) => Promise<void>
   /** Re-embed with the current global embedding model; resolves to the job id. */
-  rebuild: (agentId: string, kbId: string) => Promise<string>
-  listSources: (agentId: string, kbId: string) => Promise<SourceInfo[]>
+  rebuild: (kbId: string) => Promise<string>
+  listSources: (kbId: string) => Promise<SourceInfo[]>
   /** Pick files in the native dialog and add them; `[]` when canceled. */
-  pickFiles: (agentId: string, kbId: string) => Promise<SourceInfo[]>
+  pickFiles: (kbId: string) => Promise<SourceInfo[]>
   /** Pick a folder and add it as one source that follows its files; `null` when canceled. */
-  pickFolder: (agentId: string, kbId: string) => Promise<SourceInfo | null>
-  addUrl: (agentId: string, kbId: string, url: string, options?: UrlOptions) => Promise<SourceInfo>
+  pickFolder: (kbId: string) => Promise<SourceInfo | null>
+  addUrl: (kbId: string, url: string, options?: UrlOptions) => Promise<SourceInfo>
   /** New crawl options for a website source; they apply from its next sync. */
-  updateSourceOptions: (
-    agentId: string,
-    kbId: string,
-    sourceId: string,
-    options: UrlOptions
-  ) => Promise<SourceInfo>
-  resyncSource: (agentId: string, kbId: string, sourceId: string) => Promise<string>
-  removeSource: (agentId: string, kbId: string, sourceId: string) => Promise<void>
-  jobs: (agentId?: string) => Promise<KnowledgeJob[]>
+  updateSourceOptions: (kbId: string, sourceId: string, options: UrlOptions) => Promise<SourceInfo>
+  resyncSource: (kbId: string, sourceId: string) => Promise<string>
+  removeSource: (kbId: string, sourceId: string) => Promise<void>
+  jobs: (kbId?: string) => Promise<KnowledgeJob[]>
   cancelJob: (jobId: string) => Promise<boolean>
-  search: (
-    agentId: string,
-    query: string,
-    kbId?: string,
-    topK?: number
-  ) => Promise<KnowledgeSearchHit[]>
+  search: (query: string, kbId?: string, topK?: number) => Promise<KnowledgeSearchHit[]>
   /** `searchKnowledgeBase` over only the `@mentioned` knowledgebases: the tool's text result. */
   searchGranted: (
     grants: KnowledgeBaseGrant[],
@@ -290,11 +283,10 @@ export type KnowledgeApi = {
   /** Open a cited local file or folder; refused unless it is a source of some knowledgebase. */
   openSource: (uri: string) => Promise<void>
   /** Usage over the last `periodDays` days and health checks. */
-  stats: (agentId: string, kbId: string) => Promise<KbStats>
+  stats: (kbId: string) => Promise<KbStats>
   /** Compact the file, merge the keyword index, check integrity. */
-  optimize: (agentId: string, kbId: string) => Promise<KnowledgeOptimizeResult>
+  optimize: (kbId: string) => Promise<KnowledgeOptimizeResult>
   storageOverview: () => Promise<KnowledgeStorageOverview>
-  purgeOrphans: () => Promise<number>
   localModelStatus: () => Promise<LocalModelStatus>
   downloadLocalModel: () => Promise<void>
   deleteLocalModel: () => Promise<void>

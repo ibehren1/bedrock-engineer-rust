@@ -233,7 +233,6 @@ impl KnowledgeSettings {
 #[serde(rename_all = "camelCase")]
 pub struct KbInfo {
     pub id: String,
-    pub agent_id: String,
     pub name: String,
     pub description: String,
     pub embedding: EmbeddingSpec,
@@ -367,13 +366,15 @@ pub struct SearchHit {
     pub score: f64,
 }
 
-/// A knowledgebase of any agent that the user pointed the model at for one chat turn
-/// (an `@mention`). Only the app grants these, never the model.
+/// A knowledgebase the user pointed the model at for one chat turn (an `@mention`). Only the
+/// app grants these, never the model. `agent_id` is only on grants saved before knowledgebases
+/// were shared (the old owner), to find knowledgebases whose id changed in the move.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KbGrant {
-    pub agent_id: String,
     pub kb_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -400,7 +401,6 @@ impl JobPhase {
 #[serde(rename_all = "camelCase")]
 pub struct JobInfo {
     pub job_id: String,
-    pub agent_id: String,
     pub kb_id: String,
     /// `None` for a rebuild of the whole knowledgebase.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -415,15 +415,14 @@ pub struct JobInfo {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StorageEntry {
-    pub agent_id: String,
     pub kb_id: String,
     pub name: String,
     pub bytes: u64,
     pub source_count: usize,
     pub chunk_count: usize,
     pub embedding: Option<EmbeddingSpec>,
-    /// The owning agent no longer exists in `customAgents`.
-    pub orphan: bool,
+    /// Ids of the agents in `customAgents` that attach it (empty: not attached).
+    pub attached_to: Vec<String>,
     /// Usage and health; `None` if the file can't be read.
     pub stats: Option<KbStats>,
 }
@@ -433,7 +432,7 @@ pub struct StorageEntry {
 pub enum SearchOrigin {
     /// The model, through the MCP tool.
     Agent,
-    /// The search box in the agent editor.
+    /// The search box on the Knowledge Bases page.
     Test,
 }
 
@@ -505,6 +504,10 @@ pub struct StorageOverview {
     pub root: String,
     pub total_bytes: u64,
     pub knowledge_bases: Vec<StorageEntry>,
+    /// Folders left in the old per-agent layout that still hold knowledgebase files (moved
+    /// on a later launch, or written by an older build after the move).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub legacy_leftovers: Vec<String>,
 }
 
 #[cfg(test)]

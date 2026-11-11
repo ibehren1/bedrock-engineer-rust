@@ -43,7 +43,7 @@ export const chatPage = {
           ariaLabel: 'Agents and knowledge bases you can mention',
           agents: 'Agents',
           knowledgeBases: 'Knowledge bases',
-          thisAgent: 'this agent'
+          attached: 'Used by this agent'
         }
       },
       delegation: {
@@ -285,7 +285,7 @@ export const chatPage = {
           ariaLabel: 'メンションできるエージェントとナレッジベース',
           agents: 'エージェント',
           knowledgeBases: 'ナレッジベース',
-          thisAgent: 'このエージェント'
+          attached: 'このエージェントが使用中'
         }
       },
       delegation: {

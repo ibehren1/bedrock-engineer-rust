@@ -2,7 +2,9 @@
 //!
 //! It runs inside the app: [`KnowledgeMcp`] is the `mcp` crate's [`BuiltinServers`] provider,
 //! and each connection is an in-memory duplex stream with a [`KbMcpServer`] for one agent on
-//! the other end. Tools:
+//! the other end. The agent's knowledgebases are the ones it attaches, looked up on every call
+//! ([`KnowledgeService::attached`]), so attaching or detaching one takes effect at once without
+//! changing the server config (and reconnecting the agent's MCP servers). Tools:
 //!
 //! * `searchKnowledgeBase` — hybrid search over the agent's knowledgebases, results with their
 //!   source (file path or page URL) so the model can cite them.
@@ -26,6 +28,9 @@ use std::sync::Arc;
 pub const SEARCH_TOOL: &str = "searchKnowledgeBase";
 pub const LIST_TOOL: &str = "listKnowledgeBases";
 pub const SOURCES_TOOL: &str = "listKnowledgeBaseSources";
+
+/// The tools' reply for an agent with no (existing) knowledgebases attached.
+pub const NONE_ATTACHED: &str = "This agent has no knowledge bases attached.";
 
 /// Longest text returned per search result.
 const MAX_RESULT_CHARS: usize = 4000;
@@ -167,20 +172,16 @@ impl KbMcpServer {
         }
     }
 
-    fn select_kb(&self, sel: Option<&str>) -> Result<Vec<crate::types::KbInfo>, String> {
-        let mut kbs = self.svc.list(&self.agent_id)?;
-        if let Some(sel) = sel.map(str::trim).filter(|s| !s.is_empty()) {
-            kbs.retain(|k| k.id == sel || k.name.eq_ignore_ascii_case(sel));
-            if kbs.is_empty() {
-                return Err(format!("No knowledge base named \"{sel}\""));
-            }
-        }
-        Ok(kbs)
-    }
-
     /// Run a tool; `Err` is a tool-level error shown to the model.
     pub async fn run(&self, name: &str, args: &JsonObject) -> Result<String, String> {
         let str_arg = |k: &str| args.get(k).and_then(Value::as_str);
+        if ![SEARCH_TOOL, LIST_TOOL, SOURCES_TOOL].contains(&name) {
+            return Err(format!("Unknown tool: {name}"));
+        }
+        let scope = self.svc.attached(&self.agent_id);
+        if self.svc.select(&scope, None)?.is_empty() {
+            return Ok(NONE_ATTACHED.into());
+        }
         match name {
             SEARCH_TOOL => {
                 let query = str_arg("query").unwrap_or_default();
@@ -191,7 +192,7 @@ impl KbMcpServer {
                 let hits = self
                     .svc
                     .search(
-                        &self.agent_id,
+                        &scope,
                         str_arg("knowledgeBase"),
                         query,
                         top_k,
@@ -200,17 +201,11 @@ impl KbMcpServer {
                     .await?;
                 Ok(format_hits(query.trim(), &hits))
             }
-            LIST_TOOL => {
-                let kbs = self.select_kb(None)?;
-                if kbs.is_empty() {
-                    return Ok("This agent has no knowledge bases.".into());
-                }
-                Ok(format_kb_list(&kbs))
-            }
+            LIST_TOOL => Ok(format_kb_list(&self.svc.select(&scope, None)?)),
             SOURCES_TOOL => {
                 let mut out = String::new();
-                for k in self.select_kb(str_arg("knowledgeBase"))? {
-                    let sources = self.svc.list_sources(&self.agent_id, &k.id)?;
+                for k in self.svc.select(&scope, str_arg("knowledgeBase"))? {
+                    let sources = self.svc.list_sources(&k.id)?;
                     out.push_str(&format_sources(&k.name, &sources));
                 }
                 Ok(out)
@@ -297,7 +292,9 @@ mod tests {
     use mcp::McpManager;
     use serde_json::json;
 
-    struct Host;
+    /// Agent id -> attached knowledgebase ids.
+    #[derive(Default)]
+    struct Host(std::sync::Mutex<std::collections::HashMap<String, Vec<String>>>);
     impl KnowledgeHost for Host {
         fn settings(&self) -> KnowledgeSettings {
             let mut s = KnowledgeSettings::default();
@@ -308,6 +305,14 @@ mod tests {
             reqwest::Client::new()
         }
         fn emit(&self, _: &str, _: Value) {}
+        fn attached_kbs(&self, agent_id: &str) -> Vec<String> {
+            self.0
+                .lock()
+                .unwrap()
+                .get(agent_id)
+                .cloned()
+                .unwrap_or_default()
+        }
     }
 
     #[test]
@@ -357,16 +362,23 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn manager_reaches_builtin_server() {
         let dir = tempfile::tempdir().unwrap();
+        let host = Arc::new(Host::default());
         let svc = KnowledgeService::new(
             dir.path().to_path_buf(),
-            Arc::new(Host),
+            host.clone(),
             Arc::new(FakeProvider),
             tokio::runtime::Handle::current(),
         );
-        let kb = svc.create("agent-1", "Notes", "my notes").unwrap();
+        let kb = svc.create("Notes", "my notes").unwrap();
+        // Not attached to the agent: never searched or listed.
+        let hidden = svc.create("Hidden", "").unwrap();
         let f = dir.path().join("n.md");
         std::fs::write(&f, "The launch code is in the blue folder.").unwrap();
-        svc.add_files("agent-1", &kb.id, &[f.to_string_lossy().into_owned()])
+        svc.add_files(&kb.id, &[f.to_string_lossy().into_owned()])
+            .unwrap();
+        let g = dir.path().join("h.md");
+        std::fs::write(&g, "The launch code is also hidden in the red folder.").unwrap();
+        svc.add_files(&hidden.id, &[g.to_string_lossy().into_owned()])
             .unwrap();
         for _ in 0..500 {
             if svc.jobs(None).is_empty() {
@@ -383,6 +395,21 @@ mod tests {
         let servers = common::agent::effective_mcp_servers(&json!({
             "id": "agent-1", "localKnowledgeBases": [{ "id": kb.id, "name": "Notes" }]
         }));
+        // Nothing attached yet: the tools say so.
+        let r = manager
+            .execute_tool(
+                SEARCH_TOOL,
+                &json!({ "query": "launch code" }),
+                Some(&servers),
+            )
+            .await;
+        assert_eq!(r.result[0]["text"], NONE_ATTACHED, "{r:?}");
+        // Attached later: picked up on the next call, same server config.
+        host.0
+            .lock()
+            .unwrap()
+            .insert("agent-1".into(), vec![kb.id.clone(), "kb_missing".into()]);
+
         let specs = manager.get_tool_specs(Some(&servers)).await.unwrap();
         let names: Vec<&str> = specs
             .iter()
@@ -402,14 +429,22 @@ mod tests {
         assert!(text.contains("blue folder"), "{text}");
         assert!(text.contains("Source: "), "{text}");
         assert!(text.contains("Cite as: [n.md]("), "{text}");
+        assert!(!text.contains("red folder"), "{text}");
+        let r = manager
+            .execute_tool(
+                SEARCH_TOOL,
+                &json!({ "query": "launch code", "knowledgeBase": "Hidden" }),
+                Some(&servers),
+            )
+            .await;
+        assert_eq!(r.result[0]["text"], "No knowledge base named \"Hidden\"");
 
         let r = manager
             .execute_tool(LIST_TOOL, &json!({}), Some(&servers))
             .await;
-        assert!(r.result[0]["text"]
-            .as_str()
-            .unwrap()
-            .contains("Notes (id: "));
+        let listed = r.result[0]["text"].as_str().unwrap();
+        assert!(listed.contains("Notes (id: "), "{listed}");
+        assert!(!listed.contains("Hidden"), "{listed}");
         let r = manager
             .execute_tool(
                 SOURCES_TOOL,

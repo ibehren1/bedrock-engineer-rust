@@ -264,15 +264,25 @@ Commands marked "(params object as-is)" take the params object's keys as their a
   the moment live recording began (`meta.live_since`), as `source = 'backfill'` rows; repeat
   runs skip rows already imported. On every open, rows still without a price are priced if the
   catalog now knows their model (retired models are priced from `RETIRED_MODEL_PRICING`).
-- **Local knowledgebases** (`commands/knowledge.rs`, logic in `crates/knowledge`):
-  `<userData>/knowledgebases/<agentId>/<kbId>.db`, one SQLite file each (sqlite-vec + FTS5), the
-  on-device model in `knowledgebases/.models/`. Ingestion runs as background jobs (one at a time
-  per knowledgebase) that emit `knowledge:progress`; `knowledge:changed` follows any change. An
-  agent whose `localKnowledgeBases` is non-empty gets the built-in MCP server
-  `{ name: 'local-knowledgebase', connectionType: 'builtin', agentId }`
+- **Local knowledgebases** (`commands/knowledge.rs`, logic in `crates/knowledge`): central, not
+  owned by an agent. `<userData>/knowledgebases/kbs/<kbId>.db`, one SQLite file each (sqlite-vec
+  + FTS5), the on-device model in `knowledgebases/.models/`. Names are unique (case-insensitive).
+  Agents attach knowledgebases by id in `localKnowledgeBases` (`[{ id, name, description }]`;
+  only `id` decides, name/description are the prompt's display cache). Ingestion runs as
+  background jobs (one at a time per knowledgebase) that emit `knowledge:progress`;
+  `knowledge:changed` follows any change. An agent whose `localKnowledgeBases` is non-empty gets
+  the built-in MCP server `{ name: 'local-knowledgebase', connectionType: 'builtin', agentId }`
   (`common::agent::effective_mcp_servers`), reached in-process over a duplex stream
-  (`mcp::BuiltinServers`); the renderer adds its tool specs to the agent's tools
-  (`src/common/agents/knowledgeTools.ts`) and calls go through the usual MCP tool path.
+  (`mcp::BuiltinServers`); the server looks up the agent's attached ids in `customAgents` on
+  every call, so attaching or detaching takes effect without reconnecting MCP servers. The
+  renderer adds its tool specs to the agent's tools (`src/common/agents/knowledgeTools.ts`) and
+  calls go through the usual MCP tool path.
+  Earlier builds stored `<knowledgebases>/<agentId>/<kbId>.db`; on startup, before the knowledge
+  service and any window, `knowledge::layout::migrate_files` moves those files into `kbs/`
+  (journal `knowledgebases/layout.json`: `planned` → `filesMoved` → `done`), then the app rewrites
+  each migrated agent's `localKnowledgeBases` in `customAgents` once. A file whose id is taken
+  (a duplicated agent's copy) gets a new id and the name suffix ` (<agent name>)`; old
+  `@mention` grants `{ agentId, kbId }` for it are remapped through the journal.
 - **Files panel** (`commands/workspace_files.rs`, logic in `crates/workspace_files`): the root is
   the store's current `projectPath` (every command rejects `No project folder is set` without
   one). Path arguments are root-relative or absolute; each is resolved with symlinks and `..`
@@ -390,7 +400,7 @@ Notes on the file commands (`src-tauri/app/src/commands/{file,agent_files}.rs`):
 | `memory.add` | `memory_add` | `{ content, kind?, source? }` → `MemoryItem` (`kind` defaults to `'memory'`, `source` to `'manual'`; blank content rejects) |
 | `memory.update` | `memory_update` | `{ id, content?, kind?, enabled? }` → `MemoryItem` (bumps `updatedAt`; unknown id rejects) |
 | `memory.delete` | `memory_delete` | `{ id }` → `boolean` (`true` if removed) |
-| `chatHistory.setMentionGrants` | `chat_history_set_mention_grants` | `{ sessionId, grants: { agentIds, knowledgeBases: [{ agentId, kbId }] } }` (sets the session's top-level `mentionGrants`, the agents and knowledge bases on for the chat; unknown session = no-op) |
+| `chatHistory.setMentionGrants` | `chat_history_set_mention_grants` | `{ sessionId, grants: { agentIds, knowledgeBases: [{ kbId, agentId? }] } }` (`agentId` only on grants saved before knowledge bases were shared) (sets the session's top-level `mentionGrants`, the agents and knowledge bases on for the chat; unknown session = no-op) |
 | `chatHistory.addTouchedFiles` | `chat_history_add_touched_files` | `{ sessionId, paths }` (merges project-relative paths into the session's top-level `touchedFiles: string[]`, deduplicated, first-seen order; unknown session = no-op) |
 | `chatHistory.getFolders` | `chat_history_get_folders` | → `ChatFolder[]` (`{ id, name, createdAt }`, creation order; the bridge serves it from the cache, hydrated by the snapshot's `folders`) |
 | `chatHistory.createFolder` | `chat_history_create_folder` | `{ name }` → folder id (`folder_<ms>`; empty name rejects) |
@@ -497,34 +507,31 @@ Notes on the file commands (`src-tauri/app/src/commands/{file,agent_files}.rs`):
 | `api.appUpdate.check` | `app_update_check` | → `{ currentVersion, available, version, notes }` (main window only, see below) |
 | `api.appUpdate.download` | `app_update_download` | → `string` (the version now in place; verified against the update key) |
 | `api.appUpdate.restart` | `app_update_restart` | restarts into the downloaded version (Windows: runs its installer) |
-| `api.knowledge.list` | `knowledge_list` | `{ agentId }` → `KbInfo[]` (oldest first; main window only, like every `knowledge_*` command) |
-| `api.knowledge.create` | `knowledge_create` | `{ agentId, name, description? }` → `KbInfo` (with the current embedding / chunking settings) |
-| `api.knowledge.update` | `knowledge_update` | `{ agentId, kbId, name, description? }` → `KbInfo` |
-| `api.knowledge.delete` | `knowledge_delete` | `{ agentId, kbId }` (cancels its jobs first) |
-| `api.knowledge.deleteAgent` | `knowledge_delete_agent` | `{ agentId }` (every knowledgebase of the agent) |
-| `api.knowledge.copyAgent` | `knowledge_copy_agent` | `{ fromAgentId, toAgentId }` → `KbInfo[]` (the copies; same ids) |
-| `api.knowledge.rebuild` | `knowledge_rebuild` | `{ agentId, kbId }` → job id (re-embed with the current model) |
-| `api.knowledge.listSources` | `knowledge_list_sources` | `{ agentId, kbId }` → `SourceInfo[]` |
-| `api.knowledge.pickFiles` | `knowledge_pick_files` | `{ agentId, kbId }` → `SourceInfo[]` (native multi-file picker; `[]` when canceled) |
-| `api.knowledge.pickFolder` | `knowledge_pick_folder` | `{ agentId, kbId }` → `SourceInfo \| null` (native folder picker; adds the folder as one `kind: 'folder'` source whose documents are the supported files under it, re-scanned on each sync; `null` when canceled) |
-| `api.knowledge.addUrl` | `knowledge_add_url` | `{ agentId, kbId, url, options? }` → `SourceInfo` (`options`: `{ maxDepth, maxPages, pathPrefixOnly }`, default from the crawler settings) |
-| `api.knowledge.updateSourceOptions` | `knowledge_update_source_options` | `{ agentId, kbId, sourceId, options }` → `SourceInfo` (website sources; used from the next sync) |
-| `api.knowledge.resyncSource` | `knowledge_resync_source` | `{ agentId, kbId, sourceId }` → job id |
-| `api.knowledge.removeSource` | `knowledge_remove_source` | `{ agentId, kbId, sourceId }` |
-| `api.knowledge.jobs` | `knowledge_jobs` | `{ agentId? }` → `KnowledgeJob[]` (running and queued) |
+| `api.knowledge.list` | `knowledge_list` | `{}` → `KbInfo[]` (every knowledgebase, oldest first; main window only, like every `knowledge_*` command) |
+| `api.knowledge.create` | `knowledge_create` | `{ name, description? }` → `KbInfo` (with the current embedding / chunking settings; rejects a name already used, case-insensitive) |
+| `api.knowledge.update` | `knowledge_update` | `{ kbId, name, description? }` → `KbInfo` (same name rule) |
+| `api.knowledge.delete` | `knowledge_delete` | `{ kbId }` (cancels its jobs first; agents' references are dropped by the renderer) |
+| `api.knowledge.rebuild` | `knowledge_rebuild` | `{ kbId }` → job id (re-embed with the current model) |
+| `api.knowledge.listSources` | `knowledge_list_sources` | `{ kbId }` → `SourceInfo[]` |
+| `api.knowledge.pickFiles` | `knowledge_pick_files` | `{ kbId }` → `SourceInfo[]` (native multi-file picker; `[]` when canceled) |
+| `api.knowledge.pickFolder` | `knowledge_pick_folder` | `{ kbId }` → `SourceInfo \| null` (native folder picker; adds the folder as one `kind: 'folder'` source whose documents are the supported files under it, re-scanned on each sync; `null` when canceled) |
+| `api.knowledge.addUrl` | `knowledge_add_url` | `{ kbId, url, options? }` → `SourceInfo` (`options`: `{ maxDepth, maxPages, pathPrefixOnly }`, default from the crawler settings) |
+| `api.knowledge.updateSourceOptions` | `knowledge_update_source_options` | `{ kbId, sourceId, options }` → `SourceInfo` (website sources; used from the next sync) |
+| `api.knowledge.resyncSource` | `knowledge_resync_source` | `{ kbId, sourceId }` → job id |
+| `api.knowledge.removeSource` | `knowledge_remove_source` | `{ kbId, sourceId }` |
+| `api.knowledge.jobs` | `knowledge_jobs` | `{ kbId? }` → `KnowledgeJob[]` (running and queued; `{ jobId, kbId, sourceId?, phase, current, total, message }`) |
 | `api.knowledge.cancelJob` | `knowledge_cancel_job` | `{ jobId }` → `boolean` |
-| `api.knowledge.search` | `knowledge_search` | `{ agentId, query, kbId?, topK? }` → `KnowledgeSearchHit[]` |
-| `api.knowledge.searchGranted` | `knowledge_search_granted` | `{ grants: {agentId, kbId}[], query, knowledgeBase?, topK? }` → `string` (the `searchKnowledgeBase` result over only the `@mentioned` knowledgebases; grants come from the user's message, never the model) |
+| `api.knowledge.search` | `knowledge_search` | `{ query, kbId?, topK? }` → `KnowledgeSearchHit[]` (one knowledgebase, or all of them without `kbId`) |
+| `api.knowledge.searchGranted` | `knowledge_search_granted` | `{ grants: {kbId, agentId?}[], query, knowledgeBase?, topK? }` → `string` (the `searchKnowledgeBase` result over only the `@mentioned` knowledgebases; grants come from the user's message, never the model; `agentId` only on grants saved before the move, used to remap ids that changed) |
 | `api.knowledge.listSourcesGranted` | `knowledge_list_sources_granted` | `{ grants, knowledgeBase? }` → `string` |
 | `api.knowledge.openSource` | `knowledge_open_source` | `{ uri }` (opens a cited local file or folder with its default app; refused unless it is a document or source of some knowledgebase) |
-| `api.knowledge.stats` | `knowledge_stats` | `{ agentId, kbId }` → `KbStats` (`info`, `usage` over 30 days: daily agent searches, p50/p95 latency, last job; `health`: reclaimable bytes, issues) |
-| `api.knowledge.optimize` | `knowledge_optimize` | `{ agentId, kbId }` → `{ bytesBefore, bytesAfter, integrity }` (FTS optimize, quick_check, WAL checkpoint, VACUUM; waits for a running job) |
-| `api.knowledge.storageOverview` | `knowledge_storage_overview` | → `{ root, totalBytes, knowledgeBases: [{ agentId, kbId, name, bytes, sourceCount, chunkCount, embedding, orphan, stats }] }` |
-| `api.knowledge.purgeOrphans` | `knowledge_purge_orphans` | → number deleted (knowledgebases of agents not in `customAgents`) |
+| `api.knowledge.stats` | `knowledge_stats` | `{ kbId }` → `KbStats` (`info`, `usage` over 30 days: daily agent searches, p50/p95 latency, last job; `health`: reclaimable bytes, issues) |
+| `api.knowledge.optimize` | `knowledge_optimize` | `{ kbId }` → `{ bytesBefore, bytesAfter, integrity }` (FTS optimize, quick_check, WAL checkpoint, VACUUM; waits for a running job) |
+| `api.knowledge.storageOverview` | `knowledge_storage_overview` | → `{ root, totalBytes, knowledgeBases: [{ kbId, name, bytes, sourceCount, chunkCount, embedding, attachedTo, stats }], legacyLeftovers? }` (`attachedTo`: ids of the `customAgents` that attach it, `[]` when none; `legacyLeftovers`: folders still in the old per-agent layout, only when there are any) |
 | `api.knowledge.localModelStatus` | `knowledge_local_model_status` | → `{ installed, bytes, downloading, totalBytes, supported }` |
 | `api.knowledge.downloadLocalModel` | `knowledge_download_local_model` | resolves when done (progress: `knowledge:model-download`) |
 | `api.knowledge.deleteLocalModel` | `knowledge_delete_local_model` | also cancels a download in progress |
-| `api.knowledge.onProgress` / `onChanged` / `onModelDownload` | events `knowledge:progress`, `knowledge:changed`, `knowledge:model-download` | `KnowledgeJob` / `{ agentId, kbId }` / `{ state, received, total, file, error? }` |
+| `api.knowledge.onProgress` / `onChanged` / `onModelDownload` | events `knowledge:progress`, `knowledge:changed`, `knowledge:model-download` | `KnowledgeJob` / `{ kbId }` / `{ state, received, total, file, error? }` |
 | `api.usage.summary` | `usage_summary` | `{ query: { from, to, modelId?, feature? }, groupBy: 'day' \| 'month' \| 'model' \| 'feature' \| 'service' }` → `UsageSummaryRow[]` (inclusive local days `YYYY-MM-DD`; ordered by key; main window only, like every `usage_*` command) |
 | `api.usage.breakdown` | `usage_breakdown` | `{ query, by, then }` → `UsageBreakdownRow[]` (`{ key, subKey, subLabel, calls, costUsd }` per (`by`, `then`) pair; ordered by `by`, then cost) |
 | `api.usage.months` | `usage_months` | → `YYYY-MM[]` with recorded usage, newest first |

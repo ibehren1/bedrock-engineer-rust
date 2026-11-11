@@ -17,6 +17,7 @@ import {
   getMentionableKnowledgeBases,
   kbGrantKey,
   mentionCandidates,
+  type KnowledgeBaseListItem,
   type MentionableKnowledgeBase,
   type MentionItem
 } from './knowledgeMentions'
@@ -26,14 +27,13 @@ export const EMPTY_GRANTS: MentionGrants = { agentIds: [], knowledgeBases: [] }
 /** `disable` right before a mention (`disable @Writer`) turns it off. */
 const DISABLE_PREFIX = /(?:^|[^\w-])disable\s+$/i
 
-/** What a grant names: an agent id, or a knowledgebase by owner and id. */
-export type GrantTarget =
-  { kind: 'agent'; agentId: string } | { kind: 'kb'; agentId: string; kbId: string }
+/** What a grant names: an agent id, or a knowledgebase id. */
+export type GrantTarget = { kind: 'agent'; agentId: string } | { kind: 'kb'; kbId: string }
 
 export const grantTargetOf = (item: MentionItem): GrantTarget =>
   item.kind === 'agent'
     ? { kind: 'agent', agentId: item.agent.id! }
-    : { kind: 'kb', agentId: item.kb.agentId, kbId: item.kb.kbId }
+    : { kind: 'kb', kbId: item.kb.kbId }
 
 export function isGranted(grants: MentionGrants, target: GrantTarget): boolean {
   return target.kind === 'agent'
@@ -56,7 +56,7 @@ export function setGrant(grants: MentionGrants, target: GrantTarget, on: boolean
   return {
     ...grants,
     knowledgeBases: on
-      ? [...grants.knowledgeBases, { agentId: target.agentId, kbId: target.kbId }]
+      ? [...grants.knowledgeBases, { kbId: target.kbId }]
       : grants.knowledgeBases.filter((kb) => kbGrantKey(kb) !== key)
   }
 }
@@ -72,11 +72,12 @@ export function applyPromptToGrants(
   grants: MentionGrants,
   prompt: string,
   agents: CustomAgent[],
+  kbs: KnowledgeBaseListItem[],
   selfAgentId?: string
 ): PromptGrantResult {
   let next = grants
   const disabled = new Map<string, MentionItem>()
-  for (const span of findMentionSpans(prompt, mentionCandidates(agents, selfAgentId))) {
+  for (const span of findMentionSpans(prompt, mentionCandidates(agents, kbs, selfAgentId))) {
     const on = !DISABLE_PREFIX.test(prompt.slice(0, span.index))
     next = setGrant(next, grantTargetOf(span.value), on)
     if (on) disabled.delete(span.key)
@@ -89,10 +90,11 @@ export function applyPromptToGrants(
 export function deriveGrants(
   prompts: string[],
   agents: CustomAgent[],
+  kbs: KnowledgeBaseListItem[],
   selfAgentId?: string
 ): MentionGrants {
   return prompts.reduce(
-    (grants, prompt) => applyPromptToGrants(grants, prompt, agents, selfAgentId).grants,
+    (grants, prompt) => applyPromptToGrants(grants, prompt, agents, kbs, selfAgentId).grants,
     EMPTY_GRANTS
   )
 }
@@ -105,15 +107,17 @@ export type ResolvedGrants = {
 /**
  * The granted agents and knowledgebases that still exist and may be mentioned from
  * `selfAgentId`, in the order they were turned on. A deleted agent or knowledgebase, or the
- * chat's own agent, simply drops out.
+ * chat's own agent, simply drops out. Knowledgebase grants match by id alone, so grants saved
+ * by older builds (which also name the owning agent) keep working.
  */
 export function resolveGrants(
   grants: MentionGrants,
   agents: CustomAgent[],
+  knowledgeBases: KnowledgeBaseListItem[],
   selfAgentId?: string
 ): ResolvedGrants {
   const mentionable = getMentionableAgents(agents, selfAgentId)
-  const kbs = getMentionableKnowledgeBases(agents, selfAgentId)
+  const kbs = getMentionableKnowledgeBases(knowledgeBases, agents, selfAgentId)
   return {
     agents: grants.agentIds.flatMap((id) => mentionable.filter((a) => a.id === id)),
     knowledgeBases: grants.knowledgeBases.flatMap((grant) =>

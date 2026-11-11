@@ -9,6 +9,7 @@ import { getMentionableAgents } from '../../utils/agentMentions'
 import { getMentionableKnowledgeBases, kbGrantKey } from '../../utils/knowledgeMentions'
 import type { GrantTarget } from '../../utils/mentionGrants'
 import type { MentionGrantsControl } from '../../hooks/useMentionGrants'
+import { useKnowledgeBaseList } from '@renderer/contexts/KnowledgeBasesContext'
 
 export type ChatGrantsButtonsProps = {
   agents: CustomAgent[]
@@ -146,6 +147,7 @@ export const ChatGrantsButtons: React.FC<ChatGrantsButtonsProps> = ({
 }) => {
   const { t } = useTranslation()
   const { resolved, setGranted } = control
+  const { knowledgeBases } = useKnowledgeBaseList()
 
   const agentRows: Row[] = useMemo(() => {
     const on = new Set(resolved.agents.map((a) => a.id))
@@ -168,16 +170,16 @@ export const ChatGrantsButtons: React.FC<ChatGrantsButtonsProps> = ({
 
   const kbRows: Row[] = useMemo(() => {
     const on = new Set(resolved.knowledgeBases.map(kbGrantKey))
-    return getMentionableKnowledgeBases(agents, agentId).map((kb) => ({
+    return getMentionableKnowledgeBases(knowledgeBases, agents, agentId).map((kb) => ({
       key: kbGrantKey(kb),
-      target: { kind: 'kb', agentId: kb.agentId, kbId: kb.kbId },
+      target: { kind: 'kb', kbId: kb.kbId },
       label: kb.kbName,
-      detail: kb.isOwn ? t('textarea.mention.thisAgent') : kb.agentName,
+      detail: kb.attached ? t('textarea.mention.attached') : undefined,
       title: [`@${kb.mention}`, kb.description].filter(Boolean).join('\n'),
       icon: <FiDatabase className="w-4 h-4" />,
       on: on.has(kbGrantKey(kb))
     }))
-  }, [agents, agentId, resolved.knowledgeBases, t])
+  }, [knowledgeBases, agents, agentId, resolved.knowledgeBases, t])
 
   return (
     <>

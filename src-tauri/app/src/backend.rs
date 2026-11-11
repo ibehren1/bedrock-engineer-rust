@@ -46,8 +46,8 @@ pub struct Backend {
     /// Shells on the user's machine for the chat page's Terminal tab. Deliberately not in
     /// `ToolDeps` / `ContextServices`: no tool can reach them.
     pub local_terminals: local_terminal::LocalTerminalManager,
-    /// Agents' local knowledgebases (`<userData>/knowledgebases`), also served to agents as the
-    /// built-in `local-knowledgebase` MCP server.
+    /// The local knowledgebases (`<userData>/knowledgebases/kbs`), served to the agents that
+    /// attach them as the built-in `local-knowledgebase` MCP server.
     pub knowledge: Arc<knowledge::service::KnowledgeService>,
     /// The on-device embedding model (download, status, inference).
     pub local_model: Arc<knowledge::local::LocalModel>,
@@ -283,6 +283,109 @@ impl knowledge::service::KnowledgeHost for KnowledgeHost {
             tracing::warn!(event, error = %e, "Failed to emit event");
         }
     }
+    fn attached_kbs(&self, agent_id: &str) -> Vec<String> {
+        store_snapshot(&self.0)
+            .get("customAgents")
+            .and_then(Value::as_array)
+            .and_then(|agents| {
+                agents
+                    .iter()
+                    .find(|a| a.get("id").and_then(Value::as_str) == Some(agent_id))
+            })
+            .map(attached_kb_ids)
+            .unwrap_or_default()
+    }
+}
+
+/// The knowledgebase ids an agent attaches: `localKnowledgeBases[].id`.
+pub fn attached_kb_ids(agent: &Value) -> Vec<String> {
+    agent
+        .get("localKnowledgeBases")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|r| r.get("id").and_then(Value::as_str))
+        .map(String::from)
+        .collect()
+}
+
+/// Replace the `localKnowledgeBases` of every agent in `custom_agents` (the `customAgents`
+/// array) that the layout migration has references for. Returns whether anything changed.
+pub fn apply_layout_refs(custom_agents: &mut Value, journal: &knowledge::layout::Journal) -> bool {
+    let Some(agents) = custom_agents.as_array_mut() else {
+        return false;
+    };
+    let mut changed = false;
+    for agent in agents {
+        let Some(id) = agent.get("id").and_then(Value::as_str) else {
+            continue;
+        };
+        let Some(refs) = journal.refs.get(id) else {
+            continue;
+        };
+        let Ok(refs) = serde_json::to_value(refs) else {
+            continue;
+        };
+        if let Some(obj) = agent.as_object_mut() {
+            if obj.get("localKnowledgeBases") != Some(&refs) {
+                obj.insert("localKnowledgeBases".into(), refs);
+                changed = true;
+            }
+        }
+    }
+    changed
+}
+
+/// Move knowledgebases from the old per-agent folders into the shared one and point the agents
+/// at their new ids (see [`knowledge::layout`]). Runs before the knowledge service starts and
+/// before any window loads `customAgents`. Failures are logged; whatever didn't finish is
+/// retried on the next launch.
+fn migrate_knowledge_layout(app: &AppHandle, kb_root: &Path) {
+    let custom_agents = store_get(app, "customAgents");
+    let agents: Vec<knowledge::layout::LegacyAgent> = custom_agents
+        .as_ref()
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|a| {
+            Some(knowledge::layout::LegacyAgent {
+                id: a.get("id")?.as_str()?.to_string(),
+                name: a
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string(),
+            })
+        })
+        .collect();
+    let journal = match knowledge::layout::migrate_files(kb_root, &agents) {
+        Ok(Some(j)) => j,
+        Ok(None) => return,
+        Err(error) => {
+            tracing::error!(%error, "Knowledge base layout migration failed");
+            return;
+        }
+    };
+    if let Some(mut custom_agents) = custom_agents {
+        if apply_layout_refs(&mut custom_agents, &journal) {
+            let saved = app
+                .state::<StoreMutex>()
+                .lock()
+                .map_err(|e| e.to_string())
+                .and_then(|mut s| {
+                    s.set("customAgents", custom_agents)
+                        .map_err(|e| e.to_string())
+                });
+            if let Err(error) = saved {
+                tracing::error!(%error, "Could not save the agents' knowledge base references");
+                return;
+            }
+        }
+    }
+    match knowledge::layout::mark_done(kb_root) {
+        Ok(()) => tracing::info!("Knowledge bases moved to the shared folder"),
+        Err(error) => tracing::error!(%error, "Could not finish the knowledge base migration"),
+    }
 }
 
 /// PDF / DOCX text for attachment context (the `pdf-*` / `docx-*` extractors in `tools`).
@@ -343,6 +446,7 @@ impl Backend {
             crate::commands::help::shipped_help_kb_path(app),
             &kb_root,
         ));
+        migrate_knowledge_layout(app, &kb_root);
         let knowledge = knowledge::service::KnowledgeService::new(
             kb_root,
             Arc::new(KnowledgeHost(app.clone())),
@@ -481,5 +585,79 @@ impl Backend {
         });
         self.background.shutdown_scheduler();
         tracing::info!("Background services shut down");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use knowledge::layout::{Journal, LayoutState, LocalKbRef};
+
+    #[test]
+    fn apply_layout_refs_replaces_only_migrated_agents() {
+        let mut agents = json!([
+            { "id": "a1", "name": "One", "localKnowledgeBases": [{ "id": "kb_x", "name": "Old" }] },
+            { "id": "a2", "name": "Two" },
+            { "id": "a3", "name": "Three", "localKnowledgeBases": [{ "id": "kb_keep", "name": "K" }] },
+            { "name": "no id" }
+        ]);
+        let journal = Journal {
+            version: 1,
+            state: LayoutState::FilesMoved,
+            moves: Vec::new(),
+            refs: [
+                (
+                    "a1".to_string(),
+                    vec![LocalKbRef {
+                        id: "kb_x".into(),
+                        name: "Docs".into(),
+                        description: "d".into(),
+                    }],
+                ),
+                (
+                    "a2".to_string(),
+                    vec![LocalKbRef {
+                        id: "kb_new".into(),
+                        name: "Docs (Two)".into(),
+                        description: String::new(),
+                    }],
+                ),
+                ("gone".to_string(), Vec::new()),
+            ]
+            .into(),
+        };
+        assert!(apply_layout_refs(&mut agents, &journal));
+        assert_eq!(
+            agents[0]["localKnowledgeBases"],
+            json!([{ "id": "kb_x", "name": "Docs", "description": "d" }])
+        );
+        assert_eq!(
+            agents[1]["localKnowledgeBases"],
+            json!([{ "id": "kb_new", "name": "Docs (Two)", "description": "" }])
+        );
+        assert_eq!(agents[1]["name"], "Two");
+        assert_eq!(
+            agents[2]["localKnowledgeBases"],
+            json!([{ "id": "kb_keep", "name": "K" }])
+        );
+        // Applying again changes nothing.
+        assert!(!apply_layout_refs(&mut agents, &journal));
+        assert!(!apply_layout_refs(&mut json!({}), &journal));
+    }
+
+    #[test]
+    fn attached_ids_and_attachments() {
+        let store = json!({ "customAgents": [
+            { "id": "a1", "localKnowledgeBases": [{ "id": "k1" }, { "id": "k2" }] },
+            { "id": "a2", "localKnowledgeBases": [{ "id": "k1" }, { "name": "no id" }] },
+            { "id": "a3" }
+        ]});
+        assert_eq!(attached_kb_ids(&store["customAgents"][0]), ["k1", "k2"]);
+        assert!(attached_kb_ids(&store["customAgents"][2]).is_empty());
+        let map = crate::commands::knowledge::attachments(&store);
+        assert_eq!(map["k1"], ["a1", "a2"]);
+        assert_eq!(map["k2"], ["a1"]);
+        assert_eq!(map.len(), 2);
+        assert!(crate::commands::knowledge::attachments(&json!({})).is_empty());
     }
 }

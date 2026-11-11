@@ -1,7 +1,6 @@
 export * from './AwsTab'
 export * from './ChatTab'
 export * from './GeneralTab'
-export * from './KnowledgeBaseTab'
 export * from './ModelsTab'
 export * from './SandboxTab'
 export * from './UpdatesTab'

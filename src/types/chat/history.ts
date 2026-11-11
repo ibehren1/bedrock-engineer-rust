@@ -63,7 +63,8 @@ export interface ChatSession {
 /** The agents a chat may delegate to and the knowledge bases it searches. */
 export type MentionGrants = {
   agentIds: string[]
-  knowledgeBases: { agentId: string; kbId: string }[]
+  /** `agentId` only on grants saved by older builds, when knowledge bases belonged to an agent. */
+  knowledgeBases: { kbId: string; agentId?: string }[]
 }
 
 export interface ChatHistoryStore {

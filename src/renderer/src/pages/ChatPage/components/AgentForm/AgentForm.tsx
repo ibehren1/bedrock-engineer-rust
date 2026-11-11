@@ -43,16 +43,6 @@ export const AgentForm: React.FC<AgentFormProps> = ({ agent, onSave, onCancel })
     [updateField]
   )
 
-  // Discarding a new agent also discards the knowledgebases created for it.
-  const handleCancel = React.useCallback(() => {
-    if (!agent?.id && formData.localKnowledgeBases?.length) {
-      window.api.knowledge
-        .deleteAgent(formData.id)
-        .catch((error) => console.error('Failed to delete knowledge bases:', error))
-    }
-    onCancel()
-  }, [agent?.id, formData.id, formData.localKnowledgeBases, onCancel])
-
   // 合成された生成状態
   const isGenerating = isGeneratingSystem || isGeneratingScenarios
 
@@ -102,7 +92,7 @@ export const AgentForm: React.FC<AgentFormProps> = ({ agent, onSave, onCancel })
 
         {/* フッター固定部分 - 常に画面下部に表示 */}
         <div className="shrink-0 px-3 py-2 sticky bottom-0 z-10 bg-surface border-t border-subtle backdrop-blur-xs">
-          <FormActionButtons onCancel={handleCancel} isGenerating={isGenerating} />
+          <FormActionButtons onCancel={onCancel} isGenerating={isGenerating} />
         </div>
       </form>
     </div>

@@ -2,8 +2,9 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
 import { FiRefreshCw, FiTool, FiTrash2 } from 'react-icons/fi'
-import { SettingSection } from '../SettingSection'
+import { SettingSection } from '@renderer/pages/SettingPage/components/SettingSection'
 import useSetting from '@renderer/hooks/useSetting'
+import { useKnowledgeBaseList } from '@renderer/contexts/KnowledgeBasesContext'
 import type { KnowledgeStorageEntry, KnowledgeStorageOverview } from '@/types/knowledge'
 import { embeddingLabel, formatBytes } from '@renderer/components/KnowledgeBase/knowledgeSettings'
 import {
@@ -20,7 +21,6 @@ const buttonClass =
   'inline-flex items-center gap-1 text-xs px-2 py-1 rounded-control border border-subtle text-ink hover:bg-raised disabled:opacity-50'
 
 const needsAttention = (e: KnowledgeStorageEntry) =>
-  e.orphan ||
   (e.stats?.health.issues ?? []).some((i) => i.severity === 'critical' || i.severity === 'warning')
 
 /** Element-wise sum of equal-length day series. */
@@ -36,12 +36,14 @@ const median = (values: number[]): number | null => {
 }
 
 /**
- * Settings > Knowledge Base overview: totals across every knowledgebase on disk, then one row
- * per knowledgebase with its usage, search time and health, and the maintenance actions.
+ * The Knowledge Bases page's overview: totals across every knowledgebase on disk, then one row
+ * per knowledgebase with the agents using it, its usage, search time and health, and the
+ * maintenance actions.
  */
 export const KnowledgeStorageSection: React.FC = () => {
   const { t, i18n } = useTranslation()
-  const { customAgents, saveCustomAgents } = useSetting()
+  const { customAgents } = useSetting()
+  const { remove } = useKnowledgeBaseList()
   const [overview, setOverview] = useState<KnowledgeStorageOverview | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
 
@@ -59,13 +61,13 @@ export const KnowledgeStorageSection: React.FC = () => {
 
   const agentName = (id: string) => customAgents.find((a) => a.id === id)?.name ?? id
   const entries = overview?.knowledgeBases ?? []
-  const orphans = entries.filter((e) => e.orphan)
+  const leftovers = overview?.legacyLeftovers ?? []
 
   const totals = useMemo(() => {
     const stats = entries.flatMap((e) => (e.stats ? [e.stats] : []))
     return {
       kbs: entries.length,
-      agents: new Set(entries.map((e) => e.agentId)).size,
+      agents: new Set(entries.flatMap((e) => e.attachedTo)).size,
       passages: entries.reduce((a, e) => a + e.chunkCount, 0),
       documents: stats.reduce((a, s) => a + s.info.documentCount, 0),
       reclaimable: stats.reduce((a, s) => a + s.health.reclaimableBytes, 0),
@@ -80,9 +82,9 @@ export const KnowledgeStorageSection: React.FC = () => {
   }, [entries])
 
   const optimize = async (e: KnowledgeStorageEntry) => {
-    setBusy(`${e.agentId}/${e.kbId}`)
+    setBusy(e.kbId)
     try {
-      const r = await window.api.knowledge.optimize(e.agentId, e.kbId)
+      const r = await window.api.knowledge.optimize(e.kbId)
       if (r.integrity !== 'ok')
         toast.error(t('knowledgeBase.maintenance.integrityFailed', { result: r.integrity }))
       return r
@@ -115,23 +117,8 @@ export const KnowledgeStorageSection: React.FC = () => {
 
   const deleteKb = async (e: KnowledgeStorageEntry) => {
     if (!window.confirm(t('knowledgeBase.deleteConfirm', { name: e.name }))) return
-    try {
-      await window.api.knowledge.delete(e.agentId, e.kbId)
-      // Keep the agent's list in step with what is on disk.
-      const agent = customAgents.find((a) => a.id === e.agentId)
-      if (agent?.localKnowledgeBases?.some((k) => k.id === e.kbId)) {
-        saveCustomAgents(
-          customAgents.map((a) =>
-            a.id === e.agentId
-              ? { ...a, localKnowledgeBases: a.localKnowledgeBases?.filter((k) => k.id !== e.kbId) }
-              : a
-          )
-        )
-      }
-      toast.success(t('knowledgeBase.deleted'))
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : String(err))
-    }
+    // The list reload detaches it from every agent that used it.
+    await remove(e.kbId)
     refresh()
   }
 
@@ -217,34 +204,21 @@ export const KnowledgeStorageSection: React.FC = () => {
               : t('knowledgeBase.settings.overview.optimizeAll')}
           </button>
         )}
-        {orphans.length > 0 && (
-          <button
-            type="button"
-            className={buttonClass}
-            onClick={async () => {
-              if (
-                !window.confirm(t('knowledgeBase.settings.purgeConfirm', { count: orphans.length }))
-              )
-                return
-              try {
-                const n = await window.api.knowledge.purgeOrphans()
-                toast.success(t('knowledgeBase.settings.purged', { count: n }))
-              } catch (e) {
-                toast.error(e instanceof Error ? e.message : String(e))
-              }
-              refresh()
-            }}
-          >
-            <FiTrash2 className="w-3 h-3 text-danger" />
-            {t('knowledgeBase.settings.purgeOrphans')}
-          </button>
-        )}
         {totals.attention > 0 && (
           <span className="text-xs text-ink-muted">
             {t('knowledgeBase.settings.overview.attention', { count: totals.attention })}
           </span>
         )}
       </div>
+
+      {leftovers.length > 0 && (
+        <p className="text-xs text-warning">
+          {t('knowledgeBase.settings.legacyLeftovers', {
+            count: leftovers.length,
+            folders: leftovers.join(', ')
+          })}
+        </p>
+      )}
 
       {overview && entries.length === 0 && (
         <p className="text-sm text-ink-muted">{t('knowledgeBase.settings.storageEmpty')}</p>
@@ -282,17 +256,17 @@ export const KnowledgeStorageSection: React.FC = () => {
             <tbody className="divide-y divide-subtle tabular-nums">
               {entries.map((e) => {
                 const s = e.stats
-                const key = `${e.agentId}/${e.kbId}`
+                const key = e.kbId
                 return (
                   <tr key={key} className="align-top hover:bg-surface-2">
                     <td className="px-3 py-2 min-w-48">
                       <div className="text-sm font-medium text-ink">{e.name}</div>
                       <div className="text-ink-muted">
-                        {e.orphan ? (
-                          <span className="text-warning">{t('knowledgeBase.settings.orphan')}</span>
-                        ) : (
-                          agentName(e.agentId)
-                        )}
+                        {e.attachedTo.length > 0
+                          ? t('knowledgeBase.settings.attachedTo', {
+                              agents: e.attachedTo.map(agentName).join(', ')
+                            })
+                          : t('knowledgeBase.settings.notAttached')}
                         {e.embedding ? ` · ${embeddingLabel(e.embedding)}` : ''}
                       </div>
                     </td>

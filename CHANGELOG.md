@@ -7,6 +7,28 @@ dated section here for anything user-visible.
 See the [README](./README.md#whats-different-in-this-fork) for a feature-by-feature
 overview of the fork with screenshots.
 
+### 2026-11-11
+
+- Local knowledge bases have their own **Knowledge Bases** page in the sidebar, above Settings,
+  instead of living inside each agent. You create and fill them there and tick the agents that use
+  each one; an agent's Knowledge Base tab now just picks from them. Several agents can share a
+  knowledge base, deleting an agent keeps its knowledge bases, a duplicated agent uses the same
+  ones rather than copies, and deleting a knowledge base removes it from every agent. Knowledge
+  base names must now be unique. The knowledge base settings (embedding model, chunking and
+  retrieval, automatic re-sync, the website crawler and the storage overview) moved to the page's
+  Settings tab, so Settings no longer has a Knowledge Base tab.
+- Existing knowledge bases are moved to the new page automatically the first time this version
+  starts, without being indexed again, and each agent keeps the ones it had. Where duplicating an
+  agent had made a copy, or two knowledge bases had the same name, the later one is kept with the
+  agent's name added in brackets. An older build of the app, if you go back to one, will not see
+  the moved knowledge bases.
+- An agent now searches only the knowledge bases attached to it. Before, it could search every
+  knowledge base stored under it, even one no longer listed on its Knowledge Base tab.
+- In a chat, `@` now offers every knowledge base by its name (or `@kb/Name` when an agent has the
+  same name), with the ones the current agent uses marked "Used by this agent". Mentions in older
+  chats keep working.
+- The tour has a stop for the new Knowledge Bases page.
+
 ### 2026-11-10
 
 - The chat scrolls to each new response again. After a long answer had stopped with its first

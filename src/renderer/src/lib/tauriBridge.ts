@@ -1203,39 +1203,22 @@ function createApi(): Window['api'] {
       restart: cmd(`${AU}.restart`, 'app_update_restart')
     },
     knowledge: {
-      list: cmd(`${KB}.list`, 'knowledge_list', (agentId) => ({ agentId })),
-      create: cmd(`${KB}.create`, 'knowledge_create', (agentId, name, description) => ({
-        agentId,
+      list: cmd(`${KB}.list`, 'knowledge_list'),
+      create: cmd(`${KB}.create`, 'knowledge_create', (name, description) => ({
         name,
         description
       })),
-      update: cmd(`${KB}.update`, 'knowledge_update', (agentId, kbId, name, description) => ({
-        agentId,
+      update: cmd(`${KB}.update`, 'knowledge_update', (kbId, name, description) => ({
         kbId,
         name,
         description
       })),
-      delete: cmd(`${KB}.delete`, 'knowledge_delete', (agentId, kbId) => ({ agentId, kbId })),
-      deleteAgent: cmd(`${KB}.deleteAgent`, 'knowledge_delete_agent', (agentId) => ({ agentId })),
-      copyAgent: cmd(`${KB}.copyAgent`, 'knowledge_copy_agent', (fromAgentId, toAgentId) => ({
-        fromAgentId,
-        toAgentId
-      })),
-      rebuild: cmd(`${KB}.rebuild`, 'knowledge_rebuild', (agentId, kbId) => ({ agentId, kbId })),
-      listSources: cmd(`${KB}.listSources`, 'knowledge_list_sources', (agentId, kbId) => ({
-        agentId,
-        kbId
-      })),
-      pickFiles: cmd(`${KB}.pickFiles`, 'knowledge_pick_files', (agentId, kbId) => ({
-        agentId,
-        kbId
-      })),
-      pickFolder: cmd(`${KB}.pickFolder`, 'knowledge_pick_folder', (agentId, kbId) => ({
-        agentId,
-        kbId
-      })),
-      addUrl: cmd(`${KB}.addUrl`, 'knowledge_add_url', (agentId, kbId, url, options) => ({
-        agentId,
+      delete: cmd(`${KB}.delete`, 'knowledge_delete', (kbId) => ({ kbId })),
+      rebuild: cmd(`${KB}.rebuild`, 'knowledge_rebuild', (kbId) => ({ kbId })),
+      listSources: cmd(`${KB}.listSources`, 'knowledge_list_sources', (kbId) => ({ kbId })),
+      pickFiles: cmd(`${KB}.pickFiles`, 'knowledge_pick_files', (kbId) => ({ kbId })),
+      pickFolder: cmd(`${KB}.pickFolder`, 'knowledge_pick_folder', (kbId) => ({ kbId })),
+      addUrl: cmd(`${KB}.addUrl`, 'knowledge_add_url', (kbId, url, options) => ({
         kbId,
         url,
         options
@@ -1243,22 +1226,19 @@ function createApi(): Window['api'] {
       updateSourceOptions: cmd(
         `${KB}.updateSourceOptions`,
         'knowledge_update_source_options',
-        (agentId, kbId, sourceId, options) => ({ agentId, kbId, sourceId, options })
+        (kbId, sourceId, options) => ({ kbId, sourceId, options })
       ),
-      resyncSource: cmd(
-        `${KB}.resyncSource`,
-        'knowledge_resync_source',
-        (agentId, kbId, sourceId) => ({ agentId, kbId, sourceId })
-      ),
-      removeSource: cmd(
-        `${KB}.removeSource`,
-        'knowledge_remove_source',
-        (agentId, kbId, sourceId) => ({ agentId, kbId, sourceId })
-      ),
-      jobs: cmd(`${KB}.jobs`, 'knowledge_jobs', (agentId) => ({ agentId })),
+      resyncSource: cmd(`${KB}.resyncSource`, 'knowledge_resync_source', (kbId, sourceId) => ({
+        kbId,
+        sourceId
+      })),
+      removeSource: cmd(`${KB}.removeSource`, 'knowledge_remove_source', (kbId, sourceId) => ({
+        kbId,
+        sourceId
+      })),
+      jobs: cmd(`${KB}.jobs`, 'knowledge_jobs', (kbId) => ({ kbId })),
       cancelJob: cmd(`${KB}.cancelJob`, 'knowledge_cancel_job', (jobId) => ({ jobId })),
-      search: cmd(`${KB}.search`, 'knowledge_search', (agentId, query, kbId, topK) => ({
-        agentId,
+      search: cmd(`${KB}.search`, 'knowledge_search', (query, kbId, topK) => ({
         query,
         kbId,
         topK
@@ -1274,13 +1254,9 @@ function createApi(): Window['api'] {
         (grants, knowledgeBase) => ({ grants, knowledgeBase })
       ),
       openSource: cmd(`${KB}.openSource`, 'knowledge_open_source', (uri) => ({ uri })),
-      stats: cmd(`${KB}.stats`, 'knowledge_stats', (agentId, kbId) => ({ agentId, kbId })),
-      optimize: cmd(`${KB}.optimize`, 'knowledge_optimize', (agentId, kbId) => ({
-        agentId,
-        kbId
-      })),
+      stats: cmd(`${KB}.stats`, 'knowledge_stats', (kbId) => ({ kbId })),
+      optimize: cmd(`${KB}.optimize`, 'knowledge_optimize', (kbId) => ({ kbId })),
       storageOverview: cmd(`${KB}.storageOverview`, 'knowledge_storage_overview'),
-      purgeOrphans: cmd(`${KB}.purgeOrphans`, 'knowledge_purge_orphans'),
       localModelStatus: cmd(`${KB}.localModelStatus`, 'knowledge_local_model_status'),
       downloadLocalModel: cmd(`${KB}.downloadLocalModel`, 'knowledge_download_local_model'),
       deleteLocalModel: cmd(`${KB}.deleteLocalModel`, 'knowledge_delete_local_model'),

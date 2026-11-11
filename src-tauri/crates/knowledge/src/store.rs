@@ -25,7 +25,7 @@ const JOB_LOG_KEEP: i64 = 200;
 const DAY_MS: i64 = 86_400_000;
 
 /// Register sqlite-vec for every connection opened afterwards.
-fn register_vec() {
+pub(crate) fn register_vec() {
     static ONCE: Once = Once::new();
     ONCE.call_once(|| unsafe {
         // SAFETY: `sqlite3_vec_init` has the extension entry point signature sqlite expects;

@@ -6,6 +6,7 @@ import {
   resolveGrants,
   setGrant
 } from './mentionGrants'
+import type { KnowledgeBaseListItem } from './knowledgeMentions'
 
 const agent = (id: string, name: string, kbs: LocalKnowledgeBaseRef[] = []): CustomAgent =>
   ({
@@ -17,20 +18,25 @@ const agent = (id: string, name: string, kbs: LocalKnowledgeBaseRef[] = []): Cus
     localKnowledgeBases: kbs
   }) as CustomAgent
 
+const KBS: KnowledgeBaseListItem[] = [
+  { id: 'kb1', name: 'Manuals' },
+  { id: 'kb3', name: 'Recipes' }
+]
+
 const AGENTS: CustomAgent[] = [
   agent('me', 'Me', [{ id: 'kb1', name: 'Manuals' }]),
-  agent('other', 'Other', [{ id: 'kb3', name: 'Recipes' }]),
+  agent('other', 'Other'),
   agent('writer', 'Writer'),
   agent('reviewer', 'Reviewer')
 ]
 
-const derive = (prompts: string[]) => deriveGrants(prompts, AGENTS, 'me')
+const derive = (prompts: string[]) => deriveGrants(prompts, AGENTS, KBS, 'me')
 
 describe('deriveGrants', () => {
   it('keeps agents and knowledge bases mentioned in earlier prompts', () => {
     expect(derive(['ask @Writer, use @Recipes', 'now fix the typo'])).toEqual({
       agentIds: ['writer'],
-      knowledgeBases: [{ agentId: 'other', kbId: 'kb3' }]
+      knowledgeBases: [{ kbId: 'kb3' }]
     })
   })
 
@@ -66,7 +72,13 @@ describe('deriveGrants', () => {
 describe('applyPromptToGrants', () => {
   it('reports what the prompt disabled', () => {
     const start = derive(['@Writer @Recipes'])
-    const { grants, disabled } = applyPromptToGrants(start, 'disable @Recipes please', AGENTS, 'me')
+    const { grants, disabled } = applyPromptToGrants(
+      start,
+      'disable @Recipes please',
+      AGENTS,
+      KBS,
+      'me'
+    )
     expect(grants.knowledgeBases).toEqual([])
     expect(disabled.map((d) => (d.kind === 'kb' ? d.kb.kbId : d.agent.id))).toEqual(['kb3'])
   })
@@ -76,6 +88,7 @@ describe('applyPromptToGrants', () => {
       EMPTY_GRANTS,
       'disable @Writer, no wait, @Writer',
       AGENTS,
+      KBS,
       'me'
     )
     expect(disabled).toEqual([])
@@ -84,9 +97,9 @@ describe('applyPromptToGrants', () => {
 
 describe('setGrant', () => {
   it('turns an agent or knowledge base on and off', () => {
-    const on = setGrant(EMPTY_GRANTS, { kind: 'kb', agentId: 'me', kbId: 'kb1' }, true)
-    expect(on.knowledgeBases).toEqual([{ agentId: 'me', kbId: 'kb1' }])
-    expect(setGrant(on, { kind: 'kb', agentId: 'me', kbId: 'kb1' }, false)).toEqual(EMPTY_GRANTS)
+    const on = setGrant(EMPTY_GRANTS, { kind: 'kb', kbId: 'kb1' }, true)
+    expect(on.knowledgeBases).toEqual([{ kbId: 'kb1' }])
+    expect(setGrant(on, { kind: 'kb', kbId: 'kb1' }, false)).toEqual(EMPTY_GRANTS)
     expect(setGrant(EMPTY_GRANTS, { kind: 'agent', agentId: 'writer' }, false)).toBe(EMPTY_GRANTS)
   })
 })
@@ -96,15 +109,22 @@ describe('resolveGrants', () => {
     const resolved = resolveGrants(
       {
         agentIds: ['gone', 'writer'],
-        knowledgeBases: [
-          { agentId: 'other', kbId: 'kb3' },
-          { agentId: 'other', kbId: 'deleted' }
-        ]
+        knowledgeBases: [{ kbId: 'kb3' }, { kbId: 'deleted' }]
       },
       AGENTS,
+      KBS,
       'me'
     )
     expect(resolved.agents.map((a) => a.id)).toEqual(['writer'])
     expect(resolved.knowledgeBases.map((kb) => kb.kbId)).toEqual(['kb3'])
+  })
+
+  it('matches grants saved with an owning agent by the knowledge base id', () => {
+    const legacy = { agentIds: [], knowledgeBases: [{ agentId: 'gone-agent', kbId: 'kb1' }] }
+    expect(resolveGrants(legacy, AGENTS, KBS, 'me').knowledgeBases.map((kb) => kb.kbId)).toEqual([
+      'kb1'
+    ])
+    // Turning it off removes the legacy entry too.
+    expect(setGrant(legacy, { kind: 'kb', kbId: 'kb1' }, false).knowledgeBases).toEqual([])
   })
 })

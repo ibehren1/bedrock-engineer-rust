@@ -3,10 +3,29 @@ export const knowledgeBase = {
     knowledgeBase: {
       tab: 'Knowledge Base',
       title: 'Local knowledge bases',
-      description:
-        'Documents and websites this agent can search. They are stored on this computer; an agent with a knowledge base gets the searchKnowledgeBase tool.',
+      pickerDescription:
+        'The knowledge bases this agent searches in every chat. They are stored on this computer; an agent that uses one gets the searchKnowledgeBase tool.',
+      pickerEmpty: 'No knowledge bases yet. Create one on the Knowledge Bases page.',
+      manage: 'Manage knowledge bases',
+      manageHint:
+        'Opens the Knowledge Bases page, where you create knowledge bases and add files, folders and websites. Save this agent first: unsaved changes are lost.',
+      page: {
+        title: 'Knowledge Bases',
+        description:
+          'Documents, folders and websites your agents can search, stored on this computer. Pick the agents that use each knowledge base; you can also @mention any of them in a chat.',
+        count_one: '{{count}} knowledge base',
+        count_other: '{{count}} knowledge bases',
+        listTab: 'Knowledge bases',
+        settingsTab: 'Settings',
+        agentCount_one: 'Used by {{count}} agent',
+        agentCount_other: 'Used by {{count}} agents',
+        usedBy: 'Used by ({{count}})',
+        usedByHint:
+          'These agents search this knowledge base in every chat. Changes are saved right away.',
+        noAgents: 'No custom agents yet. Create one on the My Agents page.'
+      },
       sharedUnavailable:
-        'Shared agents cannot have local knowledge bases. Add one to your own copy of the agent instead.',
+        'Shared agents cannot use local knowledge bases. Pick them in your own copy of the agent instead.',
       empty: 'No knowledge bases yet.',
       create: 'New knowledge base',
       createTitle: 'New knowledge base',
@@ -19,14 +38,14 @@ export const knowledgeBase = {
       save: 'Save',
       embeddingModel: 'Embedding model: {{model}}',
       embeddingFromSettings:
-        'Set in Settings > Knowledge Base. It cannot be changed later without a rebuild.',
+        'Set on the Settings tab of this page. It cannot be changed later without a rebuild.',
       rename: 'Rename',
       delete: 'Delete',
       deleteConfirm:
-        'Delete the knowledge base "{{name}}"? Its indexed content is removed from this computer. The original files, folders and websites are not touched.',
+        'Delete the knowledge base "{{name}}"? Its indexed content is removed from this computer and every agent that uses it loses it. The original files, folders and websites are not touched.',
       deleted: 'Knowledge base deleted',
       rebuild: 'Rebuild',
-      rebuildHint: 'Re-embed everything with the model now set in Settings ({{model}})',
+      rebuildHint: 'Re-embed everything with the model now set on the Settings tab ({{model}})',
       rebuildConfirm:
         'Re-embed every passage in "{{name}}" with {{model}}? This can take a while and, with Bedrock, costs embedding tokens.',
       rebuilding: 'Rebuilding…',
@@ -93,7 +112,7 @@ export const knowledgeBase = {
       builtinServer: {
         badge: 'Built-in',
         description:
-          'Added automatically because this agent has local knowledge bases ({{names}}). Manage them on the Knowledge Base tab.',
+          'Added automatically because this agent uses local knowledge bases ({{names}}). Choose them on the Knowledge Base tab; manage them on the Knowledge Bases page.',
         test: 'Test connection',
         connected: 'Connected: {{count}} tools available'
       },
@@ -182,8 +201,8 @@ export const knowledgeBase = {
         useSitemap: 'Use sitemap.xml to find pages',
         overview: {
           knowledgeBases: 'Knowledge bases',
-          acrossAgents_one: 'for {{count}} agent',
-          acrossAgents_other: 'across {{count}} agents',
+          acrossAgents_one: 'used by {{count}} agent',
+          acrossAgents_other: 'used by {{count}} agents',
           documents: '{{n}} documents',
           typicalTime: 'Typical search {{time}}',
           optimizeAll: 'Optimize all',
@@ -202,10 +221,12 @@ export const knowledgeBase = {
         storageDescription: 'Knowledge bases on this computer: {{size}} in {{path}}',
         storageEmpty: 'No knowledge bases yet.',
         agent: 'Agent',
-        orphan: 'Agent deleted',
-        purgeOrphans: 'Delete orphaned knowledge bases',
-        purgeConfirm: 'Delete {{count}} knowledge bases whose agent no longer exists?',
-        purged: 'Deleted {{count}} knowledge bases',
+        attachedTo: 'Attached to {{agents}}',
+        notAttached: 'Not attached',
+        legacyLeftovers_one:
+          'Knowledge bases in {{count}} old folder could not be moved yet ({{folders}}). The app tries again at the next start.',
+        legacyLeftovers_other:
+          'Knowledge bases in {{count}} old folders could not be moved yet ({{folders}}). The app tries again at the next start.',
         refresh: 'Refresh'
       }
     }
@@ -214,10 +235,29 @@ export const knowledgeBase = {
     knowledgeBase: {
       tab: 'ナレッジベース',
       title: 'ローカルナレッジベース',
-      description:
-        'このエージェントが検索できるドキュメントとウェブサイトです。このコンピューターに保存され、ナレッジベースを持つエージェントには searchKnowledgeBase ツールが追加されます。',
+      pickerDescription:
+        'このエージェントがすべてのチャットで検索するナレッジベースです。このコンピューターに保存され、ナレッジベースを使うエージェントには searchKnowledgeBase ツールが追加されます。',
+      pickerEmpty: 'ナレッジベースはまだありません。ナレッジベースページで作成してください。',
+      manage: 'ナレッジベースを管理',
+      manageHint:
+        'ナレッジベースページを開きます。ナレッジベースの作成と、ファイル・フォルダ・ウェブサイトの追加はそこで行います。先にこのエージェントを保存してください。保存していない変更は失われます。',
+      page: {
+        title: 'ナレッジベース',
+        description:
+          'エージェントが検索できるドキュメント・フォルダ・ウェブサイトで、このコンピューターに保存されます。ナレッジベースごとに使うエージェントを選びます。チャットでどれでも @メンションすることもできます。',
+        count_one: 'ナレッジベース {{count}} 件',
+        count_other: 'ナレッジベース {{count}} 件',
+        listTab: 'ナレッジベース',
+        settingsTab: '設定',
+        agentCount_one: '{{count}} 件のエージェントが使用',
+        agentCount_other: '{{count}} 件のエージェントが使用',
+        usedBy: '使用するエージェント（{{count}}）',
+        usedByHint:
+          'これらのエージェントはすべてのチャットでこのナレッジベースを検索します。変更はすぐに保存されます。',
+        noAgents: 'カスタムエージェントはまだありません。マイエージェントページで作成してください。'
+      },
       sharedUnavailable:
-        '共有エージェントにはローカルナレッジベースを追加できません。自分用のエージェントのコピーに追加してください。',
+        '共有エージェントはローカルナレッジベースを使えません。自分用のエージェントのコピーで選んでください。',
       empty: 'ナレッジベースはまだありません。',
       create: '新しいナレッジベース',
       createTitle: '新しいナレッジベース',
@@ -230,14 +270,14 @@ export const knowledgeBase = {
       save: '保存',
       embeddingModel: '埋め込みモデル: {{model}}',
       embeddingFromSettings:
-        '設定 > ナレッジベースで指定します。後から変更するには再構築が必要です。',
+        'このページの「設定」タブで指定します。後から変更するには再構築が必要です。',
       rename: '名前を変更',
       delete: '削除',
       deleteConfirm:
-        'ナレッジベース「{{name}}」を削除しますか？インデックス化された内容がこのコンピューターから削除されます。元のファイル、フォルダ、ウェブサイトには影響しません。',
+        'ナレッジベース「{{name}}」を削除しますか？インデックス化された内容がこのコンピューターから削除され、使用中のエージェントからも外れます。元のファイル、フォルダ、ウェブサイトには影響しません。',
       deleted: 'ナレッジベースを削除しました',
       rebuild: '再構築',
-      rebuildHint: '設定で現在指定しているモデル（{{model}}）ですべて埋め込み直します',
+      rebuildHint: '「設定」タブで現在指定しているモデル（{{model}}）ですべて埋め込み直します',
       rebuildConfirm:
         '「{{name}}」のすべてのパッセージを {{model}} で埋め込み直しますか？時間がかかることがあり、Bedrock の場合は埋め込みトークンの料金がかかります。',
       rebuilding: '再構築中…',
@@ -307,7 +347,7 @@ export const knowledgeBase = {
       builtinServer: {
         badge: '組み込み',
         description:
-          'このエージェントにはローカルナレッジベース（{{names}}）があるため自動的に追加されます。ナレッジベースタブで管理します。',
+          'このエージェントはローカルナレッジベース（{{names}}）を使うため自動的に追加されます。ナレッジベースタブで選び、ナレッジベースページで管理します。',
         test: '接続テスト',
         connected: '接続しました: {{count}} 個のツールが利用可能'
       },
@@ -396,8 +436,8 @@ export const knowledgeBase = {
         useSitemap: 'sitemap.xml でページを探す',
         overview: {
           knowledgeBases: 'ナレッジベース',
-          acrossAgents_one: 'エージェント {{count}} 件',
-          acrossAgents_other: 'エージェント {{count}} 件',
+          acrossAgents_one: '{{count}} 件のエージェントが使用',
+          acrossAgents_other: '{{count}} 件のエージェントが使用',
           documents: 'ドキュメント {{n}} 件',
           typicalTime: '標準的な検索 {{time}}',
           optimizeAll: 'すべて最適化',
@@ -416,10 +456,12 @@ export const knowledgeBase = {
         storageDescription: 'このコンピューター上のナレッジベース: {{path}} に {{size}}',
         storageEmpty: 'ナレッジベースはまだありません。',
         agent: 'エージェント',
-        orphan: 'エージェント削除済み',
-        purgeOrphans: '孤立したナレッジベースを削除',
-        purgeConfirm: 'エージェントが存在しないナレッジベース {{count}} 件を削除しますか？',
-        purged: 'ナレッジベース {{count}} 件を削除しました',
+        attachedTo: '使用: {{agents}}',
+        notAttached: '未使用',
+        legacyLeftovers_one:
+          '古いフォルダ {{count}} 件のナレッジベースをまだ移動できていません（{{folders}}）。次回起動時に再試行します。',
+        legacyLeftovers_other:
+          '古いフォルダ {{count}} 件のナレッジベースをまだ移動できていません（{{folders}}）。次回起動時に再試行します。',
         refresh: '更新'
       }
     }

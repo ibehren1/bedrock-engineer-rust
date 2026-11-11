@@ -1,4 +1,9 @@
-import { DEFAULT_SETTING_TAB, resolveSettingTab, SETTING_TABS } from './settingTabs'
+import {
+  DEFAULT_SETTING_TAB,
+  movedSettingTab,
+  resolveSettingTab,
+  SETTING_TABS
+} from './settingTabs'
 
 describe('resolveSettingTab', () => {
   it('accepts every declared tab id', () => {
@@ -26,5 +31,18 @@ describe('SETTING_TABS', () => {
 
   it('starts with the default tab', () => {
     expect(SETTING_TABS[0].id).toBe(DEFAULT_SETTING_TAB)
+  })
+})
+
+describe('movedSettingTab', () => {
+  it('sends the old Knowledge Base tab to its page', () => {
+    expect(movedSettingTab('knowledgebase')).toBe('/knowledge-bases')
+    expect(SETTING_TABS.some((tab) => (tab.id as string) === 'knowledgebase')).toBe(false)
+  })
+
+  it('leaves current and unknown tabs alone', () => {
+    SETTING_TABS.forEach((tab) => expect(movedSettingTab(tab.id)).toBeUndefined())
+    expect(movedSettingTab(undefined)).toBeUndefined()
+    expect(movedSettingTab('toString')).toBeUndefined()
   })
 })

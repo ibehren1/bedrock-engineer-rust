@@ -180,7 +180,6 @@ export const AgentFormContent: React.FC<{
       return (
         <div className="pb-4" onClick={formEventUtils.preventPropagation}>
           <LocalKnowledgeBaseSection
-            agentId={formData.id}
             isShared={isSharedAgent}
             value={formData.localKnowledgeBases}
             onChange={(refs) => updateField('localKnowledgeBases', refs)}

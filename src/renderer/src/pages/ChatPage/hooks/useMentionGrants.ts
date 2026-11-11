@@ -12,7 +12,7 @@ import {
   type GrantTarget,
   type ResolvedGrants
 } from '../utils/mentionGrants'
-import type { MentionItem } from '../utils/knowledgeMentions'
+import type { KnowledgeBaseListItem, MentionItem } from '../utils/knowledgeMentions'
 import { previousUserPrompts } from '../utils/userPrompts'
 
 export type MentionGrantsControl = {
@@ -29,6 +29,7 @@ export type MentionGrantsControl = {
 export function useMentionGrants(
   sessionId: string | undefined,
   agents: CustomAgent[],
+  knowledgeBases: KnowledgeBaseListItem[],
   agentId: string | undefined
 ) {
   const { getSession, getSessionField, setMentionGrants } = useChatHistory()
@@ -43,7 +44,12 @@ export function useMentionGrants(
     const loaded =
       saved ??
       (session
-        ? deriveGrants(previousUserPrompts(session.messages as Message[]), agents, agentId)
+        ? deriveGrants(
+            previousUserPrompts(session.messages as Message[]),
+            agents,
+            knowledgeBases,
+            agentId
+          )
         : EMPTY_GRANTS)
     grantsRef.current = loaded
     setGrantsState(loaded)
@@ -72,14 +78,20 @@ export function useMentionGrants(
   /** Fold `prompt`'s mentions in; returns the grants for its turn and what it disabled. */
   const applyPrompt = useCallback(
     (prompt: string): { resolved: ResolvedGrants; disabled: MentionItem[] } => {
-      const result = applyPromptToGrants(grantsRef.current, prompt, agents, agentId)
+      const result = applyPromptToGrants(grantsRef.current, prompt, agents, knowledgeBases, agentId)
       commit(result.grants)
-      return { resolved: resolveGrants(result.grants, agents, agentId), disabled: result.disabled }
+      return {
+        resolved: resolveGrants(result.grants, agents, knowledgeBases, agentId),
+        disabled: result.disabled
+      }
     },
-    [agents, agentId, commit]
+    [agents, knowledgeBases, agentId, commit]
   )
 
-  const resolved = useMemo(() => resolveGrants(grants, agents, agentId), [grants, agents, agentId])
+  const resolved = useMemo(
+    () => resolveGrants(grants, agents, knowledgeBases, agentId),
+    [grants, agents, knowledgeBases, agentId]
+  )
 
   const control: MentionGrantsControl = useMemo(
     () => ({ resolved, setGranted }),

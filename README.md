@@ -219,9 +219,11 @@ switching back and forth. For example, `use @email to find the email from Kevin 
 A mentioned agent stays on for the rest of the chat; write `disable @email` to turn it off again, or
 use the robot button above the message box, which lists the agents with an on / off switch each.
 
-The same `@` list offers every agent's local knowledge bases. Mentioning one makes the knowledge base
-tools search only the mentioned knowledge bases for the rest of the chat, even another agent's. The
-database button next to the robot button turns them on and off, and so does `disable @Name`.
+The same `@` list offers every local knowledge base, by name (or `@kb/Name` when an agent has the
+same name), with the ones the current agent uses marked **Used by this agent**. Mentioning one makes
+the knowledge base tools search only the mentioned knowledge bases for the rest of the chat, even ones
+the agent does not use. The database button next to the robot button turns them on and off, and so
+does `disable @Name`.
 
 ![agent-mention](./assets/agent-mention.png)
 
@@ -383,11 +385,16 @@ Amazon Bedrock.
 
 ### Local knowledge bases
 
-An agent can search documents and websites you give it, all stored on your computer.
+Agents can search documents, folders and websites you add, all stored on your computer.
 
-- The **Knowledge Base** tab in the agent editor (after MCP Servers) holds the agent's knowledge
-  bases. Create one with a name and a short description; the description tells the model what it
-  covers.
+- Knowledge bases have their own **Knowledge Bases** page in the sidebar (above Settings). Create one
+  there with a unique name and a short description; the description tells the model what it covers.
+  Pick a knowledge base in the list to see its card, and tick the agents that use it under **Used
+  by** (saved right away). Several agents can share one knowledge base, and an agent can use several.
+- The **Knowledge Base** tab in the agent editor (after MCP Servers) is the same choice from the
+  agent's side: a checkbox for each knowledge base, saved with the agent, and a **Manage knowledge
+  bases** link to the page. An agent searches only the knowledge bases it uses (plus any you
+  `@` mention in a chat).
 - **Add files** takes text, Markdown and code files, PDF, Word, HTML, Excel and PowerPoint. **Add
   folder** adds a folder as one source that follows it: files added, edited or deleted in it are
   picked up at the next sync (hidden, dependency and build folders are left out). **Add
@@ -398,37 +405,41 @@ An agent can search documents and websites you give it, all stored on your compu
   picks up changes and skips documents that are unchanged. File and folder sources also re-sync
   on their own when their files change, checked at startup and then hourly (the interval is a
   setting); websites only when you ask. **Remove** takes a source and its
-  passages out again. A search box on the tab shows what the agent would find for a question.
-- An agent with a knowledge base gets a built-in MCP server, `local-knowledgebase`. Its
+  passages out again. A search box on the card shows what the agent would find for a question.
+- An agent that uses a knowledge base gets a built-in MCP server, `local-knowledgebase`. Its
   `searchKnowledgeBase` tool returns the most relevant passages, ranked by both meaning and
   keyword matches, with the file path or page URL they came from (`listKnowledgeBases` and
   `listKnowledgeBaseSources` let it see what is there). Its system prompt lists the
-  knowledge bases and asks the agent to search them and cite each passage inline, right after the
-  fact it supports; every result is tagged with its title, section, file path or URL, knowledge
-  base, position in the document and a ready-made citation link. Background agents and
+  knowledge bases it uses and asks the agent to search them and cite each passage inline, right
+  after the fact it supports; every result is tagged with its title, section, file path or URL,
+  knowledge base, position in the document and a ready-made citation link. Background agents and
   sub-agents get the same tools. The agent editor's **MCP Servers** tab shows the server as
   **Built-in** with its tools and a **Test connection** button, and the **Tools** tab lists the
   tools with the other MCP tools. In a chat, each search shows up as a `searchKnowledgeBase` tool
   call with the query and the passages it returned.
-- **Settings → Knowledge Base** picks the embedding model for new knowledge bases: Amazon Titan
+- The page's **Settings** tab picks the embedding model for new knowledge bases: Amazon Titan
   Text Embeddings V2 or Cohere Embed on Bedrock, or **multilingual-e5-small** running on your
-  computer (works offline and covers about 100 languages; a one-time download of about 465 MB). The
-  tab also has chunk size, the number of results, the balance between meaning and keyword matches,
-  the crawler's defaults, and a list of every knowledge base on disk with its size and a delete
-  button, including any left behind by deleted agents.
+  computer (works offline and covers about 100 languages; a one-time download of about 465 MB). It
+  also has chunk size, the number of results, the balance between meaning and keyword matches,
+  automatic re-sync and the crawler's defaults.
 - Each knowledge base card shows tiles for passages, storage (with the space an optimize would
   give back), agent searches over 30 days with a per-day trend, and the typical search time, plus
   a health badge and a **Maintenance** panel. The panel lists anything that needs attention
   (failed sources, websites not synced for 30 days, a missing local model, a model that differs
-  from Settings, free space) and has an **Optimize** button. Optimize compacts the file, tidies
+  from the settings, free space) and has an **Optimize** button. Optimize compacts the file, tidies
   the keyword index and checks for errors, and also runs on its own after an update that leaves
-  a lot of free space. **Settings → Knowledge Base** opens with an **Overview** of every knowledge
-  base: totals, then a table with each one's agent, model, size, searches, search time, last use
-  and health, with **Optimize all**.
-- Each knowledge base is one SQLite file under `knowledgebases/` in the app's data folder. It keeps
-  the model it was built with; when Settings name a different one, the agent editor offers a
-  rebuild. Duplicating an agent copies its knowledge bases and deleting the agent deletes them.
-  They are never written into shared or exported agent files.
+  a lot of free space. The **Settings** tab opens with an **Overview** of every knowledge base:
+  totals, then a table with the agents each one is attached to, its model, size, searches, search
+  time, last use and health, with **Optimize all**.
+- Each knowledge base is one SQLite file under `knowledgebases/kbs/` in the app's data folder. It
+  keeps the model it was built with; when the settings name a different one, its card offers a
+  rebuild. Deleting or duplicating an agent leaves knowledge bases alone (a duplicate uses the same
+  ones); deleting a knowledge base takes it away from every agent. They are never written into
+  shared or exported agent files.
+- Knowledge bases made with older versions, which kept them inside each agent, are moved to the
+  shared folder on first launch without re-indexing, and each agent keeps the ones it had. A copy
+  left by duplicating an agent, or a second knowledge base with the same name, is kept with the
+  agent's name added in brackets.
 
 ### Files tab
 
@@ -524,8 +535,8 @@ context pointing at a remote daemon disables that tab and says why; the rest of 
 
 ![settings-sidebar](./assets/settings-sidebar.png)
 
-- **Settings are grouped into tabs** — General, AWS, Models, Chat, Workspace, Sandbox, Knowledge
-  Base and Updates — with a sidebar down the left, rather than one long column. Each tab has its own address
+- **Settings are grouped into tabs** — General, AWS, Models, Chat, Workspace, Sandbox and
+  Updates — with a sidebar down the left, rather than one long column. Each tab has its own address
   (`#/setting/aws`), so links into settings open the relevant tab.
 - **Five appearances**, lightest to darkest — Light, **Newspaper**, Dim (default), **Charcoal** and
   Dark. Newspaper is a flat, monochrome, black-on-white view in the spirit of a printed page or an

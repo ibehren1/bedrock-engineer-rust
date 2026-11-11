@@ -1,8 +1,8 @@
 import React from 'react'
 import type { ChatTab } from './chatTabs'
 
-export type ChatTabItem = {
-  key: ChatTab
+export type ChatTabItem<K extends string = ChatTab> = {
+  key: K
   label: string
   icon: React.ReactNode
   /** Shown after the label: a count, an attention dot, the running cost. */
@@ -10,14 +10,18 @@ export type ChatTabItem = {
   title?: string
 }
 
-type ChatTabStripProps = {
-  items: ChatTabItem[]
-  active: ChatTab
-  onChange: (tab: ChatTab) => void
+type ChatTabStripProps<K extends string> = {
+  items: ChatTabItem<K>[]
+  active: K
+  onChange: (tab: K) => void
 }
 
-/** The tab row across the top of the chat column. */
-export const ChatTabStrip: React.FC<ChatTabStripProps> = ({ items, active, onChange }) => (
+/** The tab row across the top of the chat column (also used by other pages for the same look). */
+export const ChatTabStrip = <K extends string = ChatTab>({
+  items,
+  active,
+  onChange
+}: ChatTabStripProps<K>): React.ReactElement => (
   <div
     role="tablist"
     className="flex items-center gap-0.5 px-1 border-b border-subtle shrink-0 min-w-0"
@@ -25,6 +29,7 @@ export const ChatTabStrip: React.FC<ChatTabStripProps> = ({ items, active, onCha
     {items.map((item) => (
       <button
         key={item.key}
+        type="button"
         role="tab"
         aria-selected={active === item.key}
         onClick={() => onChange(item.key)}
