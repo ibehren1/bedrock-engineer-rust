@@ -25,16 +25,19 @@ jobs:
       # The macOS and Windows lanes exist to package installers, which only a public repo does
       # (see the "Build app" step). A private repo therefore runs a single Linux lane for the
       # platform-independent checks (same lint, typecheck and tests) at the 1x minute rate
-      # instead of macOS's 10x and Windows's 2x.
+      # instead of Windows's 2x.
+      # The macOS lane runs on a self-hosted runner (`runner` holds its labels; `os` is only the
+      # lane's name, used in the job title, cache key and artifact name). The workflow has no
+      # pull_request trigger, so only pushes to main and manual runs reach that machine.
       matrix:
         include: >-
           ${{ github.event.repository.private
           && fromJSON('[{"os": "ubuntu-24.04"}]')
-          || fromJSON('[{"os": "macos-latest", "tauri_args": "--target universal-apple-darwin", "rust_targets": "aarch64-apple-darwin,x86_64-apple-darwin"},
+          || fromJSON('[{"os": "macos-self-hosted", "runner": ["self-hosted", "macOS"], "tauri_args": "--target universal-apple-darwin", "rust_targets": "aarch64-apple-darwin,x86_64-apple-darwin"},
           {"os": "windows-latest", "tauri_args": "--bundles nsis"},
           {"os": "ubuntu-24.04", "tauri_args": "--bundles appimage,deb"}]') }}
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.runner || matrix.os }}
     env:
       NODE_OPTIONS: '--max-old-space-size=8192'
       CARGO_TERM_COLOR: always
