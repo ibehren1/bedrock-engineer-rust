@@ -1,3 +1,8 @@
+![GitHub Release](https://img.shields.io/github/v/release/ibehren1/bedrock-engineer-rust)
+[![Build binaries](https://github.com/ibehren1/bedrock-engineer-rust/actions/workflows/build-and-release.yml/badge.svg)](https://github.com/ibehren1/bedrock-engineer-rust/actions/workflows/build.yml)
+![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/ibehren1/bedrock-engineer-rust/total)
+
+
 # Bedrock Engineer (Rust fork)
 
 Original code here: https://github.com/aws-samples/bedrock-engineer
