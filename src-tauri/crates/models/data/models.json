@@ -829,6 +829,105 @@
       ]
     },
     {
+      "baseId": "gpt-6.2-astra",
+      "name": "GPT-6.2 Astra",
+      "provider": "openai",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 128000,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "enabled"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "global",
+          "prefix": "global",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(Global)"
+        },
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        }
+      ],
+      "pricing": {
+        "input": 0.011,
+        "output": 0.055,
+        "cacheRead": 0.0011,
+        "cacheWrite": 0.01375
+      },
+      "pricingRules": {
+        "profileMultiplier": {
+          "global": 0.91
+        },
+        "longContext": {
+          "thresholdTokens": 272000,
+          "input": 2
+        }
+      }
+    },
+    {
+      "baseId": "gpt-6.2-sol",
+      "name": "GPT-6.2 Sol",
+      "provider": "openai",
+      "category": "text",
+      "toolUse": true,
+      "maxTokensLimit": 128000,
+      "supportsThinking": true,
+      "supportedThinkingTypes": [
+        "enabled"
+      ],
+      "inferenceProfiles": [
+        {
+          "type": "global",
+          "prefix": "global",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(Global)"
+        },
+        {
+          "type": "regional-us",
+          "prefix": "us",
+          "regions": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ],
+          "displaySuffix": "(US)"
+        }
+      ],
+      "pricing": {
+        "input": 0.0022,
+        "output": 0.011,
+        "cacheRead": 0.00011,
+        "cacheWrite": 0.00275
+      },
+      "pricingRules": {
+        "profileMultiplier": {
+          "global": 0.9
+        },
+        "longContext": {
+          "thresholdTokens": 272000,
+          "input": 2,
+          "output": 1.5
+        }
+      }
+    },
+    {
       "baseId": "gpt-6-astra",
       "name": "GPT-6 Astra",
       "provider": "openai",
@@ -1933,6 +2032,10 @@
       "us.openai.gpt-6.1-sol",
       "global.openai.gpt-6.1-terra",
       "us.openai.gpt-6.1-terra",
+      "global.openai.gpt-6.2-astra",
+      "us.openai.gpt-6.2-astra",
+      "global.openai.gpt-6.2-sol",
+      "us.openai.gpt-6.2-sol",
       "global.xai.grok-4.6",
       "us.xai.grok-4.6",
       "global.xai.grok-4.7",
@@ -1971,6 +2074,10 @@
       "us.openai.gpt-6.1-sol",
       "global.openai.gpt-6.1-terra",
       "us.openai.gpt-6.1-terra",
+      "global.openai.gpt-6.2-astra",
+      "us.openai.gpt-6.2-astra",
+      "global.openai.gpt-6.2-sol",
+      "us.openai.gpt-6.2-sol",
       "global.xai.grok-4.6",
       "us.xai.grok-4.6",
       "global.xai.grok-4.7",
@@ -2029,6 +2136,10 @@
       "us.openai.gpt-6.1-sol",
       "global.openai.gpt-6.1-terra",
       "us.openai.gpt-6.1-terra",
+      "global.openai.gpt-6.2-astra",
+      "us.openai.gpt-6.2-astra",
+      "global.openai.gpt-6.2-sol",
+      "us.openai.gpt-6.2-sol",
       "openai.gpt-oss-120b-1:0",
       "openai.gpt-oss-20b-1:0",
       "global.xai.grok-4.6",

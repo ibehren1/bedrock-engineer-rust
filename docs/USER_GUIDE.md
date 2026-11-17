@@ -804,7 +804,7 @@ that can think.
 | **Quick** (1K)   | A little planning.                                                                                                                                                                    |
 | **Normal** (4K)  | Everyday multi-step work.                                                                                                                                                             |
 | **Deep** (16K)   | Hard debugging, tricky analysis, long plans.                                                                                                                                          |
-| **Deeper** (32K) | The hardest problems. On models that use effort levels instead of a thinking budget (Grok 4.7, Grok 4.6, GPT-6.1, GPT-6), this asks for the highest effort the model offers.         |
+| **Deeper** (32K) | The hardest problems. On models that use effort levels instead of a thinking budget (Grok 4.7, Grok 4.6, GPT-6.2, GPT-6.1, GPT-6), this asks for the highest effort the model offers.         |
 
 Models that think adaptively offer just **None** and **Adaptive**; the others offer None and the four
 budgets. Some models always think and cannot be turned down; the control will tell you when that is
@@ -2175,7 +2175,9 @@ Useful when you know what the steps are but not the exact JSON syntax for expres
 | Speed and low cost for simple work                       | **Claude Haiku 5.5** or **Amazon Nova Lite**                 |
 | The cheapest option for background tasks and chat titles | **Amazon Nova Micro**, **Nova Lite** or **Claude Haiku 5.5** |
 | A very large context window for huge documents           | **Claude Fable 5.2** (1M tokens) or **Grok 4.7** (500K)      |
-| OpenAI's most capable model, cost no object              | **GPT-6 Astra** (1.05M tokens, $11/$55 per 1M)               |
+| OpenAI's most capable model, cost no object              | **GPT-6.2 Astra** (newest; priced for now like GPT-6 Astra)  |
+| OpenAI's previous flagship                               | **GPT-6 Astra** (1.05M tokens, $11/$55 per 1M)               |
+| OpenAI's newest mid-tier model for coding and agents     | **GPT-6.2 Sol** (priced for now like GPT-6.1 Sol)            |
 | Near-Astra quality at a mid-tier OpenAI price            | **GPT-6.1 Sol** (1M tokens, $2.20/$11 per 1M)                |
 | A strong, low-cost OpenAI model for agent work           | **GPT-6.1 Terra** (1.05M tokens, $1.10/$5.50 per 1M)         |
 | A mid-priced OpenAI model for everyday work              | **GPT-6 Sol** ($2/$10 per 1M)                                |
@@ -2193,7 +2195,7 @@ Fable 5.2
 
 **Amazon (Nova):** Nova Micro, Nova Lite, Nova 2 Lite, Nova Pro
 
-**OpenAI:** GPT-6 Astra, GPT-6.1 Sol, GPT-6.1 Terra, GPT-6 Sol, GPT-6 Luna, GPT-OSS 20B, GPT-OSS 120B
+**OpenAI:** GPT-6.2 Astra, GPT-6.2 Sol, GPT-6 Astra, GPT-6.1 Sol, GPT-6.1 Terra, GPT-6 Sol, GPT-6 Luna, GPT-OSS 20B, GPT-OSS 120B
 
 **Others:** DeepSeek R1, Kimi K3, Kimi K2.5, Grok 4.6, Grok 4.7
 

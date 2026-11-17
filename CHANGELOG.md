@@ -7,6 +7,18 @@ dated section here for anything user-visible.
 See the [README](./README.md#whats-different-in-this-fork) for a feature-by-feature
 overview of the fork with screenshots.
 
+### 2026-11-17
+
+- **OpenAI GPT-6.2 Astra** and **GPT-6.2 Sol** are now in the model dropdown, as **(US)** and
+  **(Global)**, in US East (N. Virginia, Ohio) and US West (Oregon). Astra is OpenAI's newest
+  frontier model for hard reasoning, research and advanced coding and agent work; Sol is built for
+  everyday coding, agent and professional tasks where speed and cost per task matter. Both take
+  text and images, can return up to 128,000 tokens in one answer, use tools, and think by effort
+  level, so **Deeper** asks them to think as hard as they can. AWS hadn't published their prices
+  when they launched, so for now the app prices GPT-6.2 Astra like GPT-6 Astra ($11 per million
+  tokens in, $55 out) and GPT-6.2 Sol like GPT-6.1 Sol ($2.20 in, $11 out); costs shown for them
+  may change once AWS posts the real rates. Astra's Ultrafast mode isn't available in the app.
+
 ### 2026-11-11
 
 - Local knowledge bases have their own **Knowledge Bases** page in the sidebar, above Settings,

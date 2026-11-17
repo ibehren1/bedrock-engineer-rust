@@ -14,6 +14,8 @@ import { PricingCalculator } from '../pricing'
 // resolution, and pricing.
 // GPT-6.1 Sol and GPT-6.1 Terra are covered separately below.
 const OPENAI_GPT_MODELS = [
+  { base: 'gpt-6.2-astra', name: 'GPT-6.2 Astra' },
+  { base: 'gpt-6.2-sol', name: 'GPT-6.2 Sol' },
   { base: 'gpt-6-astra', name: 'GPT-6 Astra' },
   { base: 'gpt-6-sol', name: 'GPT-6 Sol' },
   { base: 'gpt-6-luna', name: 'GPT-6 Luna' }
@@ -207,6 +209,57 @@ describe('OpenAI GPT-6.1 Terra registry integration', () => {
     expect(calc.calculateOutputCost(1_000_000)).toBeCloseTo(5.5, 5)
     expect(calc.calculateCacheReadCost(1_000_000)).toBeCloseTo(0.055, 5)
     expect(calc.calculateCacheWriteCost(1_000_000)).toBeCloseTo(1.375, 5)
+  })
+})
+
+// GPT-6.2 Astra and Sol launched with no published prices, so they carry their
+// predecessors' rates for now (GPT-6 Astra's and GPT-6.1 Sol's). Their base IDs
+// sit next to GPT-6 Astra's and GPT-6.1 / GPT-6 Sol's, so config resolution
+// must keep them apart.
+describe('OpenAI GPT-6.2 registry integration', () => {
+  test('resolve to their own configs, not their predecessors', () => {
+    expect(getModelConfig('us.openai.gpt-6.2-astra')?.name).toBe('GPT-6.2 Astra')
+    expect(getModelConfig('global.openai.gpt-6.2-sol')?.name).toBe('GPT-6.2 Sol')
+    expect(getModelConfig('us.openai.gpt-6-astra')?.name).toBe('GPT-6 Astra')
+    expect(getModelConfig('us.openai.gpt-6.1-sol')?.name).toBe('GPT-6.1 Sol')
+    expect(getModelConfig('us.openai.gpt-6-sol')?.name).toBe('GPT-6 Sol')
+  })
+
+  test('display names carry the routing suffix and allow 128K output', () => {
+    for (const [base, name] of [
+      ['gpt-6.2-astra', 'GPT-6.2 Astra'],
+      ['gpt-6.2-sol', 'GPT-6.2 Sol']
+    ]) {
+      expect(allModels.find((m) => m.modelId === `global.openai.${base}`)?.modelName).toBe(
+        `${name} (Global)`
+      )
+      expect(getModelConfig(`us.openai.${base}`)?.maxTokensLimit).toBe(128000)
+      expect(getModelConfig(`us.openai.${base}`)?.cache).toBeUndefined()
+    }
+  })
+
+  test('are offered only in the three US regions', () => {
+    for (const region of ['eu-west-1', 'ap-northeast-1'] as const) {
+      const ids = getModelsForRegion(region).map((m) => m.modelId)
+      expect(ids).not.toContain('us.openai.gpt-6.2-astra')
+      expect(ids).not.toContain('us.openai.gpt-6.2-sol')
+    }
+  })
+
+  test('GPT-6.2 Astra is priced like GPT-6 Astra ($11/$55/$1.10/$13.75 per 1M)', () => {
+    const calc = new PricingCalculator('us.openai.gpt-6.2-astra')
+    expect(calc.calculateInputCost(1_000_000)).toBeCloseTo(11, 5)
+    expect(calc.calculateOutputCost(1_000_000)).toBeCloseTo(55, 5)
+    expect(calc.calculateCacheReadCost(1_000_000)).toBeCloseTo(1.1, 5)
+    expect(calc.calculateCacheWriteCost(1_000_000)).toBeCloseTo(13.75, 5)
+  })
+
+  test('GPT-6.2 Sol is priced like GPT-6.1 Sol ($2.20/$11/$0.11/$2.75 per 1M)', () => {
+    const calc = new PricingCalculator('us.openai.gpt-6.2-sol')
+    expect(calc.calculateInputCost(1_000_000)).toBeCloseTo(2.2, 5)
+    expect(calc.calculateOutputCost(1_000_000)).toBeCloseTo(11, 5)
+    expect(calc.calculateCacheReadCost(1_000_000)).toBeCloseTo(0.11, 5)
+    expect(calc.calculateCacheWriteCost(1_000_000)).toBeCloseTo(2.75, 5)
   })
 })
 
@@ -547,6 +600,8 @@ describe('model output ceilings', () => {
     ['us.openai.gpt-6-astra', 128000],
     ['us.openai.gpt-6.1-sol', 131072],
     ['us.openai.gpt-6.1-terra', 128000],
+    ['us.openai.gpt-6.2-astra', 128000],
+    ['us.openai.gpt-6.2-sol', 128000],
     ['us.openai.gpt-6-sol', 128000],
     ['us.openai.gpt-6-luna', 128000],
     ['openai.gpt-oss-120b-1:0', 16384],

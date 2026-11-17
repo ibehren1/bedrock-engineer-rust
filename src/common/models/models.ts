@@ -857,6 +857,110 @@ const MODEL_REGISTRY: ModelConfig[] = [
     ]
   },
 
+  // OpenAI GPT-6.2 Astra
+  // Launched on Bedrock 2026-11-17 (lifecycle start 2026-11-16): OpenAI's
+  // frontier reasoning model for complex business problems, research, and
+  // advanced coding and agentic work. Text and image input.
+  // On bedrock-runtime, Converse is reachable only through a cross-region
+  // inference profile (`us.openai.gpt-6.2-astra` / `global.openai.gpt-6.2-astra`);
+  // the bare model ID is INFERENCE_PROFILE-only. Converse caps maxTokens at
+  // 128,000 and accepts `reasoning.effort` (verified by calling it at launch).
+  // No model card existed at launch, so the context window is unknown and no
+  // `cache` block is declared (a cachePoint is accepted but no cache use was
+  // seen). The Ultrafast mode (3x Standard until 2027-02-28, then 6x) is not
+  // offered here.
+  // PROVISIONAL PRICING: AWS had published no rates at launch, so these are
+  // GPT-6 Astra's (there is no GPT-6.1 Astra): $11.00/$55.00/$1.10/$13.75 per
+  // 1M in/out/cache-read/cache-write at the geo rate, stored per 1K, with its
+  // global discount and 272K long-context tier. Replace once AWS publishes.
+  {
+    baseId: 'gpt-6.2-astra',
+    name: 'GPT-6.2 Astra',
+    provider: 'openai',
+    category: 'text',
+    toolUse: true,
+    maxTokensLimit: 128000,
+    supportsThinking: true,
+    supportedThinkingTypes: ['enabled'],
+    inferenceProfiles: [
+      {
+        type: 'global',
+        prefix: 'global',
+        regions: ['us-east-1', 'us-east-2', 'us-west-2'],
+        displaySuffix: '(Global)'
+      },
+      {
+        type: 'regional-us',
+        prefix: 'us',
+        regions: ['us-east-1', 'us-east-2', 'us-west-2'],
+        displaySuffix: '(US)'
+      }
+    ],
+    pricing: {
+      input: 0.011,
+      output: 0.055,
+      cacheRead: 0.0011,
+      cacheWrite: 0.01375
+    },
+    // Provisional, copied from GPT-6 Astra: geo rate stored, global ~9% cheaper, input beyond
+    // 272K at ~2x.
+    pricingRules: {
+      profileMultiplier: { global: 0.91 },
+      longContext: { thresholdTokens: 272000, input: 2 }
+    }
+  },
+
+  // OpenAI GPT-6.2 Sol
+  // Launched on Bedrock 2026-11-17 (lifecycle start 2026-11-16): built for
+  // recurring coding, agentic and professional workflows where speed and cost
+  // per task matter. Text and image input.
+  // On bedrock-runtime, Converse is reachable only through a cross-region
+  // inference profile (`us.openai.gpt-6.2-sol` / `global.openai.gpt-6.2-sol`);
+  // the bare model ID is INFERENCE_PROFILE-only. Converse caps maxTokens at
+  // 128,000 and accepts `reasoning.effort` (verified by calling it at launch).
+  // No model card existed at launch, so the context window is unknown and no
+  // `cache` block is declared.
+  // PROVISIONAL PRICING: AWS had published no rates at launch, so these are
+  // GPT-6.1 Sol's: $2.20/$11.00/$0.11/$2.75 per 1M in/out/cache-read/
+  // cache-write at the US rate, stored per 1K, with its global discount and
+  // 272K long-context tier. Replace once AWS publishes.
+  {
+    baseId: 'gpt-6.2-sol',
+    name: 'GPT-6.2 Sol',
+    provider: 'openai',
+    category: 'text',
+    toolUse: true,
+    maxTokensLimit: 128000,
+    supportsThinking: true,
+    supportedThinkingTypes: ['enabled'],
+    inferenceProfiles: [
+      {
+        type: 'global',
+        prefix: 'global',
+        regions: ['us-east-1', 'us-east-2', 'us-west-2'],
+        displaySuffix: '(Global)'
+      },
+      {
+        type: 'regional-us',
+        prefix: 'us',
+        regions: ['us-east-1', 'us-east-2', 'us-west-2'],
+        displaySuffix: '(US)'
+      }
+    ],
+    pricing: {
+      input: 0.0022,
+      output: 0.011,
+      cacheRead: 0.00011,
+      cacheWrite: 0.00275
+    },
+    // Provisional, copied from GPT-6.1 Sol: US rate stored, global 10% cheaper, input above
+    // 272K bills the whole request at 2x input and 1.5x output.
+    pricingRules: {
+      profileMultiplier: { global: 0.9 },
+      longContext: { thresholdTokens: 272000, input: 2, output: 1.5 }
+    }
+  },
+
   // OpenAI GPT-6 Astra
   // Invoked through the Bedrock Converse API via a cross-region inference
   // profile (`us.openai.gpt-6-astra` / `global.openai.gpt-6-astra`); on-demand

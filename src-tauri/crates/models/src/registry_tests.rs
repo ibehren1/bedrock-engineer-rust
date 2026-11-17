@@ -38,7 +38,9 @@ fn has(ids: &[impl AsRef<str>], id: &str) -> bool {
 mod openai_gpt {
     use super::*;
 
-    const OPENAI_GPT_MODELS: [(&str, &str); 3] = [
+    const OPENAI_GPT_MODELS: [(&str, &str); 5] = [
+        ("gpt-6.2-astra", "GPT-6.2 Astra"),
+        ("gpt-6.2-sol", "GPT-6.2 Sol"),
         ("gpt-6-astra", "GPT-6 Astra"),
         ("gpt-6-sol", "GPT-6 Sol"),
         ("gpt-6-luna", "GPT-6 Luna"),
@@ -275,6 +277,63 @@ mod openai_gpt_6_1_terra {
         assert_close(calc.calculate_output_cost(1_000_000), 5.5);
         assert_close(calc.calculate_cache_read_cost(1_000_000), 0.055);
         assert_close(calc.calculate_cache_write_cost(1_000_000), 1.375);
+    }
+}
+
+/// describe('OpenAI GPT-6.2 registry integration')
+mod openai_gpt_6_2 {
+    use super::*;
+
+    #[test]
+    fn resolve_to_their_own_configs_not_their_predecessors() {
+        assert_eq!(name_of("us.openai.gpt-6.2-astra"), Some("GPT-6.2 Astra"));
+        assert_eq!(name_of("global.openai.gpt-6.2-sol"), Some("GPT-6.2 Sol"));
+        assert_eq!(name_of("us.openai.gpt-6-astra"), Some("GPT-6 Astra"));
+        assert_eq!(name_of("us.openai.gpt-6.1-sol"), Some("GPT-6.1 Sol"));
+        assert_eq!(name_of("us.openai.gpt-6-sol"), Some("GPT-6 Sol"));
+    }
+
+    #[test]
+    fn display_names_carry_the_routing_suffix_and_allow_128k_output() {
+        for (base, name) in [
+            ("gpt-6.2-astra", "GPT-6.2 Astra"),
+            ("gpt-6.2-sol", "GPT-6.2 Sol"),
+        ] {
+            assert_eq!(
+                find(&format!("global.openai.{base}")).unwrap().model_name,
+                format!("{name} (Global)")
+            );
+            let config = get_model_config(&format!("us.openai.{base}")).unwrap();
+            assert_eq!(config.max_tokens_limit, 128000);
+            assert_eq!(config.cache, None);
+        }
+    }
+
+    #[test]
+    fn offered_only_in_the_three_us_regions() {
+        for region in ["eu-west-1", "ap-northeast-1"] {
+            let ids = region_ids(region);
+            assert!(!has(&ids, "us.openai.gpt-6.2-astra"), "{region}");
+            assert!(!has(&ids, "us.openai.gpt-6.2-sol"), "{region}");
+        }
+    }
+
+    #[test]
+    fn astra_is_priced_like_gpt_6_astra() {
+        let calc = PricingCalculator::new("us.openai.gpt-6.2-astra");
+        assert_close(calc.calculate_input_cost(1_000_000), 11.0);
+        assert_close(calc.calculate_output_cost(1_000_000), 55.0);
+        assert_close(calc.calculate_cache_read_cost(1_000_000), 1.1);
+        assert_close(calc.calculate_cache_write_cost(1_000_000), 13.75);
+    }
+
+    #[test]
+    fn sol_is_priced_like_gpt_6_1_sol() {
+        let calc = PricingCalculator::new("us.openai.gpt-6.2-sol");
+        assert_close(calc.calculate_input_cost(1_000_000), 2.2);
+        assert_close(calc.calculate_output_cost(1_000_000), 11.0);
+        assert_close(calc.calculate_cache_read_cost(1_000_000), 0.11);
+        assert_close(calc.calculate_cache_write_cost(1_000_000), 2.75);
     }
 }
 
@@ -682,6 +741,8 @@ fn model_output_ceilings() {
         ("us.openai.gpt-6-astra", 128000),
         ("us.openai.gpt-6.1-sol", 131072),
         ("us.openai.gpt-6.1-terra", 128000),
+        ("us.openai.gpt-6.2-astra", 128000),
+        ("us.openai.gpt-6.2-sol", 128000),
         ("us.openai.gpt-6-sol", 128000),
         ("us.openai.gpt-6-luna", 128000),
         ("openai.gpt-oss-120b-1:0", 16384),

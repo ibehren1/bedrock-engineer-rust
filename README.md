@@ -521,13 +521,13 @@ context pointing at a remote daemon disables that tab and says why; the rest of 
 ### Models
 
 - Added Claude Fable 5.2, Fable 5.1, Fable 5, Opus 5.5, Opus 5, Sonnet 5.5, Sonnet 5 and Haiku 5.5,
-  Kimi K3, Kimi 2.5, xAI Grok 4.7 and 4.6, and the OpenAI GPT-6.1 (Sol/Terra) and GPT-6
-  (Astra/Sol/Luna) models, all served through the standard Bedrock Converse API. The Claude 4.x and
+  Kimi K3, Kimi 2.5, xAI Grok 4.7 and 4.6, and the OpenAI GPT-6.2 (Astra/Sol), GPT-6.1 (Sol/Terra) and
+  GPT-6 (Astra/Sol/Luna) models, all served through the standard Bedrock Converse API. The Claude 4.x and
   GPT-5.x models are retired: a saved setting that names one moves to its closest current model, and
   usage already recorded with them stays priced.
 - Adaptive thinking for newer Claude models, with the thinking type translated per model so
   switching model generations doesn't 400. On models that expose reasoning-effort levels rather than
-  a thinking budget — Grok 4.7, Grok 4.6 and the GPT-6.1 and GPT-6 models — **Deeper** asks
+  a thinking budget — Grok 4.7, Grok 4.6 and the GPT-6.2, GPT-6.1 and GPT-6 models — **Deeper** asks
   for the highest effort the model offers.
 - Model pricing kept current, and per-model input/output pricing shown in the model dropdown.
 - **Max Tokens is capped per model.** Every request sends the lesser of your Max Tokens setting and
