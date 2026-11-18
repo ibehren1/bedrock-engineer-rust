@@ -273,6 +273,8 @@ const MODEL_REGISTRY: ModelConfig[] = [
       cacheRead: 0.0002,
       cacheWrite: 0.0025
     },
+    // The stored rates are the global rate: geo profiles cost 10% more.
+    pricingRules: { profileMultiplier: { us: 1.1, eu: 1.1, jp: 1.1 } },
     cache: {
       supported: true,
       cacheableFields: ['messages', 'system', 'tools']
@@ -286,8 +288,9 @@ const MODEL_REGISTRY: ModelConfig[] = [
   // suffix: invoked as e.g. `global.anthropic.claude-sonnet-5-5`.
   // Offered through the same inference profiles as Sonnet 5 — global plus the
   // US/EU/JP geos — with no in-region invocation of the bare model ID.
-  // Pricing is unchanged from Sonnet 5: $2 in / $10 out per 1M tokens, stored per
-  // 1K, cache read 10% of input and a 5-minute cache write 1.25x it.
+  // Pricing (Bedrock global, per 1M): $2 in / $10 out like Sonnet 5, stored per
+  // 1K, with a 5-minute cache write at 1.25x input. Cache read is $0.10 (half
+  // Sonnet 5's since 2026-10-07).
   {
     baseId: 'claude-sonnet-5-5',
     name: 'Claude Sonnet 5.5',
@@ -335,9 +338,11 @@ const MODEL_REGISTRY: ModelConfig[] = [
     pricing: {
       input: 0.002,
       output: 0.01,
-      cacheRead: 0.0002,
+      cacheRead: 0.0001,
       cacheWrite: 0.0025
     },
+    // The stored rates are the global rate: geo profiles cost 10% more.
+    pricingRules: { profileMultiplier: { us: 1.1, eu: 1.1, jp: 1.1 } },
     cache: {
       supported: true,
       cacheableFields: ['messages', 'system', 'tools']
@@ -348,9 +353,8 @@ const MODEL_REGISTRY: ModelConfig[] = [
   // Anthropic's most advanced Opus model (launched 2026-07-24). 1M context window,
   // 128K max output, adaptive thinking on by default. Model ID has no version suffix:
   // invoked as e.g. `global.anthropic.claude-opus-5`.
-  // NOTE: Opus 5 pricing is not yet published on the Bedrock pricing page; the values
-  // below are the previous Opus rate ($5/$25 per 1M) as a placeholder and should be
-  // updated once available.
+  // Pricing (Bedrock global, per 1M in/out/cache-read/cache-write):
+  // $5/$25/$0.50/$6.25, stored per 1K.
   {
     baseId: 'claude-opus-5',
     name: 'Claude Opus 5',
@@ -395,6 +399,8 @@ const MODEL_REGISTRY: ModelConfig[] = [
       cacheRead: 0.0005,
       cacheWrite: 0.00625
     },
+    // The stored rates are the global rate: geo profiles cost 10% more.
+    pricingRules: { profileMultiplier: { us: 1.1, eu: 1.1 } },
     cache: {
       supported: true,
       cacheableFields: ['messages', 'system', 'tools']
@@ -412,8 +418,8 @@ const MODEL_REGISTRY: ModelConfig[] = [
   // model card also lists an `au.` geo (Sydney/Melbourne), which this registry
   // has no profile type for; Australian users can reach the model through the
   // global endpoint.
-  // Pricing: $4 in / $20 out per 1M tokens, stored per 1K. Cache read is the
-  // standard Anthropic 10% of the input rate; a 5-minute cache write is 1.25x it.
+  // Pricing (Bedrock global, per 1M in/out/cache-read/cache-write):
+  // $4/$20/$0.20/$5, stored per 1K. Cache read is 5% of input, not the usual 10%.
   {
     baseId: 'claude-opus-5-5',
     name: 'Claude Opus 5.5',
@@ -485,9 +491,11 @@ const MODEL_REGISTRY: ModelConfig[] = [
     pricing: {
       input: 0.004,
       output: 0.02,
-      cacheRead: 0.0004,
+      cacheRead: 0.0002,
       cacheWrite: 0.005
     },
+    // The stored rates are the global rate: geo profiles cost 10% more.
+    pricingRules: { profileMultiplier: { us: 1.1, eu: 1.1, jp: 1.1 } },
     cache: {
       supported: true,
       cacheableFields: ['messages', 'system', 'tools']
@@ -541,12 +549,15 @@ const MODEL_REGISTRY: ModelConfig[] = [
         displaySuffix: '(US)'
       }
     ],
+    // Bedrock global, per 1M in/out/cache-read/cache-write: $10/$50/$1/$12.50.
     pricing: {
       input: 0.01,
       output: 0.05,
       cacheRead: 0.001,
       cacheWrite: 0.0125
     },
+    // The stored rates are the global rate: geo profiles cost 10% more.
+    pricingRules: { profileMultiplier: { us: 1.1, eu: 1.1 } },
     cache: {
       supported: true,
       cacheableFields: ['messages', 'system', 'tools']
@@ -591,12 +602,15 @@ const MODEL_REGISTRY: ModelConfig[] = [
         displaySuffix: '(US)'
       }
     ],
+    // Bedrock global, per 1M in/out/cache-read/cache-write: $10/$50/$0.25/$12.50.
     pricing: {
       input: 0.01,
       output: 0.05,
-      cacheRead: 0.001,
+      cacheRead: 0.00025,
       cacheWrite: 0.0125
     },
+    // The stored rates are the global rate: the US profile costs 10% more.
+    pricingRules: { profileMultiplier: { us: 1.1 } },
     cache: {
       supported: true,
       cacheableFields: ['messages', 'system', 'tools']
@@ -613,9 +627,8 @@ const MODEL_REGISTRY: ModelConfig[] = [
   // `base` profile — only the global endpoint and the US geo profile (which also
   // serves the Canadian source regions). Prompt caching: 512-token minimum per
   // checkpoint, up to 4 checkpoints over system, messages and tools.
-  // NOTE: Fable 5.2 pricing is not yet published on the Bedrock pricing page; the
-  // values below mirror Claude Fable 5.1 as a placeholder and should be updated
-  // once available (including any geo-profile premium or long-context tier).
+  // Pricing (Bedrock global, per 1M in/out/cache-read/cache-write):
+  // $8/$40/$0.20/$10, stored per 1K; no long-context tier.
   {
     baseId: 'claude-fable-5-2',
     name: 'Claude Fable 5.2',
@@ -664,11 +677,13 @@ const MODEL_REGISTRY: ModelConfig[] = [
       }
     ],
     pricing: {
-      input: 0.01,
-      output: 0.05,
-      cacheRead: 0.001,
-      cacheWrite: 0.0125
+      input: 0.008,
+      output: 0.04,
+      cacheRead: 0.0002,
+      cacheWrite: 0.01
     },
+    // The stored rates are the global rate: the US profile costs 10% more.
+    pricingRules: { profileMultiplier: { us: 1.1 } },
     cache: {
       supported: true,
       cacheableFields: ['messages', 'system', 'tools']
@@ -790,7 +805,17 @@ const MODEL_REGISTRY: ModelConfig[] = [
         regions: ['us-east-1', 'us-west-2'],
         displaySuffix: '(Global)'
       }
-    ]
+    ],
+    // Bedrock global, per 1M in/out/cache-read: $0.30/$2.50/$0.075 (cache writes are free),
+    // stored per 1K.
+    pricing: {
+      input: 0.0003,
+      output: 0.0025,
+      cacheRead: 0.000075,
+      cacheWrite: 0
+    },
+    // The stored rates are the global rate: the US profile costs 10% more.
+    pricingRules: { profileMultiplier: { us: 1.1 } }
   },
 
   // Amazon Nova Micro
@@ -854,7 +879,14 @@ const MODEL_REGISTRY: ModelConfig[] = [
         regions: ['us-east-1', 'us-east-2', 'us-west-2'],
         displaySuffix: '(US)'
       }
-    ]
+    ],
+    // $1.35/$5.40 per 1M in/out, stored per 1K.
+    pricing: {
+      input: 0.00135,
+      output: 0.0054,
+      cacheRead: 0,
+      cacheWrite: 0
+    }
   },
 
   // OpenAI GPT-6.2 Astra
@@ -869,10 +901,11 @@ const MODEL_REGISTRY: ModelConfig[] = [
   // `cache` block is declared (a cachePoint is accepted but no cache use was
   // seen). The Ultrafast mode (3x Standard until 2027-02-28, then 6x) is not
   // offered here.
-  // PROVISIONAL PRICING: AWS had published no rates at launch, so these are
-  // GPT-6 Astra's (there is no GPT-6.1 Astra): $11.00/$55.00/$1.10/$13.75 per
-  // 1M in/out/cache-read/cache-write at the geo rate, stored per 1K, with its
-  // global discount and 272K long-context tier. Replace once AWS publishes.
+  // PROVISIONAL PRICING: AWS has published no rates yet (not in the AWS Price
+  // List as of 2026-11-18), so these are GPT-6 Astra's (there is no GPT-6.1
+  // Astra): $10/$50/$1/$12.50 per 1M in/out/cache-read/cache-write at the
+  // global rate, stored per 1K, with its geo premium and 272K long-context tier.
+  // Replace once AWS publishes.
   {
     baseId: 'gpt-6.2-astra',
     name: 'GPT-6.2 Astra',
@@ -897,16 +930,16 @@ const MODEL_REGISTRY: ModelConfig[] = [
       }
     ],
     pricing: {
-      input: 0.011,
-      output: 0.055,
-      cacheRead: 0.0011,
-      cacheWrite: 0.01375
+      input: 0.01,
+      output: 0.05,
+      cacheRead: 0.001,
+      cacheWrite: 0.0125
     },
-    // Provisional, copied from GPT-6 Astra: geo rate stored, global ~9% cheaper, input beyond
-    // 272K at ~2x.
+    // Provisional, copied from GPT-6 Astra: global rate stored, the US profile 10% more; a
+    // prompt above 272K bills the whole request at 2x input and cache, 1.5x output.
     pricingRules: {
-      profileMultiplier: { global: 0.91 },
-      longContext: { thresholdTokens: 272000, input: 2 }
+      profileMultiplier: { us: 1.1 },
+      longContext: { thresholdTokens: 272000, input: 2, output: 1.5, cacheRead: 2, cacheWrite: 2 }
     }
   },
 
@@ -920,10 +953,10 @@ const MODEL_REGISTRY: ModelConfig[] = [
   // 128,000 and accepts `reasoning.effort` (verified by calling it at launch).
   // No model card existed at launch, so the context window is unknown and no
   // `cache` block is declared.
-  // PROVISIONAL PRICING: AWS had published no rates at launch, so these are
-  // GPT-6.1 Sol's: $2.20/$11.00/$0.11/$2.75 per 1M in/out/cache-read/
-  // cache-write at the US rate, stored per 1K, with its global discount and
-  // 272K long-context tier. Replace once AWS publishes.
+  // PROVISIONAL PRICING: AWS has published no rates yet (not in the AWS Price
+  // List as of 2026-11-18), so these are GPT-6.1 Sol's: $2/$10/$0.10/$2.50 per
+  // 1M in/out/cache-read/cache-write at the global rate, stored per 1K, with
+  // its geo premium and 272K long-context tier. Replace once AWS publishes.
   {
     baseId: 'gpt-6.2-sol',
     name: 'GPT-6.2 Sol',
@@ -948,16 +981,16 @@ const MODEL_REGISTRY: ModelConfig[] = [
       }
     ],
     pricing: {
-      input: 0.0022,
-      output: 0.011,
-      cacheRead: 0.00011,
-      cacheWrite: 0.00275
+      input: 0.002,
+      output: 0.01,
+      cacheRead: 0.0001,
+      cacheWrite: 0.0025
     },
-    // Provisional, copied from GPT-6.1 Sol: US rate stored, global 10% cheaper, input above
-    // 272K bills the whole request at 2x input and 1.5x output.
+    // Provisional, copied from GPT-6.1 Sol: global rate stored, the US profile 10% more; a
+    // prompt above 272K bills the whole request at 2x input and cache, 1.5x output.
     pricingRules: {
-      profileMultiplier: { global: 0.9 },
-      longContext: { thresholdTokens: 272000, input: 2, output: 1.5 }
+      profileMultiplier: { us: 1.1 },
+      longContext: { thresholdTokens: 272000, input: 2, output: 1.5, cacheRead: 2, cacheWrite: 2 }
     }
   },
 
@@ -967,10 +1000,10 @@ const MODEL_REGISTRY: ModelConfig[] = [
   // invocation of the bare model ID is not supported. OpenAI's most capable
   // model: complex reasoning, coding, computer use, research, document
   // creation. 1.05M context window, 128K max output.
-  // Pricing: $11.00/$55.00 per 1M in/out (stored per 1K), Short Context Window
-  // (272K) at the Geo CRIS rate. The (Global) profile is ~9% cheaper and input
-  // beyond 272K bills at the Long Context tier (~2x), so displayed cost is a
-  // floor rather than an exact figure.
+  // Pricing (Global CRIS short context, per 1M in/out/cache-read/cache-write):
+  // $10/$50/$1/$12.50, stored per 1K. The US profile is 10% more, and a prompt
+  // above 272K bills the whole request at the long-context tier (2x input and
+  // cache, 1.5x output).
   {
     baseId: 'gpt-6-astra',
     name: 'GPT-6 Astra',
@@ -995,16 +1028,16 @@ const MODEL_REGISTRY: ModelConfig[] = [
       }
     ],
     pricing: {
-      input: 0.011,
-      output: 0.055,
-      cacheRead: 0.0011,
-      cacheWrite: 0.01375
+      input: 0.01,
+      output: 0.05,
+      cacheRead: 0.001,
+      cacheWrite: 0.0125
     },
-    // The stored rates are the geo rate: the global profile is ~9% cheaper. Input beyond 272K
-    // bills at ~2x (the model card names no other rate).
+    // The stored rates are the global rate: the US profile is 10% more. A prompt above 272K
+    // bills the whole request at 2x input and cache, 1.5x output.
     pricingRules: {
-      profileMultiplier: { global: 0.91 },
-      longContext: { thresholdTokens: 272000, input: 2 }
+      profileMultiplier: { us: 1.1 },
+      longContext: { thresholdTokens: 272000, input: 2, output: 1.5, cacheRead: 2, cacheWrite: 2 }
     }
   },
 
@@ -1020,12 +1053,10 @@ const MODEL_REGISTRY: ModelConfig[] = [
   // Explicit prompt caching is not supported, so no `cache` block is declared —
   // a cachePoint block would be rejected. Implicit caching is still billed, so
   // cache pricing is recorded.
-  // Pricing (US CRIS short context, per 1M in/out/cache-read/cache-write):
-  // $2.20/$11.00/$0.11/$2.75, stored per 1K. The (Global) profile is 10%
-  // cheaper ($2.00/$10.00/$0.10/$2.50), so its displayed cost runs slightly
-  // high. Input above 272K tokens bills at
-  // the long-context tier (2x input, 1.5x output) for the whole request, so the
-  // displayed cost is a floor rather than an exact figure on very long prompts.
+  // Pricing (Global CRIS short context, per 1M in/out/cache-read/cache-write):
+  // $2/$10/$0.10/$2.50, stored per 1K. The US profile is 10% more, and a prompt
+  // above 272K tokens bills the whole request at the long-context tier (2x
+  // input and cache, 1.5x output).
   {
     baseId: 'gpt-6.1-sol',
     name: 'GPT-6.1 Sol',
@@ -1050,16 +1081,16 @@ const MODEL_REGISTRY: ModelConfig[] = [
       }
     ],
     pricing: {
-      input: 0.0022,
-      output: 0.011,
-      cacheRead: 0.00011,
-      cacheWrite: 0.00275
+      input: 0.002,
+      output: 0.01,
+      cacheRead: 0.0001,
+      cacheWrite: 0.0025
     },
-    // The stored rates are the US rate: the global profile is 10% cheaper. Input above 272K
-    // bills the whole request at 2x input and 1.5x output.
+    // The stored rates are the global rate: the US profile is 10% more. A prompt above 272K
+    // bills the whole request at 2x input and cache, 1.5x output.
     pricingRules: {
-      profileMultiplier: { global: 0.9 },
-      longContext: { thresholdTokens: 272000, input: 2, output: 1.5 }
+      profileMultiplier: { us: 1.1 },
+      longContext: { thresholdTokens: 272000, input: 2, output: 1.5, cacheRead: 2, cacheWrite: 2 }
     }
   },
 
@@ -1073,10 +1104,10 @@ const MODEL_REGISTRY: ModelConfig[] = [
   // 1.05M-token context window, 128K max output tokens, text and image input.
   // Explicit prompt caching is Responses-API only, so no `cache` block is
   // declared; implicit caching is still billed, so cache pricing is recorded.
-  // Pricing (US CRIS short context, per 1M in/out/cache-read/cache-write):
-  // $1.10/$5.50/$0.055/$1.375, stored per 1K. The (Global) profile is ~9%
-  // cheaper ($1.00/$5.00/$0.05/$1.25). Input above 272K tokens bills the whole
-  // request at the long-context tier (2x input and cache, 1.5x output).
+  // Pricing (Global CRIS short context, per 1M in/out/cache-read/cache-write):
+  // $1/$5/$0.05/$1.25, stored per 1K. The US profile is 10% more. Input above
+  // 272K tokens bills the whole request at the long-context tier (2x input and
+  // cache, 1.5x output).
   {
     baseId: 'gpt-6.1-terra',
     name: 'GPT-6.1 Terra',
@@ -1101,15 +1132,15 @@ const MODEL_REGISTRY: ModelConfig[] = [
       }
     ],
     pricing: {
-      input: 0.0011,
-      output: 0.0055,
-      cacheRead: 0.000055,
-      cacheWrite: 0.001375
+      input: 0.001,
+      output: 0.005,
+      cacheRead: 0.00005,
+      cacheWrite: 0.00125
     },
-    // The stored rates are the US rate: the global profile is ~9% cheaper. Input above 272K
+    // The stored rates are the global rate: the US profile is 10% more. Input above 272K
     // bills the whole request at 2x input and cache, 1.5x output.
     pricingRules: {
-      profileMultiplier: { global: 0.91 },
+      profileMultiplier: { us: 1.1 },
       longContext: { thresholdTokens: 272000, input: 2, output: 1.5, cacheRead: 2, cacheWrite: 2 }
     }
   },
@@ -1119,8 +1150,9 @@ const MODEL_REGISTRY: ModelConfig[] = [
   // profile (`us.openai.gpt-6-sol` / `global.openai.gpt-6-sol`); on-demand
   // invocation of the bare model ID is not supported. Mid-tier GPT-6: the
   // everyday reasoning/coding model below Astra.
-  // Pricing: $2.00/$10.00 per 1M in/out, $0.20 cache read, $2.50 cache write
-  // (stored per 1K).
+  // Pricing (Global CRIS short context): $2.00/$10.00 per 1M in/out, $0.20
+  // cache read, $2.50 cache write (stored per 1K). The US profile is 10% more;
+  // a prompt above 272K bills at 2x input and cache, 1.5x output.
   {
     baseId: 'gpt-6-sol',
     name: 'GPT-6 Sol',
@@ -1149,6 +1181,10 @@ const MODEL_REGISTRY: ModelConfig[] = [
       output: 0.01,
       cacheRead: 0.0002,
       cacheWrite: 0.0025
+    },
+    pricingRules: {
+      profileMultiplier: { us: 1.1 },
+      longContext: { thresholdTokens: 272000, input: 2, output: 1.5, cacheRead: 2, cacheWrite: 2 }
     }
   },
 
@@ -1157,8 +1193,9 @@ const MODEL_REGISTRY: ModelConfig[] = [
   // profile (`us.openai.gpt-6-luna` / `global.openai.gpt-6-luna`); on-demand
   // invocation of the bare model ID is not supported. Fast/affordable tier of
   // GPT-6: high-volume classification, summarization, routing.
-  // Pricing: $0.10/$0.50 per 1M in/out, $0.01 cache read, $0.125 cache write
-  // (stored per 1K).
+  // Pricing (Global CRIS short context): $0.10/$0.50 per 1M in/out, $0.01
+  // cache read, $0.125 cache write (stored per 1K). The US profile is 10% more;
+  // a prompt above 272K bills at 2x input and cache, 1.5x output.
   {
     baseId: 'gpt-6-luna',
     name: 'GPT-6 Luna',
@@ -1187,6 +1224,10 @@ const MODEL_REGISTRY: ModelConfig[] = [
       output: 0.0005,
       cacheRead: 0.00001,
       cacheWrite: 0.000125
+    },
+    pricingRules: {
+      profileMultiplier: { us: 1.1 },
+      longContext: { thresholdTokens: 272000, input: 2, output: 1.5, cacheRead: 2, cacheWrite: 2 }
     }
   },
 
@@ -1206,10 +1247,10 @@ const MODEL_REGISTRY: ModelConfig[] = [
         regions: ['us-west-2']
       }
     ],
-    // Standard tier: $0.1545/$0.6180 per 1M in/out (stored per 1K).
+    // Standard tier: $0.15/$0.60 per 1M in/out (stored per 1K).
     pricing: {
-      input: 0.0001545,
-      output: 0.000618,
+      input: 0.00015,
+      output: 0.0006,
       cacheRead: 0,
       cacheWrite: 0
     }
@@ -1231,10 +1272,10 @@ const MODEL_REGISTRY: ModelConfig[] = [
         regions: ['us-west-2']
       }
     ],
-    // Standard tier: $0.0721/$0.3090 per 1M in/out (stored per 1K).
+    // Standard tier: $0.07/$0.30 per 1M in/out (stored per 1K).
     pricing: {
-      input: 0.0000721,
-      output: 0.000309,
+      input: 0.00007,
+      output: 0.0003,
       cacheRead: 0,
       cacheWrite: 0
     }
@@ -1258,9 +1299,8 @@ const MODEL_REGISTRY: ModelConfig[] = [
   // Completions APIs, not Converse, so no `cache` block is declared — a
   // cachePoint block would be rejected. Implicit caching still applies and is
   // billed, so cache-read pricing is recorded.
-  // Pricing (US CRIS, per 1M in/out/cache-read): $3.30/$16.50/$0.33, stored per
-  // 1K. Global CRIS bills about 10% less ($3.00/$15.00/$0.30) but the registry
-  // keeps one rate per model, so the higher US rate is used.
+  // Pricing (Global CRIS, per 1M in/out/cache-read/30-minute cache write):
+  // $3/$15/$0.30/$3.75, stored per 1K. US CRIS bills 10% more.
   {
     baseId: 'kimi-k3',
     name: 'Kimi K3',
@@ -1311,13 +1351,13 @@ const MODEL_REGISTRY: ModelConfig[] = [
       }
     ],
     pricing: {
-      input: 0.0033,
-      output: 0.0165,
-      cacheRead: 0.00033,
-      cacheWrite: 0
+      input: 0.003,
+      output: 0.015,
+      cacheRead: 0.0003,
+      cacheWrite: 0.00375
     },
-    // The stored rates are the US rate: global bills about 10% less.
-    pricingRules: { profileMultiplier: { global: 0.9 } }
+    // The stored rates are the global rate: the US profile bills 10% more.
+    pricingRules: { profileMultiplier: { us: 1.1 } }
   },
 
   // Moonshot AI Kimi K2.5
@@ -1371,9 +1411,8 @@ const MODEL_REGISTRY: ModelConfig[] = [
   // Only implicit prompt caching is offered, so no `cache` block is declared:
   // explicit cachePoint blocks would be rejected. Cache-read pricing is still
   // recorded because implicit hits are billed and reported in usage.
-  // Pricing (Geo/US CRIS, per 1M in/out/cache-read): $2.20/$6.60/$0.55, stored
-  // per 1K. Global CRIS bills about 10% less ($2.00/$6.00/$0.50) but the
-  // registry keeps one rate per model, so the higher US rate is used.
+  // Pricing (Global CRIS, per 1M in/out/cache-read): $2.00/$6.00/$0.50, stored
+  // per 1K. Geo/US CRIS bills 10% more.
   {
     baseId: 'grok-4.6',
     name: 'Grok 4.6',
@@ -1423,13 +1462,13 @@ const MODEL_REGISTRY: ModelConfig[] = [
       }
     ],
     pricing: {
-      input: 0.0022,
-      output: 0.0066,
-      cacheRead: 0.00055,
+      input: 0.002,
+      output: 0.006,
+      cacheRead: 0.0005,
       cacheWrite: 0
     },
-    // The stored rates are the US rate: global bills about 10% less.
-    pricingRules: { profileMultiplier: { global: 0.9 } }
+    // The stored rates are the global rate: the US profile bills 10% more.
+    pricingRules: { profileMultiplier: { us: 1.1 } }
   },
 
   // xAI Grok 4.7
@@ -1446,8 +1485,7 @@ const MODEL_REGISTRY: ModelConfig[] = [
   // explicit cachePoint blocks would be rejected. Cache-read pricing is still
   // recorded because implicit hits are billed and reported in usage.
   // Pricing (Global CRIS, per 1M in/out/cache-read): $2.00/$6.00/$0.50, stored
-  // per 1K. Geo/US CRIS bills about 10% more ($2.20/$6.60/$0.55) but the registry
-  // keeps one rate per model, so the Global rate is used.
+  // per 1K. Geo/US CRIS bills 10% more ($2.20/$6.60/$0.55).
   {
     baseId: 'grok-4.7',
     name: 'Grok 4.7',

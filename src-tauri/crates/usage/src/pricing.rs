@@ -152,14 +152,14 @@ mod tests {
 
     #[test]
     fn converse_cost_uses_catalog_rates_and_strips_prefix() {
-        let mut e = event(UsageService::Converse, "us.anthropic.claude-sonnet-5-5");
+        let mut e = event(UsageService::Converse, "global.anthropic.claude-sonnet-5-5");
         e.input_tokens = 1000;
         e.output_tokens = 500;
         e.cache_read_tokens = 200;
         e.cache_write_tokens = 100;
         let p = price(&e);
         assert_eq!(p.model_id, "anthropic.claude-sonnet-5-5");
-        let expected = (1000.0 * 0.002 + 500.0 * 0.01 + 200.0 * 0.0002 + 100.0 * 0.0025) / 1000.0;
+        let expected = (1000.0 * 0.002 + 500.0 * 0.01 + 200.0 * 0.0001 + 100.0 * 0.0025) / 1000.0;
         assert!((p.cost_usd.unwrap() - expected).abs() < 1e-12);
         assert_eq!(p.snapshot.unwrap()["input"], 0.002);
     }
@@ -266,9 +266,9 @@ mod tests {
         assert!((long - expected).abs() < 1e-12, "{long} vs {expected}");
 
         // Models without rules are unchanged by the prefix.
-        let mut s = event(UsageService::Converse, "us.anthropic.claude-sonnet-5-5");
+        let mut s = event(UsageService::Converse, "us.amazon.nova-pro-v1:0");
         s.input_tokens = 1000;
-        assert!((price(&s).cost_usd.unwrap() - 0.002).abs() < 1e-12);
+        assert!((price(&s).cost_usd.unwrap() - 0.0008).abs() < 1e-12);
         assert_eq!(profile_prefix("arn:aws:bedrock:x"), "base");
         assert_eq!(profile_prefix("apac.amazon.nova-pro-v1:0"), "apac");
     }

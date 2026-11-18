@@ -7,6 +7,20 @@ dated section here for anything user-visible.
 See the [README](./README.md#whats-different-in-this-fork) for a feature-by-feature
 overview of the fork with screenshots.
 
+### 2026-11-18
+
+- Model prices now match Amazon Bedrock's current price list, so the Accounting page and chat cost
+  figures are accurate. Fixes: **Claude Fable 5.2** is $8 per million tokens in and $40 out, with
+  cache reads at $0.20 and 5-minute cache writes at $10 (it had been priced like Fable 5.1).
+  Cache reads are now $0.10 for **Claude Sonnet 5.5**, $0.20 for **Claude Opus 5.5**, and $0.25 for
+  **Claude Fable 5.1**. **GPT-OSS 120B** and **20B** use the current $0.15/$0.60 and $0.07/$0.30
+  rates. **Kimi K3** cache writes now have a price. **Amazon Nova 2 Lite** and **DeepSeek R1** had
+  no price before and now have one. Every model is priced at its **(Global)** rate. Requests through
+  a **(US)**, **(EU)** or **(JP)** profile cost 10% more, and the cost report now counts that
+  premium for every Claude, GPT-6, Kimi K3, Grok and Nova 2 Lite model. Prompts over 272,000 tokens
+  on GPT-6 models are billed at the long-context rate for cache and output as well as input.
+  GPT-6.2 Astra and Sol prices are still estimates: AWS hasn't published them yet.
+
 ### 2026-11-17
 
 - **OpenAI GPT-6.2 Astra** and **GPT-6.2 Sol** are now in the model dropdown, as **(US)** and

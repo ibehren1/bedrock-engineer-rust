@@ -71,11 +71,11 @@ describe('OpenAI GPT model registry integration', () => {
     }
   })
 
-  test('pricing calculator uses per-1K rates (GPT-6 Astra: $11/$55 per 1M)', () => {
+  test('pricing calculator uses per-1K rates (GPT-6 Astra: $10/$50 per 1M)', () => {
     const calc = new PricingCalculator('us.openai.gpt-6-astra')
-    // Short Context Window (272K) Geo CRIS rate: 1M input = $11.00, 1M output = $55.00
-    expect(calc.calculateInputCost(1_000_000)).toBeCloseTo(11.0, 5)
-    expect(calc.calculateOutputCost(1_000_000)).toBeCloseTo(55.0, 5)
+    // Short Context Window (272K) Global CRIS rate: 1M input = $10.00, 1M output = $50.00
+    expect(calc.calculateInputCost(1_000_000)).toBeCloseTo(10.0, 5)
+    expect(calc.calculateOutputCost(1_000_000)).toBeCloseTo(50.0, 5)
   })
 
   test('pricing calculator uses per-1K rates (GPT-6 Sol: $2/$10 per 1M)', () => {
@@ -150,12 +150,12 @@ describe('OpenAI GPT-6.1 Sol registry integration', () => {
     expect(getModelConfig('us.openai.gpt-6.1-sol')?.cache).toBeUndefined()
   })
 
-  test('pricing uses the US CRIS short-context rate ($2.20/$11.00/$0.11/$2.75 per 1M)', () => {
+  test('pricing uses the global CRIS short-context rate ($2/$10/$0.10/$2.50 per 1M)', () => {
     const calc = new PricingCalculator('us.openai.gpt-6.1-sol')
-    expect(calc.calculateInputCost(1_000_000)).toBeCloseTo(2.2, 5)
-    expect(calc.calculateOutputCost(1_000_000)).toBeCloseTo(11.0, 5)
-    expect(calc.calculateCacheReadCost(1_000_000)).toBeCloseTo(0.11, 5)
-    expect(calc.calculateCacheWriteCost(1_000_000)).toBeCloseTo(2.75, 5)
+    expect(calc.calculateInputCost(1_000_000)).toBeCloseTo(2, 5)
+    expect(calc.calculateOutputCost(1_000_000)).toBeCloseTo(10, 5)
+    expect(calc.calculateCacheReadCost(1_000_000)).toBeCloseTo(0.1, 5)
+    expect(calc.calculateCacheWriteCost(1_000_000)).toBeCloseTo(2.5, 5)
   })
 })
 
@@ -203,12 +203,12 @@ describe('OpenAI GPT-6.1 Terra registry integration', () => {
     expect(getModelConfig('us.openai.gpt-6.1-terra')?.cache).toBeUndefined()
   })
 
-  test('pricing uses the US CRIS short-context rate ($1.10/$5.50/$0.055/$1.375 per 1M)', () => {
+  test('pricing uses the global CRIS short-context rate ($1/$5/$0.05/$1.25 per 1M)', () => {
     const calc = new PricingCalculator('us.openai.gpt-6.1-terra')
-    expect(calc.calculateInputCost(1_000_000)).toBeCloseTo(1.1, 5)
-    expect(calc.calculateOutputCost(1_000_000)).toBeCloseTo(5.5, 5)
-    expect(calc.calculateCacheReadCost(1_000_000)).toBeCloseTo(0.055, 5)
-    expect(calc.calculateCacheWriteCost(1_000_000)).toBeCloseTo(1.375, 5)
+    expect(calc.calculateInputCost(1_000_000)).toBeCloseTo(1, 5)
+    expect(calc.calculateOutputCost(1_000_000)).toBeCloseTo(5, 5)
+    expect(calc.calculateCacheReadCost(1_000_000)).toBeCloseTo(0.05, 5)
+    expect(calc.calculateCacheWriteCost(1_000_000)).toBeCloseTo(1.25, 5)
   })
 })
 
@@ -246,20 +246,20 @@ describe('OpenAI GPT-6.2 registry integration', () => {
     }
   })
 
-  test('GPT-6.2 Astra is priced like GPT-6 Astra ($11/$55/$1.10/$13.75 per 1M)', () => {
+  test('GPT-6.2 Astra is priced like GPT-6 Astra ($10/$50/$1/$12.50 per 1M)', () => {
     const calc = new PricingCalculator('us.openai.gpt-6.2-astra')
-    expect(calc.calculateInputCost(1_000_000)).toBeCloseTo(11, 5)
-    expect(calc.calculateOutputCost(1_000_000)).toBeCloseTo(55, 5)
-    expect(calc.calculateCacheReadCost(1_000_000)).toBeCloseTo(1.1, 5)
-    expect(calc.calculateCacheWriteCost(1_000_000)).toBeCloseTo(13.75, 5)
+    expect(calc.calculateInputCost(1_000_000)).toBeCloseTo(10, 5)
+    expect(calc.calculateOutputCost(1_000_000)).toBeCloseTo(50, 5)
+    expect(calc.calculateCacheReadCost(1_000_000)).toBeCloseTo(1, 5)
+    expect(calc.calculateCacheWriteCost(1_000_000)).toBeCloseTo(12.5, 5)
   })
 
-  test('GPT-6.2 Sol is priced like GPT-6.1 Sol ($2.20/$11/$0.11/$2.75 per 1M)', () => {
+  test('GPT-6.2 Sol is priced like GPT-6.1 Sol ($2/$10/$0.10/$2.50 per 1M)', () => {
     const calc = new PricingCalculator('us.openai.gpt-6.2-sol')
-    expect(calc.calculateInputCost(1_000_000)).toBeCloseTo(2.2, 5)
-    expect(calc.calculateOutputCost(1_000_000)).toBeCloseTo(11, 5)
-    expect(calc.calculateCacheReadCost(1_000_000)).toBeCloseTo(0.11, 5)
-    expect(calc.calculateCacheWriteCost(1_000_000)).toBeCloseTo(2.75, 5)
+    expect(calc.calculateInputCost(1_000_000)).toBeCloseTo(2, 5)
+    expect(calc.calculateOutputCost(1_000_000)).toBeCloseTo(10, 5)
+    expect(calc.calculateCacheReadCost(1_000_000)).toBeCloseTo(0.1, 5)
+    expect(calc.calculateCacheWriteCost(1_000_000)).toBeCloseTo(2.5, 5)
   })
 })
 
@@ -285,11 +285,11 @@ describe('Claude Opus 5.5 registry integration', () => {
     expect(usModel?.maxTokensLimit).toBe(128000)
   })
 
-  test('pricing uses per-1K rates ($4/$20 per 1M, cache read a tenth of input)', () => {
+  test('pricing uses per-1K rates ($4/$20 per 1M, cache read $0.20)', () => {
     const calc = new PricingCalculator('us.anthropic.claude-opus-5-5')
     expect(calc.calculateInputCost(1_000_000)).toBeCloseTo(4.0, 5)
     expect(calc.calculateOutputCost(1_000_000)).toBeCloseTo(20.0, 5)
-    expect(calc.calculateCacheReadCost(1_000_000)).toBeCloseTo(0.4, 5)
+    expect(calc.calculateCacheReadCost(1_000_000)).toBeCloseTo(0.2, 5)
   })
 
   test('prompt caching is declared on messages, system and tools', () => {
@@ -341,12 +341,12 @@ describe('Claude Fable 5.2 registry integration', () => {
     expect(caIds).toContain('us.anthropic.claude-fable-5-2')
   })
 
-  test('pricing uses per-1K rates ($10/$50 per 1M, cache read a tenth of input)', () => {
+  test('pricing uses per-1K rates ($8/$40/$0.20/$10 per 1M)', () => {
     const calc = new PricingCalculator('global.anthropic.claude-fable-5-2')
-    expect(calc.calculateInputCost(1_000_000)).toBeCloseTo(10.0, 5)
-    expect(calc.calculateOutputCost(1_000_000)).toBeCloseTo(50.0, 5)
-    expect(calc.calculateCacheReadCost(1_000_000)).toBeCloseTo(1.0, 5)
-    expect(calc.calculateCacheWriteCost(1_000_000)).toBeCloseTo(12.5, 5)
+    expect(calc.calculateInputCost(1_000_000)).toBeCloseTo(8.0, 5)
+    expect(calc.calculateOutputCost(1_000_000)).toBeCloseTo(40.0, 5)
+    expect(calc.calculateCacheReadCost(1_000_000)).toBeCloseTo(0.2, 5)
+    expect(calc.calculateCacheWriteCost(1_000_000)).toBeCloseTo(10.0, 5)
   })
 
   test('prompt caching is declared on messages, system and tools', () => {
@@ -421,11 +421,11 @@ describe('Claude Sonnet 5.5 registry integration', () => {
     expect(usModel?.maxTokensLimit).toBe(128000)
   })
 
-  test('pricing matches Sonnet 5 ($2/$10 per 1M, cache read a tenth of input)', () => {
+  test('pricing matches Sonnet 5 ($2/$10 per 1M, cache read $0.10)', () => {
     const calc = new PricingCalculator('us.anthropic.claude-sonnet-5-5')
     expect(calc.calculateInputCost(1_000_000)).toBeCloseTo(2.0, 5)
     expect(calc.calculateOutputCost(1_000_000)).toBeCloseTo(10.0, 5)
-    expect(calc.calculateCacheReadCost(1_000_000)).toBeCloseTo(0.2, 5)
+    expect(calc.calculateCacheReadCost(1_000_000)).toBeCloseTo(0.1, 5)
   })
 
   test('prompt caching is declared on messages, system and tools', () => {
@@ -523,11 +523,11 @@ describe('xAI Grok model registry integration', () => {
     }
   })
 
-  test('Grok 4.6 pricing uses the Geo/US CRIS rate ($2.20/$6.60/$0.55 per 1M)', () => {
+  test('Grok 4.6 pricing uses the Global CRIS rate ($2/$6/$0.50 per 1M)', () => {
     const calc = new PricingCalculator('us.xai.grok-4.6')
-    expect(calc.calculateInputCost(1_000_000)).toBeCloseTo(2.2, 5)
-    expect(calc.calculateOutputCost(1_000_000)).toBeCloseTo(6.6, 5)
-    expect(calc.calculateCacheReadCost(1_000_000)).toBeCloseTo(0.55, 5)
+    expect(calc.calculateInputCost(1_000_000)).toBeCloseTo(2, 5)
+    expect(calc.calculateOutputCost(1_000_000)).toBeCloseTo(6, 5)
+    expect(calc.calculateCacheReadCost(1_000_000)).toBeCloseTo(0.5, 5)
   })
 
   // One rate per model, and for Grok 4.7 it is the Global CRIS rate, so US

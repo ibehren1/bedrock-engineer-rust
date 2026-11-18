@@ -107,8 +107,8 @@ mod openai_gpt {
     #[test]
     fn pricing_gpt_6_astra() {
         let calc = PricingCalculator::new("us.openai.gpt-6-astra");
-        assert_close(calc.calculate_input_cost(1_000_000), 11.0);
-        assert_close(calc.calculate_output_cost(1_000_000), 55.0);
+        assert_close(calc.calculate_input_cost(1_000_000), 10.0);
+        assert_close(calc.calculate_output_cost(1_000_000), 50.0);
     }
 
     #[test]
@@ -203,12 +203,12 @@ mod openai_gpt_6_1_sol {
     }
 
     #[test]
-    fn pricing_us_cris_short_context() {
+    fn pricing_global_cris_short_context() {
         let calc = PricingCalculator::new("us.openai.gpt-6.1-sol");
-        assert_close(calc.calculate_input_cost(1_000_000), 2.2);
-        assert_close(calc.calculate_output_cost(1_000_000), 11.0);
-        assert_close(calc.calculate_cache_read_cost(1_000_000), 0.11);
-        assert_close(calc.calculate_cache_write_cost(1_000_000), 2.75);
+        assert_close(calc.calculate_input_cost(1_000_000), 2.0);
+        assert_close(calc.calculate_output_cost(1_000_000), 10.0);
+        assert_close(calc.calculate_cache_read_cost(1_000_000), 0.1);
+        assert_close(calc.calculate_cache_write_cost(1_000_000), 2.5);
     }
 }
 
@@ -271,12 +271,12 @@ mod openai_gpt_6_1_terra {
     }
 
     #[test]
-    fn pricing_us_cris_short_context() {
+    fn pricing_global_cris_short_context() {
         let calc = PricingCalculator::new("us.openai.gpt-6.1-terra");
-        assert_close(calc.calculate_input_cost(1_000_000), 1.1);
-        assert_close(calc.calculate_output_cost(1_000_000), 5.5);
-        assert_close(calc.calculate_cache_read_cost(1_000_000), 0.055);
-        assert_close(calc.calculate_cache_write_cost(1_000_000), 1.375);
+        assert_close(calc.calculate_input_cost(1_000_000), 1.0);
+        assert_close(calc.calculate_output_cost(1_000_000), 5.0);
+        assert_close(calc.calculate_cache_read_cost(1_000_000), 0.05);
+        assert_close(calc.calculate_cache_write_cost(1_000_000), 1.25);
     }
 }
 
@@ -321,19 +321,19 @@ mod openai_gpt_6_2 {
     #[test]
     fn astra_is_priced_like_gpt_6_astra() {
         let calc = PricingCalculator::new("us.openai.gpt-6.2-astra");
-        assert_close(calc.calculate_input_cost(1_000_000), 11.0);
-        assert_close(calc.calculate_output_cost(1_000_000), 55.0);
-        assert_close(calc.calculate_cache_read_cost(1_000_000), 1.1);
-        assert_close(calc.calculate_cache_write_cost(1_000_000), 13.75);
+        assert_close(calc.calculate_input_cost(1_000_000), 10.0);
+        assert_close(calc.calculate_output_cost(1_000_000), 50.0);
+        assert_close(calc.calculate_cache_read_cost(1_000_000), 1.0);
+        assert_close(calc.calculate_cache_write_cost(1_000_000), 12.5);
     }
 
     #[test]
     fn sol_is_priced_like_gpt_6_1_sol() {
         let calc = PricingCalculator::new("us.openai.gpt-6.2-sol");
-        assert_close(calc.calculate_input_cost(1_000_000), 2.2);
-        assert_close(calc.calculate_output_cost(1_000_000), 11.0);
-        assert_close(calc.calculate_cache_read_cost(1_000_000), 0.11);
-        assert_close(calc.calculate_cache_write_cost(1_000_000), 2.75);
+        assert_close(calc.calculate_input_cost(1_000_000), 2.0);
+        assert_close(calc.calculate_output_cost(1_000_000), 10.0);
+        assert_close(calc.calculate_cache_read_cost(1_000_000), 0.1);
+        assert_close(calc.calculate_cache_write_cost(1_000_000), 2.5);
     }
 }
 
@@ -393,7 +393,7 @@ mod claude_opus_5_5 {
         let calc = PricingCalculator::new("us.anthropic.claude-opus-5-5");
         assert_close(calc.calculate_input_cost(1_000_000), 4.0);
         assert_close(calc.calculate_output_cost(1_000_000), 20.0);
-        assert_close(calc.calculate_cache_read_cost(1_000_000), 0.4);
+        assert_close(calc.calculate_cache_read_cost(1_000_000), 0.2);
     }
 
     #[test]
@@ -495,10 +495,10 @@ mod claude_fable_5_2 {
     #[test]
     fn pricing_per_1k() {
         let calc = PricingCalculator::new("global.anthropic.claude-fable-5-2");
-        assert_close(calc.calculate_input_cost(1_000_000), 10.0);
-        assert_close(calc.calculate_output_cost(1_000_000), 50.0);
-        assert_close(calc.calculate_cache_read_cost(1_000_000), 1.0);
-        assert_close(calc.calculate_cache_write_cost(1_000_000), 12.5);
+        assert_close(calc.calculate_input_cost(1_000_000), 8.0);
+        assert_close(calc.calculate_output_cost(1_000_000), 40.0);
+        assert_close(calc.calculate_cache_read_cost(1_000_000), 0.2);
+        assert_close(calc.calculate_cache_write_cost(1_000_000), 10.0);
     }
 
     #[test]
@@ -536,11 +536,11 @@ mod claude_sonnet_5_5 {
     }
 
     #[test]
-    fn pricing_matches_sonnet_5() {
+    fn pricing_matches_sonnet_5_with_cheaper_cache_read() {
         let calc = PricingCalculator::new("us.anthropic.claude-sonnet-5-5");
         assert_close(calc.calculate_input_cost(1_000_000), 2.0);
         assert_close(calc.calculate_output_cost(1_000_000), 10.0);
-        assert_close(calc.calculate_cache_read_cost(1_000_000), 0.2);
+        assert_close(calc.calculate_cache_read_cost(1_000_000), 0.1);
     }
 
     #[test]
@@ -649,11 +649,11 @@ mod xai_grok {
     }
 
     #[test]
-    fn grok_4_6_pricing_geo_rate() {
+    fn grok_4_6_pricing_global_rate() {
         let calc = PricingCalculator::new("us.xai.grok-4.6");
-        assert_close(calc.calculate_input_cost(1_000_000), 2.2);
-        assert_close(calc.calculate_output_cost(1_000_000), 6.6);
-        assert_close(calc.calculate_cache_read_cost(1_000_000), 0.55);
+        assert_close(calc.calculate_input_cost(1_000_000), 2.0);
+        assert_close(calc.calculate_output_cost(1_000_000), 6.0);
+        assert_close(calc.calculate_cache_read_cost(1_000_000), 0.5);
     }
 
     #[test]

@@ -34,7 +34,7 @@ fn ledger() -> (tempfile::TempDir, Arc<UsageLedger>) {
     (dir, ledger)
 }
 
-const SONNET: &str = "us.anthropic.claude-sonnet-5-5";
+const SONNET: &str = "global.anthropic.claude-sonnet-5-5";
 
 fn month(m: &str) -> UsageQuery {
     UsageQuery {
@@ -292,7 +292,7 @@ fn agents_sessions_and_cache_savings() {
     let mut a = event("2026-10-01", SONNET, "chat", 1000, 0);
     a.context.agent_id = Some("dev".into());
     a.context.session_id = Some("s1".into());
-    // 10k cache reads save (0.002 - 0.0002) * 10 = $0.018; 1k writes cost (0.0025 - 0.002) more.
+    // 10k cache reads save (0.002 - 0.0001) * 10 = $0.019; 1k writes cost (0.0025 - 0.002) more.
     a.cache_read_tokens = 10_000;
     a.cache_write_tokens = 1_000;
     l.record_now(&a).unwrap();
@@ -315,7 +315,7 @@ fn agents_sessions_and_cache_savings() {
         ..month("2026-10")
     };
     let dev = &l.summary(&q, GroupBy::Month).unwrap()[0];
-    assert!((dev.cache_savings_usd - (0.018 - 0.0005)).abs() < 1e-12);
+    assert!((dev.cache_savings_usd - (0.019 - 0.0005)).abs() < 1e-12);
 
     let costs = l
         .session_costs(&[

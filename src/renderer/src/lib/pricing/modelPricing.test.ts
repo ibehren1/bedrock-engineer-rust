@@ -13,7 +13,7 @@ test('should calculate cost for Claude Sonnet 5.5', () => {
   const expectedCost =
     (inputTokens * 0.002 +
       outputTokens * 0.01 +
-      cacheReadTokens * 0.0002 +
+      cacheReadTokens * 0.0001 +
       cacheWriteTokens * 0.0025) /
     1000
 
@@ -100,7 +100,7 @@ test('should calculate individual cost components', () => {
     6
   )
   expect(pricingCalculator.calculateCacheReadCost(cacheReadTokens)).toBeCloseTo(
-    (cacheReadTokens * 0.0002) / 1000,
+    (cacheReadTokens * 0.0001) / 1000,
     6
   )
   expect(pricingCalculator.calculateCacheWriteCost(cacheWriteTokens)).toBeCloseTo(
@@ -118,7 +118,7 @@ test('should get pricing information', () => {
   expect(pricing).toEqual({
     input: 0.002,
     output: 0.01,
-    cacheRead: 0.0002,
+    cacheRead: 0.0001,
     cacheWrite: 0.0025
   })
 })
