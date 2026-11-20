@@ -53,7 +53,7 @@ const HomePage = {
     help: 'The user guide, available offline. You can also ask it questions. Tip: {{shortcut}} opens the command palette from anywhere.'
   },
   'set your aws credential':
-    'Set up the Amazon Bedrock configuration. Enter your AWS Credentials (region, access key, secret access key) from the settings screen.',
+    'Set up the Amazon Bedrock connection on the settings screen: pick a region and sign in with an access key and secret key, an AWS profile, or a Bedrock API key.',
   'Welcome to Bedrock Engineer': 'Welcome to {{appName}}',
   'This is AI assistant of software development tasks':
     'This is AI assistant of software development tasks',
@@ -187,6 +187,9 @@ const SettingPage = {
   'Project Setting': 'Project Setting',
   'Agent Chat': 'Agent Chat',
   'Tavily Search API Key': 'Tavily Search API Key',
+  'Tavily Search': 'Tavily Search',
+  'tavilySearch.sectionDescription':
+    'The API key for the Tavily Search tool, which agents use to search the web. Only needed if an agent has that tool turned on.',
   tavilySearchApiKeyPlaceholder: 'tvly-xxxxxxxxxxxxxxx',
   tavilySearchUrl: 'https://tavily.com/',
   'Learn more about Tavily Search, go to': 'Learn more about Tavily Search, go to',
@@ -209,7 +212,6 @@ const SettingPage = {
   'Limiting context length reduces token usage but may affect conversation continuity':
     'Limiting context length reduces token usage but may affect conversation continuity',
   'Amazon Bedrock': 'Amazon Bedrock',
-  'LLM (Large Language Model)': 'LLM (Large Language Model)',
   'Inference Parameters': 'Inference Parameters',
   'Max Tokens': 'Max Tokens',
   Temperature: 'Temperature',

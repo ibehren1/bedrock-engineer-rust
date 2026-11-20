@@ -125,9 +125,9 @@ later), such as Ubuntu 24.04, Debian 13 or Fedora 40.
 
 ### Step 2 — Give the app your AWS keys
 
-Open **Settings** (the gear at the bottom of the left sidebar), go to the **AWS** tab, and enter
-either your access key and secret key, or the name of an AWS profile you already have set up. Pick
-your region.
+Open **Settings** (the gear at the bottom of the left sidebar), go to the **AWS Authentication** tab, and under
+**AWS Authentication** choose one of three ways to sign in: an access key and secret key, an AWS
+profile you already have set up, or an Amazon Bedrock API key. Pick your region.
 
 If you do not have AWS keys yet, or Bedrock has never been used in your AWS account,
 [Section 4](#4-setting-up-access-to-amazon-bedrock) is the full walkthrough: enabling model access in
@@ -136,7 +136,7 @@ filling in the `~/.aws/credentials` and `~/.aws/config` files.
 
 ### Step 3 — Turn on the models you want to use
 
-Still in Settings, go to the **Models** tab. Choose your main model. If the list is overwhelming, use
+Still in Settings, go to the **Bedrock Models** tab. Choose your main model. If the list is overwhelming, use
 **Visible Models** to trim it down to the two or three you actually want.
 
 Not sure which to pick? Start with a Claude Sonnet model. It is the best balance of speed, cost and
@@ -223,8 +223,8 @@ use. So before the app can do anything useful, three things have to be true:
 
 1. The models you want are **switched on** in your AWS account, in the region you plan to use.
 2. Your AWS identity has **permission** to call Bedrock.
-3. The app has **credentials** for that identity — either typed into its settings, or read from the
-   files the AWS command line tools use.
+3. The app has **credentials** for that identity — typed into its settings, read from the files the
+   AWS command line tools use, or a Bedrock API key.
 
 Sections 4.1 to 4.7 walk through all three from nothing. If someone else administers your AWS
 account, you can hand them [4.2](#42-step-1--turn-on-the-models-you-want-in-the-bedrock-console) and
@@ -281,7 +281,7 @@ Two things that trip people up here:
 Being allowed to sign in to AWS does not imply being allowed to call Bedrock. The identity whose keys
 you give the app needs an **IAM policy** attached.
 
-The app will write the policy out for you: **Settings → AWS → View required IAM policies**. It offers
+The app will write the policy out for you: **Settings → AWS Authentication → View required IAM policies**. It offers
 two.
 
 | Policy                            | Use it when                                                                                                                                                                   |
@@ -496,10 +496,11 @@ the files or the app's own settings instead.
 
 ### 4.7 Step 6 — Point the app at your credentials
 
-Open **Settings → AWS** (the gear at the bottom of the sidebar, then the **AWS** tab). There are two
-ways to do this and you only need one.
+Open **Settings → AWS Authentication** (the gear at the bottom of the sidebar, then the **AWS Authentication** tab). The
+**AWS Authentication** section offers three ways to sign in, one card each; pick one and fill in
+what its card asks for.
 
-**Option A — type the keys into the app**
+**Option A — Access key / secret key**
 
 Fill in:
 
@@ -517,20 +518,34 @@ the field empty keeps the saved one. The proxy password in **Proxy Settings** wo
 These values stay in the app's background process and are never handed to its windows, so a fault
 in the app's pages can't reveal them.
 
-**Option B — use an AWS profile (better if you have one)**
+**Option B — AWS profile (better if you have one)**
 
-Turn on **Use AWS Profile** and type the name into **AWS Profile Name** — `default`, or `bedrock` if
-you followed the naming above. The app then reads `~/.aws/credentials` every time it makes a request, so your secret
-never gets copied into the app's own storage, and rotating or refreshing the key in that file takes
-effect without touching the app.
+Choose **AWS profile** and pick the profile from the list — `default`, or `bedrock` if you followed
+the naming above. The list shows every profile in `~/.aws/config` and `~/.aws/credentials`; if you
+add one while the app is open, press the refresh button next to it. If no profiles are found, the
+card says so: create one with `aws configure --profile <name>` (or `aws configure sso`), then
+refresh. The app reads the profile every time it makes a request, so your secret never gets copied
+into the app's own storage, and rotating or refreshing the key in that file takes effect without
+touching the app.
 
-Set the **AWS Region** in the app either way. The app uses the region you pick here, not the one in
+**Option C — Bedrock API key**
+
+An Amazon Bedrock API key is a single token that only calls Bedrock. Create one in the Amazon
+Bedrock console under **API keys**, choose **Bedrock API key**, and paste it in. Like the secret
+key, it is saved on your machine and shown as **Saved (type to replace)** afterwards. A Bedrock API
+key covers chat, the model list, image generation and recognition, local knowledge base embeddings,
+guardrails and inference profiles. It can't call the other AWS services some features use, so
+**Bedrock Agents**, **Bedrock Knowledge Bases**, **Flows**, **translation**, **video generation**
+(which writes to S3) and uploading agent files to S3 don't work with it; they say so when you try.
+Use an access key or a profile if you need those.
+
+Set the **AWS Region** in the app whichever option you choose. The app uses the region you pick here, not the one in
 your profile's config file. The region list puts the regions that offer Bedrock first, under
 **Bedrock Supported Regions**, and everything else under **Other Regions**.
 
 ### 4.8 Check that it works
 
-Fastest check: go to **Settings → Models** and see whether the model list is populated. That list
+Fastest check: go to **Settings → Bedrock Models** and see whether the model list is populated. That list
 comes from a live call to Bedrock, so if models appear, your credentials and permissions are good.
 Then go to Chat and ask the agent anything.
 
@@ -584,7 +599,7 @@ for text, images, video and embeddings, plus a few read-only permissions to list
 
 ### 4.11 If your office uses a proxy
 
-**Settings → AWS → Proxy Settings**. Turn on **Enable Proxy** and fill in the host, port and protocol
+**Settings → AWS Authentication → Proxy Settings**. Turn on **Enable Proxy** and fill in the host, port and protocol
 (HTTP or HTTPS). Username and password are optional. While the proxy is on, the app never
 connects directly: calls to AWS, the web tools, MCP servers reached by URL, knowledge base website
 sources, the on-device model download and update checks all go through the proxy, and if the proxy
@@ -629,23 +644,36 @@ are in its **.ignore** button.
 
 Update controls used to be on this tab; they now have their own [Updates tab](#58-updates-tab).
 
-### 5.2 AWS tab
+### 5.2 AWS Authentication tab
 
-Covered in full in [Section 4](#4-setting-up-access-to-amazon-bedrock): credentials or a profile,
-region, the **View required IAM policies** dialog, and **Proxy Settings**.
+Covered in full in [Section 4](#4-setting-up-access-to-amazon-bedrock): **AWS Authentication**
+(access key, AWS profile or Bedrock API key), region, the **View required IAM policies** dialog, and **Proxy Settings**.
 
-### 5.3 Models tab
+### 5.3 Bedrock Models tab
 
-| Setting                                           | What it does                                                                                                                                                                                                                                                                                                                           |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **LLM (Large Language Model)**                    | Your default model for new conversations. You can still change it per conversation from the Chat page.                                                                                                                                                                                                                                 |
-| **Visible Models**                                | An allowlist. Add models here (**Add a visible model**) to trim the chat's model dropdown down to only the ones you want to see. Leave it empty to see everything your region offers. The model you are using always stays visible.                                                                                                    |
-| **Enable Application Inference Profiles**         | On by default. For cost tracking: lets you route requests through a tagged profile so your AWS bill can be split by project or team. See [the inference profile guide](./inference-profile/INFERENCE_PROFILE.md).                                                                                                                      |
-| **Enable Region Failover on ThrottlingException** | Off by default. If AWS is busy and rejects your request ("throttling"), automatically retry in another region you list under **Failover Regions**. Turn this on if you get "too many requests" errors. Turning it off clears the list.                                                                                                 |
-| **Inference Parameters**                          | Fine controls over how the model writes, and the default thinking budget. See below.                                                                                                                                                                                                                                                   |
-| **Light Processing Model**                        | A model used for small background jobs like naming your chats and suggesting follow-up questions, and for the [Help chat](#23-getting-help-inside-the-app). The default, **Use Main Conversation Model**, uses your main model; pick a cheap Haiku or Nova model to save money. It does not affect the quality of your actual answers. |
-| **Amazon Bedrock Guardrails**                     | Connect an Amazon Bedrock Guardrail to filter content. See below.                                                                                                                                                                                                                                                                      |
+The tab opens with the two models the app picks for you, then thinking mode, then the finer
+controls.
 
+| Setting                                           | What it does                                                                                                                                                                                                                                                                                                                                             |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Default model**                                 | The model for new conversations and for the Website, Diagram and Step Functions generators; new background agent sessions start with it too. You can still change it per conversation from the Chat page.                                                                                                                                                |
+| **Light processing model**                        | Shown next to the default model. Used for small background jobs: naming your chats, the [Help chat](#23-getting-help-inside-the-app), suggestions in the generators and MCP registry searches. **Same as default model** uses your default model; pick a cheap Haiku or Nova model to save money. It does not affect the quality of your actual answers. |
+| **Thinking Mode**                                 | How much the model reasons before answering. See below.                                                                                                                                                                                                                                                                                                  |
+| **Visible Models**                                | An allowlist. Add models here (**Add a visible model**) to trim the chat's model dropdown down to only the ones you want to see. Leave it empty to see everything your region offers. The model you are using always stays visible.                                                                                                                      |
+| **Enable Application Inference Profiles**         | On by default. For cost tracking: lets you route requests through a tagged profile so your AWS bill can be split by project or team. See [the inference profile guide](./inference-profile/INFERENCE_PROFILE.md).                                                                                                                                        |
+| **Enable Region Failover on ThrottlingException** | Off by default. If AWS is busy and rejects your request ("throttling"), automatically retry in another region you list under **Failover Regions**. Turn this on if you get "too many requests" errors. Turning it off clears the list.                                                                                                                   |
+| **Inference Parameters**                          | Fine controls over how the model writes. See below.                                                                                                                                                                                                                                                                                                      |
+| **Amazon Bedrock Guardrails**                     | Connect an Amazon Bedrock Guardrail to filter content. See below.                                                                                                                                                                                                                                                                                        |
+
+**Thinking mode** lets the model work through a problem before it answers. A bigger **Thinking
+Budget** helps with hard, multi-step work but makes answers slower and dearer, because thinking is
+billed as output. Models that only offer adaptive thinking show **None** or **Adaptive** instead of
+a budget. The setting applies to every conversation, whichever model it uses: the **Thinking**
+control on the Chat page ([Section 6.2](#62-the-three-main-controls)) changes the same value. It is
+not used for chat titles or for calls that must return structured output. Claude Fable 5 always
+thinks adaptively, and the GPT-6 and Grok models turn the budget into a reasoning effort. If your
+default model doesn't support thinking, the section says so and the setting has no effect until you
+choose one that does.
 **Inference parameters, in plain terms:**
 
 - **Max Tokens** (default 4,096) — the longest reply the model is allowed to produce. A "token" is
@@ -658,8 +686,6 @@ region, the **View required IAM policies** dialog, and **Proxy Settings**.
   are more creative and more unpredictable. For code and factual work, keep it low.
 - **topP** (default 0.9) — another randomness dial that limits the model to its most likely word
   choices. Most people should leave this alone and adjust only Temperature.
-- **Thinking Mode / Thinking Budget** — the default for the **Thinking** control on the Chat page
-  ([Section 6.2](#62-the-three-main-controls)).
 
 Some newer models (the Claude 5 family, Kimi K3, and the GPT-6 and Grok models) no
 longer accept Temperature and topP, so for those the app leaves both out and the model's own defaults
@@ -674,13 +700,13 @@ Guardrails** and enter its **Guardrail Identifier** and **Guardrail Version** (d
 
 | Setting                                    | What it does                                                                                                                                                                                                                                                                                                    |
 | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Tavily Search API Key**                  | Required for the web search tool. Get a free key from [tavily.com](https://tavily.com/). Without it, `tavilySearch` is left out of the agent's tools.                                                                                                                                                           |
 | **Context Length**                         | How many past messages get sent along with each new one. Higher means the agent remembers more of the conversation, but every message costs money to send, so long context costs more. The default is 60; lower it if long chats get expensive, raise it if the agent keeps forgetting things you said earlier. |
 | **Request Timeout (minutes)**              | How long to wait before giving up on a reply (default 15). Raise it if you ask for long, tool-heavy jobs that legitimately take a while.                                                                                                                                                                        |
 | **Enable Prompt Cache**                    | Lets AWS remember the unchanging front part of your conversation so it does not have to be re-processed every turn. This makes replies faster and cheaper. On by default; leave it on.                                                                                                                          |
 | **Remote images in chat**                 | Off by default: an image a reply links to on another website shows a placeholder naming the site, with a **Load** button. Loading an image sends a request to that site, and a reply steered by a web page, file or tool result can hide parts of your conversation in the image's address. Turn on **Load remote images in replies automatically** to load them straight away. Images from your project and attachments always load. |
 | **Background agents → Most tool calls per scheduled run** | How many tool calls one scheduled background agent run may make before it stops: 1 to 1,000, default 100. Raise it for long jobs; keep it low so a run that goes wrong, or is steered by something it reads, can only do so much. |
 | **Advanced Setting → Enter key behaviour** | "When writing a message, press [Enter] to" **Send the message** (the default; `Shift+Enter` makes a new line), or **Start a new line** (then `Cmd`/`Ctrl` + `Enter` sends). Pick whichever matches the other apps you use.                                                                                      |
+| **Tavily Search → Tavily Search API Key**  | Required for the web search tool. Get a free key from [tavily.com](https://tavily.com/). Without it, `tavilySearch` is left out of the agent's tools.                                                                                                                                                           |
 
 ### 5.5 Workspace tab
 
@@ -695,7 +721,7 @@ Guardrails** and enter its **Guardrail Identifier** and **Guardrail Version** (d
 You can also switch the project folder for the current chat from the folder button below the message
 box ([Section 6.10](#610-the-folder-tools-and-ignore-buttons)).
 
-### 5.6 Sandbox tab
+### 5.6 Agent Sandboxes tab
 
 Settings for the [Docker sandbox](#10-the-docker-sandbox), the private Linux container a chat can work
 in.
@@ -912,7 +938,7 @@ Deleting a chat also deletes that chat's
 it.
 
 Chat titles are generated for you from the first thing you say, using the
-[Light Processing Model](#53-models-tab). A title is always short plain text — a handful of words, no
+[Light processing model](#53-bedrock-models-tab). A title is always short plain text — a handful of words, no
 formatting — and is trimmed to fit the sidebar. Each chat's **⋯** menu offers **Edit title** to type
 your own (Enter saves, Esc cancels), **Generate title** to ask for a new one, and **Delete**.
 **Generate All Titles** redoes every chat that still has a placeholder "Chat…" title.
@@ -1658,7 +1684,7 @@ The Docker sandbox removes the trade-off. It gives the chat its own Linux comput
 Turn on the **Docker Sandbox** tool for an agent. Then, the first time that agent runs a command in
 a chat, the app creates a container for that chat on the operating system chosen in **Settings →
 Sandbox**
-([Section 5.6](#56-sandbox-tab)), and from then on commands go there by default. The choices are Debian 13 (the default),
+([Section 5.6](#56-agent-sandboxes-tab)), and from then on commands go there by default. The choices are Debian 13 (the default),
 Ubuntu 26.04, Amazon Linux 2023 and 2027, AlmaLinux 9, Rocky Linux 9 and Red Hat UBI 9 (real RHEL,
 limited to Red Hat's freely available packages). Changing it affects new sandboxes; a chat that
 already has one keeps its OS until you remove the sandbox. The agent can also ask for a different OS
@@ -1746,10 +1772,10 @@ data, is left where it was for you to copy from or delete.
 
 - **Containers never restart on their own**, so a sandbox doesn't come back by itself after you quit
   the app. To lock containers down further or take them off the network, see **Sandbox
-  restrictions** in [Section 5.6](#56-sandbox-tab); both are off by default.
+  restrictions** in [Section 5.6](#56-agent-sandboxes-tab); both are off by default.
 - **Docker must be installed and running.** If it is missing, the agent tells you how to install it
-  for your platform. **Settings → Sandbox** shows whether the app can see Docker.
-- **Each container is limited** to the memory and CPU set in **Settings → Sandbox** (2 GB and 2 CPUs
+  for your platform. **Settings → Agent Sandboxes** shows whether the app can see Docker.
+- **Each container is limited** to the memory and CPU set in **Settings → Agent Sandboxes** (2 GB and 2 CPUs
   by default), and the agent waits up to the command timeout (5 minutes by default) for each command
   before moving on. New limits apply when a sandbox is recreated.
 - **Docker Compose** is used when available, and is required for stacks with more than one service.
@@ -1768,7 +1794,7 @@ It has up to four tabs of its own:
 
 **Overview** — what the container is and what it is doing: its name and image, when it started, the
 workspace and folder, and CPU, memory, network and disk against the limits from
-[Settings → Sandbox](#56-sandbox-tab). Each service is listed with its state, and each published port
+[Settings → Agent Sandboxes](#56-agent-sandboxes-tab). Each service is listed with its state, and each published port
 is a button that opens `localhost:<port>` in your browser. The usual actions — open folder, start,
 stop, restart, remove (keeping or deleting the data) — are at the bottom.
 
@@ -1916,7 +1942,7 @@ three tools.
 ### 11.4 Using the app's AWS settings in a server
 
 Many AWS MCP servers need AWS credentials. Instead of typing a profile name or keys into the
-server's `env`, use these two placeholders. The app fills them in from **Settings → AWS** each time
+server's `env`, use these two placeholders. The app fills them in from **Settings → AWS Authentication** each time
 the server starts:
 
 | Value in `env`   | Becomes                                                                  |
@@ -1932,7 +1958,8 @@ the server starts:
 ```
 
 If the app signs in with an access key instead of a profile, the `AWS_PROFILE` entry is left out
-and the server gets the access key, secret key and session token in its place. Values the
+and the server gets the access key, secret key and session token in its place. With a Bedrock API
+key, servers get the region only: the API key is never passed to MCP servers. Values the
 placeholders produce take priority over any AWS variables already in the app's environment.
 Changing your AWS settings reconnects the servers that use them the next time you send a message.
 
@@ -2215,7 +2242,7 @@ in the dropdown with a different suffix:
 | _(no suffix)_      | Run in exactly the region you selected, and nowhere else.                                                       |
 
 If you keep hitting capacity errors, try a Global option, or turn on
-[Region Failover](#53-models-tab).
+[Region Failover](#53-bedrock-models-tab).
 
 ### 18.4 Prompt caching
 
@@ -2231,7 +2258,7 @@ it off. Some models handle caching automatically and ignore the setting entirely
 Four things actually move the needle:
 
 1. **Set Context Length sensibly.** Every past message is re-sent and re-charged each turn.
-2. **Set a cheap Light Processing Model.** By default it is your main model. Chat titles, suggestions
+2. **Set a cheap light processing model.** By default it is your main model. Chat titles, suggestions
    and the Help chat do not need your best model.
 3. **Give agents fewer tools.** The tool list is sent with every request.
 4. **Turn thinking down for simple work.** Reasoning tokens are billed.
@@ -2406,7 +2433,7 @@ the conversation.
 - _…get a shell inside the container myself?_ → [Section 10.9](#109-the-interactive-terminal)
 - _…let the agent run commands on my actual machine?_ → Allowed Commands,
   [Section 8.3](#83-the-agent-editor) — and read the safety note
-- _…choose the sandbox's operating system or limits?_ → [Section 5.6](#56-sandbox-tab)
+- _…choose the sandbox's operating system or limits?_ → [Section 5.6](#56-agent-sandboxes-tab)
 - _…let the agent analyze a spreadsheet?_ → `codeInterpreter`, [Section 9.5](#95-system-tools)
 - _…let the agent search my company's documents?_ → a local knowledge base
   ([Section 24](#24-local-knowledge-bases-letting-an-agent-search-your-documents)), or `retrieve`
@@ -2446,7 +2473,7 @@ the conversation.
   [Section 26.4](#264-a-monthly-budget)
 - _…see which model, agent or feature costs the most?_ →
   [Section 26.2](#262-reading-the-page)
-- _…hide models I never use?_ → Visible Models, [Section 5.3](#53-models-tab)
+- _…hide models I never use?_ → Visible Models, [Section 5.3](#53-bedrock-models-tab)
 - _…stop getting throttling errors?_ → Region failover or Global routing,
   [Section 18.3](#183-routing-why-some-models-appear-twice)
 - _…know which model to pick?_ → [Section 18.1](#181-the-short-answer)
@@ -2566,15 +2593,15 @@ have to re-enter your AWS details. If it still will not start after that, please
 
 Check, in this order:
 
-1. **Settings → AWS** — are your credentials filled in?
-2. **Settings → Models** — is a model selected, and is it available in your region?
+1. **Settings → AWS Authentication** — are your credentials filled in?
+2. **Settings → Bedrock Models** — is a model selected, and is it available in your region?
 3. Is your internet connection working, and if you are behind a proxy, is
    [the proxy configured](#411-if-your-office-uses-a-proxy)?
 
 ### "AccessDeniedException" or a permissions error
 
 Your AWS account has credentials but not permission to use Bedrock, or not permission for that
-specific model. Two things to check: click **View required IAM policies** in **Settings → AWS** and
+specific model. Two things to check: click **View required IAM policies** in **Settings → AWS Authentication** and
 compare against what your account has
 ([Section 4.3](#43-step-2--give-your-identity-permission-to-call-bedrock)); and in the AWS console,
 confirm your account has requested access to that model family
@@ -2585,7 +2612,7 @@ you to enable them first.
 
 The keys themselves are the problem, not the permissions. Common causes: a character lost while
 copying the secret, keys belonging to a user that has since been deleted, or a profile name in
-**Settings → AWS** that does not exist in `~/.aws/credentials`. Test the keys outside the app with
+**Settings → AWS Authentication** that does not exist in `~/.aws/credentials`. Test the keys outside the app with
 `aws sts get-caller-identity` ([Section 4.8](#48-check-that-it-works)); if that fails too, create a
 fresh access key ([Section 4.4](#44-step-3--create-aws-access-keys)).
 
@@ -2605,11 +2632,11 @@ AWS is busy. Fixes, easiest first:
 2. Switch to a **Global** routing option for your model
    ([Section 18.3](#183-routing-why-some-models-appear-twice)).
 3. Turn on **Region Failover** and list a couple of backup regions
-   ([Section 5.3](#53-models-tab)).
+   ([Section 5.3](#53-bedrock-models-tab)).
 
 ### The answer got cut off mid-sentence
 
-Raise **Max Tokens** in **Settings → Models → Inference Parameters**.
+Raise **Max Tokens** in **Settings → Bedrock Models → Inference Parameters**.
 
 If it is already at the maximum, you have hit the ceiling of the model itself rather than the
 setting — every model has its own output limit and requests are capped at it. Switch to a model with
@@ -2673,7 +2700,7 @@ the new `.deb` by hand or use the AppImage. See [Section 5.8](#58-updates-tab).
 ### Web search does not work
 
 The `tavilySearch` tool needs an API key. Get a free one from [tavily.com](https://tavily.com/) and
-put it in **Settings → Chat → Tavily Search API Key**.
+put it in **Settings → Chat → Tavily Search**, at the bottom of the tab.
 
 ### Image generation is not available
 
@@ -2702,7 +2729,7 @@ Restart the app. Pages shown inside the app only read the proxy setting at start
 
 Open the **Accounting** page ([Section 26](#26-accounting-what-bedrock-is-costing-you)) to see which
 model, feature, agent or day it comes from, and the chat's **Cost** tab for a single conversation. Then
-work through [Section 18.5](#185-managing-cost) — Context Length and the Light Processing Model are usually the
+work through [Section 18.5](#185-managing-cost) — Context Length and the light processing model are usually the
 two biggest wins.
 
 ### An MCP server will not connect
@@ -2785,10 +2812,10 @@ read, the help chat falls back to sending the whole guide with your question, an
 
 ### 23.4 Which model it uses
 
-The help chat runs on whichever model you selected as the **Light Processing Model** in
-**Settings → Models** (see [Section 5.3](#53-models-tab)). Each question carries only a few sections
+The help chat runs on whichever model you selected as the **Light processing model** in
+**Settings → Bedrock Models** (see [Section 5.3](#53-bedrock-models-tab)). Each question carries only a few sections
 of the guide, so a small, cheap model like Haiku or Nova answers well and costs little. If you have
-not chosen a Light Processing Model, the help chat uses your main conversation model instead.
+not chosen a light processing model, the help chat uses your main conversation model instead.
 
 The agent and model shown at the bottom of a help chat are displayed as plain text rather than
 dropdowns, because the help chat pins both and the pickers would not be able to change them.
@@ -3160,7 +3187,7 @@ keep the model they were built with until you rebuild them
 
 A Bedrock model has to be enabled in the Bedrock console for your region
 ([Section 4.2](#42-step-1--turn-on-the-models-you-want-in-the-bedrock-console)), and Bedrock bills per
-embedded token. It uses the AWS credentials and region from the AWS tab.
+embedded token. It uses the AWS credentials and region from the AWS Authentication tab.
 
 The **Local model: multilingual-e5-small** block is always shown, whichever provider you pick, so you
 can download the model ahead of time. **Download model** fetches it from Hugging Face (through your
@@ -3231,7 +3258,7 @@ quarter of the file), the app optimizes the knowledge base by itself.
   page shows them as "Knowledge base indexing" and "Knowledge base search"
   ([Section 26](#26-accounting-what-bedrock-is-costing-you)).
 - **Permissions.** Your AWS identity needs `bedrock:InvokeModel` on the embedding model. Both policies
-  under **Settings → AWS → View required IAM policies** already allow `InvokeModel` on all models, so
+  under **Settings → AWS Authentication → View required IAM policies** already allow `InvokeModel` on all models, so
   nothing extra is needed if you use one of them
   ([Section 4.3](#43-step-2--give-your-identity-permission-to-call-bedrock)). A hand-written policy that
   lists specific models must include the embedding model.

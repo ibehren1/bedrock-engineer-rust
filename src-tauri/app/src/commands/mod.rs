@@ -7,6 +7,7 @@ pub mod agent_files;
 pub mod agents;
 pub mod app_update;
 pub mod attachments;
+pub mod aws;
 pub mod background;
 pub mod bedrock;
 pub mod camera;
@@ -144,6 +145,8 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         bedrock::bedrock_retrieve,
         bedrock::bedrock_invoke_agent,
         bedrock::bedrock_invoke_flow,
+        // window.api.aws
+        aws::aws_list_profiles,
         // bedrock:*Video* (Nova Reel)
         video::bedrock_generate_video,
         video::bedrock_start_video_generation,

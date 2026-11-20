@@ -1,36 +1,14 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { FcElectronics } from 'react-icons/fc'
+import { FcSettings } from 'react-icons/fc'
 import { IoMdClose } from 'react-icons/io'
 import { useSettings } from '@renderer/contexts/SettingsContext'
 import { SettingSection } from '../SettingSection'
-import { SettingSelect } from '../SettingSelect'
 import { bedrockRegions } from '../../utils/regionOptions'
 
 export const BedrockModelsSection: React.FC = () => {
   const { t } = useTranslation()
-  const {
-    currentLLM,
-    updateLLM,
-    availableModels,
-    awsRegion,
-    bedrockSettings,
-    updateBedrockSettings
-  } = useSettings()
-
-  const modelOptions = availableModels.map((model) => ({
-    value: model.modelId,
-    label: model.modelName
-  }))
-
-  const handleChangeLLM = (modelId: string) => {
-    const selectedModel = availableModels.find((model) => model.modelId === modelId)
-    if (selectedModel) {
-      updateLLM(selectedModel)
-    } else {
-      console.error(t('Invalid model'))
-    }
-  }
+  const { availableModels, awsRegion, bedrockSettings, updateBedrockSettings } = useSettings()
 
   const handleVisibleModelSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedModelId = e.target.value
@@ -81,15 +59,8 @@ export const BedrockModelsSection: React.FC = () => {
   }
 
   return (
-    <SettingSection title={t('Amazon Bedrock')} icon={FcElectronics}>
+    <SettingSection title={t('Amazon Bedrock')} icon={FcSettings}>
       <div className="space-y-2">
-        <SettingSelect
-          label={t('LLM (Large Language Model)')}
-          value={currentLLM?.modelId}
-          options={modelOptions}
-          onChange={(e) => handleChangeLLM(e.target.value)}
-        />
-
         <div className="space-y-2">
           <label className="block text-sm font-medium text-ink">{t('Visible Models')}</label>
           <p className="text-xs text-ink-muted">

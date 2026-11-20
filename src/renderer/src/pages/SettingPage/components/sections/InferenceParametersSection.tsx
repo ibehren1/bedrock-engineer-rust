@@ -4,7 +4,6 @@ import { FcMindMap } from 'react-icons/fc'
 import { useSettings } from '@renderer/contexts/SettingsContext'
 import { SettingSection } from '../SettingSection'
 import { SettingInput } from '../SettingInput'
-import { ThinkingModeSettings } from '../ThinkingModeSettings'
 
 export const InferenceParametersSection: React.FC = () => {
   const { t } = useTranslation()
@@ -50,8 +49,6 @@ export const InferenceParametersSection: React.FC = () => {
             updateInferenceParams({ topP: parseFloat(e.target.value) })
           }}
         />
-
-        <ThinkingModeSettings />
       </div>
     </SettingSection>
   )

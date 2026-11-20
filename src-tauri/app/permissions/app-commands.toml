@@ -81,6 +81,7 @@ permissions = [
   "allow-bedrock-retrieve",
   "allow-bedrock-invoke-agent",
   "allow-bedrock-invoke-flow",
+  "allow-aws-list-profiles",
   "allow-bedrock-generate-video",
   "allow-bedrock-start-video-generation",
   "allow-bedrock-check-video-status",

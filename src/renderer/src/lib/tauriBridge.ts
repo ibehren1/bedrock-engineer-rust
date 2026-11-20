@@ -1357,6 +1357,9 @@ function createApi(): Window['api'] {
       userGuide: cmd('api.help.userGuide', 'help_user_guide'),
       search: cmd('api.help.search', 'help_search', (query, topK) => ({ query, topK }))
     },
+    aws: {
+      listProfiles: cmd('api.aws.listProfiles', 'aws_list_profiles')
+    },
     screen: {
       listAvailableWindows: cmd('api.screen.listAvailableWindows', 'screen_list_available_windows')
     },

@@ -556,6 +556,7 @@ Notes on the file commands (`src-tauri/app/src/commands/{file,agent_files}.rs`):
 | `api.help.prepareUserGuide` | `help_prepare_user_guide` | `{ sessionId }` (attaches the whole guide; the renderer no longer calls it) |
 | `api.help.userGuide` | `help_user_guide` | → the user guide's Markdown (repository copy in dev, bundled `docs/USER_GUIDE.md` otherwise) |
 | `api.help.search` | `help_search` | `{ query, topK? }` → `{ mode: 'hybrid' \| 'keyword', hits: [{ headingPath, text, score }] }` from the guide's shipped knowledge base (`docs/help-kb.db`, copied to `knowledgebases/helpAgent/user-guide.db` when its guide hash changes). Hybrid when the on-device model is installed, keyword-only otherwise; both offline |
+| `api.aws.listProfiles` | `aws_list_profiles` | — → `string[]`: profile names from `~/.aws/config` (`[default]`, `[profile x]`) and `~/.aws/credentials` (`[x]`), honouring `AWS_CONFIG_FILE` / `AWS_SHARED_CREDENTIALS_FILE`; `sso-session` / `services` sections skipped, deduplicated, `default` first; names only, missing files → `[]`; every window |
 | `api.screen.listAvailableWindows` | `screen_list_available_windows` | — |
 | `api.camera.saveCapturedImage` | `camera_save_captured_image` | `{ request }` |
 | `api.camera.showPreviewWindow` | `camera_show_preview_window` | `{ options }` |

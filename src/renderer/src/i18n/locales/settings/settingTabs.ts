@@ -2,22 +2,22 @@ export const settingTabsLabels = {
   en: {
     settingTabs: {
       general: 'General',
-      aws: 'AWS',
-      models: 'Models',
+      aws: 'AWS Authentication',
+      models: 'Bedrock Models',
       chat: 'Chat',
       workspace: 'Workspace',
-      sandbox: 'Sandbox',
+      sandbox: 'Agent Sandboxes',
       updates: 'Updates'
     }
   },
   ja: {
     settingTabs: {
       general: '一般',
-      aws: 'AWS',
-      models: 'モデル',
+      aws: 'AWS 認証',
+      models: 'Bedrock モデル',
       chat: 'チャット',
       workspace: 'ワークスペース',
-      sandbox: 'サンドボックス',
+      sandbox: 'エージェントサンドボックス',
       updates: 'アップデート'
     }
   }

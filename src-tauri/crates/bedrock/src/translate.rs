@@ -163,6 +163,7 @@ impl TranslateService {
         aws: &AwsSettings,
         options: &TranslateTextOptions,
     ) -> Result<TranslationResult> {
+        crate::require_sigv4(aws, "Amazon Translate")?;
         let source_language = options.source_language.as_deref().unwrap_or("auto");
         let target_language = options.target_language.as_str();
         let text = options.text.as_str();

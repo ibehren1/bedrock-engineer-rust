@@ -10,8 +10,8 @@
 //! * [`settings`] — serde mirrors of the store keys the converse path reads (`aws`,
 //!   `inferenceParams`, `thinkingMode`, `guardrailSettings`,
 //!   `bedrockSettings`).
-//! * [`client`] — `SdkConfig` / runtime client from the `aws` settings (static keys or named
-//!   profile, proxy, timeouts).
+//! * [`client`] — `SdkConfig` / runtime client from the `aws` settings (static keys, named
+//!   profile or Bedrock API key, proxy, timeouts); [`profiles`] lists the named profiles.
 //! * [`request`] — `prepareCommandParameters` (model quirks, thinking, guardrails) as a pure
 //!   JSON function, then conversion to SDK types.
 //! * [`convert`] / [`document`] — renderer JSON <-> SDK types, `Document`, and blobs.
@@ -136,6 +136,7 @@ pub mod image;
 pub mod image_recognition;
 pub mod inference_profile;
 pub mod model_info;
+pub mod profiles;
 pub mod request;
 pub mod retry;
 pub mod sdk;
@@ -146,7 +147,7 @@ pub mod translate;
 pub mod usage;
 pub mod video;
 
-pub use client::{load_sdk_config, runtime_client};
+pub use client::{load_sdk_config, require_sigv4, runtime_client};
 pub use converse::{ClientFactory, ConverseService, DefaultClientFactory, EventSource};
 pub use error::{Error, Result, ServiceError};
 pub use model_info::{
@@ -157,7 +158,7 @@ pub use request::{ConverseRequest, PreparedRequest};
 pub use retry::RetryPolicy;
 pub use sdk::{DefaultSdkConfig, SdkConfigClients, SdkConfigSource};
 pub use settings::{
-    AwsSettings, BedrockSettings, ConverseSettings, GuardrailSettings, InferenceConfig,
-    ProxyConfiguration, ThinkingMode,
+    AwsAuthMode, AwsSettings, BedrockSettings, ConverseSettings, GuardrailSettings,
+    InferenceConfig, ProxyConfiguration, ThinkingMode,
 };
 pub use tokio_util::sync::CancellationToken;

@@ -134,6 +134,9 @@ async fn s3_client(store: &StoreMutex, region: &str) -> Result<Option<aws_sdk_s3
         return Ok(None);
     };
     let settings: AwsSettings = serde_json::from_value(aws).map_err(|e| e.to_string())?;
+    // S3 only takes SigV4: say so instead of failing on missing credentials.
+    bedrock::require_sigv4(&settings, "Organization agents (Amazon S3)")
+        .map_err(|e| e.message())?;
     let config = bedrock::load_sdk_config(&settings.with_region(region))
         .await
         .map_err(|e| e.to_string())?;

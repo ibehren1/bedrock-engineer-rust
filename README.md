@@ -112,8 +112,10 @@ or newer distribution (glibc 2.39 or later): for example Ubuntu 24.04, Debian 13
 ### Set up AWS access
 
 The app has no AI of its own: every answer comes from a model in Amazon Bedrock in your AWS account,
-billed by AWS. Open **Settings → AWS** and enter an access key and secret, or the name of an AWS
-profile, and pick a region. If Bedrock is new to you, follow
+billed by AWS. Open **Settings → AWS Authentication** and, under **AWS Authentication**, choose an access key and
+secret, an AWS profile (picked from the profiles in `~/.aws`), or an Amazon Bedrock API key, and pick
+a region. A Bedrock API key covers chat and the other Bedrock features, but not Bedrock Agents,
+Bedrock Knowledge Bases, Flows, translation or video generation. If Bedrock is new to you, follow
 [Setting up access to Amazon Bedrock](./docs/USER_GUIDE.md#4-setting-up-access-to-amazon-bedrock). It
 covers enabling models in the Bedrock console, the IAM policy, creating access keys, installing the
 AWS CLI, and writing the `~/.aws/credentials` and `~/.aws/config` files.
@@ -166,7 +168,7 @@ on-device embedding model), so there is nothing to download or build. It matches
 meaning too if you have downloaded the on-device model for local knowledge bases. The chat itself
 needs Amazon Bedrock; the guide page says so, and links to the setup section, until it works.
 
-The help chat runs on whichever model you chose as the **Light Processing Model** in Settings,
+The help chat runs on whichever model you chose as the **Light processing model** in Settings,
 falling back to your main conversation model. It deliberately has no tools, so it cannot read your
 files or inspect your settings. It answers from the guide and says so when the guide does not cover
 your question. Asking again continues the same conversation rather than starting a new one.
@@ -270,9 +272,9 @@ server (CloudFormation validation, compliance checks, deployment troubleshooting
 and it never deploys), and AWS Pricing for cost estimates. Three of them run with `uvx`, so install
 [uv](https://docs.astral.sh/uv/) first.
 
-The servers that call AWS use the credentials from **Settings → AWS**. Any MCP server can do the
+The servers that call AWS use the credentials from **Settings → AWS Authentication**. Any MCP server can do the
 same by putting `{{awsProfile}}` and `{{awsRegion}}` in its `env`. With an access key instead of a
-profile, the key pair is passed. Servers that don't use the placeholders never see your
+profile, the key pair is passed; a Bedrock API key is never passed. Servers that don't use the placeholders never see your
 credentials.
 
 ### Chat interface
@@ -477,7 +479,7 @@ Turning on the **Docker Sandbox** tool gives each chat its own long-lived contai
 default place the agent runs commands. The agent can install whatever it needs (`apt-get` or `dnf`) and make a mess without any of it reaching your machine — and because it
 cannot reach your machine, the command allowlist doesn't have to hold it back inside the container.
 
-- Pick the container's operating system in **Settings → Sandbox**, next to the memory, CPU and
+- Pick the container's operating system in **Settings → Agent Sandboxes**, next to the memory, CPU and
   command timeout limits: Debian 13 (the default — the quickest to download and install packages
   on), Ubuntu 26.04, Amazon Linux 2023 or 2027, AlmaLinux 9, Rocky Linux 9 or Red Hat UBI 9. UBI is
   real RHEL but only has Red Hat's freely available package subset. The agent can also ask for a

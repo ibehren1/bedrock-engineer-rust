@@ -57,7 +57,7 @@ export const sandboxSettings = {
       },
       toolSummary:
         'Current settings: {{os}}, {{memory}} memory, {{cpu}}, {{timeout}} command timeout.',
-      openSettings: 'Open sandbox settings'
+      openSettings: 'Open Agent Sandboxes settings'
     }
   },
   ja: {
@@ -118,7 +118,7 @@ export const sandboxSettings = {
       },
       toolSummary:
         '現在の設定: {{os}}、メモリ {{memory}}、{{cpu}}、コマンドのタイムアウト {{timeout}}。',
-      openSettings: 'サンドボックス設定を開く'
+      openSettings: 'エージェントサンドボックス設定を開く'
     }
   }
 }

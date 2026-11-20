@@ -53,7 +53,7 @@ const HomePage = {
     help: 'オフラインで読めるユーザーガイドです。質問することもできます。ヒント: {{shortcut}} でどこからでもコマンドパレットを開けます。'
   },
   'set your aws credential':
-    'Bedrock に接続する設定をします。設定画面から AWS Credentials（リージョン、アクセスキー、シークレットアクセスキー）を入力してください。',
+    'Bedrock に接続する設定をします。設定画面でリージョンを選び、アクセスキーとシークレットキー、AWS プロファイル、Bedrock API キーのいずれかでサインインしてください。',
   'Welcome to Bedrock Engineer': '{{appName}} にようこそ',
   'This is AI assistant of software development tasks':
     '私は、ソフトウェア開発タスクに特化したAIアシスタントです',
@@ -188,6 +188,9 @@ const SettingPage = {
   'Project Setting': 'プロジェクト設定',
   'Agent Chat': 'エージェントチャット',
   'Tavily Search API Key': 'Tavily 検索 API キー',
+  'Tavily Search': 'Tavily 検索',
+  'tavilySearch.sectionDescription':
+    'エージェントがウェブ検索に使う Tavily 検索ツールの API キーです。そのツールを有効にしたエージェントがある場合にのみ必要です。',
   tavilySearchApiKeyPlaceholder: 'tvly-xxxxxxxxxxxxxxx',
   tavilySearchUrl: 'https://tavily.com/',
   'Learn more about Tavily Search, go to':
@@ -211,7 +214,6 @@ const SettingPage = {
   'Limiting context length reduces token usage but may affect conversation continuity':
     'コンテキスト長を制限するとトークン使用量は減りますが、会話の連続性に影響する可能性があります',
   'Amazon Bedrock': 'Amazon Bedrock',
-  'LLM (Large Language Model)': 'LLM（大規模言語モデル）',
   'Inference Parameters': '推論パラメータ',
   'Max Tokens': '最大トークン数',
   Temperature: '温度',

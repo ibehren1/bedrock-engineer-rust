@@ -4,8 +4,10 @@
 //! Opt-in per server: a server without these placeholders gets none of the app's credentials.
 //! With a named profile, `{{awsProfile}}` becomes the profile name. With static keys, the entry
 //! whose value is `{{awsProfile}}` is dropped and the key pair (and session token, if any) is
-//! added in its place. Every entry a placeholder produced is *forced*: it wins over the app's own
-//! process environment, which otherwise overrides the configured `env`.
+//! added in its place. With neither (the app signs in with a Bedrock API key) the
+//! `{{awsProfile}}` entry is dropped and nothing is added: the API key is never passed on. Every
+//! entry a placeholder produced is *forced*: it wins over the app's own process environment,
+//! which otherwise overrides the configured `env`.
 
 use common::agent::McpServerConfig;
 use indexmap::IndexMap;
@@ -229,6 +231,22 @@ mod tests {
         };
         let e = expand_server_env(&server(&[("AWS_REGION", "{{awsRegion}}")]), &aws);
         assert_eq!(env_of(&e), pairs(&[("AWS_REGION", "us-west-2")]));
+    }
+
+    #[test]
+    fn neither_profile_nor_keys_passes_only_the_region() {
+        let aws = AppAwsEnv {
+            region: "us-east-1".into(),
+            profile: None,
+            keys: None,
+        };
+        let e = expand_server_env(&server(AWS_ENV), &aws);
+        assert_eq!(
+            env_of(&e),
+            pairs(&[("FASTMCP_LOG_LEVEL", "ERROR"), ("AWS_REGION", "us-east-1")])
+        );
+        assert_eq!(e.forced, vec!["AWS_REGION"]);
+        assert!(!e.receives_aws_keys());
     }
 
     #[test]

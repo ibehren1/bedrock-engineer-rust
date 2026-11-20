@@ -11,10 +11,10 @@
 use crate::settings::AwsSettings;
 use serde_json::{json, Value};
 
-/// `ModelService.listModels()`: `[]` unless a region and (a profile or an access key) are set.
+/// `ModelService.listModels()`: `[]` unless a region and credentials for the chosen sign-in
+/// method (a profile, an access key, or a non-empty Bedrock API key) are set.
 pub fn list_models(aws: &AwsSettings) -> Vec<models::Llm> {
-    if aws.region.is_empty() || (!aws.use_profile.unwrap_or(false) && aws.access_key_id.is_empty())
-    {
+    if aws.region.is_empty() || !aws.has_credentials() {
         tracing::warn!("AWS credentials not configured properly");
         return Vec::new();
     }
@@ -54,6 +54,14 @@ mod tests {
         assert!(!with_profile.is_empty());
         assert_eq!(
             list_models(&aws("us-west-2", "AKID", None)),
+            models::get_models_for_region("us-west-2")
+        );
+        let mut api_key = aws("us-west-2", "", None);
+        api_key.auth_mode = Some(crate::settings::AwsAuthMode::ApiKey);
+        assert!(list_models(&api_key).is_empty());
+        api_key.bedrock_api_key = Some("key".into());
+        assert_eq!(
+            list_models(&api_key),
             models::get_models_for_region("us-west-2")
         );
     }

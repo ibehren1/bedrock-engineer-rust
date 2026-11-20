@@ -245,25 +245,31 @@ struct McpAwsEnv(AppHandle);
 
 impl mcp::env_placeholders::AwsEnvSource for McpAwsEnv {
     fn aws_env(&self) -> mcp::env_placeholders::AppAwsEnv {
-        let aws = settings::aws_settings(&store_snapshot(&self.0));
-        let use_profile = aws.use_profile.unwrap_or(false);
-        mcp::env_placeholders::AppAwsEnv {
-            region: aws.region.clone(),
-            // An empty profile name means the default profile, as for the Bedrock clients.
-            profile: use_profile.then(|| {
-                aws.profile
-                    .clone()
-                    .filter(|p| !p.is_empty())
-                    .unwrap_or_else(|| "default".into())
-            }),
-            keys: (!use_profile && !aws.access_key_id.is_empty()).then(|| {
-                mcp::env_placeholders::AwsKeys {
-                    access_key_id: aws.access_key_id.clone(),
-                    secret_access_key: aws.secret_access_key.clone(),
-                    session_token: aws.session_token.clone(),
-                }
-            }),
-        }
+        mcp_aws_env(&settings::aws_settings(&store_snapshot(&self.0)))
+    }
+}
+
+/// What MCP servers get from the app's AWS settings. With a Bedrock API key they get the region
+/// only: no profile, no access keys, and never the API key itself.
+fn mcp_aws_env(aws: &bedrock::AwsSettings) -> mcp::env_placeholders::AppAwsEnv {
+    use bedrock::AwsAuthMode;
+    let mode = aws.auth_mode();
+    mcp::env_placeholders::AppAwsEnv {
+        region: aws.region.clone(),
+        // An empty profile name means the default profile, as for the Bedrock clients.
+        profile: (mode == AwsAuthMode::Profile).then(|| {
+            aws.profile
+                .clone()
+                .filter(|p| !p.is_empty())
+                .unwrap_or_else(|| "default".into())
+        }),
+        keys: (mode == AwsAuthMode::AccessKey && !aws.access_key_id.is_empty()).then(|| {
+            mcp::env_placeholders::AwsKeys {
+                access_key_id: aws.access_key_id.clone(),
+                secret_access_key: aws.secret_access_key.clone(),
+                session_token: aws.session_token.clone(),
+            }
+        }),
     }
 }
 
@@ -592,6 +598,48 @@ impl Backend {
 mod tests {
     use super::*;
     use knowledge::layout::{Journal, LayoutState, LocalKbRef};
+
+    #[test]
+    fn mcp_aws_env_follows_the_auth_mode() {
+        let mut aws: bedrock::AwsSettings = serde_json::from_value(json!({
+            "region": "eu-west-1",
+            "accessKeyId": "AKIA",
+            "secretAccessKey": "secret",
+            "profile": "work",
+            "bedrockApiKey": "bedrock-api-key"
+        }))
+        .unwrap();
+        let keys = mcp_aws_env(&aws);
+        assert_eq!(keys.profile, None);
+        assert_eq!(keys.keys.as_ref().unwrap().access_key_id, "AKIA");
+
+        aws.use_profile = Some(true);
+        let profile = mcp_aws_env(&aws);
+        assert_eq!(profile.profile.as_deref(), Some("work"));
+        assert!(profile.keys.is_none());
+
+        aws.auth_mode = Some(bedrock::AwsAuthMode::ApiKey);
+        let api_key = mcp_aws_env(&aws);
+        assert_eq!(api_key.region, "eu-west-1");
+        assert_eq!(api_key.profile, None);
+        assert!(api_key.keys.is_none());
+
+        // A server asking for credentials gets the region and nothing else.
+        let server: common::agent::McpServerConfig = serde_json::from_value(json!({
+            "name": "pricing",
+            "description": "",
+            "command": "uvx",
+            "args": [],
+            "env": { "AWS_PROFILE": "{{awsProfile}}", "AWS_REGION": "{{awsRegion}}" }
+        }))
+        .unwrap();
+        let expanded = mcp::env_placeholders::expand_server_env(&server, &api_key);
+        let env = expanded.config.env.clone().unwrap();
+        assert_eq!(env.len(), 1);
+        assert_eq!(env.get("AWS_REGION").map(String::as_str), Some("eu-west-1"));
+        assert!(!expanded.receives_aws_keys());
+        assert!(!format!("{:?}", expanded.config).contains("bedrock-api-key"));
+    }
 
     #[test]
     fn apply_layout_refs_replaces_only_migrated_agents() {

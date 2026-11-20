@@ -14,7 +14,7 @@ export interface SandboxAvailability {
 
 /**
  * Whether Docker and Compose are usable, with a re-check button and install guidance. Shared by
- * the Docker Sandbox tool settings and the Sandbox settings tab.
+ * the Docker Sandbox tool settings and the Agent Sandboxes settings tab.
  */
 export const DockerEnvironmentStatus: React.FC = () => {
   const { t } = useTranslation()

@@ -24,7 +24,7 @@ use crate::document::json_to_document;
 use crate::error::{Error, Result};
 use crate::retry::random_index;
 use crate::sdk::{iso_millis, now_iso, SdkConfigSource};
-use crate::settings::AwsSettings;
+use crate::settings::{AwsAuthMode, AwsSettings};
 use crate::usage::{self, UnitKind, UsageService};
 use aws_sdk_bedrockruntime::types::{AsyncInvokeOutputDataConfig, AsyncInvokeS3OutputDataConfig};
 use base64::Engine;
@@ -459,8 +459,8 @@ fn video_region(aws: &AwsSettings) -> &str {
 
 fn warn_on_settings(aws: &AwsSettings) {
     if aws.region.is_empty()
-        || (!aws.use_profile.unwrap_or(false)
-            && (aws.access_key_id.is_empty() || aws.secret_access_key.is_empty()))
+        || !aws.has_credentials()
+        || (aws.auth_mode() == AwsAuthMode::AccessKey && aws.secret_access_key.is_empty())
     {
         tracing::warn!("AWS credentials not configured properly");
     }
@@ -551,6 +551,7 @@ pub async fn start_video_generation(
     aws: &AwsSettings,
     req: &GenerateMovieRequest,
 ) -> Result<GeneratedMovie> {
+    crate::require_sigv4(aws, "Video generation")?;
     warn_on_settings(aws);
     validate_request(req)?;
     let conf = configs.sdk_config(aws).await?;
@@ -688,6 +689,7 @@ pub async fn download_video_from_s3(
     s3_uri: &str,
     local_path: &str,
 ) -> Result<String> {
+    crate::require_sigv4(aws, "Video download")?;
     let result = async {
         let (bucket, key) = parse_s3_uri(s3_uri)
             .ok_or_else(|| Error::plain(format!("Invalid S3 URI format: {s3_uri}")))?;

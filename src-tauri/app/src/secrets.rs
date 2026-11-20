@@ -1,5 +1,5 @@
-//! Credentials the renderer never sees (UI-3 / APP-5): the AWS secret access key and session
-//! token and the proxy password (store key `aws`), and the Tavily API key (`tavilySearch`). Rust
+//! Credentials the renderer never sees (UI-3 / APP-5): the AWS secret access key, session
+//! token, Bedrock API key and the proxy password (store key `aws`), and the Tavily API key (`tavilySearch`). Rust
 //! reads them from the store as before; what goes to a webview (`store_get`, `store_all`,
 //! `store-changed`) has them blanked, with `has…` flags so Settings can show that one is saved. A
 //! write of one of these keys from a webview with a blank secret keeps the saved one;
@@ -30,6 +30,7 @@ const SECRETS: &[Secret] = &[
         "clearSecretAccessKey",
     ),
     (&["sessionToken"], "hasSessionToken", "clearSessionToken"),
+    (&["bedrockApiKey"], "hasBedrockApiKey", "clearBedrockApiKey"),
     (
         &["proxyConfig", "password"],
         "hasProxyPassword",
@@ -172,7 +173,8 @@ mod tests {
     fn saved() -> Value {
         json!({
             "region": "us-east-1", "accessKeyId": "AKIA", "secretAccessKey": "SECRET",
-            "sessionToken": "TOKEN", "proxyConfig": { "enabled": true, "host": "p", "password": "PW" }
+            "sessionToken": "TOKEN", "bedrockApiKey": "BRKEY", "authMode": "apiKey",
+            "proxyConfig": { "enabled": true, "host": "p", "password": "PW" }
         })
     }
 
@@ -182,14 +184,26 @@ mod tests {
         assert_eq!(r["secretAccessKey"], "");
         assert_eq!(r["sessionToken"], "");
         assert_eq!(r["proxyConfig"]["password"], "");
+        assert_eq!(r["bedrockApiKey"], "");
+        assert_eq!(r["authMode"], "apiKey");
         assert_eq!(r["accessKeyId"], "AKIA");
         assert_eq!(r["hasSecretAccessKey"], true);
         assert_eq!(r["hasSessionToken"], true);
         assert_eq!(r["hasProxyPassword"], true);
+        assert_eq!(r["hasBedrockApiKey"], true);
         assert!(!r.to_string().contains("SECRET"));
+        assert!(!r.to_string().contains("BRKEY"));
+        assert_eq!(
+            redact_aws(&json!({ "region": "us-east-1" }))["hasBedrockApiKey"],
+            false
+        );
 
         assert_eq!(
             redact("aws.secretAccessKey", Some(json!("SECRET"))),
+            Some(json!(""))
+        );
+        assert_eq!(
+            redact("aws.bedrockApiKey", Some(json!("BRKEY"))),
             Some(json!(""))
         );
         let proxy = redact("aws.proxyConfig", Some(saved()["proxyConfig"].clone())).unwrap();
@@ -198,6 +212,7 @@ mod tests {
         assert_eq!(redact("language", Some(json!("en"))), Some(json!("en")));
         let all = redact_all(json!({ "aws": saved(), "language": "en" }));
         assert!(!all.to_string().contains("SECRET") && !all.to_string().contains("PW"));
+        assert!(!all.to_string().contains("BRKEY"));
     }
 
     #[test]
@@ -237,6 +252,29 @@ mod tests {
         let merged = merge_aws(clear, Some(&saved()));
         assert!(merged.get("sessionToken").is_none());
         assert!(merged.get("clearSessionToken").is_none());
+        assert_eq!(merged["secretAccessKey"], "SECRET");
+        assert_eq!(merged["bedrockApiKey"], "BRKEY");
+
+        // The Bedrock API key: a blank write keeps it, a new value replaces it, the clear flag
+        // removes it.
+        let mut blank_key = redact_aws(&saved());
+        blank_key["bedrockApiKey"] = json!("");
+        assert_eq!(
+            merge_aws(blank_key, Some(&saved()))["bedrockApiKey"],
+            "BRKEY"
+        );
+        let mut new_key = redact_aws(&saved());
+        new_key["bedrockApiKey"] = json!("NEWKEY");
+        assert_eq!(
+            merge_aws(new_key, Some(&saved()))["bedrockApiKey"],
+            "NEWKEY"
+        );
+        let mut clear_key = redact_aws(&saved());
+        clear_key["clearBedrockApiKey"] = json!(true);
+        let merged = merge_aws(clear_key, Some(&saved()));
+        assert!(merged.get("bedrockApiKey").is_none());
+        assert!(merged.get("clearBedrockApiKey").is_none());
+        assert!(merged.get("hasBedrockApiKey").is_none());
         assert_eq!(merged["secretAccessKey"], "SECRET");
     }
 }

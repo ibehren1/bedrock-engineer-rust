@@ -260,6 +260,13 @@ export type API = {
     /** Guide sections matching `query` from its shipped knowledge base (works offline). */
     search: (query: string, topK?: number) => Promise<HelpSearchResult>
   }
+  aws: {
+    /**
+     * Profile names found in `~/.aws/config` and `~/.aws/credentials` (or `AWS_CONFIG_FILE` /
+     * `AWS_SHARED_CREDENTIALS_FILE`), `default` first. Names only; missing files give `[]`.
+     */
+    listProfiles: () => Promise<string[]>
+  }
   screen: {
     listAvailableWindows: () => Promise<any>
   }

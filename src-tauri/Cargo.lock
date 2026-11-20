@@ -1092,6 +1092,7 @@ dependencies = [
  "aws-sdk-translate",
  "aws-smithy-eventstream",
  "aws-smithy-http-client",
+ "aws-smithy-runtime-api",
  "aws-smithy-types",
  "base64 0.22.1",
  "bytes",

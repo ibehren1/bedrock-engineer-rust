@@ -7,6 +7,26 @@ dated section here for anything user-visible.
 See the [README](./README.md#whats-different-in-this-fork) for a feature-by-feature
 overview of the fork with screenshots.
 
+### 2026-11-20
+
+- You can now sign in with an **Amazon Bedrock API key**. Create one in the Bedrock console and
+  paste it into **Settings → AWS Authentication**. It covers chat, models, images, embeddings and
+  guardrails; Bedrock Agents, Bedrock Knowledge Bases, Flows, translation and video generation still
+  need an access key or an AWS profile, and say so if you try them with an API key.
+- The AWS settings tab and section are now called **AWS Authentication**, the Models tab is now
+  **Bedrock Models**, and the Sandbox tab is now **Agent Sandboxes**. AWS Authentication offers
+  three clear choices: access key and secret key, AWS profile, or Bedrock API key. The profile
+  option lists the profiles found in `~/.aws/config` and `~/.aws/credentials` instead of asking you
+  to type a name, and explains how to create one when there are none.
+- Switching between an access key and a profile, or changing the profile, no longer clears your
+  proxy settings.
+- The **Bedrock Models** tab now starts with the default model and the light processing model side
+  by side, each with a note on what it is used for, followed by **Thinking Mode**, which now has
+  its own section explaining what it affects. It also tells you when your default model doesn't
+  support thinking, instead of hiding the setting.
+- The Tavily Search API key now has its own section at the bottom of the **Chat** settings tab,
+  with a note on what it is for.
+
 ### 2026-11-18
 
 - Model prices now match Amazon Bedrock's current price list, so the Accounting page and chat cost

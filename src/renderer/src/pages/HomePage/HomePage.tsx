@@ -7,12 +7,27 @@ import { motion } from 'framer-motion'
 import { useTour } from '@reactour/tour'
 import { useState, useEffect } from 'react'
 import { modKeyLabel } from '@renderer/lib/platform'
+import { hasAwsCredentials } from '@renderer/lib/awsAuth'
 
 const HomePage = () => {
   const { t } = useTranslation()
-  const { awsRegion, awsAccessKeyId, awsSecretAccessKey, savedAwsSecrets } = useSetting()
-  const isInitLoad =
-    !awsRegion || !awsAccessKeyId || !(awsSecretAccessKey || savedAwsSecrets.secretAccessKey)
+  const {
+    awsAuthMode,
+    awsRegion,
+    awsAccessKeyId,
+    awsSecretAccessKey,
+    bedrockApiKey,
+    savedAwsSecrets
+  } = useSetting()
+  const isInitLoad = !hasAwsCredentials({
+    authMode: awsAuthMode,
+    region: awsRegion,
+    accessKeyId: awsAccessKeyId,
+    secretAccessKey: awsSecretAccessKey,
+    bedrockApiKey,
+    savedSecretAccessKey: savedAwsSecrets.secretAccessKey,
+    savedBedrockApiKey: savedAwsSecrets.bedrockApiKey
+  })
 
   // Array of message keys for random selection
   const messageKeys = [

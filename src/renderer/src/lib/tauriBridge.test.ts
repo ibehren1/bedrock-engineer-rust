@@ -288,6 +288,14 @@ describe('installTauriBridge', () => {
     expect(seen).toEqual([[{ id: 'm2' }]])
   })
 
+  it('maps window.api.aws.listProfiles to aws_list_profiles', async () => {
+    await installTauriBridge()
+    invokeMock.mockReset()
+    invokeMock.mockResolvedValue(['default', 'dev'])
+    await expect(g.window.api.aws.listProfiles()).resolves.toEqual(['default', 'dev'])
+    expect(invokeMock).toHaveBeenCalledWith('aws_list_profiles', undefined)
+  })
+
   it('maps window.api.help to the help_* commands', async () => {
     await installTauriBridge()
     invokeMock.mockReset()

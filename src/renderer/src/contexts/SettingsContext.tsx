@@ -27,7 +27,8 @@ import {
   BedrockSupportRegion
 } from '@/types/llm'
 import { useModelManagement } from '@renderer/hooks/useModelManagement'
-import type { AwsCredentialIdentity } from '@smithy/types'
+import type { AwsAuthMode } from '@/types/aws'
+import { resolveAwsAuthMode } from '@renderer/lib/awsAuth'
 import { BedrockAgent } from '@/types/agent'
 import { AgentCategory } from '@/types/agent-chat'
 import { getToolsForCategory } from '../constants/defaultToolSets'
@@ -59,6 +60,7 @@ export type SavedAwsSecrets = {
   secretAccessKey: boolean
   sessionToken: boolean
   proxyPassword: boolean
+  bedrockApiKey: boolean
 }
 
 export interface SettingsContextType {
@@ -193,8 +195,15 @@ export interface SettingsContextType {
   savedAwsSecrets: SavedAwsSecrets
   /** Remove a saved secret (an empty field alone keeps the saved one). */
   clearSavedAwsSecret: (secret: keyof SavedAwsSecrets) => void
+  /** The sign-in method (store `aws.authMode`; older configs derive it from `useProfile`). */
+  awsAuthMode: AwsAuthMode
+  setAwsAuthMode: (mode: AwsAuthMode) => void
+  /** `awsAuthMode === 'profile'`, for readers that predate the API key option. */
   useAwsProfile: boolean
   setUseAwsProfile: (useProfile: boolean) => void
+  /** The Bedrock API key typed this session (a saved one stays in Rust; see savedAwsSecrets). */
+  bedrockApiKey: string
+  setBedrockApiKey: (apiKey: string) => void
   awsProfile: string
   setAwsProfile: (profile: string) => void
 
@@ -458,9 +467,12 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [savedAwsSecrets, setSavedAwsSecrets] = useState<SavedAwsSecrets>({
     secretAccessKey: false,
     sessionToken: false,
-    proxyPassword: false
+    proxyPassword: false,
+    bedrockApiKey: false
   })
-  const [useAwsProfile, setStateUseAwsProfile] = useState<boolean>(false)
+  const [awsAuthMode, setStateAwsAuthMode] = useState<AwsAuthMode>('accessKey')
+  const useAwsProfile = awsAuthMode === 'profile'
+  const [bedrockApiKey, setStateBedrockApiKey] = useState<string>('')
   const [awsProfile, setStateAwsProfile] = useState<string>('default')
 
   // Proxy Settings
@@ -664,10 +676,13 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setSavedAwsSecrets({
         secretAccessKey: !!awsConfig.hasSecretAccessKey,
         sessionToken: !!awsConfig.hasSessionToken,
-        proxyPassword: !!awsConfig.hasProxyPassword
+        proxyPassword: !!awsConfig.hasProxyPassword,
+        bedrockApiKey: !!awsConfig.hasBedrockApiKey
       })
-      setStateUseAwsProfile(awsConfig.useProfile || false)
-      setStateAwsProfile(awsConfig.profile || 'default')
+      setStateAwsAuthMode(resolveAwsAuthMode(awsConfig))
+      setStateBedrockApiKey(awsConfig.bedrockApiKey || '')
+      // Absent = the SDK default; '' (cleared) lets Settings pick the first profile found.
+      setStateAwsProfile(awsConfig.profile ?? 'default')
 
       // Load Proxy Settings
       if (awsConfig.proxyConfig) {
@@ -857,7 +872,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     fetchModels()
-  }, [awsRegion, awsAccessKeyId, awsSecretAccessKey, awsProfile, useAwsProfile])
+  }, [awsRegion, awsAccessKeyId, awsSecretAccessKey, awsProfile, awsAuthMode, bedrockApiKey])
 
   // MCPツールをロードする - 状態を更新せずツールのみを返すように修正
   const fetchMcpTools = useCallback(async (mcpServers?: McpServerConfig[]) => {
@@ -1105,12 +1120,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const setAwsRegion = (region: string) => {
     setStateAwsRegion(region)
-    const credentials: AwsCredentialIdentity = {
-      accessKeyId: awsAccessKeyId,
-      secretAccessKey: awsSecretAccessKey,
-      sessionToken: !awsSessionToken ? undefined : awsSessionToken
-    }
-    saveAwsConfig(credentials, region)
+    saveAwsConfig({ region })
 
     // availableFailoverRegions をリセット
     setBedrockSettings({
@@ -1210,79 +1220,52 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const setAwsAccessKeyId = (accessKeyId: string) => {
     setStateAwsAccessKeyId(accessKeyId)
-    const credentials: AwsCredentialIdentity = {
-      accessKeyId,
-      secretAccessKey: awsSecretAccessKey,
-      sessionToken: !awsSessionToken ? undefined : awsSessionToken
-    }
-    saveAwsConfig(credentials, awsRegion)
+    saveAwsConfig({ accessKeyId })
   }
 
   const setAwsSecretAccessKey = (secretAccessKey: string) => {
     setStateAwsSecretAccessKey(secretAccessKey)
     if (secretAccessKey) setSavedAwsSecrets((prev) => ({ ...prev, secretAccessKey: true }))
-    const credentials: AwsCredentialIdentity = {
-      accessKeyId: awsAccessKeyId,
-      secretAccessKey,
-      sessionToken: !awsSessionToken ? undefined : awsSessionToken
-    }
-    saveAwsConfig(credentials, awsRegion)
+    saveAwsConfig({ secretAccessKey })
   }
 
   const setAwsSessionToken = (sessionToken: string) => {
     setStateAwsSessionToken(sessionToken)
     if (sessionToken) setSavedAwsSecrets((prev) => ({ ...prev, sessionToken: true }))
-    const credentials: AwsCredentialIdentity = {
-      accessKeyId: awsAccessKeyId,
-      secretAccessKey: awsSecretAccessKey,
-      sessionToken: !sessionToken ? undefined : sessionToken
-    }
-    saveAwsConfig(credentials, awsRegion)
+    saveAwsConfig({ sessionToken })
+  }
+
+  const setAwsAuthMode = (mode: AwsAuthMode) => {
+    setStateAwsAuthMode(mode)
+    saveAwsConfig({ authMode: mode })
   }
 
   const setUseAwsProfile = (useProfile: boolean) => {
-    setStateUseAwsProfile(useProfile)
-    const credentials: AwsCredentialIdentity = {
-      accessKeyId: awsAccessKeyId,
-      secretAccessKey: awsSecretAccessKey,
-      sessionToken: !awsSessionToken ? undefined : awsSessionToken
-    }
-    window.store.set('aws', {
-      accessKeyId: credentials.accessKeyId,
-      secretAccessKey: credentials.secretAccessKey,
-      sessionToken: credentials.sessionToken,
-      region: awsRegion,
-      useProfile: useProfile,
-      profile: awsProfile
-    })
+    setAwsAuthMode(useProfile ? 'profile' : 'accessKey')
+  }
+
+  const setBedrockApiKey = (apiKey: string) => {
+    setStateBedrockApiKey(apiKey)
+    if (apiKey) setSavedAwsSecrets((prev) => ({ ...prev, bedrockApiKey: true }))
+    saveAwsConfig({ bedrockApiKey: apiKey })
   }
 
   const setAwsProfile = (profile: string) => {
     setStateAwsProfile(profile)
-    const credentials: AwsCredentialIdentity = {
-      accessKeyId: awsAccessKeyId,
-      secretAccessKey: awsSecretAccessKey,
-      sessionToken: !awsSessionToken ? undefined : awsSessionToken
-    }
-    window.store.set('aws', {
-      accessKeyId: credentials.accessKeyId,
-      secretAccessKey: credentials.secretAccessKey,
-      sessionToken: credentials.sessionToken,
-      region: awsRegion,
-      useProfile: useAwsProfile,
-      profile: profile
-    })
+    saveAwsConfig({ profile })
   }
 
   const clearSavedAwsSecret = (secret: keyof SavedAwsSecrets) => {
     const flag = {
       secretAccessKey: 'clearSecretAccessKey',
       sessionToken: 'clearSessionToken',
-      proxyPassword: 'clearProxyPassword'
+      proxyPassword: 'clearProxyPassword',
+      bedrockApiKey: 'clearBedrockApiKey'
     }[secret]
     if (secret === 'secretAccessKey') setStateAwsSecretAccessKey('')
     if (secret === 'sessionToken') setStateAwsSessionToken('')
     if (secret === 'proxyPassword') setStateProxySettings((prev) => ({ ...prev, password: '' }))
+    if (secret === 'bedrockApiKey') setStateBedrockApiKey('')
     setSavedAwsSecrets((prev) => ({ ...prev, [secret]: false }))
     window.store.set('aws', { ...(window.store.get('aws') || {}), [flag]: true })
   }
@@ -1291,28 +1274,38 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const newSettings = { ...proxySettings, ...settings }
     setStateProxySettings(newSettings)
     if (settings.password) setSavedAwsSecrets((prev) => ({ ...prev, proxyPassword: true }))
-
-    const credentials: AwsCredentialIdentity = {
-      accessKeyId: awsAccessKeyId,
-      secretAccessKey: awsSecretAccessKey,
-      sessionToken: !awsSessionToken ? undefined : awsSessionToken
-    }
-    saveAwsConfig(credentials, awsRegion, newSettings)
+    saveAwsConfig({ proxy: newSettings })
   }
 
+  /**
+   * Write the whole `aws` key from the current state plus `changes` (the setters' new values,
+   * which React state doesn't hold yet). Every `aws` write goes through here so no field — the
+   * proxy in particular — is dropped. Blank secrets keep the saved ones (Rust merges them).
+   */
   const saveAwsConfig = (
-    credentials: AwsCredentialIdentity,
-    region: string,
-    proxy?: typeof proxySettings
+    changes: {
+      accessKeyId?: string
+      secretAccessKey?: string
+      sessionToken?: string
+      region?: string
+      authMode?: AwsAuthMode
+      profile?: string
+      bedrockApiKey?: string
+      proxy?: typeof proxySettings
+    } = {}
   ) => {
-    const proxyConfig = proxy || proxySettings
+    const sessionToken = changes.sessionToken ?? awsSessionToken
+    const authMode = changes.authMode ?? awsAuthMode
+    const proxyConfig = changes.proxy || proxySettings
     window.store.set('aws', {
-      accessKeyId: credentials.accessKeyId,
-      secretAccessKey: credentials.secretAccessKey,
-      sessionToken: credentials.sessionToken,
-      region,
-      useProfile: useAwsProfile,
-      profile: awsProfile,
+      accessKeyId: changes.accessKeyId ?? awsAccessKeyId,
+      secretAccessKey: changes.secretAccessKey ?? awsSecretAccessKey,
+      sessionToken: sessionToken || undefined,
+      region: changes.region ?? awsRegion,
+      authMode,
+      useProfile: authMode === 'profile',
+      profile: changes.profile ?? awsProfile,
+      bedrockApiKey: changes.bedrockApiKey ?? bedrockApiKey,
       proxyConfig: proxyConfig.enabled
         ? {
             enabled: proxyConfig.enabled,
@@ -2178,8 +2171,12 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setAwsSessionToken,
     savedAwsSecrets,
     clearSavedAwsSecret,
+    awsAuthMode,
+    setAwsAuthMode,
     useAwsProfile,
     setUseAwsProfile,
+    bedrockApiKey,
+    setBedrockApiKey,
     awsProfile,
     setAwsProfile,
 

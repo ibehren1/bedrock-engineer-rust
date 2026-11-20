@@ -79,7 +79,7 @@ On macOS and Linux, command servers started with `npx`, `uvx` and similar see yo
 ## Using the App's AWS Settings
 
 A command server's `env` values can use `{{awsRegion}}` and `{{awsProfile}}`. They are filled in
-from **Settings → AWS** each time the server starts:
+from **Settings → AWS Authentication** each time the server starts:
 
 ```json
 {

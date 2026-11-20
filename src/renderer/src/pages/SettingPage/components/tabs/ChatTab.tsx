@@ -3,7 +3,8 @@ import {
   AdvancedSection,
   AgentChatSection,
   BackgroundAgentsSection,
-  RemoteImagesSection
+  RemoteImagesSection,
+  TavilySearchSection
 } from '../sections'
 
 export const ChatTab: React.FC = () => (
@@ -12,5 +13,6 @@ export const ChatTab: React.FC = () => (
     <RemoteImagesSection />
     <BackgroundAgentsSection />
     <AdvancedSection />
+    <TavilySearchSection />
   </div>
 )

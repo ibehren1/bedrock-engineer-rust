@@ -15,13 +15,13 @@ const labelOf = <T,>(options: readonly { value: T; label: string }[], value: T) 
   options.find((option) => option.value === value)?.label ?? String(value)
 
 interface DockerSandboxSettingFormProps {
-  /** Called before leaving for the Sandbox settings tab, so the modal can close. */
+  /** Called before leaving for the Agent Sandboxes settings tab, so the modal can close. */
   onOpenSettings?: () => void
 }
 
 /**
  * The Docker Sandbox tool's panel: environment status, a summary of the sandbox settings and a
- * link to the Settings page's Sandbox tab, where they are changed.
+ * link to the Settings page's Agent Sandboxes tab, where they are changed.
  */
 export const DockerSandboxSettingForm: React.FC<DockerSandboxSettingFormProps> = ({
   onOpenSettings
@@ -54,7 +54,7 @@ export const DockerSandboxSettingForm: React.FC<DockerSandboxSettingFormProps> =
 
       <DockerEnvironmentStatus />
 
-      {/* Settings live on the Settings page's Sandbox tab */}
+      {/* Settings live on the Settings page's Agent Sandboxes tab */}
       <div className="bg-accent-tint p-2.5 rounded-control">
         {/* Spacing set per child, not with space-y: Tailwind CSS 4 spaces inline children differently. */}
         <p className="text-sm text-ink">{summary}</p>

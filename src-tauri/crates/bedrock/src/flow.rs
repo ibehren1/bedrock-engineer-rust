@@ -168,6 +168,7 @@ pub async fn invoke_flow(
     aws: &AwsSettings,
     params: &Value,
 ) -> Result<Value> {
+    crate::require_sigv4(aws, "Bedrock Flows")?;
     let m = object_of(params, "InvokeFlow input")?;
     let flow_id = required_str(m, "flowIdentifier")?;
     let alias_id = required_str(m, "flowAliasIdentifier")?;

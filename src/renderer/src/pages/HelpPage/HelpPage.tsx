@@ -7,6 +7,7 @@ import MD from '@renderer/components/Markdown/MD'
 import { markdownHeadings } from '@renderer/components/Markdown/slug'
 import { Button } from '@renderer/components/ui'
 import useSetting from '@renderer/hooks/useSetting'
+import { hasAwsCredentials } from '@renderer/lib/awsAuth'
 import { headingSlugForPath, snippet } from './helpPageUtils'
 import { HelpChatPanel } from './HelpChatPanel'
 
@@ -23,7 +24,15 @@ export const HelpPage: React.FC = () => {
   const location = useLocation()
   // `/help?ask=1` (the old Help chat entry point) opens with the chat panel showing.
   const [chatOpen, setChatOpen] = useState(() => new URLSearchParams(location.search).has('ask'))
-  const { llmError, awsRegion, awsAccessKeyId, useAwsProfile } = useSetting()
+  const {
+    llmError,
+    awsAuthMode,
+    awsRegion,
+    awsAccessKeyId,
+    awsSecretAccessKey,
+    bedrockApiKey,
+    savedAwsSecrets
+  } = useSetting()
   const [guide, setGuide] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [active, setActive] = useState<string>('')
@@ -99,7 +108,15 @@ export const HelpPage: React.FC = () => {
     setResults(null)
   }
 
-  const noCredentials = useAwsProfile ? !awsRegion : !awsRegion || !awsAccessKeyId
+  const noCredentials = !hasAwsCredentials({
+    authMode: awsAuthMode,
+    region: awsRegion,
+    accessKeyId: awsAccessKeyId,
+    secretAccessKey: awsSecretAccessKey,
+    bedrockApiKey,
+    savedSecretAccessKey: savedAwsSecrets.secretAccessKey,
+    savedBedrockApiKey: savedAwsSecrets.bedrockApiKey
+  })
   const bedrockMissing = Boolean(llmError) || noCredentials
 
   // Rendering 200 KB of Markdown is the expensive part: only when the text changes.

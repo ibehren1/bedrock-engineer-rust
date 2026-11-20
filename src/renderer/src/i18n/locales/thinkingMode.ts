@@ -8,8 +8,6 @@ export const thinkingMode = {
     'Normal (4K tokens)': 'Normal (4K tokens)',
     'Deep (16K tokens)': 'Deep (16K tokens)',
     'Deeper (32K tokens)': 'Deeper (32K tokens)',
-    'Thinking mode allows Claude to work through complex problems step by step.':
-      'Thinking mode allows Claude to work through complex problems step by step.',
     'thinkingMode.none': 'None (0 tokens)',
     'thinkingMode.adaptive': 'Adaptive',
     'thinkingMode.quick': 'Quick (1K tokens)',

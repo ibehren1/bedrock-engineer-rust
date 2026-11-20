@@ -167,6 +167,7 @@ pub async fn invoke_agent(
     aws: &AwsSettings,
     params: &Value,
 ) -> Result<InvokeAgentResult> {
+    crate::require_sigv4(aws, "Bedrock Agents")?;
     let m = object_of(params, "InvokeAgent input")?;
     let agent_id = required_str(m, "agentId")?;
     let agent_alias_id = required_str(m, "agentAliasId")?;
@@ -263,6 +264,7 @@ pub async fn retrieve(
     aws: &AwsSettings,
     input: &Value,
 ) -> Result<Value> {
+    crate::require_sigv4(aws, "Bedrock Knowledge Bases")?;
     let m = object_of(input, "Retrieve input")?;
     let knowledge_base_id = required_str(m, "knowledgeBaseId")?;
     let body = JsonBody::new(&Value::Object(body_without(m, &["knowledgeBaseId"])));
@@ -299,6 +301,7 @@ pub async fn retrieve_and_generate(
     aws: &AwsSettings,
     input: &Value,
 ) -> Result<Value> {
+    crate::require_sigv4(aws, "Bedrock Knowledge Bases")?;
     let m = object_of(input, "RetrieveAndGenerate input")?;
     let mut body = Value::Object(body_without(m, &[]));
     if let Some(ext) =

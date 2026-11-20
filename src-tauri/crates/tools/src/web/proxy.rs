@@ -31,7 +31,7 @@ impl ProxyConfig {
         }
         let broken = |why: &str| {
             ProxySetting::Broken(format!(
-                "A proxy is turned on but {why}, so the app won't connect (it never connects directly while a proxy is on). Fix it in Settings → AWS → Proxy Settings, or turn the proxy off."
+                "A proxy is turned on but {why}, so the app won't connect (it never connects directly while a proxy is on). Fix it in Settings → AWS Authentication → Proxy Settings, or turn the proxy off."
             ))
         };
         let Some(host) = self

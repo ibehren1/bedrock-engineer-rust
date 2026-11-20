@@ -7,7 +7,7 @@
 
 use crate::error::{Error, Result};
 use crate::sdk::SdkConfigSource;
-use crate::settings::AwsSettings;
+use crate::settings::{AwsAuthMode, AwsSettings};
 use crate::usage::{self, UnitKind, UsageService};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
@@ -142,8 +142,8 @@ pub async fn generate_image(
         )));
     }
     if aws.region.is_empty()
-        || (!aws.use_profile.unwrap_or(false)
-            && (aws.access_key_id.is_empty() || aws.secret_access_key.is_empty()))
+        || !aws.has_credentials()
+        || (aws.auth_mode() == AwsAuthMode::AccessKey && aws.secret_access_key.is_empty())
     {
         tracing::warn!("AWS credentials not configured properly");
     }
