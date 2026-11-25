@@ -24,6 +24,7 @@ export const history = {
       renameFolder: 'Rename folder',
       moveFolderUp: 'Move up',
       moveFolderDown: 'Move down',
+      dragToReorderFolder: 'Drag to reorder',
       deleteFolder: 'Delete folder',
       deleteFolderConfirm:
         'Delete the folder "{{name}}"? The chats in it are not deleted; they move back to the main list.',
@@ -58,6 +59,7 @@ export const history = {
       renameFolder: 'フォルダ名を変更する',
       moveFolderUp: '上へ移動',
       moveFolderDown: '下へ移動',
+      dragToReorderFolder: 'ドラッグして並べ替え',
       deleteFolder: 'フォルダを削除する',
       deleteFolderConfirm:
         'フォルダ「{{name}}」を削除しますか？中のチャットは削除されず、通常の一覧に戻ります。',

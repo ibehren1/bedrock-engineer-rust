@@ -7,6 +7,16 @@ dated section here for anything user-visible.
 See the [README](./README.md#whats-different-in-this-fork) for a feature-by-feature
 overview of the fork with screenshots.
 
+### 2026-11-25
+
+- The chat history's heading now stays at the top of the sidebar while you scroll; only the folders
+  and chats move.
+- Dragging chat history folders to reorder them now works, and each folder now shows a grip
+  handle at its left so it's clear folders can be dragged. Dragging chats into and out of folders is
+  more reliable too, including on Windows.
+- Chat history folders now start closed and open only when you click them. The app remembers which
+  ones you opened.
+
 ### 2026-11-20
 
 - You can now sign in with an **Amazon Bedrock API key**. Create one in the Bedrock console and

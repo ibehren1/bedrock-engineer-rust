@@ -3675,7 +3675,7 @@ SOFTWARE.
 
 Used by:
 
-- [form_urlencoded 1.2.2](https://github.com/servo/rust-url)
+- [form_urlencoded 1.2.3](https://github.com/servo/rust-url)
 
 ```text
 Copyright (c) 2013-2016 The rust-url developers
@@ -3712,7 +3712,7 @@ Used by:
 
 - [idna 1.1.0](https://github.com/servo/rust-url/)
 - [percent-encoding 2.3.2](https://github.com/servo/rust-url/)
-- [url 2.5.8](https://github.com/servo/rust-url)
+- [url 2.5.9](https://github.com/servo/rust-url)
 
 ```text
 Copyright (c) 2013-2025 The rust-url developers
@@ -5484,7 +5484,7 @@ DEALINGS IN THE SOFTWARE.
 
 Used by:
 
-- [cookie 0.18.2](https://github.com/SergioBenitez/cookie-rs)
+- [cookie 0.18.3](https://github.com/SergioBenitez/cookie-rs)
 
 ```text
 Copyright (c) 2017 Sergio Benitez

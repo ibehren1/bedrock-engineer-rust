@@ -19,6 +19,7 @@ import {
   FiArrowDown
 } from 'react-icons/fi'
 import { RiArchiveStackLine } from 'react-icons/ri'
+import { MdDragIndicator } from 'react-icons/md'
 import { FaDocker, FaPaperclip } from 'react-icons/fa'
 import { SessionMetadata } from '@/types/chat/history'
 import { useChatHistory } from '@renderer/contexts/ChatHistoryContext'
@@ -38,12 +39,15 @@ import {
   shiftFolder
 } from './groupSessions'
 
-/** localStorage key holding the ids of folded folders. */
-const FOLDED_FOLDERS_KEY = 'chatHistory.foldedFolders'
+/** localStorage key holding the ids of the folders the user opened; every other folder is closed. */
+const OPEN_FOLDERS_KEY = 'chatHistory.openFolders'
+/** The earlier key, which held the closed folders instead (folders used to start open). */
+const LEGACY_FOLDED_FOLDERS_KEY = 'chatHistory.foldedFolders'
 
-function readFoldedFolders(): Set<string> {
+function readOpenFolders(): Set<string> {
   try {
-    const ids: unknown = JSON.parse(localStorage.getItem(FOLDED_FOLDERS_KEY) || '[]')
+    localStorage.removeItem(LEGACY_FOLDED_FOLDERS_KEY)
+    const ids: unknown = JSON.parse(localStorage.getItem(OPEN_FOLDERS_KEY) || '[]')
     return new Set(Array.isArray(ids) ? ids.filter((id) => typeof id === 'string') : [])
   } catch {
     return new Set()
@@ -77,9 +81,12 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
   const [editingFolderId, setEditingFolderId] = useState<string>()
   const [folderName, setFolderName] = useState('')
   const [folderMenuOpenId, setFolderMenuOpenId] = useState<string>()
-  const [foldedFolders, setFoldedFolders] = useState<Set<string>>(readFoldedFolders)
-  // A chat is being dragged, and the folder (or LOOSE) under the pointer.
-  const [dragging, setDragging] = useState(false)
+  const [openFolders, setOpenFolders] = useState<Set<string>>(readOpenFolders)
+  // The chats being dragged (empty when none), and the folder (or LOOSE) under the pointer.
+  // The drag kind is tracked here rather than read from `dataTransfer.types`: the webviews
+  // do not reliably expose custom drag types during `dragover`.
+  const [draggedChats, setDraggedChats] = useState<string[]>([])
+  const dragging = draggedChats.length > 0
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   // A folder header is being dragged, and where it would land.
   const [draggedFolderId, setDraggedFolderId] = useState<string | null>(null)
@@ -141,15 +148,15 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
     }
   }, [editingSessionId, editingFolderId])
 
-  const toggleFolded = (folderId: string) => {
-    setFoldedFolders((prev) => {
+  const toggleOpen = (folderId: string) => {
+    setOpenFolders((prev) => {
       const next = new Set(prev)
       if (next.has(folderId)) next.delete(folderId)
       else next.add(folderId)
       try {
-        localStorage.setItem(FOLDED_FOLDERS_KEY, JSON.stringify([...next]))
+        localStorage.setItem(OPEN_FOLDERS_KEY, JSON.stringify([...next]))
       } catch {
-        // Only the folded state is lost.
+        // Only the open state is lost.
       }
       return next
     })
@@ -199,13 +206,18 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
         ? Array.from(selectedSessionIds)
         : [sessionId]
     e.dataTransfer.setData(CHAT_DRAG_TYPE, JSON.stringify(ids))
+    // Some webviews only start a drag that carries a standard type.
+    e.dataTransfer.setData('text/plain', ids.join('\n'))
     e.dataTransfer.effectAllowed = 'move'
-    setMenuOpenSessionId(undefined)
-    setDragging(true)
+    // Re-rendering the dragged row inside `dragstart` can cancel the drag, so wait a tick.
+    setTimeout(() => {
+      setMenuOpenSessionId(undefined)
+      setDraggedChats(ids)
+    }, 0)
   }
 
   const handleDragEnd = () => {
-    setDragging(false)
+    setDraggedChats([])
     setDropTarget(null)
   }
 
@@ -214,9 +226,12 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
   // Dragging a folder header reorders the folders.
   const handleFolderDragStart = (folderId: string, e: React.DragEvent) => {
     e.dataTransfer.setData(FOLDER_DRAG_TYPE, folderId)
+    e.dataTransfer.setData('text/plain', folderId)
     e.dataTransfer.effectAllowed = 'move'
-    setFolderMenuOpenId(undefined)
-    setDraggedFolderId(folderId)
+    setTimeout(() => {
+      setFolderMenuOpenId(undefined)
+      setDraggedFolderId(folderId)
+    }, 0)
   }
 
   const handleFolderDragEnd = () => {
@@ -235,9 +250,13 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
   /** Drop handlers for a folder (`folderId`) or, with `null`, the chats in no folder. */
   const dropProps = (folderId: string | null) => {
     const key = folderId ?? LOOSE
+    // State says what is being dragged; the drag types cover the first events of a drag,
+    // before that state lands.
+    const folderDragged = (e: React.DragEvent) => draggedFolderId !== null || isFolderDrag(e)
+    const chatsDragged = (e: React.DragEvent) => dragging || isChatDrag(e)
     return {
       onDragOver: (e: React.DragEvent) => {
-        if (folderId && isFolderDrag(e)) {
+        if (folderId && folderDragged(e)) {
           e.preventDefault()
           e.dataTransfer.dropEffect = 'move'
           const rect = e.currentTarget.getBoundingClientRect()
@@ -247,7 +266,7 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
           }
           return
         }
-        if (!isChatDrag(e)) return
+        if (!chatsDragged(e)) return
         e.preventDefault()
         e.dataTransfer.dropEffect = 'move'
         if (dropTarget !== key) setDropTarget(key)
@@ -258,10 +277,10 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
         setFolderDrop((current) => (current?.id === folderId ? null : current))
       },
       onDrop: (e: React.DragEvent) => {
-        if (folderId && isFolderDrag(e)) {
+        if (folderId && folderDragged(e)) {
           e.preventDefault()
           e.stopPropagation()
-          const moved = e.dataTransfer.getData(FOLDER_DRAG_TYPE)
+          const moved = draggedFolderId ?? e.dataTransfer.getData(FOLDER_DRAG_TYPE)
           const position = folderDrop?.id === folderId ? folderDrop.position : 'before'
           handleFolderDragEnd()
           const ids = folderIds()
@@ -269,10 +288,10 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
           if (next !== ids) void reorderFolders(next)
           return
         }
-        if (!isChatDrag(e)) return
+        if (!chatsDragged(e)) return
         e.preventDefault()
         e.stopPropagation()
-        const ids = draggedChatIds(e.dataTransfer)
+        const ids = dragging ? draggedChats : draggedChatIds(e.dataTransfer)
         handleDragEnd()
         if (ids.length > 0) void moveSessionsToFolder(ids, folderId)
       }
@@ -632,9 +651,10 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
   )
 
   return (
-    <div className="chat-history p-3">
+    <div className="chat-history flex flex-col h-full min-h-0">
+      {/* The heading (and the selection bar) stay put; only the folders and chats scroll. */}
       <h2
-        className={`text-sm font-semibold mb-4 text-ink flex items-center justify-between hover:cursor-pointer hover:text-ink-muted rounded-control ${dropHighlight(LOOSE)}`}
+        className={`shrink-0 mx-3 mt-3 text-sm font-semibold mb-4 text-ink flex items-center justify-between hover:cursor-pointer hover:text-ink-muted rounded-control ${dropHighlight(LOOSE)}`}
         onClick={toggleGlobalMenu}
         {...dropProps(null)}
       >
@@ -694,7 +714,7 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
 
       {/* Selection action bar */}
       {selectionMode && (
-        <div className="flex items-center justify-between mb-3 px-1">
+        <div className="shrink-0 flex items-center justify-between mb-3 mx-3 px-1">
           <div className="flex items-center gap-3">
             <span className="text-xs text-ink-muted">
               {t('{{count}} selected', { count: selectedSessionIds.size })}
@@ -723,158 +743,167 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
         </div>
       )}
 
-      {/* Folders, then the chats in no folder. Rows can be dragged onto a folder, or onto the
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 pb-3">
+        {/* Folders, then the chats in no folder. Rows can be dragged onto a folder, or onto the
           loose list or the heading to take them out of their folder. */}
-      {folders.length > 0 && (
-        <div className="space-y-2 mb-2">
-          {folders.map((folder, index) => {
-            const items = grouped.byFolder.get(folder.id) ?? []
-            const folded = foldedFolders.has(folder.id)
-            const editing = editingFolderId === folder.id
-            // The insertion line shows where a dragged folder would land.
-            const insertAt =
-              draggedFolderId && draggedFolderId !== folder.id && folderDrop?.id === folder.id
-                ? folderDrop.position
-                : null
-            return (
-              <div
-                key={folder.id}
-                className={`relative rounded-container ${dropHighlight(folder.id)} ${
-                  draggedFolderId === folder.id ? 'opacity-50' : ''
-                }`}
-                {...dropProps(folder.id)}
-              >
-                {insertAt && (
-                  <div
-                    className={`pointer-events-none absolute left-0 right-0 h-0.5 bg-accent ${
-                      insertAt === 'before' ? '-top-1' : '-bottom-1'
-                    }`}
-                  />
-                )}
+        {folders.length > 0 && (
+          <div className="space-y-2 mb-2">
+            {folders.map((folder, index) => {
+              const items = grouped.byFolder.get(folder.id) ?? []
+              const folded = !openFolders.has(folder.id)
+              const editing = editingFolderId === folder.id
+              // The insertion line shows where a dragged folder would land.
+              const insertAt =
+                draggedFolderId && draggedFolderId !== folder.id && folderDrop?.id === folder.id
+                  ? folderDrop.position
+                  : null
+              return (
                 <div
-                  className="flex items-center gap-1.5 px-2 py-1.5 rounded-container cursor-pointer hover:bg-sunken"
-                  onClick={() => !editing && toggleFolded(folder.id)}
-                  draggable={!editing}
-                  onDragStart={(e) => handleFolderDragStart(folder.id, e)}
-                  onDragEnd={handleFolderDragEnd}
+                  key={folder.id}
+                  className={`relative rounded-container ${dropHighlight(folder.id)} ${
+                    draggedFolderId === folder.id ? 'opacity-50' : ''
+                  }`}
+                  {...dropProps(folder.id)}
                 >
-                  {folded ? (
-                    <FiChevronRight className="w-4 h-4 shrink-0 text-ink-muted" />
-                  ) : (
-                    <FiChevronDown className="w-4 h-4 shrink-0 text-ink-muted" />
-                  )}
-                  <FiFolder className="w-4 h-4 shrink-0 text-ink-muted" />
-                  {editing ? (
-                    <input
-                      type="text"
-                      value={folderName}
-                      onChange={(e) => setFolderName(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                      onKeyDown={(e) => {
-                        if (isComposing) return
-                        if (e.key === 'Enter') saveFolderName(folder.id)
-                        else if (e.key === 'Escape') setEditingFolderId(undefined)
-                      }}
-                      onCompositionStart={handleCompositionStart}
-                      onCompositionEnd={handleCompositionEnd}
-                      onFocus={(e) => e.target.select()}
-                      autoFocus
-                      className="folder-editing-input flex-1 px-2 py-0.5 text-sm border rounded-control bg-surface border-subtle min-w-0"
+                  {insertAt && (
+                    <div
+                      className={`pointer-events-none absolute left-0 right-0 h-0.5 bg-accent ${
+                        insertAt === 'before' ? '-top-1' : '-bottom-1'
+                      }`}
                     />
-                  ) : (
-                    <span
-                      className="flex-1 min-w-0 text-sm font-medium text-ink truncate"
-                      title={folder.name}
-                    >
-                      {folder.name}
-                    </span>
                   )}
-                  {!editing && (
-                    <>
-                      <span className="text-xs text-ink-muted whitespace-nowrap">
-                        {t('history.chatCount', { count: items.length })}
+                  <div
+                    className="group flex items-center gap-1.5 pl-0.5 pr-2 py-1.5 rounded-container cursor-pointer hover:bg-sunken"
+                    onClick={() => !editing && toggleOpen(folder.id)}
+                    draggable={!editing}
+                    onDragStart={(e) => handleFolderDragStart(folder.id, e)}
+                    onDragEnd={handleFolderDragEnd}
+                  >
+                    <MdDragIndicator
+                      className={`w-4 h-4 shrink-0 text-ink-faint cursor-grab ${
+                        editing ? 'invisible' : 'opacity-40 group-hover:opacity-100'
+                      }`}
+                      title={t('history.dragToReorderFolder')}
+                      aria-label={t('history.dragToReorderFolder')}
+                    />
+                    {folded ? (
+                      <FiChevronRight className="w-4 h-4 shrink-0 text-ink-muted" />
+                    ) : (
+                      <FiChevronDown className="w-4 h-4 shrink-0 text-ink-muted" />
+                    )}
+                    <FiFolder className="w-4 h-4 shrink-0 text-ink-muted" />
+                    {editing ? (
+                      <input
+                        type="text"
+                        value={folderName}
+                        onChange={(e) => setFolderName(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => {
+                          if (isComposing) return
+                          if (e.key === 'Enter') saveFolderName(folder.id)
+                          else if (e.key === 'Escape') setEditingFolderId(undefined)
+                        }}
+                        onCompositionStart={handleCompositionStart}
+                        onCompositionEnd={handleCompositionEnd}
+                        onFocus={(e) => e.target.select()}
+                        autoFocus
+                        className="folder-editing-input flex-1 px-2 py-0.5 text-sm border rounded-control bg-surface border-subtle min-w-0"
+                      />
+                    ) : (
+                      <span
+                        className="flex-1 min-w-0 text-sm font-medium text-ink truncate"
+                        title={folder.name}
+                      >
+                        {folder.name}
                       </span>
-                      <div className="relative shrink-0">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setMenuOpenSessionId(undefined)
-                            setFolderMenuOpenId(
-                              folderMenuOpenId === folder.id ? undefined : folder.id
-                            )
-                          }}
-                          className={menuButtonClasses}
-                        >
-                          <FiMoreHorizontal className="w-4 h-4" />
-                        </button>
-                        {folderMenuOpenId === folder.id && (
-                          <div
-                            className="absolute right-0 mt-1 w-48 bg-surface rounded-control shadow-lg border border-subtle z-10"
-                            onClick={(e) => e.stopPropagation()}
+                    )}
+                    {!editing && (
+                      <>
+                        <span className="text-xs text-ink-muted whitespace-nowrap">
+                          {t('history.chatCount', { count: items.length })}
+                        </span>
+                        <div className="relative shrink-0">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setMenuOpenSessionId(undefined)
+                              setFolderMenuOpenId(
+                                folderMenuOpenId === folder.id ? undefined : folder.id
+                              )
+                            }}
+                            className={menuButtonClasses}
                           >
-                            <div className="py-1">
-                              <button
-                                onClick={(e) => startEditingFolder(folder.id, folder.name, e)}
-                                className="w-full text-left px-2.5 py-1 text-sm text-ink hover:bg-raised flex items-center gap-2"
-                              >
-                                <FiEdit2 className="w-4 h-4" />
-                                {t('history.renameFolder')}
-                              </button>
-                              {index > 0 && (
+                            <FiMoreHorizontal className="w-4 h-4" />
+                          </button>
+                          {folderMenuOpenId === folder.id && (
+                            <div
+                              className="absolute right-0 mt-1 w-48 bg-surface rounded-control shadow-lg border border-subtle z-10"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div className="py-1">
                                 <button
-                                  onClick={(e) => shiftFolderBy(folder.id, -1, e)}
+                                  onClick={(e) => startEditingFolder(folder.id, folder.name, e)}
                                   className="w-full text-left px-2.5 py-1 text-sm text-ink hover:bg-raised flex items-center gap-2"
                                 >
-                                  <FiArrowUp className="w-4 h-4" />
-                                  {t('history.moveFolderUp')}
+                                  <FiEdit2 className="w-4 h-4" />
+                                  {t('history.renameFolder')}
                                 </button>
-                              )}
-                              {index < folders.length - 1 && (
+                                {index > 0 && (
+                                  <button
+                                    onClick={(e) => shiftFolderBy(folder.id, -1, e)}
+                                    className="w-full text-left px-2.5 py-1 text-sm text-ink hover:bg-raised flex items-center gap-2"
+                                  >
+                                    <FiArrowUp className="w-4 h-4" />
+                                    {t('history.moveFolderUp')}
+                                  </button>
+                                )}
+                                {index < folders.length - 1 && (
+                                  <button
+                                    onClick={(e) => shiftFolderBy(folder.id, 1, e)}
+                                    className="w-full text-left px-2.5 py-1 text-sm text-ink hover:bg-raised flex items-center gap-2"
+                                  >
+                                    <FiArrowDown className="w-4 h-4" />
+                                    {t('history.moveFolderDown')}
+                                  </button>
+                                )}
                                 <button
-                                  onClick={(e) => shiftFolderBy(folder.id, 1, e)}
-                                  className="w-full text-left px-2.5 py-1 text-sm text-ink hover:bg-raised flex items-center gap-2"
+                                  onClick={(e) => handleDeleteFolder(folder.id, folder.name, e)}
+                                  className="w-full text-left px-2.5 py-1 text-sm text-danger hover:bg-raised flex items-center gap-2 border-t border-faint"
                                 >
-                                  <FiArrowDown className="w-4 h-4" />
-                                  {t('history.moveFolderDown')}
+                                  <FiTrash2 className="w-4 h-4" />
+                                  {t('history.deleteFolder')}
                                 </button>
-                              )}
-                              <button
-                                onClick={(e) => handleDeleteFolder(folder.id, folder.name, e)}
-                                className="w-full text-left px-2.5 py-1 text-sm text-danger hover:bg-raised flex items-center gap-2 border-t border-faint"
-                              >
-                                <FiTrash2 className="w-4 h-4" />
-                                {t('history.deleteFolder')}
-                              </button>
+                              </div>
                             </div>
-                          </div>
-                        )}
-                      </div>
-                    </>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  {!folded && items.length > 0 && (
+                    <div className="ml-4 pl-2 border-l border-subtle space-y-2 mt-1">
+                      {items.map(renderSession)}
+                    </div>
                   )}
                 </div>
-                {!folded && items.length > 0 && (
-                  <div className="ml-4 pl-2 border-l border-subtle space-y-2 mt-1">
-                    {items.map(renderSession)}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      <div
-        className={`session-list space-y-2 rounded-container ${dropHighlight(LOOSE)} ${
-          dragging && grouped.loose.length === 0
-            ? 'min-h-12 border border-dashed border-strong grid place-items-center'
-            : ''
-        }`}
-        {...dropProps(null)}
-      >
-        {grouped.loose.map(renderSession)}
-        {dragging && grouped.loose.length === 0 && (
-          <p className="text-xs text-ink-muted px-2">{t('history.dropToRemoveFromFolder')}</p>
+              )
+            })}
+          </div>
         )}
+
+        <div
+          className={`session-list space-y-2 rounded-container ${dropHighlight(LOOSE)} ${
+            dragging && grouped.loose.length === 0
+              ? 'min-h-12 border border-dashed border-strong grid place-items-center'
+              : ''
+          }`}
+          {...dropProps(null)}
+        >
+          {grouped.loose.map(renderSession)}
+          {dragging && grouped.loose.length === 0 && (
+            <p className="text-xs text-ink-muted px-2">{t('history.dropToRemoveFromFolder')}</p>
+          )}
+        </div>
       </div>
 
       <ConfirmDeleteChatModal

@@ -44,7 +44,7 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
 
   if (open) {
     return (
-      <aside className="w-96 shrink-0 bg-canvas border-r border-subtle overflow-y-auto overflow-x-hidden">
+      <aside className="w-96 shrink-0 bg-canvas border-r border-subtle flex flex-col overflow-hidden">
         <ChatHistory
           onSessionSelect={onSessionSelect}
           currentSessionId={currentSessionId}
